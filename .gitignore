@@ -1,0 +1,66 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Project-specific ignored folders (large data and models)
+data/raw/**/*.csv
+data/raw/**/*.parquet
+data/processed/**/*.csv
+data/processed/**/*.parquet
+data/features/**/*.csv
+data/features/**/*.parquet
+models/**/*.pkl
+models/**/*.joblib
+models/**/*.h5
+models/**/*.pt
+outputs/
+
+# Keep data directory structure in Git using .gitkeep if needed
+!data/
+!data/raw/
+!data/raw/team_games/
+!data/raw/player_games/
+!data/processed/
+!data/features/
+!models/
+!outputs/
+!notebooks/

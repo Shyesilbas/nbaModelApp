@@ -1,0 +1,114 @@
+{
+  "total_team_game_rows": 2622,
+  "team_games_regular": 2460,
+  "team_games_playoffs": 162,
+  "total_player_game_rows": 27757,
+  "player_games_regular": 25923,
+  "player_games_playoffs": 1834,
+  "total_teams": 30,
+  "total_players": 516,
+  "v1_rows": 2592,
+  "v1_features": 9,
+  "v2_rows": 2590,
+  "v2_features": 15,
+  "v3_rows": 2590,
+  "v3_features": 55,
+  "files_status": [
+    {
+      "name": "Raw Team Game Logs",
+      "path": "data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv",
+      "exists": true,
+      "rows": 2622,
+      "columns": 29,
+      "size_kb": 403.44
+    },
+    {
+      "name": "Raw Player Game Logs",
+      "path": "data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv",
+      "exists": true,
+      "rows": 27757,
+      "columns": 29,
+      "size_kb": 3645.91
+    },
+    {
+      "name": "Team Rosters",
+      "path": "data/analysis/team_rosters.csv",
+      "exists": true,
+      "rows": 590,
+      "columns": 10,
+      "size_kb": 66.54
+    },
+    {
+      "name": "Core Players List",
+      "path": "data/analysis/core_players.csv",
+      "exists": true,
+      "rows": 590,
+      "columns": 7,
+      "size_kb": 33.0
+    },
+    {
+      "name": "Star Candidates",
+      "path": "data/analysis/star_candidates.csv",
+      "exists": true,
+      "rows": 516,
+      "columns": 10,
+      "size_kb": 58.56
+    },
+    {
+      "name": "Multi-Team Players",
+      "path": "data/analysis/multi_team_players.csv",
+      "exists": true,
+      "rows": 68,
+      "columns": 4,
+      "size_kb": 2.41
+    },
+    {
+      "name": "Player Name Lookup",
+      "path": "data/analysis/player_name_lookup.csv",
+      "exists": true,
+      "rows": 516,
+      "columns": 3,
+      "size_kb": 18.37
+    },
+    {
+      "name": "V1 Model-Ready Dataset",
+      "path": "data/processed/team_model_ready_2025_26.csv",
+      "exists": true,
+      "rows": 2592,
+      "columns": 16,
+      "size_kb": 282.13
+    },
+    {
+      "name": "V2 Model-Ready Dataset",
+      "path": "data/processed/team_model_ready_v2_2025_26.csv",
+      "exists": true,
+      "rows": 2590,
+      "columns": 22,
+      "size_kb": 360.67
+    },
+    {
+      "name": "V3 Model-Ready Dataset",
+      "path": "data/processed/team_model_ready_v3_2025_26.csv",
+      "exists": true,
+      "rows": 2590,
+      "columns": 62,
+      "size_kb": 904.66
+    },
+    {
+      "name": "Combined Schedule",
+      "path": "data/processed/schedule_combined_2025_26.csv",
+      "exists": true,
+      "rows": 1322,
+      "columns": 17,
+      "size_kb": 79.92
+    },
+    {
+      "name": "Upcoming Games Context",
+      "path": "data/processed/upcoming_games_context_2025_26.csv",
+      "exists": true,
+      "rows": 5,
+      "columns": 33,
+      "size_kb": 2.68
+    }
+  ]
+}

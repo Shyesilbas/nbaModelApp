@@ -1,0 +1,231 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #070b14;
+    color: #e2e8f0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 { margin: 0; }
+  p { margin: 0; }
+}
+
+/* ─── Custom Scrollbar ──────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #070b14; }
+::-webkit-scrollbar-thumb { background: #1a2235; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #243048; }
+
+/* ─── Design System Utilities ───────────────────────────── */
+@layer components {
+
+  /* Glass card - default */
+  .glass {
+    background: rgba(11, 17, 32, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* Glass card with glow-on-hover */
+  .glass-hover {
+    @apply glass transition-all duration-300 cursor-pointer;
+  }
+  .glass-hover:hover {
+    border-color: rgba(56, 189, 248, 0.25);
+    box-shadow: 0 0 24px rgba(56, 189, 248, 0.07), 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+  }
+
+  /* Finals gold card */
+  .card-finals {
+    background: linear-gradient(135deg, rgba(20,15,5,0.95) 0%, rgba(12,10,2,0.95) 100%);
+    border: 1px solid rgba(234, 179, 8, 0.25);
+    box-shadow: 0 0 40px rgba(234, 179, 8, 0.06), inset 0 1px 0 rgba(234,179,8,0.08);
+  }
+  .card-finals:hover {
+    border-color: rgba(234, 179, 8, 0.45);
+    box-shadow: 0 0 60px rgba(234, 179, 8, 0.12), inset 0 1px 0 rgba(234,179,8,0.12);
+  }
+
+  /* Playoff blue card */
+  .card-playoff {
+    background: linear-gradient(135deg, rgba(5,12,28,0.95) 0%, rgba(3,8,20,0.95) 100%);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.05), inset 0 1px 0 rgba(56,189,248,0.07);
+  }
+  .card-playoff:hover {
+    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 60px rgba(56, 189, 248, 0.1), inset 0 1px 0 rgba(56,189,248,0.1);
+  }
+
+  /* Team circle badge */
+  .team-ring {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    background: linear-gradient(145deg, #131f35, #0d1628);
+    border: 1.5px solid rgba(255,255,255,0.1);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 12px rgba(0,0,0,0.5);
+    color: #e2e8f0;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  .team-ring-finals {
+    @apply team-ring;
+    border-color: rgba(234, 179, 8, 0.3);
+    box-shadow: inset 0 1px 0 rgba(234,179,8,0.08), 0 0 16px rgba(234,179,8,0.1), 0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  .team-ring-playoff {
+    @apply team-ring;
+    border-color: rgba(56, 189, 248, 0.3);
+    box-shadow: inset 0 1px 0 rgba(56,189,248,0.08), 0 0 16px rgba(56,189,248,0.08), 0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  /* Season type badge */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider;
+  }
+
+  .badge-finals {
+    @apply badge;
+    background: rgba(234, 179, 8, 0.12);
+    color: #fbbf24;
+    border: 1px solid rgba(234, 179, 8, 0.25);
+  }
+
+  .badge-playoff {
+    @apply badge;
+    background: rgba(56, 189, 248, 0.1);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.2);
+  }
+
+  .badge-playin {
+    @apply badge;
+    background: rgba(139, 92, 246, 0.1);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
+  .badge-regular {
+    @apply badge;
+    background: rgba(100, 116, 139, 0.12);
+    color: #94a3b8;
+    border: 1px solid rgba(100, 116, 139, 0.15);
+  }
+
+  .badge-upcoming {
+    @apply badge;
+    background: rgba(16, 185, 129, 0.1);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    animation: pulse-subtle 2.5s ease-in-out infinite;
+  }
+
+  /* Filter pill button */
+  .filter-pill {
+    @apply px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200;
+    border: 1px solid rgba(255,255,255,0.07);
+    color: #64748b;
+    background: rgba(255,255,255,0.03);
+  }
+
+  .filter-pill:hover {
+    border-color: rgba(56, 189, 248, 0.2);
+    color: #94a3b8;
+    background: rgba(56, 189, 248, 0.04);
+  }
+
+  .filter-pill-active {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.35);
+    color: #38bdf8;
+  }
+
+  .filter-pill-finals-active {
+    background: rgba(234, 179, 8, 0.12);
+    border-color: rgba(234, 179, 8, 0.35);
+    color: #fbbf24;
+  }
+
+  /* Sidebar nav button */
+  .nav-btn {
+    @apply w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold
+           transition-all duration-200 text-slate-500 hover:text-slate-300 hover:bg-white/[0.04];
+    letter-spacing: 0.02em;
+  }
+
+  .nav-btn-active {
+    @apply nav-btn;
+    background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(56,189,248,0.05));
+    border-left: 2px solid #38bdf8;
+    color: #7dd3fc;
+    padding-left: calc(0.75rem - 2px);
+  }
+
+  /* Stat row cell */
+  .stat-cell {
+    @apply text-xs font-bold tabular-nums py-1.5;
+  }
+
+  /* Glow ambient effects */
+  .glow-bg {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(56,189,248,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    filter: blur(60px);
+  }
+
+  .glow-gold {
+    position: absolute;
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(234,179,8,0.05) 0%, transparent 70%);
+    pointer-events: none;
+    filter: blur(80px);
+  }
+}
+
+/* ─── Animations ─────────────────────────────────────────── */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out both;
+}
+
+/* Stagger delays for card lists */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.10s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.20s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.30s; }
