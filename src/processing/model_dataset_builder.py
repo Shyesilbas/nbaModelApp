@@ -73,7 +73,39 @@ ALLOWED_COLUMNS_V2 = ALLOWED_COLUMNS + [
     "OPP_PTS_LAST_5",
     "OPP_PTS_LAST_10",
     "OPP_WINRATE_LAST_5",
-    "OPP_WINRATE_LAST_10"
+    "OPP_WINRATE_LAST_10",
+    
+    # Defensive rolling features
+    "PTS_ALLOWED_LAST_5",
+    "PTS_ALLOWED_LAST_10",
+    "OPP_PTS_ALLOWED_LAST_5",
+    "OPP_PTS_ALLOWED_LAST_10",
+    
+    # Home/Away form features
+    "HOME_WINRATE_LAST_5",
+    "HOME_PTS_LAST_5",
+    "HOME_PTS_ALLOWED_LAST_5",
+    "AWAY_WINRATE_LAST_5",
+    "AWAY_PTS_LAST_5",
+    "AWAY_PTS_ALLOWED_LAST_5",
+    
+    "OPP_HOME_WINRATE_LAST_5",
+    "OPP_HOME_PTS_LAST_5",
+    "OPP_HOME_PTS_ALLOWED_LAST_5",
+    "OPP_AWAY_WINRATE_LAST_5",
+    "OPP_AWAY_PTS_LAST_5",
+    "OPP_AWAY_PTS_ALLOWED_LAST_5",
+    
+    # Head-to-Head features
+    "H2H_GAMES_LAST_5",
+    "H2H_WINRATE_LAST_5",
+    "H2H_PTS_LAST_5",
+    "H2H_PTS_ALLOWED_LAST_5",
+    
+    "OPP_H2H_GAMES_LAST_5",
+    "OPP_H2H_WINRATE_LAST_5",
+    "OPP_H2H_PTS_LAST_5",
+    "OPP_H2H_PTS_ALLOWED_LAST_5"
 ]
 
 ROLLING_FEATURE_COLUMNS_V2 = ROLLING_FEATURE_COLUMNS + [
@@ -81,7 +113,36 @@ ROLLING_FEATURE_COLUMNS_V2 = ROLLING_FEATURE_COLUMNS + [
     "OPP_PTS_LAST_5",
     "OPP_PTS_LAST_10",
     "OPP_WINRATE_LAST_5",
-    "OPP_WINRATE_LAST_10"
+    "OPP_WINRATE_LAST_10",
+    
+    "PTS_ALLOWED_LAST_5",
+    "PTS_ALLOWED_LAST_10",
+    "OPP_PTS_ALLOWED_LAST_5",
+    "OPP_PTS_ALLOWED_LAST_10",
+    
+    "HOME_WINRATE_LAST_5",
+    "HOME_PTS_LAST_5",
+    "HOME_PTS_ALLOWED_LAST_5",
+    "AWAY_WINRATE_LAST_5",
+    "AWAY_PTS_LAST_5",
+    "AWAY_PTS_ALLOWED_LAST_5",
+    
+    "OPP_HOME_WINRATE_LAST_5",
+    "OPP_HOME_PTS_LAST_5",
+    "OPP_HOME_PTS_ALLOWED_LAST_5",
+    "OPP_AWAY_WINRATE_LAST_5",
+    "OPP_AWAY_PTS_LAST_5",
+    "OPP_AWAY_PTS_ALLOWED_LAST_5",
+    
+    # Drop NaNs if H2H stats are NaN (we only require H2H winrate to be valid, 
+    # since early season H2H may not have occurred yet, we drop games where H2H is not established)
+    "H2H_WINRATE_LAST_5",
+    "H2H_PTS_LAST_5",
+    "H2H_PTS_ALLOWED_LAST_5",
+    
+    "OPP_H2H_WINRATE_LAST_5",
+    "OPP_H2H_PTS_LAST_5",
+    "OPP_H2H_PTS_ALLOWED_LAST_5"
 ]
 
 def build_team_model_dataset_v2(team_features_with_opp_df: pd.DataFrame) -> Tuple[pd.DataFrame, int]:

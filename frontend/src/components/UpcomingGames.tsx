@@ -74,13 +74,13 @@ const ordinal = (n: number) => {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
-// Win-rate colour coding
+// Win-rate colour coding (light theme suitable)
 const winrateClass = (v: number | null) => {
   if (v == null) return "text-slate-400";
-  if (v >= 0.7) return "text-emerald-400";
-  if (v >= 0.5) return "text-cyan-400";
-  if (v >= 0.4) return "text-amber-400";
-  return "text-rose-400";
+  if (v >= 0.7) return "text-emerald-600 font-bold";
+  if (v >= 0.5) return "text-blue-600 font-bold";
+  if (v >= 0.4) return "text-amber-600 font-bold";
+  return "text-rose-600 font-bold";
 };
 
 // ─────────────────────────────────────────────
@@ -96,18 +96,19 @@ function TeamBadge({
   name: string | null;
   isHome: boolean;
 }) {
+  const brandColor = isHome ? "text-[#1d428a]" : "text-[#c9082a]";
   return (
-    <div className={`flex flex-col items-center gap-1 ${isHome ? "" : ""}`}>
+    <div className="flex flex-col items-center gap-1">
       {/* Large abbreviation circle */}
-      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-900/60 to-slate-800 border border-cyan-700/30 flex items-center justify-center shadow-lg shadow-cyan-900/30">
-        <span className="text-xl font-black tracking-tight text-white">
+      <div className="w-16 h-16 rounded-full bg-slate-50 border border-slate-200/80 flex items-center justify-center shadow-xs">
+        <span className={`text-xl font-black tracking-tight ${brandColor}`}>
           {abbr}
         </span>
       </div>
-      <span className="text-[11px] text-slate-400 font-semibold text-center leading-tight max-w-[90px]">
+      <span className="text-[11px] text-slate-600 font-bold text-center leading-tight max-w-[90px]">
         {name ?? abbr}
       </span>
-      <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-800/80 text-slate-500 border border-slate-700/40">
+      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200/50">
         {isHome ? "HOME" : "AWAY"}
       </span>
     </div>
@@ -118,8 +119,8 @@ function StatRow({
   label,
   home,
   away,
-  homeClass = "text-slate-100",
-  awayClass = "text-slate-100",
+  homeClass = "text-slate-700",
+  awayClass = "text-slate-700",
 }: {
   label: string;
   home: string;
@@ -128,11 +129,11 @@ function StatRow({
   awayClass?: string;
 }) {
   return (
-    <tr className="border-b border-slate-800/50 last:border-0">
+    <tr className="border-b border-slate-100 last:border-0">
       <td className={`py-1.5 pr-3 text-right text-xs font-bold tabular-nums ${homeClass}`}>
         {home}
       </td>
-      <td className="py-1.5 px-3 text-center text-[10px] text-slate-500 font-semibold uppercase tracking-wider whitespace-nowrap">
+      <td className="py-1.5 px-3 text-center text-[10px] text-slate-400 font-bold uppercase tracking-wider whitespace-nowrap">
         {label}
       </td>
       <td className={`py-1.5 pl-3 text-left text-xs font-bold tabular-nums ${awayClass}`}>
@@ -153,14 +154,14 @@ function CorePlayersList({
   const list = players.split(",").map((p) => p.trim());
   return (
     <div>
-      <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">
         {label}
       </p>
       <div className="flex flex-wrap gap-1">
         {list.map((name, i) => (
           <span
             key={i}
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/50"
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200/80"
           >
             {name}
           </span>
@@ -176,22 +177,22 @@ function GameCard({ game }: { game: UpcomingGame }) {
     game.SEASON_TYPE === "NBA Finals" ? "🏆 NBA Finals" : game.SEASON_TYPE;
 
   return (
-    <div className="rounded-2xl bg-gradient-to-b from-slate-900/90 to-slate-900/60 border border-slate-800/70 shadow-xl shadow-black/40 overflow-hidden">
+    <div className="glass-card border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden">
       {/* Card header band */}
-      <div className="bg-gradient-to-r from-cyan-900/40 via-slate-800/60 to-indigo-900/40 border-b border-slate-700/40 px-5 py-3 flex items-center justify-between gap-3">
+      <div className="bg-slate-50/80 border-b border-slate-100 px-5 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Trophy size={14} className="text-amber-400 flex-shrink-0" />
-          <span className="text-xs font-black text-amber-300 tracking-wider">
+          <Trophy size={14} className="text-[#e5a93b] flex-shrink-0" />
+          <span className="text-xs font-bold text-[#e5a93b] uppercase tracking-wider font-mono">
             {finalsLabel}
           </span>
           {gameNum != null && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#e5a93b]/10 text-[#e5a93b] border border-[#e5a93b]/20">
               Game {gameNum}
               {gameNum ? ` · ${ordinal(gameNum)} in series` : ""}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-slate-400 font-semibold">
+        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-semibold">
           <Calendar size={11} />
           {fmtDate(game.GAME_DATE)}
           {game.GAME_STATUS && (
@@ -213,17 +214,17 @@ function GameCard({ game }: { game: UpcomingGame }) {
 
         {/* VS divider */}
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
-          <span className="text-[11px] font-black text-slate-600 tracking-widest">
+          <span className="text-[11px] font-black text-slate-400 tracking-widest">
             VS
           </span>
           {game.HOME_SERIES_WINS != null && game.AWAY_SERIES_WINS != null ? (
             <div className="flex items-center gap-1 text-xs font-black">
-              <span className="text-cyan-300">{game.HOME_SERIES_WINS}</span>
-              <span className="text-slate-600">–</span>
-              <span className="text-rose-300">{game.AWAY_SERIES_WINS}</span>
+              <span className="text-[#1d428a]">{game.HOME_SERIES_WINS}</span>
+              <span className="text-slate-300">–</span>
+              <span className="text-[#c9082a]">{game.AWAY_SERIES_WINS}</span>
             </div>
           ) : (
-            <span className="text-[9px] text-slate-600 font-semibold">
+            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
               Series TBD
             </span>
           )}
@@ -238,19 +239,19 @@ function GameCard({ game }: { game: UpcomingGame }) {
 
       {/* Stats comparison table */}
       <div className="px-5 pb-4">
-        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1">
           <TrendingUp size={9} /> Recent Form &amp; Context
         </p>
         <table className="w-full">
           <thead>
             <tr>
-              <th className="text-right text-[9px] font-black text-cyan-500 uppercase tracking-widest pb-1 pr-3 w-1/3">
+              <th className="text-right text-[9px] font-black text-[#1d428a] uppercase tracking-widest pb-1 pr-3 w-1/3">
                 {game.HOME_TEAM_ABBREVIATION}
               </th>
-              <th className="text-center text-[9px] font-black text-slate-600 uppercase pb-1 px-3 w-1/3">
+              <th className="text-center text-[9px] font-bold text-slate-300 uppercase pb-1 px-3 w-1/3">
                 Metric
               </th>
-              <th className="text-left text-[9px] font-black text-rose-400 uppercase tracking-widest pb-1 pl-3 w-1/3">
+              <th className="text-left text-[9px] font-black text-[#c9082a] uppercase tracking-widest pb-1 pl-3 w-1/3">
                 {game.AWAY_TEAM_ABBREVIATION}
               </th>
             </tr>
@@ -310,10 +311,10 @@ function GameCard({ game }: { game: UpcomingGame }) {
                   : "—"
               }
               homeClass={
-                game.HOME_TEAM_IS_B2B ? "text-amber-400" : "text-slate-300"
+                game.HOME_TEAM_IS_B2B ? "text-amber-600 font-bold" : "text-slate-600"
               }
               awayClass={
-                game.AWAY_TEAM_IS_B2B ? "text-amber-400" : "text-slate-300"
+                game.AWAY_TEAM_IS_B2B ? "text-amber-600 font-bold" : "text-slate-600"
               }
             />
           </tbody>
@@ -322,10 +323,10 @@ function GameCard({ game }: { game: UpcomingGame }) {
 
       {/* Core players section */}
       {(game.HOME_TOP3_CORE_PLAYERS || game.AWAY_TOP3_CORE_PLAYERS) && (
-        <div className="px-5 pb-5 grid grid-cols-2 gap-4 border-t border-slate-800/50 pt-4">
+        <div className="px-5 pb-5 grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
           {/* Home side */}
           <div className="space-y-2">
-            <p className="text-[9px] font-black text-cyan-500 uppercase tracking-widest flex items-center gap-1">
+            <p className="text-[9px] font-bold text-[#1d428a] uppercase tracking-widest flex items-center gap-1">
               <Shield size={9} /> {game.HOME_TEAM_ABBREVIATION} Core
             </p>
             <CorePlayersList
@@ -339,7 +340,7 @@ function GameCard({ game }: { game: UpcomingGame }) {
           </div>
           {/* Away side */}
           <div className="space-y-2">
-            <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest flex items-center gap-1">
+            <p className="text-[9px] font-bold text-[#c9082a] uppercase tracking-widest flex items-center gap-1">
               <Shield size={9} /> {game.AWAY_TEAM_ABBREVIATION} Core
             </p>
             <CorePlayersList
@@ -384,19 +385,19 @@ export default function UpcomingGames() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-[#1d428a]" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-16 text-rose-400">
-        <AlertTriangle size={32} className="mx-auto mb-3" />
+      <div className="bg-rose-50 text-rose-800 border border-rose-200 p-6 rounded-xl text-center space-y-2">
+        <AlertTriangle size={32} className="mx-auto mb-1 text-rose-600" />
         <p className="text-sm font-bold">{error}</p>
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-slate-500">
           Run:{" "}
-          <code className="bg-slate-900 px-1 rounded">
+          <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px]">
             python3 main.py --build-schedule-context
           </code>
         </p>
@@ -409,27 +410,27 @@ export default function UpcomingGames() {
       {/* Page header */}
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <Zap size={22} className="text-amber-400" />
-          <h1 className="text-2xl font-black tracking-tight text-white m-0">
+          <Zap size={22} className="text-[#e5a93b]" />
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 m-0 uppercase animate-fade-in" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
             Upcoming Games
           </h1>
         </div>
-        <p className="text-sm text-slate-400 m-0">
+        <p className="text-sm text-slate-500 m-0">
           2025-26 NBA Season · Schedule &amp; Context Layer
         </p>
       </div>
 
-      {/* ⚠️ No-prediction banner */}
-      <div className="flex items-start gap-3 rounded-xl bg-amber-500/10 border border-amber-500/30 px-5 py-4">
+      {/* No-prediction banner */}
+      <div className="flex items-start gap-3 rounded-xl bg-amber-50 text-amber-800 border border-amber-200/80 p-4 shadow-xs">
         <AlertTriangle
           size={18}
-          className="text-amber-400 flex-shrink-0 mt-0.5"
+          className="text-amber-600 flex-shrink-0 mt-0.5"
         />
         <div>
-          <p className="text-xs font-black text-amber-300 uppercase tracking-wider m-0">
-            No Prediction Yet
+          <p className="text-xs font-bold uppercase tracking-wider m-0">
+            No Prediction Active
           </p>
-          <p className="text-xs text-amber-200/70 m-0 mt-0.5">
+          <p className="text-xs text-slate-600 m-0 mt-0.5 leading-relaxed">
             Model training is not implemented. This section shows schedule
             context, recent form, and roster data only — no win probabilities,
             predictions, or betting language.
@@ -439,21 +440,21 @@ export default function UpcomingGames() {
 
       {/* Summary stat pills */}
       <div className="flex flex-wrap gap-3">
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs font-bold text-slate-300">
-          <Calendar size={13} className="text-cyan-400" />
+        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-xs">
+          <Calendar size={13} className="text-[#1d428a]" />
           {games.length} Upcoming Game{games.length !== 1 ? "s" : ""}
         </div>
         {games[0]?.SEASON_TYPE && (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-900/20 border border-amber-700/30 text-xs font-bold text-amber-300">
-            <Trophy size={13} />
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 shadow-xs">
+            <Trophy size={13} className="text-[#e5a93b]" />
             {games[0].SEASON_TYPE}
           </div>
         )}
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs font-bold text-slate-300">
-          <Star size={13} className="text-purple-400" />
+        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-xs">
+          <Star size={13} className="text-[#c9082a]" />
           Core Player Context Included
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs font-bold text-slate-300">
+        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-xs">
           <Users size={13} className="text-slate-400" />
           V2 Rolling Features (Last Available)
         </div>
@@ -461,14 +462,14 @@ export default function UpcomingGames() {
 
       {/* Games grid */}
       {games.length === 0 ? (
-        <div className="text-center py-20">
-          <Calendar size={40} className="mx-auto text-slate-700 mb-4" />
+        <div className="text-center py-20 bg-white border border-slate-100 rounded-2xl shadow-sm">
+          <Calendar size={40} className="mx-auto text-slate-300 mb-4" />
           <p className="text-sm font-bold text-slate-500">
             No upcoming games found.
           </p>
-          <p className="text-xs text-slate-600 mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Update the source CSVs and re-run{" "}
-            <code className="bg-slate-900 px-1 rounded">
+            <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px]">
               --build-schedule-context
             </code>
             .
@@ -483,22 +484,22 @@ export default function UpcomingGames() {
       )}
 
       {/* Data provenance footer */}
-      <div className="rounded-xl bg-slate-900/40 border border-slate-800/60 px-5 py-4 text-[10px] text-slate-500 font-mono space-y-1">
-        <p className="font-bold text-slate-400 text-xs not-italic">
+      <div className="rounded-xl bg-slate-50/50 border border-slate-200/60 px-5 py-4 text-[10px] text-slate-500 font-mono space-y-1 shadow-2xs">
+        <p className="font-bold text-slate-700 text-xs not-italic">
           Data Sources
         </p>
         <p>
-          Schedule: <code>data/raw/schedule/nba_schedule_2025_26.csv</code>{" "}
+          Schedule: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">data/raw/schedule/nba_schedule_2025_26.csv</code>{" "}
           (played games) +{" "}
-          <code>data/raw/schedule/nba_finals_upcoming_2025_26.csv</code>{" "}
+          <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">data/raw/schedule/nba_finals_upcoming_2025_26.csv</code>{" "}
           (manually corrected)
         </p>
         <p>
-          Team context: <code>data/processed/team_model_ready_v2_2025_26.csv</code>{" "}
+          Team context: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">data/processed/team_model_ready_v2_2025_26.csv</code>{" "}
           — last available row per team
         </p>
         <p>
-          Core players: <code>data/analysis/core_players.csv</code> — ranked by
+          Core players: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">data/analysis/core_players.csv</code> — ranked by
           importance score
         </p>
       </div>

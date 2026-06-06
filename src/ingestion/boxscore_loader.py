@@ -47,6 +47,14 @@ RESULTS_CSV        = "data/processed/game_results_2025_26.csv"
 RESULTS_PARQ       = "data/processed/game_results_2025_26.parquet"
 
 
+def _normalize_season_type(game_id: str, season_type: str | None) -> str | None:
+    """Normalize finals game ids to NBA Finals regardless of upstream label."""
+    gid = str(game_id).zfill(10)
+    if gid.startswith("00425004"):
+        return "NBA Finals"
+    return season_type
+
+
 # ─────────────────────────────────────────────
 # Team box scores
 # ─────────────────────────────────────────────
@@ -58,7 +66,7 @@ TEAM_BS_COLS = [
     "FTM", "FTA", "FT_PCT",
     "OREB", "DREB", "REB",
     "AST", "STL", "BLK", "TOV", "PF", "PLUS_MINUS",
-    "SEASON_TYPE",
+    "SEASON_TYPE", "RAW_MATCHUP", "NORMALIZED_MATCHUP"
 ]
 
 
@@ -70,6 +78,8 @@ def load_team_boxscores(save: bool = True) -> pd.DataFrame:
     -------
     pd.DataFrame — one row per team per game.
     """
+    from src.processing.cleaning import normalize_game_matchups
+
     if not os.path.exists(RAW_TEAM_PATH):
         raise FileNotFoundError(f"Raw team game log not found: {RAW_TEAM_PATH}")
 
@@ -78,13 +88,23 @@ def load_team_boxscores(save: bool = True) -> pd.DataFrame:
     # Normalise GAME_DATE
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce").dt.strftime("%Y-%m-%d")
 
+    # Correct matchup pivot drops/anomalies (identical away-style MATCHUPs)
+    df = normalize_game_matchups(df)
+
     # Select and reorder columns (keep only those that exist)
     existing_cols = [c for c in TEAM_BS_COLS if c in df.columns]
     df = df[existing_cols].copy()
 
+    if "GAME_ID" in df.columns and "SEASON_TYPE" in df.columns:
+        df["SEASON_TYPE"] = df.apply(
+            lambda r: _normalize_season_type(r["GAME_ID"], r["SEASON_TYPE"]),
+            axis=1,
+        )
+
     # Ensure IS_PLAYOFF can be derived later
     if "IS_PLAYOFF" not in df.columns and "SEASON_TYPE" in df.columns:
         df["IS_PLAYOFF"] = df["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
+
 
     df = df.sort_values(["GAME_DATE", "GAME_ID", "TEAM_ABBREVIATION"]).reset_index(drop=True)
 
@@ -146,6 +166,12 @@ def load_player_boxscores(save: bool = True) -> pd.DataFrame:
     # Select and reorder columns
     existing_cols = [c for c in PLAYER_BS_COLS if c in df.columns]
     df = df[existing_cols].copy()
+
+    if "GAME_ID" in df.columns and "SEASON_TYPE" in df.columns:
+        df["SEASON_TYPE"] = df.apply(
+            lambda r: _normalize_season_type(r["GAME_ID"], r["SEASON_TYPE"]),
+            axis=1,
+        )
 
     df = df.sort_values(["GAME_DATE", "GAME_ID", "TEAM_ABBREVIATION", "PLAYER_NAME"]).reset_index(drop=True)
 
@@ -214,6 +240,11 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
     )
 
     # IS_PLAYOFF from SEASON_TYPE
+    results["IS_PLAYOFF"] = results["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
+    results["SEASON_TYPE"] = results.apply(
+        lambda r: _normalize_season_type(r["GAME_ID"], r["SEASON_TYPE"]),
+        axis=1,
+    )
     results["IS_PLAYOFF"] = results["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
 
     # GAME_STATUS — all rows here are completed
