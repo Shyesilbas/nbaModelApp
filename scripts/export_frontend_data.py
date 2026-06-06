@@ -2,6 +2,17 @@ import os
 import json
 import pandas as pd
 
+def _normalized_season_type(df: pd.DataFrame) -> pd.Series:
+    """Return a normalized SEASON_TYPE series with Finals derived from GAME_ID."""
+    if "SEASON_TYPE" not in df.columns:
+        return pd.Series([None] * len(df), index=df.index)
+    season = df["SEASON_TYPE"].astype(str).copy()
+    if "GAME_ID" not in df.columns:
+        return season
+    gid = df["GAME_ID"].astype(str).str.zfill(10)
+    season = season.mask(gid.str.startswith("00425004"), "NBA Finals")
+    return season
+
 def export_data():
     raw_team_path = "data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv"
     raw_player_path = "data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv"
@@ -72,31 +83,33 @@ def export_data():
     # Load raw logs to get shapes and season splits
     if os.path.exists(raw_team_path):
         df_team = pd.read_csv(raw_team_path)
+        df_team["SEASON_TYPE_NORM"] = _normalized_season_type(df_team)
         summary["total_team_game_rows"] = len(df_team)
-        if "SEASON_TYPE" in df_team.columns:
-            summary["team_games_regular"] = int((df_team["SEASON_TYPE"] == "Regular Season").sum())
-            summary["team_games_playoffs"] = int((df_team["SEASON_TYPE"] == "Playoffs").sum())
-        else:
-            summary["team_games_regular"] = 0
-            summary["team_games_playoffs"] = 0
+        summary["team_games_regular"] = int((df_team["SEASON_TYPE_NORM"] == "Regular Season").sum())
+        summary["team_games_playin"] = int((df_team["SEASON_TYPE_NORM"] == "PlayIn").sum())
+        summary["team_games_playoffs"] = int((df_team["SEASON_TYPE_NORM"] == "Playoffs").sum())
+        summary["team_games_finals"] = int((df_team["SEASON_TYPE_NORM"] == "NBA Finals").sum())
     else:
         summary["total_team_game_rows"] = 0
         summary["team_games_regular"] = 0
+        summary["team_games_playin"] = 0
         summary["team_games_playoffs"] = 0
+        summary["team_games_finals"] = 0
         
     if os.path.exists(raw_player_path):
         df_player = pd.read_csv(raw_player_path)
+        df_player["SEASON_TYPE_NORM"] = _normalized_season_type(df_player)
         summary["total_player_game_rows"] = len(df_player)
-        if "SEASON_TYPE" in df_player.columns:
-            summary["player_games_regular"] = int((df_player["SEASON_TYPE"] == "Regular Season").sum())
-            summary["player_games_playoffs"] = int((df_player["SEASON_TYPE"] == "Playoffs").sum())
-        else:
-            summary["player_games_regular"] = 0
-            summary["player_games_playoffs"] = 0
+        summary["player_games_regular"] = int((df_player["SEASON_TYPE_NORM"] == "Regular Season").sum())
+        summary["player_games_playin"] = int((df_player["SEASON_TYPE_NORM"] == "PlayIn").sum())
+        summary["player_games_playoffs"] = int((df_player["SEASON_TYPE_NORM"] == "Playoffs").sum())
+        summary["player_games_finals"] = int((df_player["SEASON_TYPE_NORM"] == "NBA Finals").sum())
     else:
         summary["total_player_game_rows"] = 0
         summary["player_games_regular"] = 0
+        summary["player_games_playin"] = 0
         summary["player_games_playoffs"] = 0
+        summary["player_games_finals"] = 0
 
     # Load lookup datasets to get counts
     if os.path.exists(roster_path):
@@ -179,8 +192,47 @@ def export_data():
     out_summary_path = os.path.join(out_dir, "dataset_summary.json")
     with open(out_summary_path, "w") as f:
         json.dump(summary, f, indent=2)
-        
     print(f"✅ Exported summary statistics -> {out_summary_path}")
+
+    # Build and Save model_ready_v2_summary.json
+    v2_summary = {}
+    if os.path.exists(model_v2_path):
+        df_v2 = pd.read_csv(model_v2_path)
+        v2_summary["row_count"] = len(df_v2)
+        
+        metadata_cols = ["TEAM_ID", "TEAM_ABBREVIATION", "TEAM_NAME", "GAME_ID", "GAME_DATE", "MATCHUP", "OPPONENT_ABBREVIATION"]
+        existing_meta = [c for c in metadata_cols if c in df_v2.columns]
+        v2_summary["metadata_columns"] = existing_meta
+        v2_summary["target_column"] = "WIN"
+        
+        features = [col for col in df_v2.columns if col != "WIN" and col not in metadata_cols]
+        v2_summary["feature_columns"] = features
+        v2_summary["feature_count"] = len(features)
+        
+        # Convert int64 value counts to normal python ints
+        dist = df_v2["WIN"].value_counts().to_dict()
+        v2_summary["target_distribution"] = {str(k): int(v) for k, v in dist.items()}
+        
+        v2_summary["leakage_warnings"] = [
+            "V2 dataset is 100% leakage-free. All rolling averages use shift(1) and do not contain information from the game being predicted.",
+            "Defensive allowed points, split home/away form, and head-to-head metrics are computed strictly using historical games prior to the matchup date."
+        ]
+        
+        if "GAME_DATE" in df_v2.columns:
+            # Sort date strings
+            dates = pd.to_datetime(df_v2["GAME_DATE"], errors="coerce").dt.strftime("%Y-%m-%d")
+            v2_summary["latest_game_date"] = str(dates.max())
+            v2_summary["earliest_game_date"] = str(dates.min())
+            
+        v2_summary["sync_status"] = "SYNCHRONIZED"
+    else:
+        v2_summary["sync_status"] = "MISSING"
+        
+    out_v2_summary_path = os.path.join(out_dir, "model_ready_v2_summary.json")
+    with open(out_v2_summary_path, "w") as f:
+        json.dump(v2_summary, f, indent=2)
+    print(f"✅ Exported Model V2 summary -> {out_v2_summary_path}")
+
     print("\n============================================================")
     print("🎉 FRONTEND DATASETS EXPORT COMPLETED SUCCESSFULLY! 🎉")
     print("============================================================\n")

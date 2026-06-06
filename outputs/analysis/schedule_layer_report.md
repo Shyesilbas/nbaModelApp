@@ -4,18 +4,18 @@
 
 ## 1. Schedule Summary
 
-- **Total rows in combined schedule**: 1,322
+- **Total rows in combined schedule**: 1,323
 - **Upcoming games (from 2026-06-06 onwards)**: 5
-- **Total playoff games (IS_PLAYOFF = True)**: 92
+- **Total playoff games (IS_PLAYOFF = True)**: 93
 
 ### Season Type Distribution
 
 | Season Type | Game Count |
 | :--- | ---: |
 | Regular Season | 1,230 |
-| Playoffs | 81 |
+| Playoffs | 80 |
+| NBA Finals | 7 |
 | PlayIn | 6 |
-| NBA Finals | 5 |
 
 ## 2. Generated Files
 
@@ -37,17 +37,17 @@
 
 | Column | Null Count |
 | :--- | ---: |
-| `HOME_TEAM_NAME` | 1,317 |
-| `AWAY_TEAM_NAME` | 1,317 |
-| `GAME_STATUS` | 1,317 |
-| `PLAYOFF_ROUND` | 1,317 |
-| `SERIES_GAME_NUMBER` | 1,317 |
-| `HOME_SERIES_WINS` | 1,322 |
-| `AWAY_SERIES_WINS` | 1,322 |
-| `IS_ELIMINATION_GAME` | 1,322 |
-| `CAN_CLINCH_SERIES` | 1,322 |
-| `ARENA` | 1,322 |
-| `LOCATION` | 1,322 |
+| `HOME_TEAM_NAME` | 1,323 |
+| `AWAY_TEAM_NAME` | 1,323 |
+| `GAME_STATUS` | 1,323 |
+| `PLAYOFF_ROUND` | 1,156 |
+| `SERIES_GAME_NUMBER` | 1,243 |
+| `HOME_SERIES_WINS` | 7 |
+| `AWAY_SERIES_WINS` | 7 |
+| `IS_ELIMINATION_GAME` | 7 |
+| `CAN_CLINCH_SERIES` | 7 |
+| `ARENA` | 1,323 |
+| `LOCATION` | 1,323 |
 
 > **Note**: Fields like `HOME_SERIES_WINS`, `AWAY_SERIES_WINS`, `IS_ELIMINATION_GAME`, and `CAN_CLINCH_SERIES` are intentionally null for upcoming games — they will be enriched as the series progresses.
 

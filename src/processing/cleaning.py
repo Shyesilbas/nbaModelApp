@@ -104,3 +104,74 @@ def clean_minutes_column(df: pd.DataFrame, min_col: str = "MIN") -> pd.DataFrame
 
     df[min_col] = df[min_col].apply(_parse_single_val)
     return df
+
+def normalize_game_matchups(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalizes matchups and home/away flags for games where both team rows
+    have identical matchups (e.g., DAL @ DET on both rows).
+    
+    Creates RAW_MATCHUP, NORMALIZED_MATCHUP, and updates IS_HOME.
+    """
+    df = df.copy()
+    if "MATCHUP" not in df.columns:
+        return df
+        
+    df["RAW_MATCHUP"] = df["MATCHUP"]
+    df["NORMALIZED_MATCHUP"] = df["MATCHUP"]
+    
+    if "IS_HOME" not in df.columns:
+        df["IS_HOME"] = df["MATCHUP"].str.contains("vs.", case=False, na=False)
+        
+    # Standardize column index/loc fetching speed
+    is_home_loc = df.columns.get_loc("IS_HOME")
+    norm_matchup_loc = df.columns.get_loc("NORMALIZED_MATCHUP")
+    team_abb_loc = df.columns.get_loc("TEAM_ABBREVIATION") if "TEAM_ABBREVIATION" in df.columns else -1
+        
+    def correct_group(grp):
+        if len(grp) != 2 or team_abb_loc == -1:
+            return grp
+            
+        row1 = grp.iloc[0]
+        row2 = grp.iloc[1]
+        
+        m1 = str(row1["MATCHUP"]).strip()
+        m2 = str(row2["MATCHUP"]).strip()
+        
+        is_m1_home = "vs." in m1
+        is_m2_home = "vs." in m2
+        
+        if is_m1_home != is_m2_home:
+            return grp
+            
+        t1 = row1["TEAM_ABBREVIATION"]
+        t2 = row2["TEAM_ABBREVIATION"]
+        
+        parts = m1.split()
+        if len(parts) == 3:
+            team_a, sep, team_b = parts
+            if {team_a, team_b} == {t1, t2}:
+                is_a_home = (sep == "vs.")
+                
+                # Update row1
+                if row1["TEAM_ABBREVIATION"] == team_a:
+                    grp.iloc[0, is_home_loc] = is_a_home
+                    grp.iloc[0, norm_matchup_loc] = m1
+                else:
+                    grp.iloc[0, is_home_loc] = not is_a_home
+                    opposite_sep = "@" if is_a_home else "vs."
+                    grp.iloc[0, norm_matchup_loc] = f"{t1} {opposite_sep} {t2}"
+                    
+                # Update row2
+                if row2["TEAM_ABBREVIATION"] == team_a:
+                    grp.iloc[1, is_home_loc] = is_a_home
+                    grp.iloc[1, norm_matchup_loc] = m1
+                else:
+                    grp.iloc[1, is_home_loc] = not is_a_home
+                    opposite_sep = "@" if is_a_home else "vs."
+                    grp.iloc[1, norm_matchup_loc] = f"{t2} {opposite_sep} {t1}"
+        return grp
+
+    df = df.groupby("GAME_ID", group_keys=False).apply(correct_group)
+    df["MATCHUP"] = df["NORMALIZED_MATCHUP"]
+    return df
+

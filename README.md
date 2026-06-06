@@ -15,12 +15,15 @@ The target is to build an end-to-end Machine Learning pipeline using real NBA da
 The project is designed to process the following datasets from the 2025-26 NBA Regular Season and Playoffs:
 
 1. **Team Game Logs** (`nba_team_games_2025_26_regular_and_playoffs.csv`):
-   - **Records**: 2622 rows (2460 Regular Season, 162 Playoffs)
+   - **Records**: 2,636 rows (Regular Season + Play-In + Playoffs + Finals)
    - **Columns**: 29 columns including `SEASON_ID`, `TEAM_ID`, `MATCHUP`, `WL`, `PTS`, `SEASON_TYPE`, and base stats.
    
 2. **Player Game Logs** (`nba_player_games_2025_26_regular_and_playoffs.csv`):
-   - **Records**: 27757 rows (25923 Regular Season, 1834 Playoffs)
+   - **Records**: 27,902 rows (Regular Season + Play-In + Playoffs + Finals)
    - **Columns**: 29 columns including `Player_ID`, `Game_ID`, `GAME_DATE`, `MATCHUP`, `WL`, `PTS`, `MIN`, `REB`, `AST`, `PLUS_MINUS`, and `PLAYER_NAME`.
+
+> [!NOTE]
+> These counts auto-update when you run `python3 main.py --update-data`. The pipeline detects newly completed NBA games and ingests them automatically.
 
 ---
 
@@ -30,9 +33,13 @@ nba-ml-project/
 ├── data/
 │   ├── raw/
 │   │   ├── team_games/
-│   │   │   └── (Place raw team games CSV here)
-│   │   └── player_games/
-│   │       └── (Place raw player games CSV here)
+│   │   │   └── nba_team_games_2025_26_regular_and_playoffs.csv
+│   │   ├── player_games/
+│   │   │   └── nba_player_games_2025_26_regular_and_playoffs.csv
+│   │   ├── schedule/
+│   │   │   ├── nba_schedule_2025_26.csv
+│   │   │   └── nba_finals_upcoming_2025_26.csv
+│   │   └── boxscores/
 │   ├── processed/
 │   │   ├── team_model_ready_2025_26.csv/.parquet     # V1 Dataset
 │   │   ├── team_model_ready_v2_2025_26.csv/.parquet  # V2 Opponent-Aware
@@ -49,7 +56,11 @@ nba-ml-project/
 ├── notebooks/
 ├── src/
 │   ├── ingestion/
-│   │   └── data_loader.py
+│   │   ├── data_loader.py                            # CSV/Parquet loader
+│   │   ├── nba_api_client.py                         # Central API wrapper
+│   │   ├── team_games_fetcher.py                     # Team game log fetcher
+│   │   ├── player_games_fetcher.py                   # Player game log fetcher
+│   │   └── schedule_fetcher.py                       # Schedule sync
 │   ├── processing/
 │   │   ├── validation.py
 │   │   ├── cleaning.py
@@ -62,6 +73,8 @@ nba-ml-project/
 │   │   └── core_player_availability_features.py
 │   ├── analysis/
 │   │   └── roster_analysis.py
+│   ├── validation/
+│   │   └── data_freshness.py                         # Freshness checker
 │   ├── training/
 │   └── evaluation/
 ├── models/
@@ -70,7 +83,10 @@ nba-ml-project/
 │   │   ├── team_roster_report.md
 │   │   ├── core_player_report.md
 │   │   ├── star_player_candidates.md
-│   │   └── team_model_ready_v3_report.md
+│   │   ├── v2_drop_analysis_report.md
+│   │   ├── data_update_report.md
+│   │   ├── local_ingestion_report.md
+│   │   └── data_freshness_report.md
 │   ├── archive/              # Deprecated and older reports/outputs
 │   │   ├── old_reports/
 │   │   └── deprecated_outputs/
@@ -117,12 +133,31 @@ Install the project dependencies (minimal package footprint):
 pip install -r requirements.txt
 ```
 
-### 2. Prepare Data
-Put your downloaded CSV logs into the raw folders:
-- Team logs: `data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv`
-- Player logs: `data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv`
+### 3. Data Auto-Update (Detect & Fetch Missing Games)
 
-### 3. Run Pipeline
+The project can detect newly completed NBA games and fetch them automatically:
+
+```bash
+# Check for missing games (diagnostic only, no mutation)
+python3 main.py --startup-check
+
+# Full update: fetch missing games, rebuild features, re-export frontend
+python3 main.py --update-data
+```
+
+The `--update-data` pipeline:
+1. Refreshes the league schedule from the NBA API
+2. Detects missing completed games via data freshness checks
+3. Fetches missing team & player game logs (with fallback to `BoxScoreTraditionalV2`)
+4. Appends and deduplicates raw datasets
+5. Re-runs feature engineering & rebuilds Enhanced V2
+6. Re-exports frontend JSON files
+7. Generates `outputs/analysis/data_update_report.md`
+
+> [!TIP]
+> Supports all season types: Regular Season, Play-In, Playoffs, and NBA Finals.
+
+### 4. Run Pipeline
 To run the full validation and feature engineering pipeline on your files, execute:
 ```bash
 python main.py
@@ -136,16 +171,21 @@ python main.py --run-roster-analysis
 This discovers player groupings dynamically, saves structured datasets to `data/analysis/` in CSV and Parquet, and writes human-readable markdown reports to `outputs/analysis/`.
 
 ### 5. Build Model-Ready Datasets (V1, V2, V3)
-To compile the pre-game prediction datasets with scheduling, rolling, and core player availability features:
+To compile the pre-game prediction datasets with scheduling, rolling, defensive, splits, and head-to-head features:
 *   **Build V1 & V2 datasets**:
     ```bash
     python main.py --build-model-dataset
     ```
-*   **Build V3 dataset (Core Availability Aware)**:
+*   **Build V3 dataset (Core Availability Aware - Exploratory Only)**:
     ```bash
     python main.py --build-v3-dataset
     ```
-This saves datasets under `data/processed/` and exports validation logs and warnings inside the `outputs/` folder structure.
+
+> [!IMPORTANT]
+> **Model Training Readiness Recommendation**: 
+> * **Primary Dataset**: Always use the V2 dataset (`data/processed/team_model_ready_v2_2025_26.csv`) for baseline model training. It is fully leakage-free and includes defensive, home/away splits, and head-to-head metrics.
+> * **Exploratory Only**: The V3 dataset (`data/processed/team_model_ready_v3_2025_26.csv`) contains observed player participation and minutes sums from the games being predicted. These represent **post-tipoff observed stats** and are unsafe for pre-game model training (data leakage). Use V3 for exploration and retrospectives only, or drop the post-tipoff columns before fitting models.
+
 
 ### 6. Running with Synthetic/Mock Data (Testing)
 If you do not have the CSV datasets on your machine yet, you can test the pipeline end-to-end using synthetic data logs. The script will automatically trigger mock generation if the directories are empty, or you can force it using:

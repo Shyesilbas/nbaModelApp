@@ -40,7 +40,22 @@ def build_opponent_features(team_features_df: pd.DataFrame) -> pd.DataFrame:
         "PTS_LAST_5_opp": "OPP_PTS_LAST_5",
         "PTS_LAST_10_opp": "OPP_PTS_LAST_10",
         "WINRATE_LAST_5_opp": "OPP_WINRATE_LAST_5",
-        "WINRATE_LAST_10_opp": "OPP_WINRATE_LAST_10"
+        "WINRATE_LAST_10_opp": "OPP_WINRATE_LAST_10",
+        
+        "PTS_ALLOWED_LAST_5_opp": "OPP_PTS_ALLOWED_LAST_5",
+        "PTS_ALLOWED_LAST_10_opp": "OPP_PTS_ALLOWED_LAST_10",
+        
+        "HOME_WINRATE_LAST_5_opp": "OPP_HOME_WINRATE_LAST_5",
+        "HOME_PTS_LAST_5_opp": "OPP_HOME_PTS_LAST_5",
+        "HOME_PTS_ALLOWED_LAST_5_opp": "OPP_HOME_PTS_ALLOWED_LAST_5",
+        "AWAY_WINRATE_LAST_5_opp": "OPP_AWAY_WINRATE_LAST_5",
+        "AWAY_PTS_LAST_5_opp": "OPP_AWAY_PTS_LAST_5",
+        "AWAY_PTS_ALLOWED_LAST_5_opp": "OPP_AWAY_PTS_ALLOWED_LAST_5",
+        
+        "H2H_GAMES_LAST_5_opp": "OPP_H2H_GAMES_LAST_5",
+        "H2H_WINRATE_LAST_5_opp": "OPP_H2H_WINRATE_LAST_5",
+        "H2H_PTS_LAST_5_opp": "OPP_H2H_PTS_LAST_5",
+        "H2H_PTS_ALLOWED_LAST_5_opp": "OPP_H2H_PTS_ALLOWED_LAST_5"
     }
     
     # Verify columns exist before renaming

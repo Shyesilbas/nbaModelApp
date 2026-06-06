@@ -97,4 +97,89 @@ def build_team_features(df: pd.DataFrame) -> pd.DataFrame:
         df["WINRATE_LAST_5"] = np.nan
         df["WINRATE_LAST_10"] = np.nan
 
+    # 10. PTS_ALLOWED (opponent points)
+    if "GAME_ID" in df.columns and "PTS" in df.columns:
+        pts_map = df[["GAME_ID", "TEAM_ABBREVIATION", "PTS"]].rename(columns={"PTS": "OPP_PTS_TEMP"})
+        df = df.merge(
+            pts_map,
+            left_on=["GAME_ID", "OPPONENT_ABBREVIATION"],
+            right_on=["GAME_ID", "TEAM_ABBREVIATION"],
+            how="left",
+            suffixes=("", "_temp_drop")
+        )
+        if "TEAM_ABBREVIATION_temp_drop" in df.columns:
+            df = df.drop(columns=["TEAM_ABBREVIATION_temp_drop"])
+        df["PTS_ALLOWED"] = df["OPP_PTS_TEMP"]
+        df = df.drop(columns=["OPP_PTS_TEMP"])
+    else:
+        df["PTS_ALLOWED"] = np.nan
+
+    # Fallback to PTS - PLUS_MINUS if PTS_ALLOWED is missing
+    if "PTS_ALLOWED" in df.columns and df["PTS_ALLOWED"].isna().any() and "PTS" in df.columns and "PLUS_MINUS" in df.columns:
+        df["PTS_ALLOWED"] = df["PTS_ALLOWED"].fillna(df["PTS"] - df["PLUS_MINUS"])
+
+    # 11. PTS_ALLOWED_LAST_5 & PTS_ALLOWED_LAST_10 (shifted by 1 to prevent data leakage)
+    if team_col in df.columns and "PTS_ALLOWED" in df.columns:
+        df["PTS_ALLOWED_LAST_5"] = df.groupby(team_col)["PTS_ALLOWED"].transform(
+            lambda x: x.shift(1).rolling(window=5, min_periods=1).mean()
+        )
+        df["PTS_ALLOWED_LAST_10"] = df.groupby(team_col)["PTS_ALLOWED"].transform(
+            lambda x: x.shift(1).rolling(window=10, min_periods=1).mean()
+        )
+    else:
+        df["PTS_ALLOWED_LAST_5"] = np.nan
+        df["PTS_ALLOWED_LAST_10"] = np.nan
+
+    # 12. Home/Away split form (rolling 5, shifted by 1, forward filled per team)
+    home_mask = df["IS_HOME"] == True
+    df.loc[home_mask, "HOME_WINRATE_LAST_5"] = df[home_mask].groupby(team_col)["WIN"].transform(
+        lambda x: x.shift(1).rolling(5, min_periods=1).mean()
+    )
+    df.loc[home_mask, "HOME_PTS_LAST_5"] = df[home_mask].groupby(team_col)["PTS"].transform(
+        lambda x: x.shift(1).rolling(5, min_periods=1).mean()
+    )
+    df.loc[home_mask, "HOME_PTS_ALLOWED_LAST_5"] = df[home_mask].groupby(team_col)["PTS_ALLOWED"].transform(
+        lambda x: x.shift(1).rolling(5, min_periods=1).mean()
+    )
+    
+    away_mask = df["IS_HOME"] == False
+    df.loc[away_mask, "AWAY_WINRATE_LAST_5"] = df[away_mask].groupby(team_col)["WIN"].transform(
+        lambda x: x.shift(1).rolling(5, min_periods=1).mean()
+    )
+    df.loc[away_mask, "AWAY_PTS_LAST_5"] = df[away_mask].groupby(team_col)["PTS"].transform(
+        lambda x: x.shift(1).rolling(5, min_periods=1).mean()
+    )
+    df.loc[away_mask, "AWAY_PTS_ALLOWED_LAST_5"] = df[away_mask].groupby(team_col)["PTS_ALLOWED"].transform(
+        lambda x: x.shift(1).rolling(5, min_periods=1).mean()
+    )
+    
+    # Forward fill chronological split form per team
+    cols_to_ffill = [
+        "HOME_WINRATE_LAST_5", "HOME_PTS_LAST_5", "HOME_PTS_ALLOWED_LAST_5",
+        "AWAY_WINRATE_LAST_5", "AWAY_PTS_LAST_5", "AWAY_PTS_ALLOWED_LAST_5"
+    ]
+    df[cols_to_ffill] = df.groupby(team_col)[cols_to_ffill].ffill()
+
+    # 13. Head-to-Head (H2H) history features (rolling 5, shifted by 1)
+    if "TEAM_ABBREVIATION" in df.columns and "OPPONENT_ABBREVIATION" in df.columns:
+        h2h_groupby = ["TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION"]
+        df["H2H_GAMES_LAST_5"] = df.groupby(h2h_groupby)["WIN"].transform(
+            lambda x: x.shift(1).rolling(window=5, min_periods=1).count()
+        ).fillna(0).astype(int)
+        df["H2H_WINRATE_LAST_5"] = df.groupby(h2h_groupby)["WIN"].transform(
+            lambda x: x.shift(1).rolling(window=5, min_periods=1).mean()
+        )
+        df["H2H_PTS_LAST_5"] = df.groupby(h2h_groupby)["PTS"].transform(
+            lambda x: x.shift(1).rolling(window=5, min_periods=1).mean()
+        )
+        df["H2H_PTS_ALLOWED_LAST_5"] = df.groupby(h2h_groupby)["PTS_ALLOWED"].transform(
+            lambda x: x.shift(1).rolling(window=5, min_periods=1).mean()
+        )
+    else:
+        df["H2H_GAMES_LAST_5"] = 0
+        df["H2H_WINRATE_LAST_5"] = np.nan
+        df["H2H_PTS_LAST_5"] = np.nan
+        df["H2H_PTS_ALLOWED_LAST_5"] = np.nan
+
     return df
+

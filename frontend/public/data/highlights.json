@@ -129,20 +129,20 @@
       "GAME_ID": "0022500013"
     },
     {
-      "PLAYER_NAME": "Kawhi Leonard",
-      "TEAM": "LAC",
-      "MATCHUP": "LAC vs. DET",
-      "GAME_DATE": "2025-12-28",
+      "PLAYER_NAME": "Anthony Edwards",
+      "TEAM": "MIN",
+      "MATCHUP": "MIN @ SAS",
+      "GAME_DATE": "2026-01-17",
       "VALUE": 55,
-      "GAME_ID": "0022500445"
+      "GAME_ID": "0022500598"
     },
     {
-      "PLAYER_NAME": "Shai Gilgeous-Alexander",
-      "TEAM": "OKC",
-      "MATCHUP": "OKC @ IND",
-      "GAME_DATE": "2025-10-23",
+      "PLAYER_NAME": "Nikola Joki\u0107",
+      "TEAM": "DEN",
+      "MATCHUP": "DEN @ LAC",
+      "GAME_DATE": "2025-11-12",
       "VALUE": 55,
-      "GAME_ID": "0022500005"
+      "GAME_ID": "0022500224"
     }
   ],
   "top_assists": [
@@ -163,6 +163,14 @@
       "GAME_ID": "0022500717"
     },
     {
+      "PLAYER_NAME": "Andrew Nembhard",
+      "TEAM": "IND",
+      "MATCHUP": "IND vs. LAL",
+      "GAME_DATE": "2026-03-25",
+      "VALUE": 19,
+      "GAME_ID": "0022501052"
+    },
+    {
       "PLAYER_NAME": "Nikola Joki\u0107",
       "TEAM": "DEN",
       "MATCHUP": "DEN vs. DAL",
@@ -177,14 +185,6 @@
       "GAME_DATE": "2026-03-19",
       "VALUE": 19,
       "GAME_ID": "0022501011"
-    },
-    {
-      "PLAYER_NAME": "Andrew Nembhard",
-      "TEAM": "IND",
-      "MATCHUP": "IND vs. LAL",
-      "GAME_DATE": "2026-03-25",
-      "VALUE": 19,
-      "GAME_ID": "0022501052"
     }
   ],
   "top_rebounds": [
@@ -221,12 +221,12 @@
       "GAME_ID": "0022501195"
     },
     {
-      "PLAYER_NAME": "Oscar Tshiebwe",
-      "TEAM": "UTA",
-      "MATCHUP": "UTA vs. MEM",
-      "GAME_DATE": "2026-04-10",
+      "PLAYER_NAME": "Jalen Duren",
+      "TEAM": "DET",
+      "MATCHUP": "DET vs. UTA",
+      "GAME_DATE": "2025-11-05",
       "VALUE": 22,
-      "GAME_ID": "0022501181"
+      "GAME_ID": "0022500172"
     }
   ]
 }
