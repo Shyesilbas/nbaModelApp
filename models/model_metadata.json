@@ -1,0 +1,34 @@
+{
+  "model_name": "logistic_regression",
+  "training_date": "2026-06-06T13:39:23.736289Z",
+  "number_of_rows": 1758,
+  "number_of_features": 38,
+  "metrics": {
+    "uncalibrated": {
+      "accuracy": 0.6428571428571429,
+      "precision": 0.65625,
+      "recall": 0.6,
+      "f1": 0.6268656716417911,
+      "roc_auc": 0.7253877551020408,
+      "brier_score": 0.2099204307183762
+    },
+    "sigmoid": {
+      "accuracy": 0.6428571428571429,
+      "precision": 0.65625,
+      "recall": 0.6,
+      "f1": 0.6268656716417911,
+      "roc_auc": 0.7253877551020408,
+      "brier_score": 0.21004485798439612
+    },
+    "isotonic": {
+      "accuracy": 0.6542857142857142,
+      "precision": 0.7596153846153846,
+      "recall": 0.4514285714285714,
+      "f1": 0.5663082437275986,
+      "roc_auc": 0.7196244897959184,
+      "brier_score": 0.21038710115682802
+    }
+  },
+  "selected_calibration": "uncalibrated",
+  "target_column": "WIN"
+}

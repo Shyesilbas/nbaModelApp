@@ -1,0 +1,301 @@
+{
+  "training_date": "2026-06-06T23:35:22.314222Z",
+  "dataset_info": {
+    "source": "/Users/serhat/agProjects/nbaModelApp/data/processed/team_score_model_ready_v2_player_features.csv",
+    "rows_count": 879,
+    "train_samples": 704,
+    "test_samples": 175,
+    "number_of_features": 75
+  },
+  "naive_baselines": {
+    "home": {
+      "MAE": 11.181714285714284,
+      "RMSE": 14.020727513221274,
+      "R2": 0.029432115882215504
+    },
+    "away": {
+      "MAE": 11.877142857142857,
+      "RMSE": 14.807548268173422,
+      "R2": -0.16438722031498898
+    },
+    "total": {
+      "MAE": 18.10457142857143,
+      "RMSE": 22.6398674907783,
+      "R2": -0.17403826492033025
+    },
+    "margin_rolling": {
+      "MAE": 14.474857142857145,
+      "RMSE": 17.864069285260047,
+      "R2": 0.07531768561906083
+    },
+    "margin_win_prob_derived": {
+      "MAE": 13.834033765898184,
+      "RMSE": 16.889753879993854,
+      "R2": 0.17343234913909222
+    }
+  },
+  "v1_model_evaluation": {
+    "home": {
+      "MAE": 10.045225390784944,
+      "RMSE": 12.623114501916515,
+      "R2": 0.2132842194821477
+    },
+    "away": {
+      "MAE": 9.849942857142857,
+      "RMSE": 12.521615687624799,
+      "R2": 0.16737037913040076
+    },
+    "margin_direct": {
+      "MAE": 13.861570524598017,
+      "RMSE": 17.04440236561317,
+      "R2": 0.15822636654127453
+    },
+    "margin_derived": {
+      "MAE": 13.582715464857785,
+      "RMSE": 16.61435814525408,
+      "R2": 0.20016777364562843
+    },
+    "total_direct": {
+      "MAE": 15.180442493317777,
+      "RMSE": 19.452997304455224,
+      "R2": 0.13322267047028735
+    },
+    "total_derived": {
+      "MAE": 14.662815549133354,
+      "RMSE": 18.87407909635229,
+      "R2": 0.18404533052511152
+    }
+  },
+  "v2_model_evaluation": {
+    "home": {
+      "algorithm": "Random Forest Regressor",
+      "metrics": {
+        "MAE": 9.623466666666666,
+        "RMSE": 12.390186982459847,
+        "R2": 0.24205003148194426
+      }
+    },
+    "away": {
+      "algorithm": "Random Forest Regressor",
+      "metrics": {
+        "MAE": 9.688380952380953,
+        "RMSE": 12.450724331578158,
+        "R2": 0.176771586658237
+      }
+    },
+    "margin_direct": {
+      "algorithm": "Gradient Boosting",
+      "metrics": {
+        "MAE": 13.22625499327244,
+        "RMSE": 16.605779022214026,
+        "R2": 0.20099357593050293
+      }
+    },
+    "margin_derived": {
+      "MAE": 12.949866666666669,
+      "RMSE": 16.19587230188753,
+      "R2": 0.23995299825954286
+    },
+    "total_direct": {
+      "algorithm": "Random Forest Regressor",
+      "metrics": {
+        "MAE": 14.741638095238093,
+        "RMSE": 18.92055555411073,
+        "R2": 0.18002188928896257
+      }
+    },
+    "total_derived": {
+      "MAE": 14.647085714285716,
+      "RMSE": 18.83529293808546,
+      "R2": 0.18739545201074248
+    },
+    "primary_margin_selection": "derived",
+    "primary_total_selection": "derived"
+  },
+  "prediction_interval_offsets_80pct": {
+    "home": [
+      -16.66266666666667,
+      15.334666666666664
+    ],
+    "away": [
+      -16.475999999999992,
+      14.943999999999994
+    ],
+    "total": [
+      -23.23466666666667,
+      21.064000000000007
+    ],
+    "margin": [
+      -19.606666666666676,
+      17.748000000000005
+    ]
+  },
+  "error_buckets": {
+    "home": {
+      "within_plus_minus_5": 37.142857142857146,
+      "within_plus_minus_10": 58.285714285714285,
+      "within_plus_minus_15": 75.42857142857143
+    },
+    "away": {
+      "within_plus_minus_5": 36.0,
+      "within_plus_minus_10": 59.42857142857143,
+      "within_plus_minus_15": 76.0
+    },
+    "total": {
+      "within_plus_minus_10": 44.57142857142857,
+      "within_plus_minus_15": 62.857142857142854,
+      "within_plus_minus_20": 74.85714285714286
+    },
+    "margin": {
+      "within_plus_minus_5": 21.142857142857142,
+      "within_plus_minus_10": 46.85714285714286,
+      "within_plus_minus_15": 66.85714285714286
+    }
+  },
+  "consistency": {
+    "agreement_rate": 82.85714285714286,
+    "sample_disagreements": [
+      {
+        "game_date": "2026-04-23",
+        "home_team": "ATL",
+        "away_team": "NYK",
+        "home_actual_pts": 109,
+        "away_actual_pts": 108,
+        "actual_winner": "HOME",
+        "wp_home_win_prob": 0.49668793500739206,
+        "wp_predicted_winner": "AWAY",
+        "score_predicted_margin": 1.0933333333333337,
+        "score_predicted_winner": "HOME"
+      },
+      {
+        "game_date": "2026-04-25",
+        "home_team": "ATL",
+        "away_team": "NYK",
+        "home_actual_pts": 98,
+        "away_actual_pts": 114,
+        "actual_winner": "AWAY",
+        "wp_home_win_prob": 0.45741767027791896,
+        "wp_predicted_winner": "AWAY",
+        "score_predicted_margin": 0.14666666666667538,
+        "score_predicted_winner": "HOME"
+      },
+      {
+        "game_date": "2026-04-20",
+        "home_team": "CLE",
+        "away_team": "TOR",
+        "home_actual_pts": 115,
+        "away_actual_pts": 105,
+        "actual_winner": "HOME",
+        "wp_home_win_prob": 0.36513352448756253,
+        "wp_predicted_winner": "AWAY",
+        "score_predicted_margin": 1.413333333333341,
+        "score_predicted_winner": "HOME"
+      },
+      {
+        "game_date": "2026-04-12",
+        "home_team": "DAL",
+        "away_team": "CHI",
+        "home_actual_pts": 149,
+        "away_actual_pts": 128,
+        "actual_winner": "HOME",
+        "wp_home_win_prob": 0.6183828330990552,
+        "wp_predicted_winner": "HOME",
+        "score_predicted_margin": -1.2333333333333343,
+        "score_predicted_winner": "AWAY"
+      },
+      {
+        "game_date": "2026-04-18",
+        "home_team": "DEN",
+        "away_team": "MIN",
+        "home_actual_pts": 116,
+        "away_actual_pts": 105,
+        "actual_winner": "HOME",
+        "wp_home_win_prob": 0.45693386723956175,
+        "wp_predicted_winner": "AWAY",
+        "score_predicted_margin": 2.3333333333333286,
+        "score_predicted_winner": "HOME"
+      }
+    ]
+  },
+  "features": {
+    "v1": [
+      "IS_PLAYOFF",
+      "DAYS_REST",
+      "IS_B2B",
+      "PTS_LAST_5",
+      "PTS_LAST_10",
+      "WINRATE_LAST_5",
+      "WINRATE_LAST_10",
+      "OPP_DAYS_REST",
+      "OPP_IS_B2B",
+      "OPP_PTS_LAST_5",
+      "OPP_PTS_LAST_10",
+      "OPP_WINRATE_LAST_5",
+      "OPP_WINRATE_LAST_10",
+      "PTS_ALLOWED_LAST_5",
+      "PTS_ALLOWED_LAST_10",
+      "OPP_PTS_ALLOWED_LAST_5",
+      "OPP_PTS_ALLOWED_LAST_10",
+      "HOME_WINRATE_LAST_5",
+      "HOME_PTS_LAST_5",
+      "HOME_PTS_ALLOWED_LAST_5",
+      "AWAY_WINRATE_LAST_5",
+      "AWAY_PTS_LAST_5",
+      "AWAY_PTS_ALLOWED_LAST_5",
+      "OPP_HOME_WINRATE_LAST_5",
+      "OPP_HOME_PTS_LAST_5",
+      "OPP_HOME_PTS_ALLOWED_LAST_5",
+      "OPP_AWAY_WINRATE_LAST_5",
+      "OPP_AWAY_PTS_LAST_5",
+      "OPP_AWAY_PTS_ALLOWED_LAST_5",
+      "H2H_GAMES_LAST_5",
+      "H2H_WINRATE_LAST_5",
+      "H2H_PTS_LAST_5",
+      "H2H_PTS_ALLOWED_LAST_5"
+    ],
+    "player": [
+      "HOME_CORE_PLAYERS_AVAILABLE_COUNT",
+      "HOME_CORE_PLAYERS_MISSING_COUNT",
+      "HOME_TOP1_AVAILABLE",
+      "HOME_TOP2_AVAILABLE",
+      "HOME_TOP3_AVAILABLE",
+      "HOME_CORE_EXPECTED_MIN_SUM",
+      "HOME_TOP3_EXPECTED_MIN_SUM",
+      "HOME_CORE_MINUTES_SHARE",
+      "HOME_CORE_EXPECTED_PTS_SUM",
+      "HOME_CORE_EXPECTED_AST_SUM",
+      "HOME_CORE_EXPECTED_REB_SUM",
+      "HOME_CORE_EXPECTED_PRA_SUM",
+      "HOME_TOP3_EXPECTED_PTS_SUM",
+      "HOME_TOP3_EXPECTED_AST_SUM",
+      "HOME_TOP3_EXPECTED_REB_SUM",
+      "HOME_TOP3_EXPECTED_PRA_SUM",
+      "HOME_MISSING_CORE_EXPECTED_MIN",
+      "HOME_MISSING_CORE_EXPECTED_PTS",
+      "HOME_MISSING_CORE_EXPECTED_AST",
+      "HOME_MISSING_CORE_EXPECTED_REB",
+      "HOME_MISSING_CORE_EXPECTED_PRA",
+      "AWAY_CORE_PLAYERS_AVAILABLE_COUNT",
+      "AWAY_CORE_PLAYERS_MISSING_COUNT",
+      "AWAY_TOP1_AVAILABLE",
+      "AWAY_TOP2_AVAILABLE",
+      "AWAY_TOP3_AVAILABLE",
+      "AWAY_CORE_EXPECTED_MIN_SUM",
+      "AWAY_TOP3_EXPECTED_MIN_SUM",
+      "AWAY_CORE_MINUTES_SHARE",
+      "AWAY_CORE_EXPECTED_PTS_SUM",
+      "AWAY_CORE_EXPECTED_AST_SUM",
+      "AWAY_CORE_EXPECTED_REB_SUM",
+      "AWAY_CORE_EXPECTED_PRA_SUM",
+      "AWAY_TOP3_EXPECTED_PTS_SUM",
+      "AWAY_TOP3_EXPECTED_AST_SUM",
+      "AWAY_TOP3_EXPECTED_REB_SUM",
+      "AWAY_TOP3_EXPECTED_PRA_SUM",
+      "AWAY_MISSING_CORE_EXPECTED_MIN",
+      "AWAY_MISSING_CORE_EXPECTED_PTS",
+      "AWAY_MISSING_CORE_EXPECTED_AST",
+      "AWAY_MISSING_CORE_EXPECTED_REB",
+      "AWAY_MISSING_CORE_EXPECTED_PRA"
+    ]
+  }
+}

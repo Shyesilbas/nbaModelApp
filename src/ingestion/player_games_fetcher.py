@@ -8,7 +8,6 @@ import os
 import logging
 import pandas as pd
 from typing import List, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from src.ingestion.nba_api_client import call_nba_api
 
@@ -22,6 +21,7 @@ EXPECTED_COLUMNS = [
     'FGM', 'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM', 'FTA', 'FT_PCT', 
     'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'PF', 'PTS', 'PLUS_MINUS', 
     'VIDEO_AVAILABLE', 'PLAYER_NAME', 'SEASON_TYPE'
+    
 ]
 
 def fetch_player_games_for_season(season: str = "2025-26", season_types: Optional[List[str]] = None) -> pd.DataFrame:
@@ -222,44 +222,57 @@ def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.Data
         logger.error(f"Fallback fetch failed for player game {game_id_str}: {e}")
         return pd.DataFrame()
 
-def fetch_missing_player_games_by_game_ids(
-    game_ids: List[str],
-    season: str = "2025-26",
-    schedule_df: Optional[pd.DataFrame] = None,
-    max_workers: int = 4
-) -> pd.DataFrame:
+def fetch_missing_player_games_by_game_ids(game_ids: List[str], season: str = "2025-26", schedule_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
     """
     Fetches player game logs specifically for missing game IDs.
-
-    This uses per-game BoxScoreTraditionalV2 requests so we do not re-download
-    the full season every time a few new games are missing.
     """
     if not game_ids:
         return pd.DataFrame(columns=EXPECTED_COLUMNS)
-
-    # Incremental path: fetch each missing game directly.
-    # LeagueGameLog downloads are intentionally avoided here because they
-    # re-fetch the entire season and defeat the purpose of an update-only run.
-    def _fetch_one(gid: str) -> pd.DataFrame:
+        
+    # Group missing game IDs by API season type based on prefix
+    api_queries = set()
+    for gid in game_ids:
         gid_str = str(gid).zfill(10)
-        logger.info(f"Fetching player boxscore for missing game {gid_str}")
-        df_game = fetch_player_games_from_boxscore(gid_str, schedule_df)
-        if df_game.empty:
-            logger.warning(f"No player rows recovered for missing game {gid_str}")
-        return df_game
-
-    max_workers = max(1, min(max_workers, len(game_ids)))
+        if gid_str.startswith("002"):
+            api_queries.add("Regular Season")
+        elif gid_str.startswith("005"):
+            api_queries.add("PlayIn")
+        elif gid_str.startswith("004"):
+            api_queries.add("Playoffs")
+            
     all_logs = []
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_map = {executor.submit(_fetch_one, gid): gid for gid in game_ids}
-        for future in as_completed(future_map):
-            df_game = future.result()
-            if not df_game.empty:
-                all_logs.append(df_game)
-
+    
+    # Try fetching with LeagueGameLog first
+    for api_st in api_queries:
+        logger.info(f"Fetching {api_st} to retrieve missing player games: {game_ids}")
+        try:
+            df_season = fetch_player_games_for_season(season=season, season_types=[api_st])
+            if not df_season.empty:
+                target_ids = [str(g).zfill(10) for g in game_ids]
+                df_filtered = df_season[df_season["Game_ID"].astype(str).str.zfill(10).isin(target_ids)]
+                if not df_filtered.empty:
+                    all_logs.append(df_filtered)
+        except Exception as e:
+            logger.error(f"LeagueGameLog player query failed for {api_st}: {e}. Falling back to BoxScoreTraditionalV2.")
+            
+    # Check if we got all game IDs we needed. If not, fallback to BoxScoreTraditionalV2
+    found_gids = set()
+    if all_logs:
+        df_found = pd.concat(all_logs, ignore_index=True)
+        found_gids = set(df_found["Game_ID"].unique())
+        
+    missing_targets = [gid for gid in game_ids if str(gid).zfill(10) not in found_gids]
+    
+    if missing_targets:
+        logger.info(f"Using BoxScoreTraditionalV2 fallback for player games: {missing_targets}")
+        for gid in missing_targets:
+            df_fallback = fetch_player_games_from_boxscore(gid, schedule_df)
+            if not df_fallback.empty:
+                all_logs.append(df_fallback)
+                
     if not all_logs:
         return pd.DataFrame(columns=EXPECTED_COLUMNS)
-
+        
     return pd.concat(all_logs, ignore_index=True)
 
 def append_player_games_to_raw_dataset(new_rows: pd.DataFrame) -> int:

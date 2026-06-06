@@ -19,6 +19,7 @@ import StarCandidates from "./components/StarCandidates";
 import MultiTeamPlayers from "./components/MultiTeamPlayers";
 import DatasetHealth from "./components/DatasetHealth";
 import FutureModeling from "./components/FutureModeling";
+import NbaPrediction from "./components/NbaPrediction";
 
 const MENU = [
   { id: "overview",      label: "Overview",        icon: <LayoutDashboard size={16} />, section: null },
@@ -29,6 +30,7 @@ const MENU = [
   { id: "star-candidates",label:"Star Candidates",  icon: <Trophy size={16} />,          section: null },
   { id: "multi-team",    label: "Trade Discovery",  icon: <RefreshCw size={16} />,       section: null },
   { id: "dataset-health",label:"Data Quality",    icon: <Activity size={16} />,        section: "PIPELINE" },
+  { id: "nba-prediction",label:"Predictions",     icon: <BarChart2 size={16} />,       section: "MODELS" },
   { id: "future-modeling",label:"Model Roadmap",     icon: <Cpu size={16} />,             section: null },
 ];
 
@@ -198,11 +200,12 @@ export default function App() {
               {activeTab === "schedule"        && <Schedule />}
               {activeTab === "game-results"    && <GameResults />}
               {activeTab === "team-explorer"   && <TeamExplorer rosters={rosters} />}
-              {activeTab === "core-players"    && <CorePlayers corePlayers={corePlayers} />}
+              {activeTab === "core-players"    && <CorePlayers corePlayers={corePlayers} rosters={rosters} />}
               {activeTab === "star-candidates" && <StarCandidates candidates={starCandidates} />}
               {activeTab === "multi-team"      && <MultiTeamPlayers players={multiTeamPlayers} />}
               {activeTab === "dataset-health"  && <DatasetHealth filesStatus={summary?.files_status ?? null} />}
               {activeTab === "future-modeling" && <FutureModeling />}
+{activeTab === "nba-prediction" && <NbaPrediction /> }
             </div>
           )}
         </div>

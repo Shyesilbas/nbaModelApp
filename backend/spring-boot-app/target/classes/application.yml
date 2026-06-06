@@ -1,0 +1,6 @@
+server:
+  port: 8080
+
+ml:
+  service:
+    base-url: http://localhost:8001
