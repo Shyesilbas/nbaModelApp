@@ -1,0 +1,18 @@
+Model recommendation report
+---------------------------
+Top model by ROC-AUC on test set: logistic_regression (ROC-AUC=0.727)
+Suggested deployment:
+- If calibrated probabilities are required and Brier score is low, deploy the model with the best calibrated probabilities (check calibration plots).
+- Otherwise prefer the model with highest ROC-AUC for ranking tasks; for decision thresholds use precision/recall tradeoffs.
+
+Cross-validation summary (means):
+logistic_regression: accuracy=0.644 (+/-0.027), roc_auc=0.711 (+/-0.023)
+random_forest: accuracy=0.633 (+/-0.021), roc_auc=0.700 (+/-0.018)
+
+Deployment readiness:
+- Current readiness: Experimental/Alpha. More validation and monitoring required in production (calibration drift, new-season distribution shifts).
+
+High-value additional features (without adding historical seasons):
+- Pre-game injury reports / player availability
+- Lineup-level minutes/usage projections for the upcoming game
+- Bettor market features (odds, spreads) if allowed

@@ -171,7 +171,7 @@ function CorePlayersList({
   );
 }
 
-function GameCard({ game }: { game: UpcomingGame }) {
+function GameCard({ game, onPredict }: { game: UpcomingGame; onPredict: (g: UpcomingGame) => void }) {
   const gameNum = game.SERIES_GAME_NUMBER;
   const finalsLabel =
     game.SEASON_TYPE === "NBA Finals" ? "🏆 NBA Finals" : game.SEASON_TYPE;
@@ -354,6 +354,16 @@ function GameCard({ game }: { game: UpcomingGame }) {
           </div>
         </div>
       )}
+
+      {/* Card actions */}
+      <div className="px-5 py-4 border-t border-slate-100 flex justify-end">
+        <button
+          className="btn-primary"
+          onClick={() => onPredict(game)}
+        >
+          Predict
+        </button>
+      </div>
     </div>
   );
 }
@@ -365,6 +375,12 @@ export default function UpcomingGames() {
   const [games, setGames] = useState<UpcomingGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<UpcomingGame | null>(null);
+  const [predicting, setPredicting] = useState(false);
+  const [predictionResult, setPredictionResult] = useState<any | null>(null);
+  const [predictionError, setPredictionError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/data/upcoming_games_context.json")
@@ -381,6 +397,38 @@ export default function UpcomingGames() {
         setLoading(false);
       });
   }, []);
+
+  const handlePredict = async (game: UpcomingGame) => {
+    setSelectedGame(game);
+    setModalOpen(true);
+    setPredictionResult(null);
+    setPredictionError(null);
+    setPredicting(true);
+
+    try {
+      // Validate date format YYYY-MM-DD
+      const dateStr = game.GAME_DATE;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        throw new Error('Invalid date format for prediction_date. Expected YYYY-MM-DD.');
+      }
+
+      const res = await fetch('/api/nba/predictions/win-probability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ home_team: game.HOME_TEAM_ABBREVIATION, away_team: game.AWAY_TEAM_ABBREVIATION, prediction_date: dateStr })
+      });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.error || `ML service returned ${res.status}`);
+      }
+      const data = await res.json();
+      setPredictionResult(data);
+    } catch (e: any) {
+      setPredictionError(e.message || 'Prediction failed');
+    } finally {
+      setPredicting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -478,16 +526,14 @@ export default function UpcomingGames() {
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {games.map((game) => (
-            <GameCard key={game.GAME_ID} game={game} />
+            <GameCard key={game.GAME_ID} game={game} onPredict={handlePredict} />
           ))}
         </div>
       )}
 
       {/* Data provenance footer */}
       <div className="rounded-xl bg-slate-50/50 border border-slate-200/60 px-5 py-4 text-[10px] text-slate-500 font-mono space-y-1 shadow-2xs">
-        <p className="font-bold text-slate-700 text-xs not-italic">
-          Data Sources
-        </p>
+        <p className="font-bold text-slate-700 text-xs not-italic">Data Sources</p>
         <p>
           Schedule: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">data/raw/schedule/nba_schedule_2025_26.csv</code>{" "}
           (played games) +{" "}
@@ -503,6 +549,39 @@ export default function UpcomingGames() {
           importance score
         </p>
       </div>
+
+      {/* Prediction modal (renders when user clicks Predict) */}
+      {modalOpen && selectedGame && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-lg">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-bold">Prediction: {selectedGame.HOME_TEAM_ABBREVIATION} vs {selectedGame.AWAY_TEAM_ABBREVIATION}</h3>
+                <p className="text-xs text-slate-500">{fmtDate(selectedGame.GAME_DATE)}</p>
+              </div>
+              <button className="text-slate-400 text-sm" onClick={() => setModalOpen(false)}>Close</button>
+            </div>
+
+            <div className="mt-4">
+              {predicting && <div className="text-sm text-slate-500">Predicting…</div>}
+              {predictionError && <div className="text-sm text-rose-600">{predictionError}</div>}
+              {predictionResult && (
+                <div className="space-y-2">
+                  <p><strong>Predicted winner:</strong> {predictionResult.predicted_winner}</p>
+                  <p><strong>Home win prob:</strong> {predictionResult.home_win_probability}</p>
+                  <p><strong>Away win prob:</strong> {predictionResult.away_win_probability}</p>
+                  <p><strong>Confidence:</strong> {predictionResult.confidence_bucket}</p>
+                  <p className="text-xs text-slate-500 mt-2">Model version: {predictionResult.model_version ?? 'unknown'}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 text-right">
+              <button className="btn" onClick={() => setModalOpen(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,215 @@
+{
+  "training_date": "2026-06-06T23:24:22.726623Z",
+  "dataset_info": {
+    "source": "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v2_2025_26.csv",
+    "rows_count": 879,
+    "train_samples": 704,
+    "test_samples": 175,
+    "number_of_features": 33
+  },
+  "models": {
+    "home_score": {
+      "selected_algorithm": "Ridge Regression",
+      "metrics": {
+        "MAE": 10.045225390784946,
+        "RMSE": 12.623114501916515,
+        "R2": 0.2132842194821477
+      }
+    },
+    "away_score": {
+      "selected_algorithm": "Random Forest Regressor",
+      "metrics": {
+        "MAE": 9.849942857142857,
+        "RMSE": 12.521615687624799,
+        "R2": 0.16737037913040076
+      }
+    }
+  },
+  "combined_evaluation_metrics": {
+    "HOME_PTS": {
+      "MAE": 10.045225390784946,
+      "RMSE": 12.623114501916515,
+      "R2": 0.2132842194821477
+    },
+    "AWAY_PTS": {
+      "MAE": 9.849942857142857,
+      "RMSE": 12.521615687624799,
+      "R2": 0.16737037913040076
+    },
+    "POINT_DIFF": {
+      "MAE": 13.582715464857788,
+      "RMSE": 16.61435814525408,
+      "R2": 0.20016777364562832
+    },
+    "TOTAL_POINTS": {
+      "MAE": 14.662815549133356,
+      "RMSE": 18.87407909635229,
+      "R2": 0.18404533052511152
+    }
+  },
+  "all_algorithms_comparison": {
+    "Linear Regression": {
+      "home": {
+        "MAE": 10.056655709794923,
+        "RMSE": 12.648400506037465,
+        "R2": 0.21012924173008074
+      },
+      "away": {
+        "MAE": 10.66457649020529,
+        "RMSE": 13.324305476756152,
+        "R2": 0.0571984713348348
+      },
+      "point_diff": {
+        "MAE": 13.926927659795428,
+        "RMSE": 17.095698893467528,
+        "R2": 0.15315196842716894
+      },
+      "total_points": {
+        "MAE": 15.323077948815657,
+        "RMSE": 19.564646251388723,
+        "R2": 0.12324451747370346
+      }
+    },
+    "Ridge Regression": {
+      "home": {
+        "MAE": 10.045225390784946,
+        "RMSE": 12.623114501916515,
+        "R2": 0.2132842194821477
+      },
+      "away": {
+        "MAE": 10.594387341456901,
+        "RMSE": 13.277789045814528,
+        "R2": 0.06376980219120099
+      },
+      "point_diff": {
+        "MAE": 13.86157052459802,
+        "RMSE": 17.04440236561317,
+        "R2": 0.15822636654127453
+      },
+      "total_points": {
+        "MAE": 15.28749640418422,
+        "RMSE": 19.513424900472362,
+        "R2": 0.1278292989242641
+      }
+    },
+    "Random Forest Regressor": {
+      "home": {
+        "MAE": 10.293333333333335,
+        "RMSE": 13.051127339252991,
+        "R2": 0.15902928528373605
+      },
+      "away": {
+        "MAE": 9.849942857142857,
+        "RMSE": 12.521615687624799,
+        "R2": 0.16737037913040076
+      },
+      "point_diff": {
+        "MAE": 13.654666666666666,
+        "RMSE": 16.96129242604775,
+        "R2": 0.16641547044537552
+      },
+      "total_points": {
+        "MAE": 14.939542857142861,
+        "RMSE": 19.14576004618338,
+        "R2": 0.1603859182198547
+      }
+    },
+    "Gradient Boosting": {
+      "home": {
+        "MAE": 10.672234480957577,
+        "RMSE": 13.272217333155082,
+        "R2": 0.13029535878803644
+      },
+      "away": {
+        "MAE": 9.890524269238856,
+        "RMSE": 12.627583252404577,
+        "R2": 0.15321804001224704
+      },
+      "point_diff": {
+        "MAE": 14.097095879171889,
+        "RMSE": 17.249245803466774,
+        "R2": 0.13787153529045248
+      },
+      "total_points": {
+        "MAE": 15.009082727585291,
+        "RMSE": 19.330771911162916,
+        "R2": 0.14408057322976608
+      }
+    }
+  },
+  "model_features": [
+    "IS_PLAYOFF",
+    "DAYS_REST",
+    "IS_B2B",
+    "PTS_LAST_5",
+    "PTS_LAST_10",
+    "WINRATE_LAST_5",
+    "WINRATE_LAST_10",
+    "OPP_DAYS_REST",
+    "OPP_IS_B2B",
+    "OPP_PTS_LAST_5",
+    "OPP_PTS_LAST_10",
+    "OPP_WINRATE_LAST_5",
+    "OPP_WINRATE_LAST_10",
+    "PTS_ALLOWED_LAST_5",
+    "PTS_ALLOWED_LAST_10",
+    "OPP_PTS_ALLOWED_LAST_5",
+    "OPP_PTS_ALLOWED_LAST_10",
+    "HOME_WINRATE_LAST_5",
+    "HOME_PTS_LAST_5",
+    "HOME_PTS_ALLOWED_LAST_5",
+    "AWAY_WINRATE_LAST_5",
+    "AWAY_PTS_LAST_5",
+    "AWAY_PTS_ALLOWED_LAST_5",
+    "OPP_HOME_WINRATE_LAST_5",
+    "OPP_HOME_PTS_LAST_5",
+    "OPP_HOME_PTS_ALLOWED_LAST_5",
+    "OPP_AWAY_WINRATE_LAST_5",
+    "OPP_AWAY_PTS_LAST_5",
+    "OPP_AWAY_PTS_ALLOWED_LAST_5",
+    "H2H_GAMES_LAST_5",
+    "H2H_WINRATE_LAST_5",
+    "H2H_PTS_LAST_5",
+    "H2H_PTS_ALLOWED_LAST_5"
+  ],
+  "all_feature_columns": [
+    "IS_HOME",
+    "IS_PLAYOFF",
+    "DAYS_REST",
+    "IS_B2B",
+    "PTS_LAST_5",
+    "PTS_LAST_10",
+    "WINRATE_LAST_5",
+    "WINRATE_LAST_10",
+    "OPP_DAYS_REST",
+    "OPP_IS_B2B",
+    "OPP_PTS_LAST_5",
+    "OPP_PTS_LAST_10",
+    "OPP_WINRATE_LAST_5",
+    "OPP_WINRATE_LAST_10",
+    "PTS_ALLOWED_LAST_5",
+    "PTS_ALLOWED_LAST_10",
+    "OPP_PTS_ALLOWED_LAST_5",
+    "OPP_PTS_ALLOWED_LAST_10",
+    "HOME_WINRATE_LAST_5",
+    "HOME_PTS_LAST_5",
+    "HOME_PTS_ALLOWED_LAST_5",
+    "AWAY_WINRATE_LAST_5",
+    "AWAY_PTS_LAST_5",
+    "AWAY_PTS_ALLOWED_LAST_5",
+    "OPP_HOME_WINRATE_LAST_5",
+    "OPP_HOME_PTS_LAST_5",
+    "OPP_HOME_PTS_ALLOWED_LAST_5",
+    "OPP_AWAY_WINRATE_LAST_5",
+    "OPP_AWAY_PTS_LAST_5",
+    "OPP_AWAY_PTS_ALLOWED_LAST_5",
+    "H2H_GAMES_LAST_5",
+    "H2H_WINRATE_LAST_5",
+    "H2H_PTS_LAST_5",
+    "H2H_PTS_ALLOWED_LAST_5",
+    "OPP_H2H_GAMES_LAST_5",
+    "OPP_H2H_WINRATE_LAST_5",
+    "OPP_H2H_PTS_LAST_5",
+    "OPP_H2H_PTS_ALLOWED_LAST_5"
+  ]
+}

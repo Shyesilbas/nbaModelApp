@@ -185,11 +185,13 @@ function FinalsGameCard({
   index,
   focusTeam,
   players,
+  onPredict,
 }: {
   game: ScheduleGame;
   index: number;
   focusTeam: string | null;
   players: PlayerBoxScore[];
+  onPredict?: (g: ScheduleGame) => void;
 }) {
   const [expanded, setExpanded] = useState(index < 2);
   const [playerView, setPlayerView] = useState<TeamSide>("home");
@@ -259,13 +261,24 @@ function FinalsGameCard({
             </div>
           </div>
 
-          <button
-            onClick={() => setExpanded((value) => !value)}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.26em] text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-700"
-          >
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            {expanded ? "Hide details" : "View details"}
-          </button>
+          <div className="flex items-center gap-2">
+            {(game._isUpcoming || !isCompleted) && onPredict && (
+              <button
+                onClick={() => onPredict(game)}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.26em] text-emerald-700 transition-colors hover:border-emerald-300 hover:text-emerald-800"
+              >
+                Predict
+              </button>
+            )}
+
+            <button
+              onClick={() => setExpanded((value) => !value)}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.26em] text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-700"
+            >
+              {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              {expanded ? "Hide details" : "View details"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -553,6 +566,13 @@ export default function Schedule() {
   const [error, setError] = useState<string | null>(null);
   const [activeLens, setActiveLens] = useState<Lens>("series");
 
+  // Prediction modal state (for in-place Finals predictions)
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<ScheduleGame | null>(null);
+  const [predicting, setPredicting] = useState(false);
+  const [predictionResult, setPredictionResult] = useState<any | null>(null);
+  const [predictionError, setPredictionError] = useState<string | null>(null);
+
   useEffect(() => {
     Promise.all([
       fetch("/data/schedule.json").then((r) => {
@@ -625,6 +645,32 @@ export default function Schedule() {
         setLoading(false);
       });
   }, []);
+
+  const handlePredict = async (game: ScheduleGame) => {
+    setSelectedGame(game);
+    setModalOpen(true);
+    setPredictionResult(null);
+    setPredictionError(null);
+    setPredicting(true);
+
+    try {
+      const res = await fetch('/api/nba/predictions/win-probability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ home_team: game.HOME_TEAM_ABBREVIATION, away_team: game.AWAY_TEAM_ABBREVIATION, prediction_date: game.GAME_DATE }),
+      });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.error || `ML service returned ${res.status}`);
+      }
+      const data = await res.json();
+      setPredictionResult(data);
+    } catch (e: any) {
+      setPredictionError(e.message || 'Prediction failed');
+    } finally {
+      setPredicting(false);
+    }
+  };
 
   const teamOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -828,6 +874,7 @@ export default function Schedule() {
                 index={index}
                 focusTeam={activeLens === "series" ? null : activeLens}
                 players={playerBS}
+                onPredict={handlePredict}
               />
             ))}
           </div>
@@ -838,6 +885,40 @@ export default function Schedule() {
           <p className="text-sm font-bold text-slate-600">No NBA Finals games available</p>
         </div>
       )}
+
+      {/* Prediction modal (Finals) */}
+      {modalOpen && selectedGame && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-lg">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-bold">Prediction: {selectedGame.HOME_TEAM_ABBREVIATION} vs {selectedGame.AWAY_TEAM_ABBREVIATION}</h3>
+                <p className="text-xs text-slate-500">{fmtDate(selectedGame.GAME_DATE)}</p>
+              </div>
+              <button className="text-slate-400 text-sm" onClick={() => setModalOpen(false)}>Close</button>
+            </div>
+
+            <div className="mt-4">
+              {predicting && <div className="text-sm text-slate-500">Predicting…</div>}
+              {predictionError && <div className="text-sm text-rose-600">{predictionError}</div>}
+              {predictionResult && (
+                <div className="space-y-2">
+                  <p><strong>Predicted winner:</strong> {predictionResult.predicted_winner}</p>
+                  <p><strong>Home win prob:</strong> {predictionResult.home_win_probability}</p>
+                  <p><strong>Away win prob:</strong> {predictionResult.away_win_probability}</p>
+                  <p><strong>Confidence:</strong> {predictionResult.confidence_bucket}</p>
+                  <p className="text-xs text-slate-500 mt-2">Model version: {predictionResult.model_version ?? 'unknown'}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 text-right">
+              <button className="btn" onClick={() => setModalOpen(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
