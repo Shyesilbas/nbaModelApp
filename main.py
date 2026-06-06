@@ -6,6 +6,7 @@ from src.processing.validation import validate_team_games, validate_player_games
 from src.processing.cleaning import clean_dates, sort_team_games, sort_player_games
 from src.features import build_team_features, build_player_features, build_opponent_features, validate_opponent_join
 from src.processing.mock_generator import generate_mock_team_games, generate_mock_player_games
+from src.orchestration import PipelineOrchestrator
 
 def _df_to_markdown(df: pd.DataFrame) -> str:
     """Helper to convert a pandas DataFrame to a markdown table string without tabulate."""
@@ -31,7 +32,7 @@ def _run_schedule_context_pipeline():
     from datetime import date
     import json
     from src.ingestion.schedule_loader import load_combined_schedule
-    from src.processing.upcoming_context_builder import build_upcoming_games_context
+    from src.processing.upcoming_context_service import UpcomingContextService
     from scripts.export_frontend_data import export_data as _export_frontend_data
 
     print("============================================================")
@@ -44,7 +45,8 @@ def _run_schedule_context_pipeline():
 
     # Step 3 & 4 — Build upcoming context and save
     print("\nSTEP 2: Building upcoming games context...")
-    df_upcoming = build_upcoming_games_context(save=True)
+    ctx_service = UpcomingContextService(save=True)
+    df_upcoming = ctx_service.build_context(save=True)
 
     # Step 5 — Export frontend JSON files
     print("\nSTEP 3: Exporting frontend JSON files...")
@@ -135,27 +137,17 @@ def _run_schedule_context_pipeline():
 
 def _run_boxscore_pipeline_cli():
     """
-    Full pipeline for --fetch-boxscores:
-      1. Load team box scores from existing raw game log CSV → save.
-      2. Load player box scores from existing raw player log CSV → save.
-      3. Build game results summary → save.
-      4. Export frontend JSON files (game_results, team_boxscores, player_boxscores).
-      5. Print summary report.
-
-    NOTE: Uses the Colab-sourced raw CSVs as source of truth.
-          nba_api is NOT required.
+    Full pipeline for --fetch-boxscores (now using BoxscoreService):
     """
-    from src.ingestion.boxscore_loader import run_boxscore_pipeline
+    from src.ingestion.boxscore_service import BoxscoreService
 
     print("============================================================")
     print("🏀 BOX SCORE PIPELINE STARTING 🏀")
     print("============================================================\n")
 
-    print("STEP 1: Building box score tables from raw game logs...")
-    team_bs_df, player_bs_df, results_df = run_boxscore_pipeline()
-
-    print("\nSTEP 2: Exporting frontend JSON files...")
-    _export_boxscore_json(team_bs_df, player_bs_df, results_df)
+    print("STEP 1: Building box score tables from raw game logs and exporting JSON...")
+    svc = BoxscoreService(save=True)
+    team_bs_df, player_bs_df, results_df = svc.run_and_export()
 
     # Summary report
     print("\n============================================================")
@@ -300,18 +292,16 @@ def _run_data_freshness_pipeline(args):
       3. Generate markdown and JSON reports.
       4. Print console summary.
     """
-    from src.validation.data_freshness import load_local_datasets, generate_data_freshness_report
+    from src.validation.data_freshness_service import DataFreshnessService
     from datetime import date
     
-    # Load datasets
-    df_team, df_player, df_schedule = load_local_datasets(
-        raw_team_dir=args.raw_team_dir,
-        raw_player_dir=args.raw_player_dir
-    )
+    # Load datasets via service
+    dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
+    df_team, df_player, df_schedule = dfs.load_local_datasets()
     
     # Generate report
     today = date.today()
-    results = generate_data_freshness_report(df_team, df_player, df_schedule, today=today)
+    results = dfs.generate_data_freshness_report(df_team, df_player, df_schedule, today=today)
     
     # Print console summary exactly as requested
     print("DATA FRESHNESS CHECK")
@@ -611,7 +601,7 @@ def _run_pre_model_readiness_pipeline(args):
     """
     from datetime import date
     from src.ingestion.data_loader import load_team_games, load_player_games
-    from src.validation.data_freshness import load_local_datasets, generate_data_freshness_report
+    from src.validation.data_freshness_service import DataFreshnessService
     from scripts.export_frontend_data import export_data
     
     print("\n" + "="*80)
@@ -628,12 +618,10 @@ def _run_pre_model_readiness_pipeline(args):
     _run_build_enhanced_v2(args)
     
     # Step 4: Run Freshness Check
-    df_team, df_player, df_schedule = load_local_datasets(
-        raw_team_dir=args.raw_team_dir,
-        raw_player_dir=args.raw_player_dir
-    )
+    dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
+    df_team, df_player, df_schedule = dfs.load_local_datasets()
     today = date.today()
-    freshness_results = generate_data_freshness_report(df_team, df_player, df_schedule, today=today)
+    freshness_results = dfs.generate_data_freshness_report(df_team, df_player, df_schedule, today=today)
     
     # Step 5: Export Frontend Data
     export_data()
@@ -722,18 +710,16 @@ def _run_startup_check(args):
     Perform diagnostic data freshness check on startup.
     Does not mutate any files.
     """
-    from src.validation.data_freshness import load_local_datasets, generate_data_freshness_report
+    from src.validation.data_freshness_service import DataFreshnessService
     from datetime import date
     
-    # Load datasets
-    df_team, df_player, df_schedule = load_local_datasets(
-        raw_team_dir=args.raw_team_dir,
-        raw_player_dir=args.raw_player_dir
-    )
+    # Load datasets via service
+    dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
+    df_team, df_player, df_schedule = dfs.load_local_datasets()
     
     # Generate report
     today = date.today()
-    results = generate_data_freshness_report(df_team, df_player, df_schedule, today=today)
+    results = dfs.generate_data_freshness_report(df_team, df_player, df_schedule, today=today)
     
     print("\n============================================================")
     print("🔍 STARTUP DATA FRESHNESS CHECK 🔍")
@@ -837,22 +823,13 @@ def _generate_update_reports(
 
 
 def _run_update_data(args):
-    """
-    Data Update Pipeline:
-      1. Refresh schedule using update_schedule_files().
-      2. Reload schedule and raw datasets.
-      3. Run data freshness check to detect missing completed GAME_IDs.
-      4. Fetch missing team and player game logs.
-      5. Append and deduplicate raw datasets (CSV + Parquet).
-      6. Re-run feature sync pipeline.
-      7. Re-run matchup normalization and game results summary.
-      8. Rebuild enhanced V2 model dataset.
-      9. Rebuild schedule/context/frontend exports.
-      10. Re-run data freshness validation.
-      11. Generate final update report.
-    """
-    from src.ingestion.schedule_fetcher import update_schedule_files
-    from src.validation.data_freshness import load_local_datasets, generate_data_freshness_report
+    """Delegate update-data pipeline to UpdateDataService."""
+    from src.ingestion.update_data_service import UpdateDataService
+
+    svc = UpdateDataService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir, fetch_workers=args.fetch_workers, skip_post_update_rebuilds=args.skip_post_update_rebuilds)
+    svc.run(args)
+
+    from src.validation.data_freshness_service import DataFreshnessService
     from src.ingestion.team_games_fetcher import fetch_missing_team_games_by_game_ids, append_team_games_to_raw_dataset
     from src.ingestion.player_games_fetcher import fetch_missing_player_games_by_game_ids, append_player_games_to_raw_dataset
     from scripts.export_frontend_data import export_data
@@ -869,17 +846,14 @@ def _run_update_data(args):
     
     # Step 2: Load local datasets and detect missing completed games
     print("Step 2: Performing data freshness validation...")
-    df_team_pre, df_player_pre, df_schedule = load_local_datasets(
-        raw_team_dir=args.raw_team_dir,
-        raw_player_dir=args.raw_player_dir,
-        refresh_schedule=True
-    )
+    dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
+    df_team_pre, df_player_pre, df_schedule = dfs.load_local_datasets(refresh_schedule=True)
     
     pre_team_count = len(df_team_pre) if df_team_pre is not None else 0
     pre_player_count = len(df_player_pre) if df_player_pre is not None else 0
     
     today = date.today()
-    freshness_results_pre = generate_data_freshness_report(df_team_pre, df_player_pre, df_schedule, today=today)
+    freshness_results_pre = dfs.generate_data_freshness_report(df_team_pre, df_player_pre, df_schedule, today=today)
     
     missing_game_ids = list(freshness_results_pre["missing_completed_game_ids"])
     all_missing_info = list(freshness_results_pre["all_missing_completed_info"])
@@ -975,12 +949,8 @@ def _run_update_data(args):
     
     # Step 10: Re-run data freshness validation to get post-update status
     print("\nStep 10: Re-running data freshness validation...")
-    df_team_post, df_player_post, df_schedule_post = load_local_datasets(
-        raw_team_dir=args.raw_team_dir,
-        raw_player_dir=args.raw_player_dir,
-        refresh_schedule=False
-    )
-    freshness_results_post = generate_data_freshness_report(df_team_post, df_player_post, df_schedule_post, today=today)
+    df_team_post, df_player_post, df_schedule_post = dfs.load_local_datasets(refresh_schedule=False)
+    freshness_results_post = dfs.generate_data_freshness_report(df_team_post, df_player_post, df_schedule_post, today=today)
     
     print(f"\nFinal Freshness Status: {freshness_results_post['status']}")
     
@@ -1116,37 +1086,7 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.update_data:
-        _run_update_data(args)
-        return
-
-    if args.startup_check:
-        _run_startup_check(args)
-        return
-
-    if args.sync_pipeline:
-        _run_sync_pipeline(args)
-        return
-
-    if args.pre_model_readiness:
-        _run_pre_model_readiness_pipeline(args)
-        return
-
-    if args.export_frontend_data:
-        from scripts.export_frontend_data import export_data
-        export_data()
-        return
-
-    if args.build_schedule_context:
-        _run_schedule_context_pipeline()
-        return
-
-    if args.fetch_boxscores:
-        _run_boxscore_pipeline_cli()
-        return
-
-    if args.check_data_freshness:
-        _run_data_freshness_pipeline(args)
+    if PipelineOrchestrator(args).dispatch():
         return
 
     if args.run_roster_analysis:
