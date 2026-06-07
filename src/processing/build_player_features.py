@@ -12,6 +12,38 @@ from scripts.data_paths import get_data_paths
 from scripts.season_utils import season_to_file_token
 from scripts.build_matchup_features import compute_player_features_for_inference
 
+def _pick_column(df, candidates):
+    for c in candidates:
+        if c in df.columns:
+            return c
+    return None
+
+
+def _build_gameid_mapping_from_results(df_results: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build natural-key -> GAME_ID mapping from results with two team perspectives.
+    Natural key: GAME_DATE (YYYY-MM-DD), TEAM_ABBREVIATION, OPPONENT_ABBREVIATION, IS_HOME (1/0)
+    """
+    df = df_results.copy()
+    if "GAME_DATE" in df.columns:
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"]).dt.strftime("%Y-%m-%d")
+    home_col = _pick_column(df, ["HOME_TEAM_ABBREVIATION", "HOME_TEAM", "HOME_ABBR", "HOME"])
+    away_col = _pick_column(df, ["AWAY_TEAM_ABBREVIATION", "AWAY_TEAM", "AWAY_ABBR", "AWAY"])
+    if home_col is None or away_col is None:
+        raise RuntimeError("Could not identify home/away team abbreviation columns in game_results")
+    needed = ["GAME_ID", "GAME_DATE", home_col, away_col]
+    for c in needed:
+        if c not in df.columns:
+            raise RuntimeError(f"Missing required column in game_results: {c}")
+    df = df[needed].copy().rename(columns={home_col: "HOME_ABBR", away_col: "AWAY_ABBR"})
+    home_rows = df.rename(columns={"HOME_ABBR": "TEAM_ABBREVIATION", "AWAY_ABBR": "OPPONENT_ABBREVIATION"}).copy()
+    home_rows["IS_HOME"] = 1
+    away_rows = df.rename(columns={"AWAY_ABBR": "TEAM_ABBREVIATION", "HOME_ABBR": "OPPONENT_ABBREVIATION"}).copy()
+    away_rows["IS_HOME"] = 0
+    map_df = pd.concat([home_rows, away_rows], ignore_index=True)
+    return map_df[["GAME_DATE", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION", "IS_HOME", "GAME_ID"]]
+
+
 def build_player_features_dataset(season=None, output_scope="production"):
     season = season or "2025-26"
     token = season_to_file_token(season)
@@ -68,7 +100,58 @@ def build_player_features_dataset(season=None, output_scope="production"):
     df_home_feats["GAME_DATE"] = pd.to_datetime(df_home_feats["GAME_DATE"])
     df_results["GAME_DATE"] = pd.to_datetime(df_results["GAME_DATE"])
 
-    # Merge V1 features with results to get targets
+    # 2024-25 experimental-only natural key GAME_ID remap before merging
+    should_remap = (season == "2024-25" and output_scope == "experimental")
+
+    if should_remap:
+        # Build canonical mapping
+        map_df = _build_gameid_mapping_from_results(df_results)
+        # Detect duplicate natural keys in mapping
+        dup_counts = map_df.groupby(["GAME_DATE", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION", "IS_HOME"]).size()
+        duplicate_keys = dup_counts[dup_counts > 1]
+
+        # Prepare feature-side natural key
+        f = df_home_feats.copy()
+        f["GAME_DATE"] = pd.to_datetime(f["GAME_DATE"]).dt.strftime("%Y-%m-%d")
+        # Left join by natural key (home-only perspective, IS_HOME==1)
+        f["IS_HOME"] = 1
+        req = ["GAME_DATE", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION", "IS_HOME"]
+        for c in req:
+            if c not in f.columns:
+                raise RuntimeError(f"Required column missing in features for remap: {c}")
+        f2 = f.merge(map_df, on=req, how="left", suffixes=("", "_MAP"))
+        # Replace GAME_ID with canonical; keep original
+        f2.rename(columns={"GAME_ID": "GAME_ID_ORIG", "GAME_ID_MAP": "GAME_ID"}, inplace=True)
+
+        remapped_rows = int(f2["GAME_ID"].notna().sum())
+        total_rows = int(f2.shape[0])
+        coverage = (remapped_rows / total_rows) if total_rows else 0.0
+        # Final intersection vs results
+        res_ids = set(df_results["GAME_ID"].astype(str).tolist())
+        inter = set(f2["GAME_ID"].dropna().astype(str).unique()) & res_ids
+
+        # Write report
+        out_md = ROOT / "reports/audits/score_dataset_remap_2024_25_experimental.md"
+        out_md.parent.mkdir(parents=True, exist_ok=True)
+        lines = [
+            "# 2024-25 Experimental Remap Report — Score Dataset",
+            "",
+            f"Remapped rows: {remapped_rows}",
+            f"Unmapped rows: {total_rows - remapped_rows}",
+            f"Duplicate natural keys in mapping: {int(duplicate_keys.shape[0])}",
+            f"Final GAME_ID intersection count: {len(inter)}",
+            f"Total feature rows: {total_rows}",
+            f"Coverage: {coverage*100:.2f}%",
+        ]
+        out_md.write_text("\n".join(lines))
+
+        if coverage < 0.95:
+            raise RuntimeError("Remap coverage below 95% for 2024-25 experimental (score dataset). Aborting dataset generation.")
+
+        # Continue with merged targets using canonical GAME_ID
+        df_home_feats = f2
+
+    # Merge V1 features with results to get targets using canonical (or original) GAME_ID
     df_results_subset = df_results[["GAME_ID", "HOME_SCORE", "AWAY_SCORE"]].rename(
         columns={"HOME_SCORE": "HOME_PTS", "AWAY_SCORE": "AWAY_PTS"}
     )
