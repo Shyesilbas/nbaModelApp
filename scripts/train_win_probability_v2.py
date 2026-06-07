@@ -104,11 +104,154 @@ def get_paths(season=None, output_scope="production"):
     }
 
 
-def build_dataset(season=None, output_scope="production"):
+def _pick_column(df, candidates):
+    for c in candidates:
+        if c in df.columns:
+            return c
+    return None
+
+
+def _build_gameid_mapping_from_results(df_results: pd.DataFrame) -> pd.DataFrame:
+    """
+    Build a natural-key -> canonical GAME_ID mapping from results.
+    Natural key columns:
+      - GAME_DATE (YYYY-MM-DD)
+      - TEAM_ABBREVIATION (team side of the row)
+      - OPPONENT_ABBREVIATION (opponent side)
+      - IS_HOME (1 for home perspective, 0 for away)
+
+    Returns a DataFrame with columns:
+      ["GAME_DATE","TEAM_ABBREVIATION","OPPONENT_ABBREVIATION","IS_HOME","GAME_ID"]
+    """
+    df = df_results.copy()
+    # Normalize date
+    if "GAME_DATE" in df.columns:
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"]).dt.strftime("%Y-%m-%d")
+
+    # Identify team abbreviation columns
+    home_col = _pick_column(df, ["HOME_TEAM_ABBREVIATION", "HOME_TEAM", "HOME_ABBR", "HOME"])
+    away_col = _pick_column(df, ["AWAY_TEAM_ABBREVIATION", "AWAY_TEAM", "AWAY_ABBR", "AWAY"])
+    if home_col is None or away_col is None:
+        raise RuntimeError("Could not identify home/away team abbreviation columns in game_results")
+
+    needed = [c for c in ["GAME_ID", "GAME_DATE", home_col, away_col] if c is not None]
+    miss = [c for c in ["GAME_ID", "GAME_DATE", home_col, away_col] if c not in df.columns]
+    if miss:
+        raise RuntimeError(f"Missing required columns in game_results: {miss}")
+
+    df = df[needed].copy()
+    df.rename(columns={home_col: "HOME_ABBR", away_col: "AWAY_ABBR"}, inplace=True)
+
+    # Build two perspectives per game
+    home_rows = df.rename(columns={"HOME_ABBR": "TEAM_ABBREVIATION", "AWAY_ABBR": "OPPONENT_ABBREVIATION"}).copy()
+    home_rows["IS_HOME"] = 1
+    away_rows = df.rename(columns={"AWAY_ABBR": "TEAM_ABBREVIATION", "HOME_ABBR": "OPPONENT_ABBREVIATION"}).copy()
+    away_rows["IS_HOME"] = 0
+
+    map_df = pd.concat([home_rows, away_rows], ignore_index=True)
+    # Keep essential columns
+    return map_df[["GAME_DATE", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION", "IS_HOME", "GAME_ID"]]
+
+
+def _apply_gameid_remap_if_needed(df: pd.DataFrame, season: str | None, output_scope: str, dataset_only: bool) -> tuple[pd.DataFrame, dict]:
+    """
+    For season=="2024-25" & output_scope=="experimental" & dataset_only==True, remap GAME_IDs using
+    natural key from game_results. Produces audit stats.
+
+    Returns (df_out, stats_dict)
+    """
+    stats = {
+        "enabled": False,
+        "remapped_rows": 0,
+        "unmapped_rows": 0,
+        "duplicate_nkeys": 0,
+        "final_intersection": 0,
+    }
+
+    if not (season == "2024-25" and output_scope == "experimental" and dataset_only):
+        return df, stats
+
+    stats["enabled"] = True
+    # Load game_results to build canonical mapping
+    from scripts.data_paths import get_data_paths
+    dp = get_data_paths(season)
+    results_path = Path(dp.game_results)
+    # 2024-25 experimental dataset-only should read experimental game_results
+    if season == "2024-25" and output_scope == "experimental" and dataset_only:
+        exp_results_path = ROOT / "data/experimental/game_results_2024_25.csv"
+        # Prefer experimental path when available; otherwise keep default to avoid breaking other flows
+        if exp_results_path.exists():
+            results_path = exp_results_path
+    df_results = pd.read_csv(results_path)
+
+    # Build mapping and detect duplicate natural keys
+    map_df = _build_gameid_mapping_from_results(df_results)
+    # Duplicate detection
+    dup_counts = map_df.groupby(["GAME_DATE", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION", "IS_HOME"]).size()
+    duplicate_keys = dup_counts[dup_counts > 1]
+    stats["duplicate_nkeys"] = int(duplicate_keys.shape[0])
+
+    # Prepare feature-side natural key
+    df2 = df.copy()
+    # Normalize date string
+    df2["GAME_DATE"] = pd.to_datetime(df2["GAME_DATE"]).dt.strftime("%Y-%m-%d")
+    # IS_HOME: prefer numeric/bool column; else parse from MATCHUP
+    if "IS_HOME" in df2.columns:
+        is_home_series = df2["IS_HOME"].astype(str).str.lower().isin(["1", "true", "t", "yes"]).astype(int)
+    else:
+        # Parse MATCHUP like "LAL vs. BOS" or "LAL @ BOS"
+        m = df2.get("MATCHUP", "")
+        is_home_series = m.astype(str).str.contains("vs.").astype(int)
+    df2["IS_HOME"] = is_home_series
+
+    # Ensure required columns exist
+    req = ["GAME_DATE", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION", "IS_HOME"]
+    for c in req:
+        if c not in df2.columns:
+            raise RuntimeError(f"Required column missing in features for remap: {c}")
+
+    # Left-join by natural key
+    merged = df2.merge(map_df, on=["GAME_DATE", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION", "IS_HOME"], how="left", suffixes=("", "_MAP"))
+    # GAME_ID from features may be misaligned; keep original and add canonical
+    merged.rename(columns={"GAME_ID": "GAME_ID_ORIG", "GAME_ID_MAP": "GAME_ID"}, inplace=True)
+
+    stats["remapped_rows"] = int(merged["GAME_ID"].notna().sum())
+    stats["unmapped_rows"] = int(merged["GAME_ID"].isna().sum())
+    # Final intersection against results GAME_ID set
+    res_ids = set(df_results["GAME_ID"].astype(str).tolist())
+    inter = set(merged["GAME_ID"].dropna().astype(str).unique()) & res_ids
+    stats["final_intersection"] = int(len(inter))
+
+    # If coverage < 95%, fail fast with report
+    total_rows = merged.shape[0]
+    coverage = (stats["remapped_rows"] / total_rows) if total_rows else 0.0
+    report = []
+    report.append("# 2024-25 Experimental Remap Report — Win Dataset")
+    report.append("")
+    report.append(f"Remapped rows: {stats['remapped_rows']}")
+    report.append(f"Unmapped rows: {stats['unmapped_rows']}")
+    report.append(f"Duplicate natural keys in mapping: {stats['duplicate_nkeys']}")
+    report.append(f"Final GAME_ID intersection count: {stats['final_intersection']}")
+    report.append(f"Total feature rows: {total_rows}")
+    report.append(f"Coverage: {coverage*100:.2f}%")
+    out_md = ROOT / "reports/audits/win_dataset_remap_2024_25_experimental.md"
+    out_md.parent.mkdir(parents=True, exist_ok=True)
+    out_md.write_text("\n".join(report))
+
+    if coverage < 0.95:
+        raise RuntimeError("Remap coverage below 95% for 2024-25 experimental (win dataset). Aborting dataset generation.")
+
+    return merged, stats
+
+
+def build_dataset(season=None, output_scope="production", dataset_only: bool = False):
     paths = get_paths(season, output_scope)
     os.makedirs(paths["OUTPUT_DATASET"].parent, exist_ok=True)
     print("Loading V1 team dataset:", paths["TEAM_V1_PATH"])
     df = pd.read_csv(paths["TEAM_V1_PATH"], parse_dates=["GAME_DATE"])
+
+    # Apply experimental-only GAME_ID remap if requested context
+    df, remap_stats = _apply_gameid_remap_if_needed(df, season or "", output_scope, dataset_only)
 
     # Ensure WIN target exists
     if "WIN" not in df.columns:
@@ -511,7 +654,7 @@ if __name__ == '__main__':
     parser.add_argument("--output-scope", choices=["production", "experimental"], default="production", help="Output scope")
     args = parser.parse_args()
 
-    df_out, feature_cols = build_dataset(season=args.season, output_scope=args.output_scope)
+    df_out, feature_cols = build_dataset(season=args.season, output_scope=args.output_scope, dataset_only=args.dataset_only)
     if not args.dataset_only:
         best_name, best_model, preds_store = evaluate_and_train(df_out, feature_cols, season=args.season)
         backtest_chronological(df_out, feature_cols, best_model, season=args.season)
