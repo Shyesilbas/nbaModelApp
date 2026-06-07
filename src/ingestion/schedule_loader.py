@@ -15,6 +15,7 @@ Public API
 """
 
 import os
+from typing import Optional
 import pandas as pd
 
 # ─────────────────────────────────────────────
@@ -55,7 +56,7 @@ def _ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df[UNIFIED_COLUMNS]
 
 
-def load_full_schedule() -> pd.DataFrame:
+def load_full_schedule(season: Optional[str] = None) -> pd.DataFrame:
     """
     Load the main played-season schedule CSV (Regular Season + Play-In + Playoffs).
 
@@ -63,13 +64,17 @@ def load_full_schedule() -> pd.DataFrame:
     -------
     pd.DataFrame with UNIFIED_COLUMNS schema.
     """
-    if not os.path.exists(RAW_SCHEDULE_PATH):
+    from scripts.data_paths import get_data_paths
+    paths = get_data_paths(season)
+    raw_schedule_path = paths.raw_schedule
+
+    if not os.path.exists(raw_schedule_path):
         raise FileNotFoundError(
-            f"Main schedule file not found: {RAW_SCHEDULE_PATH}\n"
+            f"Main schedule file not found: {raw_schedule_path}\n"
             "Place the Colab-exported CSV at that path and re-run."
         )
 
-    df = pd.read_csv(RAW_SCHEDULE_PATH, dtype={"GAME_ID": str})
+    df = pd.read_csv(raw_schedule_path, dtype={"GAME_ID": str})
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
 
     # IS_PLAYOFF: coerce to bool
@@ -79,11 +84,11 @@ def load_full_schedule() -> pd.DataFrame:
         )
 
     df = _ensure_columns(df)
-    print(f"  ✅ Loaded full schedule: {len(df):,} games  ({RAW_SCHEDULE_PATH})")
+    print(f"  ✅ Loaded full schedule: {len(df):,} games  ({raw_schedule_path})")
     return df
 
 
-def load_finals_upcoming_schedule() -> pd.DataFrame:
+def load_finals_upcoming_schedule(season: Optional[str] = None) -> pd.DataFrame:
     """
     Load the upcoming NBA Finals schedule CSV (manually corrected Colab output).
 
@@ -91,13 +96,17 @@ def load_finals_upcoming_schedule() -> pd.DataFrame:
     -------
     pd.DataFrame with UNIFIED_COLUMNS schema.
     """
-    if not os.path.exists(RAW_FINALS_PATH):
+    from scripts.data_paths import get_data_paths
+    paths = get_data_paths(season)
+    raw_finals_path = paths.raw_finals_schedule
+
+    if not os.path.exists(raw_finals_path):
         raise FileNotFoundError(
-            f"Finals upcoming schedule not found: {RAW_FINALS_PATH}\n"
+            f"Finals upcoming schedule not found: {raw_finals_path}\n"
             "Place the Colab-exported CSV at that path and re-run."
         )
 
-    df = pd.read_csv(RAW_FINALS_PATH, dtype={"GAME_ID": str})
+    df = pd.read_csv(raw_finals_path, dtype={"GAME_ID": str})
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
 
     if "IS_PLAYOFF" in df.columns:
@@ -106,11 +115,11 @@ def load_finals_upcoming_schedule() -> pd.DataFrame:
         )
 
     df = _ensure_columns(df)
-    print(f"  ✅ Loaded Finals upcoming schedule: {len(df):,} games  ({RAW_FINALS_PATH})")
+    print(f"  ✅ Loaded Finals upcoming schedule: {len(df):,} games  ({raw_finals_path})")
     return df
 
 
-def load_combined_schedule(save: bool = True) -> pd.DataFrame:
+def load_combined_schedule(save: bool = True, season: Optional[str] = None) -> pd.DataFrame:
     """
     Merge the full played schedule and the upcoming Finals schedule.
 
@@ -126,8 +135,13 @@ def load_combined_schedule(save: bool = True) -> pd.DataFrame:
     -------
     pd.DataFrame with UNIFIED_COLUMNS schema sorted by GAME_DATE.
     """
-    df_main   = load_full_schedule()
-    df_finals = load_finals_upcoming_schedule()
+    from scripts.data_paths import get_data_paths
+    paths = get_data_paths(season)
+    combined_csv_path = paths.schedule_combined
+    combined_parq_path = paths.schedule_combined.replace(".csv", ".parquet")
+
+    df_main   = load_full_schedule(season)
+    df_finals = load_finals_upcoming_schedule(season)
 
     # Concatenate – Finals rows last so they override on dedup
     df_combined = pd.concat([df_main, df_finals], ignore_index=True)
@@ -144,10 +158,10 @@ def load_combined_schedule(save: bool = True) -> pd.DataFrame:
         print(f"     {stype}: {cnt:,} games")
 
     if save:
-        os.makedirs("data/processed", exist_ok=True)
-        df_combined.to_csv(COMBINED_CSV_PATH, index=False)
-        df_combined.to_parquet(COMBINED_PARQ_PATH, index=False, engine="pyarrow")
-        print(f"  💾 Saved: {COMBINED_CSV_PATH}")
-        print(f"  💾 Saved: {COMBINED_PARQ_PATH}")
+        os.makedirs(os.path.dirname(combined_csv_path), exist_ok=True)
+        df_combined.to_csv(combined_csv_path, index=False)
+        df_combined.to_parquet(combined_parq_path, index=False, engine="pyarrow")
+        print(f"  💾 Saved: {combined_csv_path}")
+        print(f"  💾 Saved: {combined_parq_path}")
 
     return df_combined

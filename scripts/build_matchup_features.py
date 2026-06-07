@@ -53,7 +53,7 @@ def _load_game_results(season: str = None):
 
 def _ensure_datetime(df, col):
     if not pd.api.types.is_datetime64_any_dtype(df[col]):
-        df[col] = pd.to_datetime(df[col])
+        df[col] = pd.to_datetime(df[col], errors="coerce")
 
 
 def build_features(home_team: str, away_team: str, prediction_date: str, season: str = None):
@@ -268,29 +268,75 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
     ]
 
     paths = get_data_paths(season)
-    core_path = ROOT / "data/production/core_players.csv"
-    if not core_path.exists():
-        core_path = ROOT / "data/canonical/core_players.csv"
     player_games_path = Path(paths.player_games_raw)
     team_games_path = Path(paths.team_games_raw)
-    
-    if not core_path.exists() or not player_games_path.exists() or not team_games_path.exists():
+
+    if not player_games_path.exists() or not team_games_path.exists():
         return {f: 0.0 for f in player_features_list}
-        
-    df_core = pd.read_csv(core_path)
+
     df_player_games = pd.read_csv(player_games_path)
     df_team_games = pd.read_csv(team_games_path)
-    
+
     pred_dt = pd.to_datetime(prediction_date)
-    df_player_games["GAME_DATE"] = pd.to_datetime(df_player_games["GAME_DATE"])
-    df_team_games["GAME_DATE"] = pd.to_datetime(df_team_games["GAME_DATE"])
-    
+    df_player_games["GAME_DATE"] = pd.to_datetime(df_player_games["GAME_DATE"], errors="coerce")
+    df_team_games["GAME_DATE"] = pd.to_datetime(df_team_games["GAME_DATE"], errors="coerce")
+
     # Filter strictly before to prevent leakage
     df_player_hist = df_player_games[df_player_games["GAME_DATE"] < pred_dt]
     df_team_hist = df_team_games[df_team_games["GAME_DATE"] < pred_dt]
-    
+
+    is_24_25 = (season == "2024-25" or (season and "2024_25" in season) or (paths.team_games_raw and "2024_25" in paths.team_games_raw))
+
+    if is_24_25:
+        # Load experimental player registry and observed stints
+        registry_path = ROOT / "data/experimental/player_registry_2024_25.csv"
+        events_path = ROOT / "data/experimental/observed_affiliation_events_2024_25.csv"
+
+        if not registry_path.exists() or not events_path.exists():
+            return {f: 0.0 for f in player_features_list}
+
+        df_reg = pd.read_csv(registry_path)
+        df_ev = pd.read_csv(events_path)
+
+        # Build dynamic core player ranks based on highest importance score per team
+        expanded_rows = []
+        for _, row in df_reg.iterrows():
+            teams_str = row["known_teams_2024_25"]
+            if pd.isna(teams_str):
+                continue
+            teams = [t.strip() for t in str(teams_str).split(",")]
+            for t in teams:
+                expanded_rows.append({
+                    "PLAYER_ID": int(row["player_id"]),
+                    "PLAYER_NAME": row["player_name"],
+                    "TEAM_ABBREVIATION": t,
+                    "IMPORTANCE_SCORE": row["highest_importance_score"]
+                })
+        df_expanded = pd.DataFrame(expanded_rows)
+
+        df_expanded = df_expanded.sort_values(by=["TEAM_ABBREVIATION", "IMPORTANCE_SCORE"], ascending=[True, False])
+        df_expanded["CORE_RANK"] = df_expanded.groupby("TEAM_ABBREVIATION").cumcount() + 1
+
+        # Check active players for prediction_date
+        pred_date_str = prediction_date
+        df_ev["end_date_clean"] = df_ev["end_date"].fillna("2099-12-31")
+        active_ev = df_ev[(df_ev["start_date"] <= pred_date_str) & (df_ev["end_date_clean"] >= pred_date_str)]
+
+        df_core = df_expanded.merge(
+            active_ev[["player_id", "team_abbreviation"]].rename(columns={"player_id": "PLAYER_ID", "team_abbreviation": "TEAM_ABBREVIATION"}),
+            on=["PLAYER_ID", "TEAM_ABBREVIATION"],
+            how="inner"
+        )
+    else:
+        core_path = ROOT / "data/production/core_players.csv"
+        if not core_path.exists():
+            core_path = ROOT / "data/canonical/core_players.csv"
+        if not core_path.exists():
+            return {f: 0.0 for f in player_features_list}
+        df_core = pd.read_csv(core_path)
+
     features = {}
-    
+
     for prefix, team in [("HOME", home_team), ("AWAY", away_team)]:
         team_core = df_core[df_core["TEAM_ABBREVIATION"] == team]
         if team_core.empty:
@@ -298,44 +344,44 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
                 if f.startswith(prefix):
                     features[f] = 0.0
             continue
-            
+
         t_games = df_team_hist[df_team_hist["TEAM_ABBREVIATION"] == team]
         if not t_games.empty:
             t_games = t_games.sort_values("GAME_DATE", ascending=False)
             last_3_game_ids = t_games["GAME_ID"].head(3).astype(str).tolist()
         else:
             last_3_game_ids = []
-            
+
         avail_count = 0
         missing_count = 0
-        
+
         top1_avail = 0
         top2_avail = 0
         top3_avail = 0
-        
+
         core_expected_min = []
         top3_expected_min = []
-        
+
         core_expected_pts = []
         core_expected_ast = []
         core_expected_reb = []
         core_expected_pra = []
-        
+
         top3_expected_pts = []
         top3_expected_ast = []
         top3_expected_reb = []
         top3_expected_pra = []
-        
+
         missing_expected_min = []
         missing_expected_pts = []
         missing_expected_ast = []
         missing_expected_reb = []
         missing_expected_pra = []
-        
+
         for _, cp_row in team_core.iterrows():
             pid = int(cp_row["PLAYER_ID"])
             rank = int(cp_row["CORE_RANK"])
-            
+
             # 1. Determine availability using proxy
             if len(last_3_game_ids) == 0:
                 is_available = True
@@ -346,7 +392,7 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
                     is_available = False
                 else:
                     is_available = (p_games_last_3["MIN"].fillna(0) > 0).any()
-            
+
             if is_available:
                 avail_count += 1
                 if rank == 1:
@@ -357,7 +403,7 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
                     top3_avail = 1
             else:
                 missing_count += 1
-                
+
             # 2. Expected Stats (10-game rolling averages)
             p_games = df_player_hist[df_player_hist["Player_ID"] == pid]
             if not p_games.empty:
@@ -373,27 +419,27 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
                 exp_ast = 0.0
                 exp_reb = 0.0
                 exp_pra = 0.0
-                
+
             core_expected_min.append(exp_min)
             core_expected_pts.append(exp_pts)
             core_expected_ast.append(exp_ast)
             core_expected_reb.append(exp_reb)
             core_expected_pra.append(exp_pra)
-            
+
             if rank <= 3:
                 top3_expected_min.append(exp_min)
                 top3_expected_pts.append(exp_pts)
                 top3_expected_ast.append(exp_ast)
                 top3_expected_reb.append(exp_reb)
                 top3_expected_pra.append(exp_pra)
-                
+
             if not is_available:
                 missing_expected_min.append(exp_min)
                 missing_expected_pts.append(exp_pts)
                 missing_expected_ast.append(exp_ast)
                 missing_expected_reb.append(exp_reb)
                 missing_expected_pra.append(exp_pra)
-        
+
         # Aggregate
         min_sum = sum(core_expected_min)
         features.update({
@@ -419,7 +465,7 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
             f"{prefix}_MISSING_CORE_EXPECTED_REB": sum(missing_expected_reb),
             f"{prefix}_MISSING_CORE_EXPECTED_PRA": sum(missing_expected_pra)
         })
-        
+
     return features
 
 

@@ -2,55 +2,20 @@
 boxscore_loader.py
 ------------------
 Builds the box score layer from the existing raw NBA game log CSVs.
-
-Source of truth (already collected from Colab — do NOT re-fetch):
-  data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv
-  data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv
-
-These logs contain full box score data (PTS, FGM, FGA, REB, AST, STL, BLK,
-TOV, PLUS_MINUS …) for every played game in the 2025-26 season.
-
-This module:
-  - Reshapes the raw game logs into clean, schema-normalised box score tables.
-  - Derives a one-row-per-game results summary table (scores + winner/loser).
-  - Joins schedule metadata (SEASON_TYPE, IS_PLAYOFF) from the combined schedule.
-
-Public API
-----------
-  load_team_boxscores()   -> pd.DataFrame
-  load_player_boxscores() -> pd.DataFrame
-  build_game_results()    -> pd.DataFrame  (also saves CSV + Parquet)
-  run_boxscore_pipeline() -> None  (full pipeline: load → save → results → export)
-
-NOTE: nba_api is intentionally NOT used here.
-The raw game logs sourced from Colab already contain the complete box score data.
 """
 
 import os
 import pandas as pd
+from pathlib import Path
+from scripts.data_paths import get_data_paths
+from scripts.season_utils import season_to_file_token
 
-# ─────────────────────────────────────────────
-# Source paths
-# ─────────────────────────────────────────────
-RAW_TEAM_PATH      = "data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv"
-RAW_PLAYER_PATH    = "data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv"
-COMBINED_SCHED     = "data/processed/schedule_combined_2025_26.csv"
-
-# Output paths
-OUT_TEAM_DIR       = "data/raw/boxscores/team"
-OUT_PLAYER_DIR     = "data/raw/boxscores/player"
-TEAM_BS_CSV        = "data/raw/boxscores/team/nba_team_boxscores_2025_26.csv"
-TEAM_BS_PARQ       = "data/raw/boxscores/team/nba_team_boxscores_2025_26.parquet"
-PLAYER_BS_CSV      = "data/raw/boxscores/player/nba_player_boxscores_2025_26.csv"
-PLAYER_BS_PARQ     = "data/raw/boxscores/player/nba_player_boxscores_2025_26.parquet"
-RESULTS_CSV        = "data/processed/game_results_2025_26.csv"
-RESULTS_PARQ       = "data/processed/game_results_2025_26.parquet"
-
+ROOT = Path(__file__).resolve().parents[2]
 
 def _normalize_season_type(game_id: str, season_type: str | None) -> str | None:
     """Normalize finals game ids to NBA Finals regardless of upstream label."""
     gid = str(game_id).zfill(10)
-    if gid.startswith("00425004"):
+    if gid.startswith("00425004") or gid.startswith("00424004"):
         return "NBA Finals"
     return season_type
 
@@ -70,20 +35,19 @@ TEAM_BS_COLS = [
 ]
 
 
-def load_team_boxscores(save: bool = True) -> pd.DataFrame:
+def load_team_boxscores(save: bool = True, season: str = None, output_scope: str = "production") -> pd.DataFrame:
     """
     Load and normalise team-level box scores from the raw game log CSV.
-
-    Returns
-    -------
-    pd.DataFrame — one row per team per game.
     """
     from src.processing.cleaning import normalize_game_matchups
 
-    if not os.path.exists(RAW_TEAM_PATH):
-        raise FileNotFoundError(f"Raw team game log not found: {RAW_TEAM_PATH}")
+    dp = get_data_paths(season)
+    raw_team_path = dp.team_games_raw
 
-    df = pd.read_csv(RAW_TEAM_PATH, dtype={"GAME_ID": str, "TEAM_ID": str})
+    if not os.path.exists(raw_team_path):
+        raise FileNotFoundError(f"Raw team game log not found: {raw_team_path}")
+
+    df = pd.read_csv(raw_team_path, dtype={"GAME_ID": str, "TEAM_ID": str})
 
     # Normalise GAME_DATE
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce").dt.strftime("%Y-%m-%d")
@@ -105,17 +69,21 @@ def load_team_boxscores(save: bool = True) -> pd.DataFrame:
     if "IS_PLAYOFF" not in df.columns and "SEASON_TYPE" in df.columns:
         df["IS_PLAYOFF"] = df["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
 
-
     df = df.sort_values(["GAME_DATE", "GAME_ID", "TEAM_ABBREVIATION"]).reset_index(drop=True)
 
     print(f"  ✅ Team box scores: {len(df):,} rows, {df['GAME_ID'].nunique():,} unique games")
 
     if save:
-        os.makedirs(OUT_TEAM_DIR, exist_ok=True)
-        df.to_csv(TEAM_BS_CSV, index=False)
-        df.to_parquet(TEAM_BS_PARQ, index=False, engine="pyarrow")
-        print(f"  💾 Saved: {TEAM_BS_CSV}")
-        print(f"  💾 Saved: {TEAM_BS_PARQ}")
+        token = season_to_file_token(season or "2025-26")
+        out_team_dir = str(ROOT / "data/raw/boxscores/team")
+        team_bs_csv = str(ROOT / f"data/raw/boxscores/team/nba_team_boxscores_{token}.csv")
+        team_bs_parq = team_bs_csv.replace(".csv", ".parquet")
+        
+        os.makedirs(out_team_dir, exist_ok=True)
+        df.to_csv(team_bs_csv, index=False)
+        df.to_parquet(team_bs_parq, index=False, engine="pyarrow")
+        print(f"  💾 Saved: {team_bs_csv}")
+        print(f"  💾 Saved: {team_bs_parq}")
 
     return df
 
@@ -136,18 +104,17 @@ PLAYER_BS_COLS = [
 ]
 
 
-def load_player_boxscores(save: bool = True) -> pd.DataFrame:
+def load_player_boxscores(save: bool = True, season: str = None, output_scope: str = "production") -> pd.DataFrame:
     """
     Load and normalise player-level box scores from the raw player log CSV.
-
-    Returns
-    -------
-    pd.DataFrame — one row per player per game.
     """
-    if not os.path.exists(RAW_PLAYER_PATH):
-        raise FileNotFoundError(f"Raw player game log not found: {RAW_PLAYER_PATH}")
+    dp = get_data_paths(season)
+    raw_player_path = dp.player_games_raw
 
-    df = pd.read_csv(RAW_PLAYER_PATH, dtype={"Game_ID": str})
+    if not os.path.exists(raw_player_path):
+        raise FileNotFoundError(f"Raw player game log not found: {raw_player_path}")
+
+    df = pd.read_csv(raw_player_path, dtype={"Game_ID": str})
 
     # Normalise column names from the player CSV schema
     rename_map = {
@@ -178,11 +145,16 @@ def load_player_boxscores(save: bool = True) -> pd.DataFrame:
     print(f"  ✅ Player box scores: {len(df):,} rows, {df['PLAYER_ID'].nunique():,} unique players")
 
     if save:
-        os.makedirs(OUT_PLAYER_DIR, exist_ok=True)
-        df.to_csv(PLAYER_BS_CSV, index=False)
-        df.to_parquet(PLAYER_BS_PARQ, index=False, engine="pyarrow")
-        print(f"  💾 Saved: {PLAYER_BS_CSV}")
-        print(f"  💾 Saved: {PLAYER_BS_PARQ}")
+        token = season_to_file_token(season or "2025-26")
+        out_player_dir = str(ROOT / "data/raw/boxscores/player")
+        player_bs_csv = str(ROOT / f"data/raw/boxscores/player/nba_player_boxscores_{token}.csv")
+        player_bs_parq = player_bs_csv.replace(".csv", ".parquet")
+        
+        os.makedirs(out_player_dir, exist_ok=True)
+        df.to_csv(player_bs_csv, index=False)
+        df.to_parquet(player_bs_parq, index=False, engine="pyarrow")
+        print(f"  💾 Saved: {player_bs_csv}")
+        print(f"  💾 Saved: {player_bs_parq}")
 
     return df
 
@@ -190,23 +162,12 @@ def load_player_boxscores(save: bool = True) -> pd.DataFrame:
 # ─────────────────────────────────────────────
 # Game results summary
 # ─────────────────────────────────────────────
-def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True) -> pd.DataFrame:
+def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True, season: str = None, output_scope: str = "production") -> pd.DataFrame:
     """
-    Build a one-row-per-game results summary:
-      HOME_SCORE, AWAY_SCORE, WINNER, LOSER, SEASON_TYPE, IS_PLAYOFF.
-
-    Strategy
-    --------
-    The team game log has one row per team per game.  We identify HOME vs AWAY
-    from the MATCHUP string ("vs." = home, "@" = away), then pivot to get
-    both teams' PTS on a single row and join schedule metadata.
-
-    Returns
-    -------
-    pd.DataFrame — one row per completed game.
+    Build a one-row-per-game results summary.
     """
     if team_bs_df is None:
-        team_bs_df = load_team_boxscores(save=False)
+        team_bs_df = load_team_boxscores(save=False, season=season, output_scope=output_scope)
 
     df = team_bs_df.copy()
     if "MATCHUP" not in df.columns:
@@ -251,16 +212,21 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
     results["GAME_STATUS"] = "Final"
 
     # Join schedule for extra playoff context fields if available
-    if os.path.exists(COMBINED_SCHED):
-        sched = pd.read_csv(COMBINED_SCHED, dtype={"GAME_ID": str})[
+    dp = get_data_paths(season)
+    combined_sched = dp.schedule_combined
+    if os.path.exists(combined_sched):
+        sched = pd.read_csv(combined_sched, dtype={"GAME_ID": str})[
             ["GAME_ID", "PLAYOFF_ROUND", "SERIES_GAME_NUMBER",
              "HOME_SERIES_WINS", "AWAY_SERIES_WINS",
              "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES"]
         ]
         results = results.merge(sched, on="GAME_ID", how="left")
 
-    # Calculate week number relative to season start Tuesday Oct 21, 2025
-    season_start = pd.to_datetime("2025-10-21")
+    # Calculate week number relative to season start
+    # 2024-25 starts Oct 22, 2024; 2025-26 starts Oct 21, 2025
+    is_24_25 = (season_to_file_token(season or "2025-26") == "2024_25")
+    season_start_str = "2024-10-22" if is_24_25 else "2025-10-21"
+    season_start = pd.to_datetime(season_start_str)
     game_dates_dt = pd.to_datetime(results["GAME_DATE"])
     results["WEEK"] = (game_dates_dt - season_start).dt.days // 7 + 1
     # For non-Regular Season, set WEEK to None
@@ -286,11 +252,19 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
     print(f"  ✅ Game results: {len(results):,} completed games")
 
     if save:
-        os.makedirs("data/processed", exist_ok=True)
-        results.to_csv(RESULTS_CSV, index=False)
-        results.to_parquet(RESULTS_PARQ, index=False, engine="pyarrow")
-        print(f"  💾 Saved: {RESULTS_CSV}")
-        print(f"  💾 Saved: {RESULTS_PARQ}")
+        token = season_to_file_token(season or "2025-26")
+        if output_scope == "experimental":
+            os.makedirs(str(ROOT / "data/experimental"), exist_ok=True)
+            results_csv = str(ROOT / f"data/experimental/game_results_{token}.csv")
+        else:
+            os.makedirs(str(ROOT / "data/processed"), exist_ok=True)
+            results_csv = dp.game_results
+            
+        results_parq = results_csv.replace(".csv", ".parquet")
+        results.to_csv(results_csv, index=False)
+        results.to_parquet(results_parq, index=False, engine="pyarrow")
+        print(f"  💾 Saved results summary: {results_csv}")
+        print(f"  💾 Saved results summary: {results_parq}")
 
     return results
 
@@ -298,24 +272,18 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
 # ─────────────────────────────────────────────
 # Full pipeline entry point
 # ─────────────────────────────────────────────
-def run_boxscore_pipeline() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def run_boxscore_pipeline(season: str = None, output_scope: str = "production") -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Run the full box score pipeline:
-      1. Load & save team box scores.
-      2. Load & save player box scores.
-      3. Build & save game results summary.
-
-    Returns
-    -------
-    (team_bs_df, player_bs_df, results_df)
+    Run the full box score pipeline.
     """
     print("STEP A: Loading team box scores...")
-    team_bs_df = load_team_boxscores(save=True)
+    team_bs_df = load_team_boxscores(save=True, season=season, output_scope=output_scope)
 
     print("\nSTEP B: Loading player box scores...")
-    player_bs_df = load_player_boxscores(save=True)
+    player_bs_df = load_player_boxscores(save=True, season=season, output_scope=output_scope)
 
     print("\nSTEP C: Building game results summary...")
-    results_df = build_game_results(team_bs_df=team_bs_df, save=True)
+    results_df = build_game_results(team_bs_df=team_bs_df, save=True, season=season, output_scope=output_scope)
 
     return team_bs_df, player_bs_df, results_df
+

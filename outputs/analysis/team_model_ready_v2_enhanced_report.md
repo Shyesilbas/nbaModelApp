@@ -1,6 +1,6 @@
 # NBA Team Model-Ready Dataset V2 (Enhanced) Report
 
-> Generated: 2026-06-06
+> Generated: 2026-06-07
 > V2 Shape: **1758 rows, 46 columns**
 > Dropped rows due to NaNs: **878**
 

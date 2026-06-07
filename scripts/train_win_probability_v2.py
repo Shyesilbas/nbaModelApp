@@ -43,36 +43,73 @@ except Exception as e:
     from scripts.build_matchup_features import compute_player_features_for_inference
 
 # Paths helper for dynamic seasons
-def get_paths(season=None):
+def get_paths(season=None, output_scope="production"):
     from scripts.data_paths import get_data_paths
     from scripts.season_utils import season_to_file_token
     dp = get_data_paths(season)
     token = season_to_file_token(season or "2025-26")
     
+    if output_scope == "experimental":
+        output_dataset = ROOT / f"data/experimental/team_win_model_ready_v2_{token}.csv"
+        feature_cols_out = ROOT / f"data/experimental/win_probability_v2_feature_columns_{token}.json"
+        model_out = ROOT / f"data/experimental/win_probability_model_v2_{token}.pkl"
+        metadata_out = ROOT / f"data/experimental/win_probability_v2_metadata_{token}.json"
+        report_md = ROOT / f"data/experimental/win_probability_v2_report_{token}.md"
+        report_compare = ROOT / f"data/experimental/win_model_v1_vs_v2_comparison_{token}.csv"
+        feature_audit = ROOT / f"data/experimental/win_model_v2_feature_audit_{token}.csv"
+        backtest_pred = ROOT / f"data/experimental/win_model_v2_backtest_predictions_{token}.csv"
+        backtest_sum = ROOT / f"data/experimental/win_model_v2_backtest_summary_{token}.json"
+        fixed_model_out = ROOT / f"data/experimental/win_probability_model_v2_fixed_{token}.pkl"
+        fixed_meta_out = ROOT / f"data/experimental/win_probability_v2_fixed_metadata_{token}.json"
+        feature_cols_out_fixed = ROOT / f"data/experimental/win_probability_v2_fixed_feature_columns_{token}.json"
+        team_perspective = ROOT / f"data/experimental/win_model_v2_backtest_team_perspective_{token}.csv"
+        game_level_path = ROOT / f"data/experimental/win_model_v2_backtest_game_level_{token}.csv"
+    else:
+        output_dataset = Path(dp.win_model_dataset)
+        feature_cols_out = ROOT / "models/win_probability_v2_feature_columns.json" if token == "2025_26" else ROOT / f"models/win_probability_v2_feature_columns_{token}.json"
+        model_out = ROOT / "models/win_probability_model_v2.pkl" if token == "2025_26" else ROOT / f"models/win_probability_model_v2_{token}.pkl"
+        metadata_out = ROOT / "models/win_probability_v2_metadata.json" if token == "2025_26" else ROOT / f"models/win_probability_v2_metadata_{token}.json"
+        report_md = ROOT / "reports/win_probability_v2_report.md" if token == "2025_26" else ROOT / f"reports/win_probability_v2_report_{token}.md"
+        report_compare = ROOT / "reports/win_model_v1_vs_v2_comparison.csv" if token == "2025_26" else ROOT / f"reports/win_model_v1_vs_v2_comparison_{token}.csv"
+        feature_audit = ROOT / "reports/win_model_v2_feature_audit.csv" if token == "2025_26" else ROOT / f"reports/win_model_v2_feature_audit_{token}.csv"
+        backtest_pred = ROOT / "reports/win_model_v2_backtest_predictions.csv" if token == "2025_26" else ROOT / f"reports/win_model_v2_backtest_predictions_{token}.csv"
+        backtest_sum = ROOT / "reports/win_model_v2_backtest_summary.json" if token == "2025_26" else ROOT / f"reports/win_model_v2_backtest_summary_{token}.json"
+        fixed_model_out = ROOT / "models/win_probability_model_v2_fixed.pkl" if token == "2025_26" else ROOT / f"models/win_probability_model_v2_fixed_{token}.pkl"
+        fixed_meta_out = ROOT / "models/win_probability_v2_fixed_metadata.json" if token == "2025_26" else ROOT / f"models/win_probability_v2_fixed_metadata_{token}.json"
+        feature_cols_out_fixed = ROOT / "models/win_probability_v2_fixed_feature_columns.json" if token == "2025_26" else ROOT / f"models/win_probability_v2_fixed_feature_columns_{token}.json"
+        team_perspective = ROOT / "reports/win_model_v2_backtest_team_perspective.csv" if token == "2025_26" else ROOT / f"reports/win_model_v2_backtest_team_perspective_{token}.csv"
+        game_level_path = ROOT / "reports/win_model_v2_backtest_game_level.csv" if token == "2025_26" else ROOT / f"reports/win_model_v2_backtest_game_level_{token}.csv"
+
+    if output_scope == "experimental" and token == "2024_25":
+        team_v1_path = ROOT / "data/experimental/team_games_features_2024_25.csv"
+    else:
+        team_v1_path = Path(dp.team_model_ready_v2)
+
     return {
-        "TEAM_V1_PATH": Path(dp.team_model_ready_v2),
-        "OUTPUT_DATASET": Path(dp.win_model_dataset),
-        "FEATURE_COLS_OUT": ROOT / "models/win_probability_v2_feature_columns.json" if token == "2025_26" else ROOT / f"models/win_probability_v2_feature_columns_{token}.json",
-        "MODEL_OUT": ROOT / "models/win_probability_model_v2.pkl" if token == "2025_26" else ROOT / f"models/win_probability_model_v2_{token}.pkl",
-        "METADATA_OUT": ROOT / "models/win_probability_v2_metadata.json" if token == "2025_26" else ROOT / f"models/win_probability_v2_metadata_{token}.json",
-        "REPORT_MD": ROOT / "reports/win_probability_v2_report.md" if token == "2025_26" else ROOT / f"reports/win_probability_v2_report_{token}.md",
-        "REPORT_COMPARE": ROOT / "reports/win_model_v1_vs_v2_comparison.csv" if token == "2025_26" else ROOT / f"reports/win_model_v1_vs_v2_comparison_{token}.csv",
-        "FEATURE_AUDIT": ROOT / "reports/win_model_v2_feature_audit.csv" if token == "2025_26" else ROOT / f"reports/win_model_v2_feature_audit_{token}.csv",
-        "BACKTEST_PRED": ROOT / "reports/win_model_v2_backtest_predictions.csv" if token == "2025_26" else ROOT / f"reports/win_model_v2_backtest_predictions_{token}.csv",
-        "BACKTEST_SUM": ROOT / "reports/win_model_v2_backtest_summary.json" if token == "2025_26" else ROOT / f"reports/win_model_v2_backtest_summary_{token}.json",
-        "fixed_model_out": ROOT / "models/win_probability_model_v2_fixed.pkl" if token == "2025_26" else ROOT / f"models/win_probability_model_v2_fixed_{token}.pkl",
-        "fixed_meta_out": ROOT / "models/win_probability_v2_fixed_metadata.json" if token == "2025_26" else ROOT / f"models/win_probability_v2_fixed_metadata_{token}.json",
-        "FEATURE_COLS_OUT_FIXED": ROOT / "models/win_probability_v2_fixed_feature_columns.json" if token == "2025_26" else ROOT / f"models/win_probability_v2_fixed_feature_columns_{token}.json",
-        "team_perspective": ROOT / "reports/win_model_v2_backtest_team_perspective.csv" if token == "2025_26" else ROOT / f"reports/win_model_v2_backtest_team_perspective_{token}.csv",
-        "game_level_path": ROOT / "reports/win_model_v2_backtest_game_level.csv" if token == "2025_26" else ROOT / f"reports/win_model_v2_backtest_game_level_{token}.csv",
+        "TEAM_V1_PATH": Path(team_v1_path),
+        "OUTPUT_DATASET": Path(output_dataset),
+        "FEATURE_COLS_OUT": Path(feature_cols_out),
+        "MODEL_OUT": Path(model_out),
+        "METADATA_OUT": Path(metadata_out),
+        "REPORT_MD": Path(report_md),
+        "REPORT_COMPARE": Path(report_compare),
+        "FEATURE_AUDIT": Path(feature_audit),
+        "BACKTEST_PRED": Path(backtest_pred),
+        "BACKTEST_SUM": Path(backtest_sum),
+        "fixed_model_out": Path(fixed_model_out),
+        "fixed_meta_out": Path(fixed_meta_out),
+        "FEATURE_COLS_OUT_FIXED": Path(feature_cols_out_fixed),
+        "team_perspective": Path(team_perspective),
+        "game_level_path": Path(game_level_path),
     }
 
 
-def build_dataset(season=None):
-    paths = get_paths(season)
+def build_dataset(season=None, output_scope="production"):
+    paths = get_paths(season, output_scope)
     os.makedirs(paths["OUTPUT_DATASET"].parent, exist_ok=True)
     print("Loading V1 team dataset:", paths["TEAM_V1_PATH"])
     df = pd.read_csv(paths["TEAM_V1_PATH"], parse_dates=["GAME_DATE"])
+
     # Ensure WIN target exists
     if "WIN" not in df.columns:
         raise RuntimeError("WIN target not found in V1 dataset")
@@ -470,9 +507,14 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--season", help="Season string (e.g. 2025-26)")
+    parser.add_argument("--dataset-only", action="store_true", help="Only build dataset, do not train/evaluate models")
+    parser.add_argument("--output-scope", choices=["production", "experimental"], default="production", help="Output scope")
     args = parser.parse_args()
 
-    df_out, feature_cols = build_dataset(season=args.season)
-    best_name, best_model, preds_store = evaluate_and_train(df_out, feature_cols, season=args.season)
-    backtest_chronological(df_out, feature_cols, best_model, season=args.season)
-    print("All artifacts saved.")
+    df_out, feature_cols = build_dataset(season=args.season, output_scope=args.output_scope)
+    if not args.dataset_only:
+        best_name, best_model, preds_store = evaluate_and_train(df_out, feature_cols, season=args.season)
+        backtest_chronological(df_out, feature_cols, best_model, season=args.season)
+        print("All artifacts saved.")
+    else:
+        print("Dataset-only mode completed. No model training performed.")

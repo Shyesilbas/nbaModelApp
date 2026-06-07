@@ -20,26 +20,45 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import joblib
 
 # Paths helper for dynamic seasons
-def get_paths(season=None):
+def get_paths(season=None, output_scope="production"):
     from scripts.data_paths import get_data_paths
     from scripts.season_utils import season_to_file_token
     dp = get_data_paths(season)
     token = season_to_file_token(season or "2025-26")
     
-    return {
-        "DATA_PATH": Path(dp.score_model_dataset),
-        "MODELS_DIR": ROOT / "models",
-        "REPORTS_DIR": ROOT / "reports",
-        "metadata_path": ROOT / "models" / f"score_model_v2_metadata.json" if token == "2025_26" else ROOT / f"models" / f"score_model_v2_metadata_{token}.json",
-        "home_model": ROOT / "models" / "home_score_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"home_score_model_v2_{token}.pkl",
-        "away_model": ROOT / "models" / "away_score_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"away_score_model_v2_{token}.pkl",
-        "total_model": ROOT / "models" / "direct_total_points_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"direct_total_points_model_v2_{token}.pkl",
-        "diff_model": ROOT / "models" / "direct_point_diff_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"direct_point_diff_model_v2_{token}.pkl",
-        "comp_csv": ROOT / "reports" / "score_v1_vs_v2_comparison.csv" if token == "2025_26" else ROOT / "reports" / f"score_v1_vs_v2_comparison_{token}.csv",
-        "bucket_csv": ROOT / "reports" / "score_v2_error_bucket_report.csv" if token == "2025_26" else ROOT / "reports" / f"score_v2_error_bucket_report_{token}.csv",
-        "naive_csv": ROOT / "reports" / "score_naive_baseline_comparison.csv" if token == "2025_26" else ROOT / "reports" / f"score_naive_baseline_comparison_{token}.csv",
-        "report_md": ROOT / "reports" / "score_prediction_v2_player_features_report.md" if token == "2025_26" else ROOT / "reports" / f"score_prediction_v2_player_features_report_{token}.md",
-    }
+    if output_scope == "experimental":
+        data_path = ROOT / f"data/experimental/team_score_model_ready_v2_{token}.csv"
+        models_dir = ROOT / "data/experimental"
+        reports_dir = ROOT / "data/experimental"
+        return {
+            "DATA_PATH": Path(data_path),
+            "MODELS_DIR": Path(models_dir),
+            "REPORTS_DIR": Path(reports_dir),
+            "metadata_path": ROOT / f"data/experimental/score_model_v2_metadata_{token}.json",
+            "home_model": ROOT / f"data/experimental/home_score_model_v2_{token}.pkl",
+            "away_model": ROOT / f"data/experimental/away_score_model_v2_{token}.pkl",
+            "total_model": ROOT / f"data/experimental/direct_total_points_model_v2_{token}.pkl",
+            "diff_model": ROOT / f"data/experimental/direct_point_diff_model_v2_{token}.pkl",
+            "comp_csv": ROOT / f"data/experimental/score_v1_vs_v2_comparison_{token}.csv",
+            "bucket_csv": ROOT / f"data/experimental/score_v2_error_bucket_report_{token}.csv",
+            "naive_csv": ROOT / f"data/experimental/score_naive_baseline_comparison_{token}.csv",
+            "report_md": ROOT / f"data/experimental/score_prediction_v2_player_features_report_{token}.md",
+        }
+    else:
+        return {
+            "DATA_PATH": Path(dp.score_model_dataset),
+            "MODELS_DIR": ROOT / "models",
+            "REPORTS_DIR": ROOT / "reports",
+            "metadata_path": ROOT / "models" / f"score_model_v2_metadata.json" if token == "2025_26" else ROOT / f"models" / f"score_model_v2_metadata_{token}.json",
+            "home_model": ROOT / "models" / "home_score_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"home_score_model_v2_{token}.pkl",
+            "away_model": ROOT / "models" / "away_score_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"away_score_model_v2_{token}.pkl",
+            "total_model": ROOT / "models" / "direct_total_points_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"direct_total_points_model_v2_{token}.pkl",
+            "diff_model": ROOT / "models" / "direct_point_diff_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"direct_point_diff_model_v2_{token}.pkl",
+            "comp_csv": ROOT / "reports" / "score_v1_vs_v2_comparison.csv" if token == "2025_26" else ROOT / "reports" / f"score_v1_vs_v2_comparison_{token}.csv",
+            "bucket_csv": ROOT / "reports" / "score_v2_error_bucket_report.csv" if token == "2025_26" else ROOT / "reports" / f"score_v2_error_bucket_report_{token}.csv",
+            "naive_csv": ROOT / "reports" / "score_naive_baseline_comparison.csv" if token == "2025_26" else ROOT / f"reports" / f"score_naive_baseline_comparison_{token}.csv",
+            "report_md": ROOT / "reports" / "score_prediction_v2_player_features_report.md" if token == "2025_26" else ROOT / "reports" / f"score_prediction_v2_player_features_report_{token}.md",
+        }
 
 ROOT = Path(__file__).resolve().parents[1]
 FEATURE_COLS_PATH = ROOT / "models/feature_columns.json"
@@ -99,8 +118,18 @@ def compute_error_bounds(y_true, y_pred, thresholds):
         bounds[f"within_plus_minus_{t}"] = pct
     return bounds
 
-def main(season=None):
-    paths = get_paths(season)
+def main(season=None, output_scope="production", dataset_only=False):
+    if dataset_only:
+        import sys
+        _root = Path(__file__).resolve().parents[1]
+        if str(_root) not in sys.path:
+            sys.path.insert(0, str(_root))
+        from src.processing.build_player_features import build_player_features_dataset
+        build_player_features_dataset(season=season, output_scope=output_scope)
+        print("Dataset-only mode completed. No models trained.")
+        return
+
+    paths = get_paths(season, output_scope)
     os.makedirs(paths["MODELS_DIR"], exist_ok=True)
     os.makedirs(paths["REPORTS_DIR"], exist_ok=True)
     print("Loading V2 player feature enhanced dataset:", paths["DATA_PATH"])
@@ -578,5 +607,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--season", help="Season string (e.g. 2025-26)")
+    parser.add_argument("--dataset-only", action="store_true", help="Only build dataset, do not train/evaluate models")
+    parser.add_argument("--output-scope", choices=["production", "experimental"], default="production", help="Output scope")
     args = parser.parse_args()
-    main(season=args.season)
+    main(season=args.season, output_scope=args.output_scope, dataset_only=args.dataset_only)

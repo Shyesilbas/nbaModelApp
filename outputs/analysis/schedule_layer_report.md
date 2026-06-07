@@ -1,11 +1,11 @@
 # Schedule Layer Report — 2025-26 NBA Season
 
-> Generated: 2026-06-06
+> Generated: 2026-06-07
 
 ## 1. Schedule Summary
 
 - **Total rows in combined schedule**: 1,323
-- **Upcoming games (from 2026-06-06 onwards)**: 5
+- **Upcoming games (from 2026-06-07 onwards)**: 5
 - **Total playoff games (IS_PLAYOFF = True)**: 93
 
 ### Season Type Distribution

@@ -45,28 +45,42 @@ def _find_and_load_csv(directory: str, default_filename: str) -> pd.DataFrame:
         f"Expected file: {default_filename}"
     )
 
-def load_team_games(data_dir: str = "data/raw/team_games") -> pd.DataFrame:
+def load_team_games(data_dir: str = "data/raw/team_games", season: Optional[str] = None) -> pd.DataFrame:
     """
     Loads raw NBA team games data from the specified directory.
     
     Args:
         data_dir (str): Path to directory holding team games csv. Defaults to 'data/raw/team_games'.
+        season (str): Optional season string.
         
     Returns:
-        pd.DataFrame: The loaded team game logs DataFrame.
+        pd.DataFrame: The loaded team game logs DataFrame, or empty if file does not exist.
     """
-    default_name = "nba_team_games_2025_26_regular_and_playoffs.csv"
-    return _find_and_load_csv(data_dir, default_name)
+    from scripts.data_paths import get_data_paths
+    paths = get_data_paths(season)
+    default_name = os.path.basename(paths.team_games_raw)
+    specific_path = os.path.join(data_dir, default_name)
+    if not os.path.exists(specific_path):
+        print(f"Raw team games file for season {season} not found: {specific_path}. Returning empty DataFrame.")
+        return pd.DataFrame()
+    return pd.read_csv(specific_path)
 
-def load_player_games(data_dir: str = "data/raw/player_games") -> pd.DataFrame:
+def load_player_games(data_dir: str = "data/raw/player_games", season: Optional[str] = None) -> pd.DataFrame:
     """
     Loads raw NBA player games data from the specified directory.
     
     Args:
         data_dir (str): Path to directory holding player games csv. Defaults to 'data/raw/player_games'.
+        season (str): Optional season string.
         
     Returns:
-        pd.DataFrame: The loaded player game logs DataFrame.
+        pd.DataFrame: The loaded player game logs DataFrame, or empty if file does not exist.
     """
-    default_name = "nba_player_games_2025_26_regular_and_playoffs.csv"
-    return _find_and_load_csv(data_dir, default_name)
+    from scripts.data_paths import get_data_paths
+    paths = get_data_paths(season)
+    default_name = os.path.basename(paths.player_games_raw)
+    specific_path = os.path.join(data_dir, default_name)
+    if not os.path.exists(specific_path):
+        print(f"Raw player games file for season {season} not found: {specific_path}. Returning empty DataFrame.")
+        return pd.DataFrame()
+    return pd.read_csv(specific_path)

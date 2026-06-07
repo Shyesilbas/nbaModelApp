@@ -135,7 +135,7 @@ def _run_schedule_context_pipeline():
     print("============================================================\n")
 
 
-def _run_boxscore_pipeline_cli():
+def _run_boxscore_pipeline_cli(args):
     """
     Full pipeline for --fetch-boxscores (now using BoxscoreService):
     """
@@ -146,7 +146,7 @@ def _run_boxscore_pipeline_cli():
     print("============================================================\n")
 
     print("STEP 1: Building box score tables from raw game logs and exporting JSON...")
-    svc = BoxscoreService(save=True)
+    svc = BoxscoreService(save=True, season=args.season, output_scope=args.output_scope)
     team_bs_df, player_bs_df, results_df = svc.run_and_export()
 
     # Summary report
@@ -387,10 +387,25 @@ def _run_sync_pipeline(args):
     print("\nSTEP 4: Saving engineered features...")
     os.makedirs(args.output_dir, exist_ok=True)
     
-    team_csv = os.path.join(args.output_dir, "team_games_features_2025_26.csv")
-    team_parq = os.path.join(args.output_dir, "team_games_features_2025_26.parquet")
-    player_csv = os.path.join(args.output_dir, "player_games_features_2025_26.csv")
-    player_parq = os.path.join(args.output_dir, "player_games_features_2025_26.parquet")
+    from scripts.data_paths import get_data_paths
+    from scripts.season_utils import season_to_file_token, normalize_season
+    paths = get_data_paths(args.season)
+    season = normalize_season(args.season or "2025-26")
+    token = season_to_file_token(season)
+
+    # Resolve output directory
+    out_dir = "data/experimental" if args.output_scope == "experimental" else args.output_dir
+    os.makedirs(out_dir, exist_ok=True)
+
+    if args.output_scope == "experimental":
+        team_csv = os.path.join(out_dir, f"team_games_features_{token}.csv")
+        player_csv = os.path.join(out_dir, f"player_games_features_{token}.csv")
+    else:
+        team_csv = paths.team_features
+        player_csv = paths.player_features
+
+    team_parq = team_csv.replace(".csv", ".parquet")
+    player_parq = player_csv.replace(".csv", ".parquet")
 
     df_team_features.to_csv(team_csv, index=False)
     df_team_features.to_parquet(team_parq, index=False, engine="pyarrow")
@@ -409,10 +424,10 @@ def _run_sync_pipeline(args):
     print(f"  Team games sync: {'✅ MATCH' if team_match else '❌ MISMATCH'}")
     print(f"  Player games sync: {'✅ MATCH' if player_match else '❌ MISMATCH'}")
 
-    report_path = "outputs/analysis/pipeline_sync_report.md"
+    report_path = f"outputs/analysis/pipeline_sync_report_{token}.md"
     os.makedirs(os.path.dirname(report_path), exist_ok=True)
     with open(report_path, "w") as f:
-        f.write("# NBA ML Project — Feature Pipeline Sync Report\n\n")
+        f.write(f"# NBA ML Project — Feature Pipeline Sync Report ({season})\n\n")
         f.write(f"> Generated: {date.today()}\n")
         f.write(f"> Sync Status: **{sync_status}**\n\n")
         f.write("## 1. Row Count Verification\n\n")
@@ -423,7 +438,7 @@ def _run_sync_pipeline(args):
         
         f.write("## 2. Inclusions & Corrections\n\n")
         if sync_status == "SUCCESS":
-            f.write("✅ **Play-In Tournament Games Synchronized**: The features dataset now successfully includes all Play-In tournament games (6 games, representing 12 team rows and 126 player rows).\n\n")
+            f.write("✅ **Play-In Tournament Games Synchronized**: The features dataset now successfully includes all Play-In tournament games.\n\n")
         else:
             f.write("❌ **Mismatch Alert**: There is a row count mismatch between raw files and engineered features. Check sorting and cleaning code for row-dropping operations.\n\n")
             
@@ -510,10 +525,14 @@ def _run_build_enhanced_v2(args):
     print("Building model-ready V2 dataset (dropping NaNs)...")
     df_team_model_v2, dropped_count = build_team_model_dataset_v2(df_team_features_with_opp)
     
-    processed_dir = "data/processed"
+    from scripts.season_utils import season_to_file_token, normalize_season
+    season = normalize_season(args.season or "2025-26")
+    token = season_to_file_token(season)
+
+    processed_dir = "data/experimental" if args.output_scope == "experimental" else "data/processed"
     os.makedirs(processed_dir, exist_ok=True)
-    v2_csv_path = os.path.join(processed_dir, "team_model_ready_v2_2025_26.csv")
-    v2_parq_path = os.path.join(processed_dir, "team_model_ready_v2_2025_26.parquet")
+    v2_csv_path = os.path.join(processed_dir, f"team_model_ready_v2_{token}.csv")
+    v2_parq_path = os.path.join(processed_dir, f"team_model_ready_v2_{token}.parquet")
     df_team_model_v2.to_csv(v2_csv_path, index=False)
     df_team_model_v2.to_parquet(v2_parq_path, index=False, engine="pyarrow")
     
@@ -826,8 +845,15 @@ def _run_update_data(args):
     """Delegate update-data pipeline to UpdateDataService."""
     from src.ingestion.update_data_service import UpdateDataService
 
-    svc = UpdateDataService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir, fetch_workers=args.fetch_workers, skip_post_update_rebuilds=args.skip_post_update_rebuilds)
+    svc = UpdateDataService(
+        raw_team_dir=args.raw_team_dir, 
+        raw_player_dir=args.raw_player_dir, 
+        fetch_workers=args.fetch_workers, 
+        skip_post_update_rebuilds=args.skip_post_update_rebuilds,
+        season=args.season
+    )
     svc.run(args)
+    return
 
     from src.validation.data_freshness_service import DataFreshnessService
     from src.ingestion.team_games_fetcher import fetch_missing_team_games_by_game_ids, append_team_games_to_raw_dataset
@@ -1000,6 +1026,13 @@ def main():
         type=str, 
         default=None,
         help="Season string (e.g., 2025-26)"
+    )
+    parser.add_argument(
+        "--output-scope", 
+        type=str, 
+        choices=["production", "experimental"],
+        default="production",
+        help="Output scope (production or experimental)"
     )
     parser.add_argument(
         "--raw-team-dir", 

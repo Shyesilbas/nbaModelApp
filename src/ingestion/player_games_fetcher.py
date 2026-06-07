@@ -88,7 +88,7 @@ def fetch_player_games_for_season(season: str = "2025-26", season_types: Optiona
             
     return combined_df[EXPECTED_COLUMNS]
 
-def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFrame] = None, season: Optional[str] = None) -> pd.DataFrame:
     """
     Fallback method to fetch player games using BoxScoreTraditionalV2 for a single game.
     Resolves metadata using the schedule context.
@@ -107,7 +107,9 @@ def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.Data
             
         # We need schedule context to fill GAME_DATE, SEASON_TYPE, MATCHUP
         if schedule_df is None:
-            schedule_csv = "data/processed/schedule_combined_2025_26.csv"
+            from scripts.data_paths import get_data_paths
+            paths = get_data_paths(season)
+            schedule_csv = paths.schedule_combined
             if os.path.exists(schedule_csv):
                 schedule_df = pd.read_csv(schedule_csv, dtype={"GAME_ID": str})
                 
@@ -130,12 +132,16 @@ def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.Data
         home_team = sched_row["HOME_TEAM_ABBREVIATION"]
         away_team = sched_row["AWAY_TEAM_ABBREVIATION"]
         
+        from scripts.season_utils import normalize_season
+        norm_season = normalize_season(season or "2025-26")
+        start_year = int(norm_season.split("-")[0])
+        
         if season_type == "Regular Season":
-            season_id = 22025
+            season_id = 20000 + start_year
         elif season_type == "PlayIn":
-            season_id = 52025
+            season_id = 50000 + start_year
         else:
-            season_id = 42025
+            season_id = 40000 + start_year
             
         # Find which team won to determine WL for players
         team_df = bs.get_data_frames()[1]
@@ -266,7 +272,7 @@ def fetch_missing_player_games_by_game_ids(game_ids: List[str], season: str = "2
     if missing_targets:
         logger.info(f"Using BoxScoreTraditionalV2 fallback for player games: {missing_targets}")
         for gid in missing_targets:
-            df_fallback = fetch_player_games_from_boxscore(gid, schedule_df)
+            df_fallback = fetch_player_games_from_boxscore(gid, schedule_df, season=season)
             if not df_fallback.empty:
                 all_logs.append(df_fallback)
                 
@@ -275,22 +281,27 @@ def fetch_missing_player_games_by_game_ids(game_ids: List[str], season: str = "2
         
     return pd.concat(all_logs, ignore_index=True)
 
-def append_player_games_to_raw_dataset(new_rows: pd.DataFrame) -> int:
+def append_player_games_to_raw_dataset(new_rows: pd.DataFrame, season: Optional[str] = None) -> int:
     """
     Appends new player game log rows to the raw player games dataset,
     deduplicates by Player_ID + Game_ID, and saves both CSV and Parquet.
     
     Returns the total count of rows after update.
     """
+    from scripts.data_paths import get_data_paths
+    paths = get_data_paths(season)
+    raw_player_csv = paths.player_games_raw
+    raw_player_parquet = paths.player_games_raw.replace(".csv", ".parquet")
+
     if new_rows is None or new_rows.empty:
         logger.info("No new player rows to append.")
-        if os.path.exists(RAW_PLAYER_CSV):
-            return len(pd.read_csv(RAW_PLAYER_CSV))
+        if os.path.exists(raw_player_csv):
+            return len(pd.read_csv(raw_player_csv))
         return 0
         
     # Load existing
-    if os.path.exists(RAW_PLAYER_CSV):
-        df_existing = pd.read_csv(RAW_PLAYER_CSV, dtype={"Game_ID": str, "Player_ID": int})
+    if os.path.exists(raw_player_csv):
+        df_existing = pd.read_csv(raw_player_csv, dtype={"Game_ID": str, "Player_ID": int})
         df_combined = pd.concat([df_existing, new_rows], ignore_index=True)
     else:
         df_combined = new_rows.copy()
@@ -308,12 +319,12 @@ def append_player_games_to_raw_dataset(new_rows: pd.DataFrame) -> int:
     df_combined = df_combined[EXPECTED_COLUMNS]
     
     # Save CSV
-    os.makedirs(os.path.dirname(RAW_PLAYER_CSV), exist_ok=True)
-    df_combined.to_csv(RAW_PLAYER_CSV, index=False)
-    logger.info(f"Saved: {RAW_PLAYER_CSV} ({len(df_combined)} rows)")
+    os.makedirs(os.path.dirname(raw_player_csv), exist_ok=True)
+    df_combined.to_csv(raw_player_csv, index=False)
+    logger.info(f"Saved: {raw_player_csv} ({len(df_combined)} rows)")
     
     # Save Parquet
-    df_combined.to_parquet(RAW_PLAYER_PARQUET, index=False, engine="pyarrow")
-    logger.info(f"Saved: {RAW_PLAYER_PARQUET}")
+    df_combined.to_parquet(raw_player_parquet, index=False, engine="pyarrow")
+    logger.info(f"Saved: {raw_player_parquet}")
     
     return len(df_combined)
