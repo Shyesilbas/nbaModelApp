@@ -22,10 +22,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
+from scripts.data_paths import get_data_paths
 import joblib
 
 # Paths (adjust if dataset lives elsewhere)
-DATA_PATH = "data/processed/team_model_ready_v2_2025_26.csv"
+DATA_PATH = get_data_paths("2025-26").team_model_ready_v2
 MODEL_OUT = "models/win_probability_model.pkl"
 METRICS_DIR = "reports/metrics"
 
@@ -208,9 +209,16 @@ def build_and_eval(df, target_col="WIN"):
 
 
 if __name__ == "__main__":
-    # Load dataset
-    print("Loading dataset:", DATA_PATH)
-    df = pd.read_csv(DATA_PATH)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--season", help="Season string (e.g. 2025-26)")
+    args = parser.parse_args()
+
+    from scripts.data_paths import get_data_paths
+    data_path = get_data_paths(args.season).team_model_ready_v2
+
+    print("Loading dataset:", data_path)
+    df = pd.read_csv(data_path)
     print("Rows, cols:", df.shape)
     metrics = build_and_eval(df, target_col="WIN")
     print("Done. Metrics written to:", METRICS_DIR)

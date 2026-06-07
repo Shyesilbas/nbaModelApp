@@ -12,28 +12,29 @@ import joblib
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-HOME_MODEL_PATH = ROOT / "models/home_score_model_v2.pkl"
-AWAY_MODEL_PATH = ROOT / "models/away_score_model_v2.pkl"
-TOTAL_MODEL_PATH = ROOT / "models/direct_total_points_model_v2.pkl"
-DIFF_MODEL_PATH = ROOT / "models/direct_point_diff_model_v2.pkl"
-METADATA_PATH = ROOT / "models/score_model_v2_metadata.json"
 
 # Insert ROOT to sys.path to allow imports from scripts
 sys.path.insert(0, str(ROOT))
+from scripts.artifact_paths import resolve_artifact_path
 from scripts.build_matchup_features import build_features  # type: ignore
 
 
 def load_models_and_metadata():
-    for p in [HOME_MODEL_PATH, AWAY_MODEL_PATH, TOTAL_MODEL_PATH, DIFF_MODEL_PATH, METADATA_PATH]:
+    home_model_path = resolve_artifact_path("score_model", "home_model_path", "models/home_score_model_v2.pkl")
+    away_model_path = resolve_artifact_path("score_model", "away_model_path", "models/away_score_model_v2.pkl")
+    total_model_path = resolve_artifact_path("score_model", "total_model_path", "models/direct_total_points_model_v2.pkl")
+    diff_model_path = resolve_artifact_path("score_model", "margin_model_path", "models/direct_point_diff_model_v2.pkl")
+    metadata_path = resolve_artifact_path("score_model", "metadata_path", "models/score_model_v2_metadata.json")
+    for p in [home_model_path, away_model_path, total_model_path, diff_model_path, metadata_path]:
         if not p.exists():
             raise FileNotFoundError(f"Model file not found at {p}. Run training script prepare_score_model.py first.")
             
-    home_model = joblib.load(HOME_MODEL_PATH)
-    away_model = joblib.load(AWAY_MODEL_PATH)
-    total_model = joblib.load(TOTAL_MODEL_PATH)
-    diff_model = joblib.load(DIFF_MODEL_PATH)
+    home_model = joblib.load(home_model_path)
+    away_model = joblib.load(away_model_path)
+    total_model = joblib.load(total_model_path)
+    diff_model = joblib.load(diff_model_path)
     
-    with open(METADATA_PATH, "r") as f:
+    with open(metadata_path, "r") as f:
         metadata = json.load(f)
         
     return home_model, away_model, total_model, diff_model, metadata

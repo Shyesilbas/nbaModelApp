@@ -1,0 +1,17 @@
+path,purpose,source,row_count,key_columns,downstream_consumers
+data/raw/schedule/nba_schedule_2025_26.csv,League schedule calendar,nba_api / Colab,1316,GAME_ID;GAME_DATE;HOME_TEAM;AWAY_TEAM,DataFreshnessService;update_schedule_files
+data/raw/schedule/nba_finals_upcoming_2025_26.csv,Fallback upcoming Finals matchups schedule,Manual entry,7,GAME_ID;GAME_DATE;HOME_TEAM;AWAY_TEAM,DataFreshnessService;upcoming_games_context_2025_26
+data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv,Raw team game stats,nba_api / Colab,2636,GAME_ID;TEAM_ID;GAME_DATE;PTS,build_team_features;load_team_games
+data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv,Raw player game stats,nba_api / Colab,27902,Game_ID;Player_ID;GAME_DATE;MIN;PTS,build_player_features;load_player_games
+data/raw/boxscores/team/nba_team_boxscores_2025_26.csv,Scraped team box scores,BoxscoreService / nba_api,2636,GAME_ID;TEAM_ID;GAME_DATE;PTS,BoxscoreService;game_results_regeneration
+data/raw/boxscores/player/nba_player_boxscores_2025_26.csv,Scraped player box scores,BoxscoreService / nba_api,27902,GAME_ID;PLAYER_ID;GAME_DATE;MIN;PTS,BoxscoreService;player_availability_features
+data/processed/game_results_2025_26.csv,Normalized matchups and outcomes,Pivoted raw team box scores,1318,GAME_ID;GAME_DATE;HOME_TEAM_ABBREVIATION;AWAY_TEAM_ABBREVIATION;HOME_SCORE;AWAY_SCORE,build_matchup_features;FastAPI web dashboard
+data/processed/schedule_combined_2025_26.csv,Merged schedule and results calendar,Pivoted raw schedules + game_results,1323,GAME_ID;GAME_DATE;HOME_TEAM;AWAY_TEAM;STATUS,FastAPI web service;upcoming_games_context
+data/processed/upcoming_games_context_2025_26.csv,Context for next 5 upcoming games,Filtered schedule_combined + team forms,5,GAME_ID;GAME_DATE;HOME_TEAM;AWAY_TEAM,Vite frontend Dashboard
+data/features/team_games_features_2025_26.csv,Engineered team rolling features,team_features.py,2636,GAME_ID;TEAM_ID;PTS_LAST_10;WINRATE_LAST_10;PTS_ALLOWED_LAST_10,build_matchup_features;model_dataset_builder
+data/features/player_games_features_2025_26.csv,Engineered player rolling features,player_features.py,27902,Game_ID;Player_ID;PTS_LAST_5;MIN_LAST_5,build_matchup_features;model_dataset_builder
+data/production/core_players.csv,Discovered core rosters per team,Canonical analytical query,590,TEAM_ABBREVIATION;PLAYER_ID;PLAYER_NAME;CORE_RANK,train_win_probability_v2;prepare_score_model;build_matchup_features
+data/production/team_win_model_ready_v2_player_features.csv,Win model production training dataset,Merged V2 team features + core player features,1758,GAME_ID;TEAM_ABBREVIATION;WIN;PTS_LAST_10;HOME_CORE_PLAYERS_AVAILABLE_COUNT,train_win_probability_v2
+data/production/team_score_model_ready_v2_player_features.csv,Score model production training dataset,Pivoted V2 team features + core player features,879,GAME_ID;HOME_PTS;AWAY_PTS;PTS_LAST_10;HOME_CORE_PLAYERS_AVAILABLE_COUNT,prepare_score_model
+data/experimental/team_win_model_ready_v3_ema_experimental.csv,EMA Win model experiment dataset,build_team_model_dataset_v3 with EMA features,1758,GAME_ID;TEAM_ABBREVIATION;WIN;PTS_EMA_10;WINRATE_EMA_10,Experimental EMA tuning
+data/experimental/team_score_model_ready_v3_ema_experimental.csv,EMA Score model experiment dataset,build_team_model_dataset_v3 with EMA features,879,GAME_ID;HOME_PTS;AWAY_PTS;PTS_EMA_10,Experimental EMA tuning

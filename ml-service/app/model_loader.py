@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[2]
-MODEL_PATH = ROOT / "models" / "win_probability_model.pkl"
-FEATURES_PATH = ROOT / "models" / "feature_columns.json"
-METADATA_PATH = ROOT / "models" / "model_metadata.json"
+import sys
+sys.path.insert(0, str(ROOT))
+from scripts.artifact_paths import resolve_artifact_path
 
 
 class ModelLoader:
@@ -16,15 +16,18 @@ class ModelLoader:
         self.metadata = None
 
     def load(self):
-        if not MODEL_PATH.exists():
-            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
-        if not FEATURES_PATH.exists():
-            raise FileNotFoundError(f"Feature columns file not found at {FEATURES_PATH}")
-        self.model = joblib.load(MODEL_PATH)
-        with open(FEATURES_PATH, "r") as f:
+        model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model.pkl")
+        features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns.json")
+        metadata_path = resolve_artifact_path("win_model", "metadata_path", "models/model_metadata.json")
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model file not found at {model_path}")
+        if not features_path.exists():
+            raise FileNotFoundError(f"Feature columns file not found at {features_path}")
+        self.model = joblib.load(model_path)
+        with open(features_path, "r") as f:
             self.feature_cols = json.load(f)
-        if METADATA_PATH.exists():
-            with open(METADATA_PATH, "r") as f:
+        if metadata_path.exists():
+            with open(metadata_path, "r") as f:
                 self.metadata = json.load(f)
 
     def predict_proba(self, X):
@@ -38,13 +41,6 @@ class ModelLoader:
         return None
 
 
-SCORE_HOME_MODEL_PATH = ROOT / "models" / "home_score_model_v2.pkl"
-SCORE_AWAY_MODEL_PATH = ROOT / "models" / "away_score_model_v2.pkl"
-SCORE_TOTAL_MODEL_PATH = ROOT / "models" / "direct_total_points_model_v2.pkl"
-SCORE_DIFF_MODEL_PATH = ROOT / "models" / "direct_point_diff_model_v2.pkl"
-SCORE_METADATA_PATH = ROOT / "models" / "score_model_v2_metadata.json"
-
-
 class ScoreModelLoader:
     def __init__(self):
         self.home_model = None
@@ -54,18 +50,22 @@ class ScoreModelLoader:
         self.metadata = None
 
     def load(self):
-        for p in [SCORE_HOME_MODEL_PATH, SCORE_AWAY_MODEL_PATH, SCORE_TOTAL_MODEL_PATH, SCORE_DIFF_MODEL_PATH, SCORE_METADATA_PATH]:
+        home_model_path = resolve_artifact_path("score_model", "home_model_path", "models/home_score_model_v2.pkl")
+        away_model_path = resolve_artifact_path("score_model", "away_model_path", "models/away_score_model_v2.pkl")
+        total_model_path = resolve_artifact_path("score_model", "total_model_path", "models/direct_total_points_model_v2.pkl")
+        diff_model_path = resolve_artifact_path("score_model", "margin_model_path", "models/direct_point_diff_model_v2.pkl")
+        metadata_path = resolve_artifact_path("score_model", "metadata_path", "models/score_model_v2_metadata.json")
+        for p in [home_model_path, away_model_path, total_model_path, diff_model_path, metadata_path]:
             if not p.exists():
                 raise FileNotFoundError(f"Score model file not found at {p}")
-        self.home_model = joblib.load(SCORE_HOME_MODEL_PATH)
-        self.away_model = joblib.load(SCORE_AWAY_MODEL_PATH)
-        self.total_model = joblib.load(SCORE_TOTAL_MODEL_PATH)
-        self.diff_model = joblib.load(SCORE_DIFF_MODEL_PATH)
-        with open(SCORE_METADATA_PATH, "r") as f:
+        self.home_model = joblib.load(home_model_path)
+        self.away_model = joblib.load(away_model_path)
+        self.total_model = joblib.load(total_model_path)
+        self.diff_model = joblib.load(diff_model_path)
+        with open(metadata_path, "r") as f:
             self.metadata = json.load(f)
 
     def get_version(self) -> Optional[str]:
         if self.metadata:
             return self.metadata.get("model_name") or "score_v2"
         return "score_v2"
-

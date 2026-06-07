@@ -988,13 +988,19 @@ def _run_update_data(args):
         rebuilds_ran=rebuilds_ran
     )
     
-    print("\n" + "="*60)
-    print("🎉 LOCAL DATA UPDATE PIPELINE COMPLETE! 🎉")
-    print("="*60 + "\n")
+    print("\n" + "="*20)
+    print(" LOCAL DATA UPDATE PIPELINE COMPLETE ")
+    print("="*20 + "\n")
 
 
 def main():
     parser = argparse.ArgumentParser(description="NBA ML Project Preprocessing & Feature Engineering Pipeline")
+    parser.add_argument(
+        "--season", 
+        type=str, 
+        default=None,
+        help="Season string (e.g., 2025-26)"
+    )
     parser.add_argument(
         "--raw-team-dir", 
         type=str, 
@@ -1086,12 +1092,25 @@ def main():
     )
     args = parser.parse_args()
 
+    from scripts.data_paths import get_data_paths
+    from scripts.season_utils import season_to_file_token, normalize_season
+    
+    paths = get_data_paths(args.season)
+    season = normalize_season(args.season or "2025-26")
+    token = season_to_file_token(season)
+
+    # Overwrite dirs dynamically if a specific season is provided
+    if args.season:
+        args.raw_team_dir = os.path.dirname(paths.team_games_raw)
+        args.raw_player_dir = os.path.dirname(paths.player_games_raw)
+        args.output_dir = os.path.dirname(paths.team_features)
+
     if PipelineOrchestrator(args).dispatch():
         return
 
     if args.run_roster_analysis:
         from src.analysis.roster_analysis import run_roster_analysis
-        player_csv = os.path.join(args.raw_player_dir, "nba_player_games_2025_26_regular_and_playoffs.csv")
+        player_csv = paths.player_games_raw
         roster_df, core_players_df, star_candidates_df, multi_team_players_df, player_name_lookup_df = run_roster_analysis(player_csv)
         
         print("\n============================================================")
@@ -1246,10 +1265,10 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     
     # File paths
-    team_csv_path = os.path.join(args.output_dir, "team_games_features_2025_26.csv")
-    team_parquet_path = os.path.join(args.output_dir, "team_games_features_2025_26.parquet")
-    player_csv_path = os.path.join(args.output_dir, "player_games_features_2025_26.csv")
-    player_parquet_path = os.path.join(args.output_dir, "player_games_features_2025_26.parquet")
+    team_csv_path = paths.team_features
+    team_parquet_path = paths.team_features.replace(".csv", ".parquet")
+    player_csv_path = paths.player_features
+    player_parquet_path = paths.player_features.replace(".csv", ".parquet")
     
     # Save team games
     print(f"Saving team features to CSV: {team_csv_path}")
@@ -1274,8 +1293,8 @@ def main():
         processed_dir = "data/processed"
         os.makedirs(processed_dir, exist_ok=True)
         
-        model_csv_path = os.path.join(processed_dir, "team_model_ready_2025_26.csv")
-        model_parquet_path = os.path.join(processed_dir, "team_model_ready_2025_26.parquet")
+        model_csv_path = os.path.join(processed_dir, f"team_model_ready_{token}.csv")
+        model_parquet_path = os.path.join(processed_dir, f"team_model_ready_{token}.parquet")
         
         print(f"Saving model-ready team features (V1) to CSV: {model_csv_path}")
         df_team_model.to_csv(model_csv_path, index=False)
@@ -1292,8 +1311,8 @@ def main():
         # Build V2 Model-Ready Dataset
         df_team_model_v2, dropped_count_v2 = build_team_model_dataset_v2(df_team_features_with_opp)
         
-        model_v2_csv_path = os.path.join(processed_dir, "team_model_ready_v2_2025_26.csv")
-        model_v2_parquet_path = os.path.join(processed_dir, "team_model_ready_v2_2025_26.parquet")
+        model_v2_csv_path = paths.team_model_ready_v2
+        model_v2_parquet_path = paths.team_model_ready_v2.replace(".csv", ".parquet")
         
         print(f"Saving model-ready team features (V2) to CSV: {model_v2_csv_path}")
         df_team_model_v2.to_csv(model_v2_csv_path, index=False)
@@ -1386,8 +1405,8 @@ def main():
             # Build V3 Model-Ready Dataset
             df_team_model_v3, dropped_count_v3 = build_team_model_dataset_v3(df_team_features_with_core)
             
-            model_v3_csv_path = os.path.join(processed_dir, "team_model_ready_v3_2025_26.csv")
-            model_v3_parquet_path = os.path.join(processed_dir, "team_model_ready_v3_2025_26.parquet")
+            model_v3_csv_path = os.path.join(processed_dir, f"team_model_ready_v3_{token}.csv")
+            model_v3_parquet_path = os.path.join(processed_dir, f"team_model_ready_v3_{token}.parquet")
             
             print(f"Saving model-ready team features (V3) to CSV: {model_v3_csv_path}")
             df_team_model_v3.to_csv(model_v3_csv_path, index=False)
