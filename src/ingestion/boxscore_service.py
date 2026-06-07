@@ -10,13 +10,15 @@ OUT_DIR = "frontend/public/data"
 class BoxscoreService:
     """Service that runs the boxscore pipeline and exports frontend JSONs."""
 
-    def __init__(self, save: bool = True):
+    def __init__(self, save: bool = True, season: str = None, output_scope: str = "production"):
         self.save = save
+        self.season = season
+        self.output_scope = output_scope
 
     def run_and_export(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        team_bs_df, player_bs_df, results_df = run_boxscore_pipeline()
+        team_bs_df, player_bs_df, results_df = run_boxscore_pipeline(season=self.season, output_scope=self.output_scope)
 
-        if self.save:
+        if self.save and self.output_scope != "experimental":
             os.makedirs(OUT_DIR, exist_ok=True)
 
             def _save_json(df: pd.DataFrame, filename: str):

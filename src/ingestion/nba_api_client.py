@@ -36,6 +36,8 @@ def call_nba_api(endpoint_class: Any, *args, max_retries: int = 5, initial_backo
             
             logger.info(f"API Request: {endpoint_class.__name__} (Attempt {attempt}/{max_retries})")
             
+            if "timeout" not in kwargs:
+                kwargs["timeout"] = 120
             # Execute the call (let nba_api use its default headers)
             instance = endpoint_class(*args, **kwargs)
             return instance

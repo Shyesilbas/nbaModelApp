@@ -39,4 +39,5 @@ Score Prediction:
 ## Cross-Season Infrastructure
 - Phase 1: season path refactor completed
 - Phase 2: canonical ingestion and roster snapshot foundations completed
-- Next: 2024-25 pilot ingestion after explicit user approval
+- Roster Snapshot Repair Phase: Completed successfully. Unique player registry cleaned, observed affiliation events built, roster generator refactored, and all validation checks passing.
+- Next: 2024-25 pilot ingestion and cross-season model dataset generation.

@@ -28,7 +28,8 @@ from src.ingestion.schedule_loader import load_combined_schedule
 def load_local_datasets(
     raw_team_dir: str = "data/raw/team_games",
     raw_player_dir: str = "data/raw/player_games",
-    refresh_schedule: bool = True
+    refresh_schedule: bool = True,
+    season: Optional[str] = None
 ) -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     """
     Loads raw team games, raw player games, and the combined schedule dataset.
@@ -40,24 +41,26 @@ def load_local_datasets(
     df_schedule = None
 
     try:
-        df_team = load_team_games(raw_team_dir)
+        df_team = load_team_games(raw_team_dir, season=season)
     except Exception as e:
         print(f"⚠️ Error loading team games from '{raw_team_dir}': {e}")
 
     try:
-        df_player = load_player_games(raw_player_dir)
+        df_player = load_player_games(raw_player_dir, season=season)
     except Exception as e:
         print(f"⚠️ Error loading player games from '{raw_player_dir}': {e}")
 
     try:
         if refresh_schedule:
-            df_schedule = load_combined_schedule(save=True)
+            df_schedule = load_combined_schedule(save=True, season=season)
         else:
-            schedule_csv = "data/processed/schedule_combined_2025_26.csv"
+            from scripts.data_paths import get_data_paths
+            paths = get_data_paths(season)
+            schedule_csv = paths.schedule_combined
             if os.path.exists(schedule_csv):
                 df_schedule = pd.read_csv(schedule_csv, dtype={"GAME_ID": str})
             else:
-                df_schedule = load_combined_schedule(save=True)
+                df_schedule = load_combined_schedule(save=True, season=season)
     except Exception as e:
         print(f"⚠️ Error loading combined schedule: {e}")
 

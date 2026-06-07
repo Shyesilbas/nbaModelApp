@@ -42,7 +42,7 @@ class PipelineOrchestrator:
             main_mod._run_schedule_context_pipeline()
             return True
         if self.args.fetch_boxscores:
-            main_mod._run_boxscore_pipeline_cli()
+            main_mod._run_boxscore_pipeline_cli(self.args)
             return True
         if self.args.check_data_freshness:
             main_mod._run_data_freshness_pipeline(self.args)

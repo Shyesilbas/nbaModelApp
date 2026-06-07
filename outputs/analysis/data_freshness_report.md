@@ -1,15 +1,15 @@
 # NBA ML Project — Data Freshness & Sync Report
 
-> Generated: 2026-06-06 00:00:00
+> Generated: 2026-06-07 00:00:00
 > Overall Status: **OK**
 
 ## 1. Latest Dates Overview
 
-- **Current Local Date**: `2026-06-06`
-- **Latest Team Games Date**: `2026-06-05`
-- **Latest Player Games Date**: `2026-06-05`
-- **Latest Schedule Date (Combined)**: `2026-06-19`
-- **Latest Upcoming Scheduled Game Date**: `2026-06-19`
+- **Current Local Date**: `2026-06-07`
+- **Latest Team Games Date**: `2025-06-22`
+- **Latest Player Games Date**: `2025-06-22`
+- **Latest Schedule Date (Combined)**: `2025-06-22`
+- **Latest Upcoming Scheduled Game Date**: `N/A`
 
 ## 2. Missing Played/Completed Games
 

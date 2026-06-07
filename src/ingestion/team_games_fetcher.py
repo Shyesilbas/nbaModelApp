@@ -79,7 +79,7 @@ def fetch_team_games_for_season(season: str = "2025-26", season_types: Optional[
             
     return combined_df[EXPECTED_COLUMNS]
 
-def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFrame] = None, season: Optional[str] = None) -> pd.DataFrame:
     """
     Fallback method to fetch team games using BoxScoreTraditionalV2 for a single game.
     Resolves date, matchup, and season type using the schedule context.
@@ -99,7 +99,9 @@ def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFr
         # We need schedule context to fill GAME_DATE, SEASON_TYPE, MATCHUP
         if schedule_df is None:
             # Try to load it
-            schedule_csv = "data/processed/schedule_combined_2025_26.csv"
+            from scripts.data_paths import get_data_paths
+            paths = get_data_paths(season)
+            schedule_csv = paths.schedule_combined
             if os.path.exists(schedule_csv):
                 schedule_df = pd.read_csv(schedule_csv, dtype={"GAME_ID": str})
                 
@@ -120,14 +122,25 @@ def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFr
         home_team = sched_row["HOME_TEAM_ABBREVIATION"]
         away_team = sched_row["AWAY_TEAM_ABBREVIATION"]
         
-        # Determine season ID (2025-26 season is 2025)
+        # Determine season ID dynamically (2025-26 season is 2025)
         # Regular: 22025, PlayIn: 52025, Playoffs/Finals: 42025
+        from scripts.season_utils import normalize_season
+        norm_season = normalize_season(season or "2025-26")
+        start_year = int(norm_season.split("-")[0])
+        year_suffix = start_year % 100
+        
+        # Regular Season: 2 + start_year_suffix, PlayIn: 5 + start_year_suffix, Playoffs/Finals: 4 + start_year_suffix
+        # e.g., 22025 or 22024. Wait! The NBA API season ID starts with 2 for Regular Season, 4 for playoffs, 5 for playin.
+        # It has 5 digits: Digit 1 = Season Type (2=regular, 4=playoffs, 5=play-in). Digits 2-5 = year (e.g. 2024 or 2025).
+        # Let's verify: season_id = 22025 for 2025-26 regular season. Wait, 22025 has 5 digits. 2 is season type. 2025 is year?
+        # No! 2 (digit 1) + 2025 (4 digits) = 22025. Yes! 2 + 2025 = 22025.
+        # So it is 20000 + start_year.
         if season_type == "Regular Season":
-            season_id = 22025
+            season_id = 20000 + start_year
         elif season_type == "PlayIn":
-            season_id = 52025
+            season_id = 50000 + start_year
         else:  # Playoffs / NBA Finals
-            season_id = 42025
+            season_id = 40000 + start_year
             
         # Prepare mapped rows
         rows = []
@@ -210,12 +223,10 @@ def fetch_missing_team_games_by_game_ids(
         return pd.DataFrame(columns=EXPECTED_COLUMNS)
 
     # Incremental path: fetch each missing game directly.
-    # LeagueGameLog downloads are intentionally avoided here because they
-    # re-fetch the entire season and defeat the purpose of an update-only run.
     def _fetch_one(gid: str) -> pd.DataFrame:
         gid_str = str(gid).zfill(10)
         logger.info(f"Fetching team boxscore for missing game {gid_str}")
-        df_game = fetch_team_games_from_boxscore(gid_str, schedule_df)
+        df_game = fetch_team_games_from_boxscore(gid_str, schedule_df, season=season)
         if df_game.empty:
             logger.warning(f"No team rows recovered for missing game {gid_str}")
         return df_game
@@ -234,22 +245,27 @@ def fetch_missing_team_games_by_game_ids(
 
     return pd.concat(all_logs, ignore_index=True)
 
-def append_team_games_to_raw_dataset(new_rows: pd.DataFrame) -> int:
+def append_team_games_to_raw_dataset(new_rows: pd.DataFrame, season: Optional[str] = None) -> int:
     """
     Appends new team game log rows to the raw team games dataset,
     deduplicates by TEAM_ID + GAME_ID, and saves both CSV and Parquet.
     
     Returns the total count of rows after update.
     """
+    from scripts.data_paths import get_data_paths
+    paths = get_data_paths(season)
+    raw_team_csv = paths.team_games_raw
+    raw_team_parquet = paths.team_games_raw.replace(".csv", ".parquet")
+
     if new_rows is None or new_rows.empty:
         logger.info("No new team rows to append.")
-        if os.path.exists(RAW_TEAM_CSV):
-            return len(pd.read_csv(RAW_TEAM_CSV))
+        if os.path.exists(raw_team_csv):
+            return len(pd.read_csv(raw_team_csv))
         return 0
         
     # Load existing
-    if os.path.exists(RAW_TEAM_CSV):
-        df_existing = pd.read_csv(RAW_TEAM_CSV, dtype={"GAME_ID": str, "TEAM_ID": int})
+    if os.path.exists(raw_team_csv):
+        df_existing = pd.read_csv(raw_team_csv, dtype={"GAME_ID": str, "TEAM_ID": int})
         df_combined = pd.concat([df_existing, new_rows], ignore_index=True)
     else:
         df_combined = new_rows.copy()
@@ -267,12 +283,12 @@ def append_team_games_to_raw_dataset(new_rows: pd.DataFrame) -> int:
     df_combined = df_combined[EXPECTED_COLUMNS]
     
     # Save CSV
-    os.makedirs(os.path.dirname(RAW_TEAM_CSV), exist_ok=True)
-    df_combined.to_csv(RAW_TEAM_CSV, index=False)
-    logger.info(f"Saved: {RAW_TEAM_CSV} ({len(df_combined)} rows)")
+    os.makedirs(os.path.dirname(raw_team_csv), exist_ok=True)
+    df_combined.to_csv(raw_team_csv, index=False)
+    logger.info(f"Saved: {raw_team_csv} ({len(df_combined)} rows)")
     
     # Save Parquet
-    df_combined.to_parquet(RAW_TEAM_PARQUET, index=False, engine="pyarrow")
-    logger.info(f"Saved: {RAW_TEAM_PARQUET}")
+    df_combined.to_parquet(raw_team_parquet, index=False, engine="pyarrow")
+    logger.info(f"Saved: {raw_team_parquet}")
     
     return len(df_combined)

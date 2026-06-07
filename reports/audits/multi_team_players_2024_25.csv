@@ -1,0 +1,83 @@
+player_id,player_name,teams_2024_25,transfer_count,stints_detail,total_games,in_core_players,core_players_teams,has_duplicate_core_records,importance_score,is_top3_core,is_top5_core
+201988,Patty Mills,"UTA, LAC",1,UTA (17g: 2024-10-23 to 2025-01-28) -> LAC (13g: 2025-02-04 to 2025-04-24),30,False,,False,0.0,False,False
+202685,Jonas Valančiūnas,"WAS, SAC",1,WAS (49g: 2024-10-24 to 2025-02-03) -> SAC (33g: 2025-02-06 to 2025-04-16),82,True,DEN,False,18.72463768115942,False,False
+202693,Markieff Morris,"DAL, LAL",1,DAL (7g: 2024-11-06 to 2025-01-27) -> LAL (8g: 2025-02-08 to 2025-04-13),15,False,,False,0.0,False,False
+202710,Jimmy Butler III,"MIA, GSW",1,MIA (25g: 2024-10-23 to 2025-01-21) -> GSW (42g: 2025-02-08 to 2025-05-14),67,True,GSW,False,42.81842105263158,True,True
+203076,Anthony Davis,"LAL, DAL",1,LAL (42g: 2024-10-22 to 2025-01-28) -> DAL (11g: 2025-02-08 to 2025-04-18),53,True,DAL,False,44.845000000000006,True,True
+203114,Khris Middleton,"MIL, WAS",1,MIL (23g: 2024-12-06 to 2025-02-02) -> WAS (14g: 2025-02-21 to 2025-03-27),37,True,"DAL, WAS",True,27.461764705882352,False,False
+203458,Alex Len,"SAC, LAL",1,SAC (36g: 2024-10-24 to 2025-02-05) -> LAL (12g: 2025-02-12 to 2025-04-25),48,False,,False,0.0,False,False
+203471,Dennis Schröder,"BKN, GSW, DET",2,BKN (23g: 2024-10-23 to 2024-12-13) -> GSW (24g: 2024-12-19 to 2025-02-03) -> DET (34g: 2025-02-09 to 2025-05-01),81,True,"CLE, SAC",True,31.975,False,False
+203482,Kelly Olynyk,"TOR, NOP",1,TOR (24g: 2024-12-07 to 2025-02-05) -> NOP (20g: 2025-02-21 to 2025-04-08),44,True,SAS,False,8.78235294117647,False,False
+203897,Zach LaVine,"CHI, SAC",1,CHI (42g: 2024-10-23 to 2025-01-27) -> SAC (33g: 2025-02-05 to 2025-04-16),75,True,SAC,False,38.38461538461539,True,True
+203901,Elfrid Payton,"NOP, CHA",2,NOP (7g: 2024-11-20 to 2024-12-02) -> CHA (6g: 2025-02-09 to 2025-02-24) -> NOP (11g: 2025-03-21 to 2025-04-13),24,False,,False,0.0,False,False
+203935,Marcus Smart,"MEM, WAS",1,MEM (19g: 2024-10-23 to 2025-02-05) -> WAS (15g: 2025-02-21 to 2025-04-03),34,True,LAL,False,28.861111111111114,False,False
+203937,Kyle Anderson,"GSW, MIA",1,GSW (36g: 2024-10-23 to 2025-01-31) -> MIA (29g: 2025-02-10 to 2025-04-28),65,True,"MEM, MIN, UTA",True,23.075000000000003,False,False
+203952,Andrew Wiggins,"GSW, MIA",1,GSW (43g: 2024-10-23 to 2025-02-03) -> MIA (23g: 2025-02-10 to 2025-04-28),66,True,MIA,False,35.58823529411765,False,True
+203992,Bogdan Bogdanović,"ATL, LAC",1,ATL (24g: 2024-10-23 to 2025-01-25) -> LAC (37g: 2025-02-12 to 2025-05-03),61,True,LAC,False,20.57391304347826,False,False
+203994,Jusuf Nurkić,"PHX, CHA",1,PHX (25g: 2024-10-23 to 2025-01-07) -> CHA (26g: 2025-02-12 to 2025-04-13),51,True,UTA,False,34.165853658536584,False,True
+203995,Vasilije Micic,"CHA, PHX",1,CHA (36g: 2024-10-23 to 2025-02-03) -> PHX (5g: 2025-03-02 to 2025-04-04),41,False,,False,0.0,False,False
+1626153,Delon Wright,"MIL, NYK",1,MIL (26g: 2024-10-23 to 2025-02-03) -> NYK (20g: 2025-02-08 to 2025-05-31),46,False,,False,0.0,False,False
+1626156,D'Angelo Russell,"LAL, BKN",1,LAL (29g: 2024-10-22 to 2024-12-28) -> BKN (29g: 2025-01-01 to 2025-04-03),58,True,DAL,False,24.26153846153846,False,False
+1627732,Ben Simmons,"BKN, LAC",1,BKN (33g: 2024-10-23 to 2025-02-05) -> LAC (23g: 2025-02-13 to 2025-04-29),56,False,,False,0.0,False,False
+1627747,Caris LeVert,"CLE, ATL",1,CLE (38g: 2024-10-23 to 2025-02-05) -> ATL (28g: 2025-02-08 to 2025-04-18),66,True,DET,False,19.631506849315063,False,False
+1627777,Georges Niang,"CLE, ATL",1,CLE (51g: 2024-10-23 to 2025-02-05) -> ATL (30g: 2025-02-08 to 2025-04-18),81,False,,False,0.0,False,False
+1627827,Dorian Finney-Smith,"BKN, LAL",1,BKN (20g: 2024-10-23 to 2024-12-27) -> LAL (48g: 2024-12-31 to 2025-04-30),68,True,HOU,False,13.541463414634148,False,False
+1628368,De'Aaron Fox,"SAC, SAS",1,SAC (45g: 2024-10-24 to 2025-02-01) -> SAS (17g: 2025-02-05 to 2025-03-12),62,True,SAS,False,40.91348314606741,True,True
+1628380,Zach Collins,"SAS, CHI",1,SAS (36g: 2024-10-24 to 2025-02-01) -> CHI (29g: 2025-02-11 to 2025-04-16),65,True,CHI,False,23.46,False,False
+1628398,Kyle Kuzma,"WAS, MIL",1,WAS (32g: 2024-10-24 to 2025-02-03) -> MIL (38g: 2025-02-07 to 2025-04-29),70,True,MIL,False,30.95652173913044,False,True
+1628418,Thomas Bryant,"MIA, IND",1,MIA (10g: 2024-10-23 to 2024-12-08) -> IND (76g: 2024-12-15 to 2025-06-22),86,True,CLE,False,13.508695652173913,False,False
+1628467,Maxi Kleber,"DAL, LAL",1,DAL (34g: 2024-10-24 to 2025-01-25) -> LAL (1g: 2025-04-30 to 2025-04-30),35,True,LAL,False,8.697826086956521,False,False
+1628470,Torrey Craig,"CHI, BOS",1,CHI (9g: 2024-10-30 to 2024-12-30) -> BOS (22g: 2025-02-12 to 2025-05-16),31,False,,False,0.0,False,False
+1628963,Marvin Bagley III,"WAS, MEM",1,WAS (19g: 2024-10-24 to 2024-12-23) -> MEM (15g: 2025-02-20 to 2025-04-22),34,True,"DAL, WAS",True,26.80454545454545,False,False
+1628964,Mo Bamba,"LAC, NOP",1,LAC (28g: 2024-11-17 to 2025-01-27) -> NOP (4g: 2025-03-11 to 2025-03-17),32,False,,False,0.0,False,False
+1628971,Bruce Brown,"TOR, NOP",1,TOR (18g: 2024-12-29 to 2025-02-05) -> NOP (23g: 2025-02-12 to 2025-04-08),41,True,DEN,False,23.751136363636363,False,False
+1628989,Kevin Huerter,"SAC, CHI",1,SAC (43g: 2024-10-24 to 2025-02-01) -> CHI (27g: 2025-02-08 to 2025-04-16),70,True,"CHI, DET",True,27.106818181818184,False,False
+1628997,Caleb Martin,"PHI, DAL",1,PHI (31g: 2024-10-23 to 2025-01-10) -> DAL (16g: 2025-03-07 to 2025-04-18),47,True,DAL,False,13.91551724137931,False,False
+1628998,Cody Martin,"CHA, PHX",1,CHA (39g: 2024-10-23 to 2025-01-24) -> PHX (14g: 2025-03-16 to 2025-04-13),53,True,IND,False,11.125,False,False
+1629003,Shake Milton,"BKN, LAL",1,BKN (27g: 2024-10-23 to 2024-12-27) -> LAL (32g: 2024-12-31 to 2025-04-25),59,False,,False,0.0,False,False
+1629006,Josh Okogie,"PHX, CHA",1,PHX (25g: 2024-11-08 to 2025-01-11) -> CHA (15g: 2025-01-20 to 2025-04-13),40,True,HOU,False,15.495238095238092,False,False
+1629029,Luka Dončić,"DAL, LAL",1,DAL (22g: 2024-10-24 to 2024-12-25) -> LAL (33g: 2025-02-10 to 2025-04-30),55,True,LAL,False,62.6640625,True,True
+1629162,Jordan McLaughlin,"SAC, SAS",1,SAC (28g: 2024-10-26 to 2025-02-01) -> SAS (18g: 2025-02-12 to 2025-04-13),46,True,SAS,False,6.201851851851852,False,False
+1629234,Drew Eubanks,"UTA, LAC",1,UTA (37g: 2024-10-25 to 2025-01-30) -> LAC (27g: 2025-02-04 to 2025-05-03),64,True,SAC,False,13.985714285714288,False,False
+1629611,Terance Mann,"LAC, ATL",1,LAC (37g: 2024-10-23 to 2025-02-04) -> ATL (32g: 2025-02-08 to 2025-04-18),69,True,BKN,False,23.69047619047619,False,False
+1629631,De'Andre Hunter,"ATL, CLE",1,ATL (37g: 2024-10-23 to 2025-02-05) -> CLE (35g: 2025-02-10 to 2025-05-13),72,True,"CLE, SAC",True,31.24186046511628,False,False
+1629643,Chuma Okeke,"PHI, CLE",1,PHI (7g: 2025-02-07 to 2025-03-24) -> CLE (5g: 2025-04-08 to 2025-05-11),12,False,,False,0.0,False,False
+1629645,Kevin Porter Jr.,"LAC, MIL",1,LAC (45g: 2024-10-23 to 2025-02-04) -> MIL (35g: 2025-02-10 to 2025-04-29),80,True,MIL,False,43.00789473684211,True,True
+1629650,Moses Brown,"IND, DAL",1,IND (9g: 2024-11-20 to 2024-12-04) -> DAL (4g: 2025-02-21 to 2025-03-01),13,False,,False,0.0,False,False
+1629656,Quentin Grimes,"DAL, PHI",1,DAL (47g: 2024-10-24 to 2025-02-02) -> PHI (28g: 2025-02-07 to 2025-04-13),75,True,PHI,False,31.44767441860465,False,False
+1629750,Javonte Green,"NOP, CLE",1,NOP (50g: 2024-10-23 to 2025-02-13) -> CLE (24g: 2025-02-25 to 2025-05-11),74,True,DET,False,17.045161290322582,False,False
+1630200,Tre Jones,"SAS, CHI",1,SAS (28g: 2024-10-24 to 2025-02-01) -> CHI (18g: 2025-02-08 to 2025-03-20),46,True,CHI,False,33.73692307692308,False,False
+1630208,Nick Richards,"CHA, PHX",1,CHA (21g: 2024-10-23 to 2025-01-12) -> PHX (36g: 2025-01-18 to 2025-04-08),57,True,"CHI, PHX",True,25.405,False,False
+1630215,Jared Butler,"WAS, PHI",1,WAS (32g: 2024-10-24 to 2025-01-30) -> PHI (28g: 2025-02-09 to 2025-04-13),60,False,,False,0.0,False,False
+1630231,KJ Martin,"PHI, UTA",1,PHI (24g: 2024-10-23 to 2024-12-23) -> UTA (19g: 2025-02-21 to 2025-04-02),43,False,,False,0.0,False,False
+1630283,Kylor Kelley,"DAL, NOP",1,DAL (8g: 2025-01-27 to 2025-02-23) -> NOP (3g: 2025-04-10 to 2025-04-13),11,False,,False,0.0,False,False
+1630322,Lindy Waters III,"GSW, DET",1,GSW (38g: 2024-10-23 to 2025-01-31) -> DET (14g: 2025-02-11 to 2025-04-13),52,True,SAS,False,6.324489795918368,False,False
+1630531,Jaden Springer,"BOS, UTA",1,BOS (26g: 2024-10-24 to 2025-02-02) -> UTA (17g: 2025-02-21 to 2025-04-13),43,False,,False,0.0,False,False
+1630538,Bones Hyland,"LAC, MIN",1,LAC (20g: 2024-11-02 to 2025-02-04) -> MIN (4g: 2025-03-16 to 2025-04-03),24,True,MIN,False,19.060493827160496,False,False
+1630539,Kai Jones,"LAC, DAL",1,LAC (28g: 2024-10-23 to 2025-02-12) -> DAL (12g: 2025-03-03 to 2025-04-13),40,False,,False,0.0,False,False
+1630550,JT Thor,"CLE, WAS",1,CLE (9g: 2024-11-17 to 2025-01-30) -> WAS (11g: 2025-03-10 to 2025-04-11),20,False,,False,0.0,False,False
+1630558,Davion Mitchell,"TOR, MIA",1,TOR (44g: 2024-10-23 to 2025-02-05) -> MIA (36g: 2025-02-10 to 2025-04-28),80,True,MIA,False,30.392857142857142,False,False
+1630579,Jericho Sims,"NYK, MIL",1,NYK (39g: 2024-10-22 to 2025-02-04) -> MIL (19g: 2025-02-20 to 2025-04-29),58,True,MIL,False,19.38358208955224,False,False
+1630658,Colin Castleton,"MEM, TOR, PHI",3,MEM (10g: 2024-10-31 to 2024-12-31) -> TOR (10g: 2025-03-07 to 2025-03-24) -> PHI (5g: 2025-04-03 to 2025-04-11) -> TOR (1g: 2025-04-13 to 2025-04-13),26,True,ORL,False,5.275,False,False
+1630699,MarJon Beauchamp,"MIL, LAC, NYK",2,MIL (26g: 2024-10-23 to 2025-02-05) -> LAC (3g: 2025-02-08 to 2025-02-23) -> NYK (6g: 2025-03-10 to 2025-04-13),35,False,,False,0.0,False,False
+1631108,Max Christie,"LAL, DAL",1,LAL (46g: 2024-10-22 to 2025-02-01) -> DAL (34g: 2025-02-04 to 2025-04-18),80,True,DAL,False,30.346753246753245,False,True
+1631111,Wendell Moore Jr.,"DET, CHA",1,DET (20g: 2024-10-25 to 2025-01-31) -> CHA (16g: 2025-02-20 to 2025-04-13),36,True,DET,False,7.8,False,False
+1631115,Orlando Robinson,"SAC, TOR",1,SAC (9g: 2024-11-16 to 2025-01-05) -> TOR (35g: 2025-01-21 to 2025-04-09),44,True,ORL,False,6.074999999999999,False,False
+1631116,Patrick Baldwin Jr.,"WAS, LAC",1,WAS (22g: 2024-10-24 to 2025-01-30) -> LAC (2g: 2025-04-02 to 2025-04-04),24,False,,False,0.0,False,False
+1631197,Jared Rhoden,"CHA, TOR",1,CHA (4g: 2024-11-04 to 2024-11-17) -> TOR (10g: 2025-02-23 to 2025-04-09),14,False,,False,0.0,False,False
+1631210,Jacob Toppin,"NYK, ATL",1,NYK (16g: 2024-10-22 to 2025-02-01) -> ATL (1g: 2025-04-13 to 2025-04-13),17,True,ATL,False,3.58,False,False
+1631222,Jake LaRavia,"MEM, SAC",1,MEM (47g: 2024-10-23 to 2025-02-05) -> SAC (19g: 2025-02-08 to 2025-03-25),66,True,LAL,False,23.506666666666664,False,False
+1631223,David Roddy,"ATL, PHI, HOU",2,ATL (27g: 2024-10-27 to 2025-01-30) -> PHI (3g: 2025-02-20 to 2025-02-24) -> HOU (3g: 2025-04-09 to 2025-04-13),33,False,,False,0.0,False,False
+1631250,Pete Nance,"PHI, MIL",1,PHI (7g: 2024-12-30 to 2025-01-29) -> MIL (6g: 2025-03-13 to 2025-04-13),13,True,MIL,False,15.604255319148937,False,False
+1631306,Cole Swider,"DET, TOR",1,DET (2g: 2024-11-23 to 2024-11-27) -> TOR (8g: 2025-03-26 to 2025-04-09),10,False,,False,0.0,False,False
+1631311,Lester Quinones,"PHI, NOP",1,PHI (4g: 2024-10-23 to 2024-11-30) -> NOP (9g: 2025-03-24 to 2025-04-13),13,False,,False,0.0,False,False
+1631321,Sidy Cissoko,"SAS, POR",1,SAS (17g: 2024-10-30 to 2025-01-31) -> POR (5g: 2025-02-28 to 2025-04-13),22,True,POR,False,16.650632911392407,False,False
+1641720,Jalen Hood-Schifino,"LAL, PHI",1,LAL (2g: 2024-11-08 to 2024-12-01) -> PHI (13g: 2025-03-14 to 2025-04-13),15,False,,False,0.0,False,False
+1641721,Maxwell Lewis,"LAL, BKN",1,LAL (7g: 2024-11-08 to 2024-12-08) -> BKN (21g: 2025-01-01 to 2025-04-11),28,False,,False,0.0,False,False
+1641732,Colby Jones,"SAC, WAS",1,SAC (24g: 2024-10-28 to 2025-02-05) -> WAS (15g: 2025-03-11 to 2025-04-13),39,True,DET,False,9.5,False,False
+1641736,Reece Beekman,"GSW, BKN",1,GSW (2g: 2024-10-29 to 2024-10-30) -> BKN (34g: 2024-12-19 to 2025-04-11),36,False,,False,0.0,False,False
+1641798,Jaylen Martin,"BKN, WAS",1,BKN (3g: 2024-10-27 to 2024-12-23) -> WAS (13g: 2025-02-08 to 2025-04-09),16,False,,False,0.0,False,False
+1641803,Tristen Newton,"IND, MIN",1,IND (5g: 2024-11-18 to 2024-12-04) -> MIN (3g: 2025-01-13 to 2025-02-13),8,False,,False,0.0,False,False
+1641998,Trey Jemison III,"NOP, LAL",1,NOP (16g: 2024-10-30 to 2024-12-19) -> LAL (22g: 2025-01-17 to 2025-04-13),38,True,NYK,False,5.292307692307691,False,False
+1642024,Alex Reese,"OKC, PHI",1,OKC (1g: 2024-10-27 to 2024-10-27) -> PHI (14g: 2025-03-04 to 2025-04-09),15,False,,False,0.0,False,False
+1642358,AJ Johnson,"MIL, WAS",1,MIL (7g: 2024-10-23 to 2025-02-03) -> WAS (22g: 2025-02-07 to 2025-04-13),29,True,"DAL, WAS",True,10.604347826086958,False,False

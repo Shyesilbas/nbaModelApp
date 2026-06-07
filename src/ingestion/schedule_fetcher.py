@@ -180,16 +180,21 @@ def update_schedule_files(season: str = "2025-26") -> Tuple[int, int]:
     """
     Refreshes the local schedule files by querying the NBA API.
     Saves:
-        - All non-Finals games to RAW_SCHEDULE_CSV
-        - All Finals games to RAW_FINALS_CSV
+        - All non-Finals games to raw_schedule
+        - All Finals games to raw_finals_schedule
         
     Returns (num_schedule_rows, num_finals_rows).
     """
+    from scripts.data_paths import get_data_paths
+    paths = get_data_paths(season)
+    raw_schedule_csv = paths.raw_schedule
+    raw_finals_csv = paths.raw_finals_schedule
+
     df_full = fetch_schedule_for_season(season=season)
     if df_full.empty:
         logger.warning("Could not refresh schedule from NBA API. Keeping existing files.")
-        s_count = len(pd.read_csv(RAW_SCHEDULE_CSV)) if os.path.exists(RAW_SCHEDULE_CSV) else 0
-        f_count = len(pd.read_csv(RAW_FINALS_CSV)) if os.path.exists(RAW_FINALS_CSV) else 0
+        s_count = len(pd.read_csv(raw_schedule_csv)) if os.path.exists(raw_schedule_csv) else 0
+        f_count = len(pd.read_csv(raw_finals_csv)) if os.path.exists(raw_finals_csv) else 0
         return s_count, f_count
         
     # Split into schedule (non-Finals) and Finals
@@ -212,11 +217,11 @@ def update_schedule_files(season: str = "2025-26") -> Tuple[int, int]:
     df_finals = df_finals[FINALS_COLUMNS]
     
     # Save files
-    os.makedirs(os.path.dirname(RAW_SCHEDULE_CSV), exist_ok=True)
-    df_sched.to_csv(RAW_SCHEDULE_CSV, index=False)
-    logger.info(f"Updated: {RAW_SCHEDULE_CSV} ({len(df_sched)} games)")
+    os.makedirs(os.path.dirname(raw_schedule_csv), exist_ok=True)
+    df_sched.to_csv(raw_schedule_csv, index=False)
+    logger.info(f"Updated: {raw_schedule_csv} ({len(df_sched)} games)")
     
-    df_finals.to_csv(RAW_FINALS_CSV, index=False)
-    logger.info(f"Updated: {RAW_FINALS_CSV} ({len(df_finals)} games)")
+    df_finals.to_csv(raw_finals_csv, index=False)
+    logger.info(f"Updated: {raw_finals_csv} ({len(df_finals)} games)")
     
     return len(df_sched), len(df_finals)

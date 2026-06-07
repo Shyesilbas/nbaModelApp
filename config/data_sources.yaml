@@ -6,5 +6,6 @@ raw_data_root: "data/raw"
 
 seasons:
   - "2025-26"
+  - "2024-25"
 
 season_file_token_format: "YYYY_YY"

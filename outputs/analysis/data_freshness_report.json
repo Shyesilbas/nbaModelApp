@@ -1,8 +1,8 @@
 {
   "status": "OK",
-  "latest_team_game_date": "2026-06-05",
-  "latest_player_game_date": "2026-06-05",
-  "latest_schedule_date": "2026-06-19",
+  "latest_team_game_date": "2025-06-22",
+  "latest_player_game_date": "2025-06-22",
+  "latest_schedule_date": "2025-06-22",
   "missing_completed_game_ids": [],
   "team_player_mismatch_game_ids": [],
   "warnings": []

@@ -38,6 +38,8 @@
 |---|---|---:|---:|---|
 | `data/experimental/team_win_model_ready_v3_ema_experimental.csv` | EMA win experiment dataset | experimental | no | Keep for comparison |
 | `data/experimental/team_score_model_ready_v3_ema_experimental.csv` | EMA score experiment dataset | experimental | no | Keep for comparison |
+| `data/experimental/player_registry_2024_25.csv` | Unique player registry for 2024-25 | experimental | no | Deduplicated unique player list |
+| `data/experimental/observed_affiliation_events_2024_25.csv` | Observed player stints timeline | experimental | no | Extracted stints from game logs |
 
 ## Important Reports
 
@@ -52,6 +54,13 @@
 | `reports/experiments/win_probability_v2_report.md` | Win model v2 candidate report | experimental | no | Baseline vs candidate comparison |
 | `reports/production/win_probability_deployment_report.md` | Deployment notes | production | no | Production context |
 | `reports/audits/season_2024_25_pilot_ingestion_plan.md` | Ingestion plan for 2024-25 pilot | audit | no | Blueprint for next phase |
+| `reports/audits/multi_team_players_2024_25.csv` | Multi-team player list for 24-25 | audit | no | Roster tracking for consistency |
+| `reports/audits/historical_roster_consistency_report.md` | Roster consistency audit | audit | no | Detailed audit of player movement in 2024-25 |
+| `reports/audits/roster_snapshot_validation_report.md` | Roster snapshot validation audit | audit | no | Audit of roster snapshot reconstruction capabilities |
+| `reports/audits/player_registry_2024_25_cleanup_report.md` | Player registry cleanup report | audit | no | Details of registry deduplication |
+| `reports/audits/roster_snapshot_validation_report_after_repair.md` | Roster snapshot validation post-repair | audit | no | Roster generator post-repair validation audit |
+| `reports/audits/roster_snapshot_known_transfer_validation.csv` | Known transfer validation results | audit | no | Pass/fail status for target star player stints |
+| `reports/audits/roster_snapshot_known_transfer_validation_report.md` | Known transfer validation report | audit | no | Detailed analysis of target star player stints |
 
 ## Important Docs
 
