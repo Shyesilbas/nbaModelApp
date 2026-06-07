@@ -23,11 +23,10 @@ import joblib
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-MODEL_PATH = ROOT / "models/win_probability_model.pkl"
-FEATURES_PATH = ROOT / "models/feature_columns.json"
 
 # Local import of builder (ensure scripts folder's parent is on sys.path)
 sys.path.insert(0, str(ROOT))
+from scripts.artifact_paths import resolve_artifact_path
 from scripts.build_matchup_features import build_features  # type: ignore
 
 CONFIDENCE_BUCKETS = [
@@ -46,12 +45,14 @@ def bucket_confidence(p):
 
 
 def load_model_and_features():
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(f"Model not found at {MODEL_PATH}. Run training first.")
-    if not FEATURES_PATH.exists():
-        raise FileNotFoundError(f"Feature columns file not found at {FEATURES_PATH}. Run training first.")
-    model = joblib.load(MODEL_PATH)
-    feature_cols = json.loads(FEATURES_PATH.read_text())
+    model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model.pkl")
+    features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns.json")
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model not found at {model_path}. Run training first.")
+    if not features_path.exists():
+        raise FileNotFoundError(f"Feature columns file not found at {features_path}. Run training first.")
+    model = joblib.load(model_path)
+    feature_cols = json.loads(features_path.read_text())
     return model, feature_cols
 
 

@@ -43,8 +43,9 @@ try:
 except Exception:
     LGB_AVAILABLE = False
 
+from scripts.data_paths import get_data_paths
 # Paths
-DATA_PATH = "data/processed/team_model_ready_v2_2025_26.csv"
+DATA_PATH = get_data_paths("2025-26").team_model_ready_v2
 PLOTS_DIR = "reports/plots"
 METRICS_DIR = "reports/metrics"
 FEATURE_ANALYSIS_DIR = "reports/feature_analysis"
@@ -350,7 +351,14 @@ def train_and_evaluate(df, target_col="WIN"):
 
 
 if __name__ == '__main__':
-    print('Loading dataset', DATA_PATH)
-    df = pd.read_csv(DATA_PATH)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--season", help="Season string (e.g. 2025-26)")
+    args = parser.parse_args()
+
+    from scripts.data_paths import get_data_paths
+    data_path = get_data_paths(args.season).team_model_ready_v2
+    print('Loading dataset', data_path)
+    df = pd.read_csv(data_path)
     comp_df, cv_df, leakage_df = train_and_evaluate(df, target_col='WIN')
     print('Done')

@@ -1,0 +1,27 @@
+data/**/*.csv
+data/**/*.parquet
+
+# Large/raw dumps
+data/raw/**
+data/archive/**
+data/experimental/**
+
+# Model binaries
+models/**/*.pkl
+models/**/*.bin
+models/**/*weights*
+
+# Keep small metadata visible when needed
+!models/**/*.json
+!config/**/*.yaml
+!config/**/*.yml
+!ARTIFACT_REGISTRY.md
+!PROJECT_STATUS.md
+
+# Runtime/cache
+logs/**
+**/logs/**
+**/.pytest_cache/**
+**/__pycache__/**
+**/.cache/**
+**/cache/**

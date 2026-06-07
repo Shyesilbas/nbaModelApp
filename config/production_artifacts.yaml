@@ -1,0 +1,20 @@
+win_model:
+  model_path: models/production/win_probability_model.pkl
+  feature_columns_path: models/production/feature_columns.json
+  metadata_path: models/production/model_metadata.json
+  status: production
+  notes: "Current production win probability model. V1 Logistic Regression remains production."
+
+score_model:
+  home_model_path: models/production/home_score_model_v2.pkl
+  away_model_path: models/production/away_score_model_v2.pkl
+  total_model_path: models/production/direct_total_points_model_v2.pkl
+  margin_model_path: models/production/direct_point_diff_model_v2.pkl
+  metadata_path: models/production/score_model_v2_metadata.json
+  status: production
+  notes: "Current production score model V2. Used for score ranges, not primary winner prediction."
+
+core_players:
+  path: data/production/core_players.csv
+  status: production
+  notes: "Source of truth for core players."

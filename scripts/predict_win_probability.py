@@ -11,8 +11,11 @@ import pandas as pd
 import joblib
 
 ROOT = Path(__file__).resolve().parents[1]
-MODEL_PATH = ROOT / "models/win_probability_model.pkl"
-FEATURES_PATH = ROOT / "models/feature_columns.json"
+sys.path.insert(0, str(ROOT))
+from scripts.artifact_paths import resolve_artifact_path
+
+MODEL_PATH = resolve_artifact_path("win_model", "model_path", "models/win_probability_model.pkl")
+FEATURES_PATH = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns.json")
 
 CONFIDENCE_BUCKETS = [
     (0.5, 0.55, "Toss-up"),

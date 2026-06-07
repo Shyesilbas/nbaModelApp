@@ -19,15 +19,30 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import joblib
 
-# Paths
-ROOT = Path(__file__).resolve().parents[1]
-DATA_PATH = ROOT / "data/processed/team_score_model_ready_v2_player_features.csv"
-FEATURE_COLS_PATH = ROOT / "models/feature_columns.json"
-MODELS_DIR = ROOT / "models"
-REPORTS_DIR = ROOT / "reports"
+# Paths helper for dynamic seasons
+def get_paths(season=None):
+    from scripts.data_paths import get_data_paths
+    from scripts.season_utils import season_to_file_token
+    dp = get_data_paths(season)
+    token = season_to_file_token(season or "2025-26")
+    
+    return {
+        "DATA_PATH": Path(dp.score_model_dataset),
+        "MODELS_DIR": ROOT / "models",
+        "REPORTS_DIR": ROOT / "reports",
+        "metadata_path": ROOT / "models" / f"score_model_v2_metadata.json" if token == "2025_26" else ROOT / f"models" / f"score_model_v2_metadata_{token}.json",
+        "home_model": ROOT / "models" / "home_score_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"home_score_model_v2_{token}.pkl",
+        "away_model": ROOT / "models" / "away_score_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"away_score_model_v2_{token}.pkl",
+        "total_model": ROOT / "models" / "direct_total_points_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"direct_total_points_model_v2_{token}.pkl",
+        "diff_model": ROOT / "models" / "direct_point_diff_model_v2.pkl" if token == "2025_26" else ROOT / "models" / f"direct_point_diff_model_v2_{token}.pkl",
+        "comp_csv": ROOT / "reports" / "score_v1_vs_v2_comparison.csv" if token == "2025_26" else ROOT / "reports" / f"score_v1_vs_v2_comparison_{token}.csv",
+        "bucket_csv": ROOT / "reports" / "score_v2_error_bucket_report.csv" if token == "2025_26" else ROOT / "reports" / f"score_v2_error_bucket_report_{token}.csv",
+        "naive_csv": ROOT / "reports" / "score_naive_baseline_comparison.csv" if token == "2025_26" else ROOT / "reports" / f"score_naive_baseline_comparison_{token}.csv",
+        "report_md": ROOT / "reports" / "score_prediction_v2_player_features_report.md" if token == "2025_26" else ROOT / "reports" / f"score_prediction_v2_player_features_report_{token}.md",
+    }
 
-os.makedirs(MODELS_DIR, exist_ok=True)
-os.makedirs(REPORTS_DIR, exist_ok=True)
+ROOT = Path(__file__).resolve().parents[1]
+FEATURE_COLS_PATH = ROOT / "models/feature_columns.json"
 
 # Redundant features to drop for regression models to prevent collinearity
 REDUNDANT_COLS = [
@@ -84,11 +99,14 @@ def compute_error_bounds(y_true, y_pred, thresholds):
         bounds[f"within_plus_minus_{t}"] = pct
     return bounds
 
-def main():
-    print("Loading V2 player feature enhanced dataset:", DATA_PATH)
-    if not DATA_PATH.exists():
-        raise FileNotFoundError(f"Feature dataset not found at {DATA_PATH}. Run pipeline first.")
-    df = pd.read_csv(DATA_PATH)
+def main(season=None):
+    paths = get_paths(season)
+    os.makedirs(paths["MODELS_DIR"], exist_ok=True)
+    os.makedirs(paths["REPORTS_DIR"], exist_ok=True)
+    print("Loading V2 player feature enhanced dataset:", paths["DATA_PATH"])
+    if not paths["DATA_PATH"].exists():
+        raise FileNotFoundError(f"Feature dataset not found at {paths['DATA_PATH']}. Run pipeline first.")
+    df = pd.read_csv(paths["DATA_PATH"])
     
     # Chronological split at 80%
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
@@ -246,10 +264,10 @@ def main():
     best_v2_total_model_type = "direct" if tot_v2_metrics["MAE"] <= derived_tot_v2_metrics["MAE"] else "derived"
 
     # Save v2 models
-    joblib.dump(h_v2_model, MODELS_DIR / "home_score_model_v2.pkl")
-    joblib.dump(a_v2_model, MODELS_DIR / "away_score_model_v2.pkl")
-    joblib.dump(tot_v2_model, MODELS_DIR / "direct_total_points_model_v2.pkl")
-    joblib.dump(diff_v2_model, MODELS_DIR / "direct_point_diff_model_v2.pkl")
+    joblib.dump(h_v2_model, paths["home_model"])
+    joblib.dump(a_v2_model, paths["away_model"])
+    joblib.dump(tot_v2_model, paths["total_model"])
+    joblib.dump(diff_v2_model, paths["diff_model"])
     print("\nSaved V2 models (.pkl) to models/")
 
     # 5. Prediction Intervals (Empirical residual percentiles of the test split)
@@ -372,9 +390,9 @@ def main():
         }
     }
     
-    with open(MODELS_DIR / "score_model_v2_metadata.json", "w") as f:
+    with open(paths["metadata_path"], "w") as f:
         json.dump(metadata, f, indent=2)
-    print("Saved score model v2 metadata to models/score_model_v2_metadata.json")
+    print("Saved score model v2 metadata to", paths["metadata_path"])
 
     # Save reports/score_v1_vs_v2_comparison.csv
     comp_data = [
@@ -383,8 +401,8 @@ def main():
         {"Target": "POINT_DIFF", "V1_MAE": diff_v1_metrics["MAE"], "V2_MAE": diff_v2_metrics["MAE"], "V1_RMSE": diff_v1_metrics["RMSE"], "V2_RMSE": diff_v2_metrics["RMSE"], "V1_R2": diff_v1_metrics["R2"], "V2_R2": diff_v2_metrics["R2"]},
         {"Target": "TOTAL_POINTS", "V1_MAE": tot_v1_metrics["MAE"], "V2_MAE": tot_v2_metrics["MAE"], "V1_RMSE": tot_v1_metrics["RMSE"], "V2_RMSE": tot_v2_metrics["RMSE"], "V1_R2": tot_v1_metrics["R2"], "V2_R2": tot_v2_metrics["R2"]}
     ]
-    pd.DataFrame(comp_data).to_csv(REPORTS_DIR / "score_v1_vs_v2_comparison.csv", index=False)
-    print("Saved comparison CSV to reports/score_v1_vs_v2_comparison.csv")
+    pd.DataFrame(comp_data).to_csv(paths["comp_csv"], index=False)
+    print("Saved comparison CSV to", paths["comp_csv"])
 
     # Save reports/score_v2_error_bucket_report.csv
     bucket_data = []
@@ -396,8 +414,8 @@ def main():
         bucket_data.append({"Target": "TOTAL_POINTS", "Bucket": bucket, "Percentage": pct})
     for bucket, pct in diff_error_buckets.items():
         bucket_data.append({"Target": "POINT_DIFF", "Bucket": bucket, "Percentage": pct})
-    pd.DataFrame(bucket_data).to_csv(REPORTS_DIR / "score_v2_error_bucket_report.csv", index=False)
-    print("Saved error bucket CSV to reports/score_v2_error_bucket_report.csv")
+    pd.DataFrame(bucket_data).to_csv(paths["bucket_csv"], index=False)
+    print("Saved error bucket CSV to", paths["bucket_csv"])
 
     # Save reports/score_naive_baseline_comparison.csv (as requested in baseline task)
     naive_data = [
@@ -408,14 +426,14 @@ def main():
     ]
     if naive_diff_wp_metrics:
         naive_data.append({"Target": "POINT_DIFF", "Naive_Method": "Win_Prob_Derived_Margin", "Naive_MAE": naive_diff_wp_metrics["MAE"], "ML_MAE": best_v2_diff_metrics["MAE"], "ML_Algorithm": diff_v2_name if best_v2_diff_model_type == "direct" else "Derived"})
-    pd.DataFrame(naive_data).to_csv(REPORTS_DIR / "score_naive_baseline_comparison.csv", index=False)
-    print("Saved naive baseline comparison to reports/score_naive_baseline_comparison.csv")
+    pd.DataFrame(naive_data).to_csv(paths["naive_csv"], index=False)
+    print("Saved naive baseline comparison to", paths["naive_csv"])
 
     # Write detailed markdown report
-    generate_markdown_report(metadata)
+    generate_markdown_report(metadata, paths)
 
-def generate_markdown_report(metadata):
-    report_path = REPORTS_DIR / "score_prediction_v2_player_features_report.md"
+def generate_markdown_report(metadata, paths):
+    report_path = paths["report_md"]
     
     # Check improvements
     home_imp = metadata["v2_model_evaluation"]["home"]["metrics"]["MAE"] < metadata["v1_model_evaluation"]["home"]["MAE"]
@@ -557,4 +575,8 @@ def generate_markdown_report(metadata):
     print(f"Generated Markdown report at {report_path}")
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--season", help="Season string (e.g. 2025-26)")
+    args = parser.parse_args()
+    main(season=args.season)

@@ -16,37 +16,39 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 import numpy as np
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-FEATURES_PATHS = [
-    ROOT / "data/features/team_games_features_2025_26.parquet",
-    ROOT / "data/features/team_games_features_2025_26.csv",
-]
-GAME_RESULTS_PATHS = [
-    ROOT / "data/processed/game_results_2025_26.parquet",
-    ROOT / "data/processed/game_results_2025_26.csv",
-]
-MODEL_FEATURE_COLS = ROOT / "models/feature_columns.json"
+sys.path.insert(0, str(ROOT))
+from scripts.data_paths import get_data_paths
+from scripts.artifact_paths import resolve_artifact_path
 
+MODEL_FEATURE_COLS = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns.json")
 
-def _load_team_features():
-    for p in FEATURES_PATHS:
+def _load_team_features(season: str = None):
+    paths = get_data_paths(season)
+    p_parq = Path(paths.team_features.replace(".csv", ".parquet"))
+    p_csv = Path(paths.team_features)
+    for p in [p_parq, p_csv]:
         if p.exists():
             if p.suffix == ".parquet":
                 return pd.read_parquet(p)
             else:
                 return pd.read_csv(p)
-    raise FileNotFoundError("team_games_features not found; expected at data/features/team_games_features_2025_26.parquet or .csv")
+    raise FileNotFoundError(f"team_games_features not found; expected at {p_parq} or {p_csv}")
 
 
-def _load_game_results():
-    for p in GAME_RESULTS_PATHS:
+def _load_game_results(season: str = None):
+    paths = get_data_paths(season)
+    p_parq = Path(paths.game_results.replace(".csv", ".parquet"))
+    p_csv = Path(paths.game_results)
+    for p in [p_parq, p_csv]:
         if p.exists():
             if p.suffix == ".parquet":
                 return pd.read_parquet(p)
             else:
                 return pd.read_csv(p)
-    raise FileNotFoundError("game_results not found; expected at data/processed/game_results_2025_26.parquet or .csv")
+    raise FileNotFoundError(f"game_results not found; expected at {p_parq} or {p_csv}")
 
 
 def _ensure_datetime(df, col):
@@ -54,7 +56,7 @@ def _ensure_datetime(df, col):
         df[col] = pd.to_datetime(df[col])
 
 
-def build_features(home_team: str, away_team: str, prediction_date: str):
+def build_features(home_team: str, away_team: str, prediction_date: str, season: str = None):
     """Return Ordered dict (feature_name -> value) matching models/feature_columns.json.
     home_team and away_team should be team abbreviations (e.g., "LAL"). prediction_date is YYYY-MM-DD.
     """
@@ -62,8 +64,8 @@ def build_features(home_team: str, away_team: str, prediction_date: str):
 
     feat_cols = json.loads(MODEL_FEATURE_COLS.read_text())
 
-    team_df = _load_team_features()
-    games_df = _load_game_results()
+    team_df = _load_team_features(season)
+    games_df = _load_game_results(season)
 
     # Normalize datetimes
     _ensure_datetime(team_df, "GAME_DATE")
@@ -241,7 +243,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str):
     
     # Dynamically compute player-level features
     try:
-        player_feats = compute_player_features_for_inference(home_team, away_team, prediction_date)
+        player_feats = compute_player_features_for_inference(home_team, away_team, prediction_date, season=season)
         base_dict.update(player_feats)
     except Exception as e:
         print(f"Warning: failed to compute player features for inference: {e}")
@@ -249,7 +251,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str):
     return base_dict
 
 
-def compute_player_features_for_inference(home_team: str, away_team: str, prediction_date: str):
+def compute_player_features_for_inference(home_team: str, away_team: str, prediction_date: str, season: str = None):
     player_features_list = [
         "HOME_CORE_PLAYERS_AVAILABLE_COUNT", "HOME_CORE_PLAYERS_MISSING_COUNT",
         "HOME_TOP1_AVAILABLE", "HOME_TOP2_AVAILABLE", "HOME_TOP3_AVAILABLE",
@@ -265,9 +267,12 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
         "AWAY_MISSING_CORE_EXPECTED_MIN", "AWAY_MISSING_CORE_EXPECTED_PTS", "AWAY_MISSING_CORE_EXPECTED_AST", "AWAY_MISSING_CORE_EXPECTED_REB", "AWAY_MISSING_CORE_EXPECTED_PRA"
     ]
 
-    core_path = ROOT / "data/core_players.csv"
-    player_games_path = ROOT / "data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv"
-    team_games_path = ROOT / "data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv"
+    paths = get_data_paths(season)
+    core_path = ROOT / "data/production/core_players.csv"
+    if not core_path.exists():
+        core_path = ROOT / "data/canonical/core_players.csv"
+    player_games_path = Path(paths.player_games_raw)
+    team_games_path = Path(paths.team_games_raw)
     
     if not core_path.exists() or not player_games_path.exists() or not team_games_path.exists():
         return {f: 0.0 for f in player_features_list}
@@ -424,9 +429,10 @@ def main():
     parser.add_argument("--away", required=True, help="Away team abbreviation (e.g., BOS)")
     parser.add_argument("--prediction-date", required=True, help="YYYY-MM-DD (tip-off date)")
     parser.add_argument("--out-json", help="Optional output path; prints to stdout if omitted")
+    parser.add_argument("--season", help="Optional season string (e.g., 2025-26)")
     args = parser.parse_args()
 
-    feats = build_features(args.home.upper(), args.away.upper(), args.prediction_date)
+    feats = build_features(args.home.upper(), args.away.upper(), args.prediction_date, season=args.season)
     out_text = json.dumps(feats, indent=2)
     if args.out_json:
         Path(args.out_json).write_text(out_text)

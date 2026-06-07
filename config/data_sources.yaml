@@ -1,0 +1,10 @@
+current_season: "2025-26"
+canonical_data_root: "data/canonical"
+processed_data_root: "data/processed"
+features_data_root: "data/features"
+raw_data_root: "data/raw"
+
+seasons:
+  - "2025-26"
+
+season_file_token_format: "YYYY_YY"
