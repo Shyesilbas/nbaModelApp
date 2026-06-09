@@ -1,43 +1,29 @@
-# NBA Prediction Project Status
+# Project Status
 
-## Current Production Models
+This file tracks the overall status of the project.
 
-Winner Prediction:
-- Win Probability V1
-- Status: PRODUCTION
+## Current Phase
 
-Score Prediction:
-- Score Model V2
-- Status: PRODUCTION
+**Phase 4: 2024-25 Experimental Dataset Generation**
 
-## Current Experimental Work
+## Phase Status
 
-- Cross-Season Infrastructure
-- Feature Pruning
-- EMA Features
-- Random Forest Tuning
-- Minutes Model V1 (Planned)
-- Strength of Schedule Features (Planned)
+- [X] 2024-25 raw data exists and is valid.
+- [X] 2024-25 game_results exists and is valid.
+- [X] Team features are regenerated correctly.
+- [X] Player features are regenerated correctly.
+- [X] Player GAME_ID was standardized from Game_ID to GAME_ID.
+- [X] Team feature alignment with game_results: 100%.
+- [X] Player feature alignment with game_results: 100%.
+- [X] Dataset readiness: PASS 100/100.
+- [X] Dynamic roster snapshot validation: PASS.
+- [X] Known transfer validation passed for Luka, AD, Jimmy, Fox, Schroder, LaVine, Wiggins.
+- [ ] **Generate 2024-25 experimental model-ready datasets**
+- [ ] **Validate generated datasets**
+- [ ] **Create audit report**
+- [ ] **Update artifact registry and project status**
 
-## Current Decisions
+## Next Steps
 
-- Win V2 is NOT promoted.
-- EMA features are NOT promoted.
-- Tuned Random Forest is NOT promoted.
-- Newer models are experimental by default.
-- Production status is determined only by ARTIFACT_REGISTRY.md.
-
-## Next Roadmap
-
-1. Full Pipeline Data Lineage Audit
-2. 2024-25 Pilot Season Ingestion
-3. Cross-Season Dataset Merge
-4. Minutes Prediction Model V1
-5. Strength of Schedule Features
-6. Travel/Fatigue Features
-
-## Cross-Season Infrastructure
-- Phase 1: season path refactor completed
-- Phase 2: canonical ingestion and roster snapshot foundations completed
-- Roster Snapshot Repair Phase: Completed successfully. Unique player registry cleaned, observed affiliation events built, roster generator refactored, and all validation checks passing.
-- Next: 2024-25 pilot ingestion and cross-season model dataset generation.
+- Complete the generation and validation of the 2024-25 experimental datasets.
+- Merge the 2024-25 experimental datasets with the 2025-26 production datasets for cross-season analysis.

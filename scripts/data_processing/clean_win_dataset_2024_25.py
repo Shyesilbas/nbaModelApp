@@ -52,19 +52,30 @@ SAFE_FEATURES = [
     'AWAY_MISSING_CORE_EXPECTED_REB', 'AWAY_MISSING_CORE_EXPECTED_PRA'
 ]
 
-def validate_dataset(df, name, report_sections):
+def validate_dataset(df, name, report_sections, expected_rows, expected_unique_games):
     """Runs a series of checks on a dataframe and updates the report."""
     section = f"### Validation for: `{name}`\n\n"
     errors = []
     
-    # Check for required columns
-    if "GAME_ID" not in df.columns: errors.append("- `GAME_ID` column is missing.")
+    # Check rows and unique games
+    if len(df) == 0:
+        errors.append("- Dataset is empty (0 rows).")
+    elif len(df) != expected_rows:
+        errors.append(f"- Expected {expected_rows} rows, but got {len(df)}.")
+        
+    if "GAME_ID" in df.columns:
+        actual_unique_games = df["GAME_ID"].nunique()
+        if actual_unique_games != expected_unique_games:
+            errors.append(f"- Expected {expected_unique_games} unique games, but got {actual_unique_games}.")
+    else:
+        errors.append("- `GAME_ID` column is missing.")
+
     if "TEAM_ID" not in df.columns: errors.append("- `TEAM_ID` column is missing.")
     if TARGET_COL not in df.columns: errors.append(f"- Target column `{TARGET_COL}` is missing.")
 
     # Grain validation
     if "GAME_ID" in df.columns and "TEAM_ID" in df.columns:
-        if not df[["GAME_ID", "TEAM_ID"]].is_unique:
+        if df.duplicated(subset=["GAME_ID", "TEAM_ID"]).any():
             errors.append("- `GAME_ID` + `TEAM_ID` is not unique.")
         game_counts = df.groupby("GAME_ID").size()
         if not (game_counts == 2).all():
@@ -106,13 +117,16 @@ def main():
 
     # --- 1. Load Data ---
     print(f"Loading data from {INPUT_FILE}...")
-    df = pd.read_csv(INPUT_FILE, dtype={'GAME_ID': str})
+    df = pd.read_csv(INPUT_FILE, dtype={"GAME_ID": str, "TEAM_ID": str, "SEASON_ID": str})
     
+    # --- Fix GAME_ID leading zeros ---
+    df["GAME_ID"] = df["GAME_ID"].astype(str).str.strip().str.zfill(10)
+    df["GAME_ID_PREFIX"] = df["GAME_ID"].str[:3]
+
     # --- Input Stats ---
     report_sections.append("## 1. Input Dataset Profile\n")
     report_sections.append(f"- **Shape**: {df.shape}")
     report_sections.append(f"- **Season Distribution**:\n{df['SEASON_TYPE'].value_counts().to_string() if 'SEASON_TYPE' in df.columns else 'N/A'}")
-    df['GAME_ID_PREFIX'] = df['GAME_ID'].str[:3]
     report_sections.append(f"- **GAME_ID Prefix Distribution**:\n{df['GAME_ID_PREFIX'].value_counts().to_string()}")
 
     # --- 2. Initial Grain Validation ---
@@ -143,7 +157,8 @@ def main():
     actual_features = [col for col in SAFE_FEATURES if col in df.columns]
     dropped_leakage = [col for col in LEAKAGE_COLS if col in df.columns]
     
-    final_cols = actual_metadata + [TARGET_COL] + actual_features
+    # Include GAME_ID_PREFIX temporarily for filtering
+    final_cols = actual_metadata + [TARGET_COL] + actual_features + ["GAME_ID_PREFIX"]
     df_clean = df[final_cols].copy()
 
     report_sections.append("## 3. Column Management\n")
@@ -159,18 +174,24 @@ def main():
     outputs = {
         "regular": {
             "file": OUTPUT_DIR / "win_dataset_regular_2024_25_clean.csv",
-            "filter": df_clean['GAME_ID'].str.startswith("002"),
-            "scope": "Regular Season"
+            "filter": df_clean['GAME_ID_PREFIX'] == "002",
+            "scope": "Regular Season",
+            "expected_rows": 2460,
+            "expected_unique_games": 1230
         },
         "postseason": {
             "file": OUTPUT_DIR / "win_dataset_postseason_2024_25_clean.csv",
-            "filter": df_clean['GAME_ID'].str.startswith(("004", "005")),
-            "scope": "Postseason (Playoffs + Play-In)"
+            "filter": df_clean['GAME_ID_PREFIX'].isin(["004", "005"]),
+            "scope": "Postseason (Playoffs + Play-In)",
+            "expected_rows": 176,
+            "expected_unique_games": 88
         },
         "all_games": {
             "file": OUTPUT_DIR / "win_dataset_all_games_2024_25_clean.csv",
             "filter": pd.Series(True, index=df_clean.index),
-            "scope": "All Games"
+            "scope": "All Games",
+            "expected_rows": 2636,
+            "expected_unique_games": 1318
         }
     }
 
@@ -178,6 +199,10 @@ def main():
         print(f"  - Processing {name}...")
         df_out = df_clean[config["filter"]].copy()
         
+        # Drop the temporary GAME_ID_PREFIX column before saving
+        if "GAME_ID_PREFIX" in df_out.columns:
+            df_out = df_out.drop(columns=["GAME_ID_PREFIX"])
+            
         # Save CSV
         df_out.to_csv(config["file"], index=False)
         
@@ -203,8 +228,15 @@ def main():
 
         # --- 5. Post-Save Validation ---
         print(f"    - Validating {name} output...")
-        df_check = pd.read_csv(config["file"], dtype={'GAME_ID': str})
-        validate_dataset(df_check, name, report_sections)
+        df_check = pd.read_csv(config["file"], dtype={"GAME_ID": str, "TEAM_ID": str, "SEASON_ID": str})
+        df_check["GAME_ID"] = df_check["GAME_ID"].astype(str).str.strip().str.zfill(10)
+        validate_dataset(
+            df=df_check, 
+            name=name, 
+            report_sections=report_sections, 
+            expected_rows=config["expected_rows"], 
+            expected_unique_games=config["expected_unique_games"]
+        )
 
     # --- Final Decision ---
     report_sections.append("\n## 5. Final Decision\n")
