@@ -253,6 +253,9 @@ def build_dataset(season=None, output_scope="production", dataset_only: bool = F
     # Apply experimental-only GAME_ID remap if requested context
     df, remap_stats = _apply_gameid_remap_if_needed(df, season or "", output_scope, dataset_only)
 
+    if season == "2024-25" and output_scope == "experimental":
+        df = df[df["SEASON_TYPE"] == "Regular Season"].copy()
+
     # Ensure WIN target exists
     if "WIN" not in df.columns:
         raise RuntimeError("WIN target not found in V1 dataset")
