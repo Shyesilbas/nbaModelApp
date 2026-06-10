@@ -7,8 +7,8 @@ if str(REPO_ROOT) not in sys.path:
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from .schemas import WinProbRequest, WinProbResponse, ScorePredictionRequest, ScorePredictionResponse
-from .service import init_model, predict, predict_score
+from .schemas import WinProbRequest, WinProbResponse, ScorePredictionRequest, ScorePredictionResponse, ModelStatusResponse
+from .service import init_model, predict, predict_score, get_model_status
 import uvicorn
 
 app = FastAPI(title="NBA Win Probability ML Service")
@@ -59,6 +59,14 @@ def predict_score_endpoint(req: ScorePredictionRequest):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/model-status", response_model=ModelStatusResponse)
+def model_status():
+    try:
+        return get_model_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == '__main__':

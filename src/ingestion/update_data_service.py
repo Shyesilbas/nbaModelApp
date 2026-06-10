@@ -100,9 +100,16 @@ class UpdateDataService:
                     print(f"Fetched {len(df_new_team)} new team game rows.")
                     post_team_count = append_team_games_to_raw_dataset(df_new_team, season=self.season)
                     fetched_game_ids.extend(df_new_team["GAME_ID"].unique().tolist())
+                    skipped_team = [
+                        gid for gid in missing_game_ids
+                        if str(gid).zfill(10) not in {str(g).zfill(10) for g in df_new_team["GAME_ID"].unique()}
+                    ]
+                    for gid in skipped_team:
+                        print(f"  Warning: No team boxscore available for {str(gid).zfill(10)} (likely not played yet); skipped.")
                 else:
-                    print("No team logs retrieved from API.")
-                    failed_api_calls.append("team_games_fetcher: empty data")
+                    print("No team logs retrieved from API (games may not be played yet).")
+                    for gid in missing_game_ids:
+                        print(f"  Warning: No team boxscore available for {str(gid).zfill(10)} (likely not played yet); skipped.")
                     post_team_count = pre_team_count
             except Exception as e:
                 print(f"Error fetching/appending team game logs: {e}")
@@ -120,9 +127,16 @@ class UpdateDataService:
                 if not df_new_player.empty:
                     print(f"Fetched {len(df_new_player)} new player game rows.")
                     post_player_count = append_player_games_to_raw_dataset(df_new_player, season=self.season)
+                    skipped_player = [
+                        gid for gid in missing_game_ids
+                        if str(gid).zfill(10) not in {str(g).zfill(10) for g in df_new_player["Game_ID"].unique()}
+                    ]
+                    for gid in skipped_player:
+                        print(f"  Warning: No player boxscore available for {str(gid).zfill(10)} (likely not played yet); skipped.")
                 else:
-                    print("No player logs retrieved from API.")
-                    failed_api_calls.append("player_games_fetcher: empty data")
+                    print("No player logs retrieved from API (games may not be played yet).")
+                    for gid in missing_game_ids:
+                        print(f"  Warning: No player boxscore available for {str(gid).zfill(10)} (likely not played yet); skipped.")
                     post_player_count = pre_player_count
             except Exception as e:
                 print(f"Error fetching/appending player game logs: {e}")

@@ -117,7 +117,8 @@ def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFr
             return pd.DataFrame()
             
         # Parse fields from schedule
-        game_date = sched_row["GAME_DATE"]
+        game_date_dt = pd.to_datetime(sched_row["GAME_DATE"], errors="coerce")
+        game_date = game_date_dt.strftime("%Y-%m-%d") if pd.notna(game_date_dt) else str(sched_row["GAME_DATE"])
         season_type = sched_row["SEASON_TYPE"]
         home_team = sched_row["HOME_TEAM_ABBREVIATION"]
         away_team = sched_row["AWAY_TEAM_ABBREVIATION"]
@@ -281,7 +282,13 @@ def append_team_games_to_raw_dataset(new_rows: pd.DataFrame, season: Optional[st
     
     # Order columns
     df_combined = df_combined[EXPECTED_COLUMNS]
-    
+
+    if "GAME_DATE" in df_combined.columns:
+        df_combined["GAME_DATE"] = (
+            pd.to_datetime(df_combined["GAME_DATE"], errors="coerce", format="mixed")
+            .dt.strftime("%Y-%m-%d")
+        )
+
     # Save CSV
     os.makedirs(os.path.dirname(raw_team_csv), exist_ok=True)
     df_combined.to_csv(raw_team_csv, index=False)

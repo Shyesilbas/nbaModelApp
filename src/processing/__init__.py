@@ -13,3 +13,4 @@ __all__ = [
     "build_team_model_dataset_v2",
     "build_team_model_dataset_v3"
 ]
+from .compact_game_payload import compact_game_payload, expand_winner

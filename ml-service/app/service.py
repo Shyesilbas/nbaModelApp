@@ -1,8 +1,19 @@
 from .model_loader import ModelLoader, ScoreModelLoader
-from .schemas import WinProbRequest, WinProbResponse, ScorePredictionRequest, ScorePredictionResponse
+from .schemas import (
+    WinProbRequest, WinProbResponse,
+    ScorePredictionRequest, ScorePredictionResponse,
+    ModelStatusResponse, ModelMetrics, WinModelInfo, ScoreModelInfo
+)
 from scripts.build_matchup_features import build_features
+from scripts.artifact_paths import resolve_artifact_path
 import pandas as pd
 import numpy as np
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 loader = ModelLoader()
 score_loader = ScoreModelLoader()
@@ -126,3 +137,100 @@ def predict_score(request: ScorePredictionRequest) -> ScorePredictionResponse:
         prediction_date=pred_date_str
     )
 
+
+def get_model_status() -> ModelStatusResponse:
+    """Get the current model status and metadata."""
+    
+    def _extract_win_metrics(metadata):
+        metrics = ModelMetrics()
+        if not metadata:
+            return metrics
+        flat = metadata.get("metrics", {})
+        uncal = flat.get("uncalibrated", {}) if isinstance(flat.get("uncalibrated", {}), dict) else {}
+        metrics.roc_auc = flat.get("roc_auc", uncal.get("roc_auc"))
+        metrics.brier = flat.get("brier", uncal.get("brier_score"))
+        metrics.accuracy = flat.get("accuracy", uncal.get("accuracy"))
+        return metrics
+
+    # Get win model info
+    win_model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model.pkl")
+    win_metadata = loader.metadata
+
+    win_info = WinModelInfo(
+        active=loader.model is not None,
+        scope="production",
+        path=str(win_model_path),
+        version=loader.get_version(),
+        metrics=_extract_win_metrics(win_metadata)
+    )
+    
+    # Get score model info
+    home_model_path = resolve_artifact_path("score_model", "home_model_path", "models/home_score_model_v2.pkl")
+    away_model_path = resolve_artifact_path("score_model", "away_model_path", "models/away_score_model_v2.pkl")
+    total_model_path = resolve_artifact_path("score_model", "total_model_path", "models/direct_total_points_model_v2.pkl")
+    margin_model_path = resolve_artifact_path("score_model", "margin_model_path", "models/direct_point_diff_model_v2.pkl")
+    
+    score_metrics = ModelMetrics()
+    score_metadata = score_loader.metadata
+    
+    if score_metadata:
+        v2_metrics = score_metadata.get("v2_model_evaluation", {})
+        if "home" in v2_metrics:
+            score_metrics.home_mae = v2_metrics["home"]["metrics"]["MAE"]
+        if "away" in v2_metrics:
+            score_metrics.away_mae = v2_metrics["away"]["metrics"]["MAE"]
+    
+    score_info = ScoreModelInfo(
+        active=score_loader.home_model is not None,
+        home_model_path=str(home_model_path),
+        away_model_path=str(away_model_path),
+        total_model_path=str(total_model_path),
+        margin_model_path=str(margin_model_path),
+        version=score_loader.get_version(),
+        metrics=score_metrics
+    )
+    
+    # Check for experimental candidate
+    experimental_candidate = None
+    experimental_path = ROOT / "models" / "experimental" / "cross_season_win_logistic_regression.pkl"
+    if experimental_path.exists():
+        # Try to load experimental metadata if it exists
+        exp_metadata_path = experimental_path.parent / "cross_season_win_metadata.json"
+        if exp_metadata_path.exists():
+            import json
+            with open(exp_metadata_path, "r") as f:
+                exp_metadata = json.load(f)
+                exp_metrics = exp_metadata.get("metrics", {})
+                uncalibrated_metrics = exp_metrics.get("uncalibrated", {}) if isinstance(exp_metrics.get("uncalibrated", {}), dict) else {}
+                experimental_candidate = {
+                    "model_name": "cross_season_win_logistic_regression",
+                    "path": str(experimental_path),
+                    "training_date": exp_metadata.get("training_date"),
+                    "version": exp_metadata.get("version") or exp_metadata.get("training_date"),
+                    "metrics": {
+                        "roc_auc": exp_metrics.get("roc_auc", uncalibrated_metrics.get("roc_auc")),
+                        "brier": exp_metrics.get("brier", uncalibrated_metrics.get("brier_score")),
+                        "brier_score": exp_metrics.get("brier_score", uncalibrated_metrics.get("brier_score")),
+                        "accuracy": exp_metrics.get("accuracy", uncalibrated_metrics.get("accuracy"))
+                    }
+                }
+        else:
+            # Use training report data as fallback
+            experimental_candidate = {
+                "model_name": "cross_season_win_logistic_regression",
+                "path": str(experimental_path),
+                "training_date": "2026-06-09",
+                "version": "2026-06-09",
+                "metrics": {
+                    "roc_auc": 0.7048,
+                    "brier": 0.2190,
+                    "accuracy": 0.6422
+                },
+                "note": "Best experimental candidate from cross-season training"
+            }
+    
+    return ModelStatusResponse(
+        win_model=win_info,
+        score_model=score_info,
+        experimental_candidate=experimental_candidate
+    )

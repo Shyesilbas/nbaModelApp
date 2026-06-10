@@ -50,7 +50,7 @@ def load_team_boxscores(save: bool = True, season: str = None, output_scope: str
     df = pd.read_csv(raw_team_path, dtype={"GAME_ID": str, "TEAM_ID": str})
 
     # Normalise GAME_DATE
-    df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce").dt.strftime("%Y-%m-%d")
+    df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce", format="mixed").dt.strftime("%Y-%m-%d")
 
     # Correct matchup pivot drops/anomalies (identical away-style MATCHUPs)
     df = normalize_game_matchups(df)
@@ -124,7 +124,7 @@ def load_player_boxscores(save: bool = True, season: str = None, output_scope: s
     df = df.rename(columns=rename_map)
 
     # Normalise GAME_DATE
-    df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce").dt.strftime("%Y-%m-%d")
+    df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce", format="mixed").dt.strftime("%Y-%m-%d")
 
     # Derive TEAM_ABBREVIATION from MATCHUP if not present
     if "TEAM_ABBREVIATION" not in df.columns and "MATCHUP" in df.columns:
