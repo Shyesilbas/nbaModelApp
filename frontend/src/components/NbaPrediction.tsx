@@ -63,6 +63,9 @@ export default function NbaPrediction() {
   const [filterTeam1, setFilterTeam1] = useState("");
   const [filterTeam2, setFilterTeam2] = useState("");
 
+  // Model status state
+  const [modelStatus, setModelStatus] = useState<any>(null);
+
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
@@ -104,6 +107,21 @@ export default function NbaPrediction() {
     fetchDropdownData();
   }, []);
 
+  useEffect(() => {
+    const fetchModelStatus = async () => {
+      try {
+        const res = await fetch('http://localhost:8001/model-status');
+        if (res.ok) {
+          const data = await res.json();
+          setModelStatus(data);
+        }
+      } catch (err) {
+        console.error("Error loading model status:", err);
+      }
+    };
+    fetchModelStatus();
+  }, []);
+
   const getTeamInfo = (abbr: string) => {
     return NBA_TEAMS.find((t) => t.abbr === abbr) || { abbr, name: abbr, logo: "🏀", color: "#475569" };
   };
@@ -134,7 +152,7 @@ export default function NbaPrediction() {
         throw new Error('Invalid date format. Please use YYYY-MM-DD.');
       }
 
-      const res = await fetch('/api/nba/predictions/matchup', {
+      const res = await fetch('/api/nba/predictions/matchup?format=compact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ home_team: home, away_team: away, prediction_date: date })
@@ -144,7 +162,41 @@ export default function NbaPrediction() {
         throw new Error(body.error || `Server returned ${res.status}`);
       }
       const data = await res.json();
-      setResult(data);
+      const normalized = data?.display || data?.win || data?.score ? {
+        home_team: data.home,
+        away_team: data.away,
+        prediction_date: data.date,
+        win_probability: data.win ? {
+          predicted_winner: data.win.w,
+          home_win_probability: data.win.hp,
+          away_win_probability: data.win.ap,
+          confidence_bucket: data.win.cb,
+          model_version: data.win.mv,
+          error: data.win.e,
+        } : undefined,
+        score_prediction: data.score ? {
+          predicted_home_score: data.score.hs,
+          home_score_range: data.score.hR,
+          predicted_away_score: data.score.as,
+          away_score_range: data.score.aR,
+          predicted_total_points: data.score.tp,
+          total_points_range: data.score.tR,
+          predicted_margin: data.score.m,
+          margin_range: data.score.mR,
+          score_model_winner: data.score.w,
+          note: data.score.n,
+          model_version: data.score.mv,
+          error: data.score.e,
+        } : undefined,
+        final_display_recommendation: data.display ? {
+          primary_winner_signal: data.display.s,
+          displayed_winner: data.display.w,
+          displayed_score_summary: data.display.ss,
+          displayed_score_range_summary: data.display.rs,
+          warning: data.display.warn,
+        } : undefined,
+      } : data;
+      setResult(normalized);
     } catch (e: any) {
       setError(e.message || 'Unknown error');
     } finally {
@@ -290,7 +342,7 @@ export default function NbaPrediction() {
           <div className="flex items-center gap-3">
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
               <p className="text-[9px] font-black uppercase tracking-widest text-indigo-300/80 m-0">Model Deployed</p>
-              <p className="text-base font-black text-white leading-none mt-1.5 m-0">Random Forest V2</p>
+              <p className="text-base font-black text-white leading-none mt-1.5 m-0">Cross-Season WIN</p>
             </div>
           </div>
         </div>
@@ -300,6 +352,41 @@ export default function NbaPrediction() {
         <div className="flex items-start gap-3 rounded-xl bg-amber-50 text-amber-800 border border-amber-200/80 p-4 shadow-xs">
           <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-xs font-semibold m-0">{dataError}</p>
+        </div>
+      )}
+
+      {/* Experimental Candidate Info */}
+      {modelStatus?.experimental_candidate && (
+        <div className="rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200/60 p-4 shadow-xs">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={16} className="text-violet-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-violet-700 m-0">Best Experimental Candidate</p>
+              <div className="mt-2 flex flex-wrap gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-700">Model:</span>
+                  <span className="text-xs font-mono font-black text-violet-800">{modelStatus.experimental_candidate.model_name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-700">ROC-AUC:</span>
+                  <span className="text-xs font-mono font-black text-emerald-700">{modelStatus.experimental_candidate.metrics?.roc_auc?.toFixed(4)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-700">Accuracy:</span>
+                  <span className="text-xs font-mono font-black text-blue-700">{(modelStatus.experimental_candidate.metrics?.accuracy * 100).toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-700">Brier:</span>
+                  <span className="text-xs font-mono font-black text-orange-700">{modelStatus.experimental_candidate.metrics?.brier_score?.toFixed(4)}</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-2 m-0 italic">
+                * Experimental model - not promoted to production. Requires validation before deployment.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -663,9 +750,21 @@ export default function NbaPrediction() {
                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 m-0">Primary Winner Prediction</p>
                           <h4 className="text-base font-extrabold text-slate-800 mt-0.5 m-0">Predicted Probabilities</h4>
                         </div>
-                        <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono shadow-2xs">
-                          {result.win_probability.model_version || "RF_V2"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono shadow-2xs">
+                            {result.win_probability.model_version || "cross_season_win_logistic_regression"}
+                          </span>
+                          {modelStatus?.win_model?.metrics?.roc_auc && (
+                            <span className="text-[9px] font-bold px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono shadow-2xs">
+                              AUC: {modelStatus.win_model.metrics.roc_auc.toFixed(3)}
+                            </span>
+                          )}
+                          {modelStatus?.win_model?.metrics?.accuracy && (
+                            <span className="text-[9px] font-bold px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200 font-mono shadow-2xs">
+                              Acc: {(modelStatus.win_model.metrics.accuracy * 100).toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Projected Winner Banner */}
@@ -759,9 +858,21 @@ export default function NbaPrediction() {
                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 m-0">Expected Game Scores</p>
                           <h4 className="text-base font-extrabold text-slate-800 mt-0.5 m-0">80% Confidence Score Ranges</h4>
                         </div>
-                        <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono shadow-2xs">
-                          {result.score_prediction.model_version || "score_v2"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono shadow-2xs">
+                            {result.score_prediction.model_version || "score_v2"}
+                          </span>
+                          {modelStatus?.score_model?.metrics?.home_mae && (
+                            <span className="text-[9px] font-bold px-2 py-1 rounded bg-purple-50 text-purple-700 border border-purple-200 font-mono shadow-2xs">
+                              H-MAE: {modelStatus.score_model.metrics.home_mae.toFixed(1)}
+                            </span>
+                          )}
+                          {modelStatus?.score_model?.metrics?.away_mae && (
+                            <span className="text-[9px] font-bold px-2 py-1 rounded bg-orange-50 text-orange-700 border border-orange-200 font-mono shadow-2xs">
+                              A-MAE: {modelStatus.score_model.metrics.away_mae.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Score Range Tracks */}

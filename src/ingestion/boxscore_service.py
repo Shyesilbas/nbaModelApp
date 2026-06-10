@@ -35,6 +35,82 @@ class BoxscoreService:
             player_recent = player_bs_df.sort_values("GAME_DATE", ascending=False).head(3000).copy()
             _save_json(player_recent, "player_boxscores.json")
 
+            # Game details: merge game results with the corresponding team and player box scores.
+            game_details = []
+            if not results_df.empty:
+                results_sorted = results_df.copy().sort_values("GAME_DATE", ascending=False)
+                for _, row in results_sorted.iterrows():
+                    game_id = str(row["GAME_ID"])
+                    home_id = row.get("HOME_TEAM_ABBREVIATION")
+                    away_id = row.get("AWAY_TEAM_ABBREVIATION")
+
+                    teams_for_game = team_bs_df[team_bs_df["GAME_ID"].astype(str) == game_id].copy()
+                    players_for_game = player_bs_df[player_bs_df["GAME_ID"].astype(str) == game_id].copy()
+
+                    def _row_to_dict(series):
+                        out = {}
+                        for col, val in series.items():
+                            if pd.notna(val):
+                                if hasattr(val, "item"):
+                                    try:
+                                        val = val.item()
+                                    except Exception:
+                                        pass
+                                out[col] = val
+                        return out
+
+                    team_stats = [_row_to_dict(r) for _, r in teams_for_game.iterrows()]
+                    player_stats = [_row_to_dict(r) for _, r in players_for_game.iterrows()]
+
+                    team_lookup = {str(t.get("TEAM_ABBREVIATION")): t for t in team_stats}
+                    home_team = team_lookup.get(str(home_id), {})
+                    away_team = team_lookup.get(str(away_id), {})
+
+                    leaders = {
+                        "points": None,
+                        "rebounds": None,
+                        "assists": None,
+                    }
+                    if player_stats:
+                        leaders["points"] = max(player_stats, key=lambda x: x.get("PTS", -1) or -1)
+                        leaders["rebounds"] = max(player_stats, key=lambda x: x.get("REB", -1) or -1)
+                        leaders["assists"] = max(player_stats, key=lambda x: x.get("AST", -1) or -1)
+
+                    game_details.append({
+                        "game_id": game_id,
+                        "season": row.get("SEASON"),
+                        "season_type": row.get("SEASON_TYPE"),
+                        "game_date": str(row.get("GAME_DATE")),
+                        "game_status": row.get("GAME_STATUS", "Final"),
+                        "arena": {
+                            "name": row.get("ARENA"),
+                            "city": row.get("LOCATION", "").split(",")[0].strip() if row.get("LOCATION") else None,
+                            "state": row.get("LOCATION", "").split(",")[1].strip() if row.get("LOCATION") and "," in str(row.get("LOCATION")) else None,
+                        },
+                        "home_team": {
+                            "team_id": home_id,
+                            "team_name": row.get("HOME_TEAM_NAME"),
+                            "team_city": row.get("HOME_TEAM_CITY"),
+                            "score": int(row.get("HOME_SCORE")) if pd.notna(row.get("HOME_SCORE")) else None,
+                            "quarter_scores": row.get("HOME_QUARTER_SCORES", None),
+                        },
+                        "away_team": {
+                            "team_id": away_id,
+                            "team_name": row.get("AWAY_TEAM_NAME"),
+                            "team_city": row.get("AWAY_TEAM_CITY"),
+                            "score": int(row.get("AWAY_SCORE")) if pd.notna(row.get("AWAY_SCORE")) else None,
+                            "quarter_scores": row.get("AWAY_QUARTER_SCORES", None),
+                        },
+                        "team_stats": team_stats,
+                        "player_stats": player_stats[:20],
+                        "game_leaders": leaders,
+                        "officials": [],
+                    })
+
+            game_details_path = os.path.join(OUT_DIR, "game_details.json")
+            with open(game_details_path, "w") as f:
+                json.dump(game_details, f, indent=2, default=str)
+
             # Highlights
             highlights = {"highest_scoring_games": [], "lowest_scoring_games": [], "top_points": [], "top_assists": [], "top_rebounds": []}
             if not results_df.empty:

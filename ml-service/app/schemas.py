@@ -44,3 +44,35 @@ class ScorePredictionResponse(BaseModel):
     prediction_date: str
     error: Optional[str] = None
 
+
+class ModelMetrics(BaseModel):
+    roc_auc: Optional[float] = None
+    brier: Optional[float] = None
+    accuracy: Optional[float] = None
+    home_mae: Optional[float] = None
+    away_mae: Optional[float] = None
+
+
+class WinModelInfo(BaseModel):
+    active: bool
+    scope: str
+    path: str
+    version: Optional[str]
+    metrics: ModelMetrics
+
+
+class ScoreModelInfo(BaseModel):
+    active: bool
+    home_model_path: str
+    away_model_path: str
+    total_model_path: str
+    margin_model_path: str
+    version: Optional[str]
+    metrics: ModelMetrics
+
+
+class ModelStatusResponse(BaseModel):
+    win_model: WinModelInfo
+    score_model: ScoreModelInfo
+    experimental_candidate: Optional[dict] = None
+

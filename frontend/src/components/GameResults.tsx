@@ -404,14 +404,20 @@ function GameCard({
   game,
   teamBoxScores,
   playerBoxScores,
+  gameDetail,
   index,
   initiallyExpanded = false,
+  autoExpandSignal,
+  preferredTab,
 }: {
   game: GameResult;
   teamBoxScores: TeamBoxScore[];
   playerBoxScores: PlayerBoxScore[];
+  gameDetail?: GameDetail | null;
   index: number;
   initiallyExpanded?: boolean;
+  autoExpandSignal?: string;
+  preferredTab?: DetailTab;
 }) {
   const [expanded, setExpanded] = useState(initiallyExpanded);
   const [detailTab, setDetailTab] = useState<DetailTab>("summary");
@@ -421,8 +427,16 @@ function GameCard({
   useEffect(() => {
     if (initiallyExpanded) {
       setExpanded(true);
+      setDetailTab("summary");
     }
   }, [initiallyExpanded]);
+
+  useEffect(() => {
+    if (autoExpandSignal) {
+      setExpanded(true);
+      setDetailTab(preferredTab || "summary");
+    }
+  }, [autoExpandSignal, preferredTab]);
 
   const meta = seasonMeta(game.SEASON_TYPE);
   const margin = Math.abs(game.HOME_SCORE - game.AWAY_SCORE);
@@ -436,6 +450,7 @@ function GameCard({
   const gamePlayers = playerBoxScores.filter(p => p.GAME_ID === game.GAME_ID);
   const homePlayers = playerTeamFilter(gamePlayers, game.HOME_TEAM_ABBREVIATION);
   const awayPlayers = playerTeamFilter(gamePlayers, game.AWAY_TEAM_ABBREVIATION);
+  const detail = gameDetail;
 
   const staggerClass = `stagger-${Math.min((index % 6) + 1, 6)}`;
 
@@ -447,7 +462,7 @@ function GameCard({
   ];
 
   return (
-    <div className={`animate-fade-in-up ${staggerClass} ${meta.card} rounded-2xl overflow-hidden transition-all duration-300`}>
+    <div id={`game-result-${game.GAME_ID}`} className={`animate-fade-in-up ${staggerClass} ${meta.card} rounded-2xl overflow-hidden transition-all duration-300`}>
       <button
         className="w-full text-left"
         onClick={() => setExpanded(!expanded)}
@@ -591,9 +606,33 @@ function GameCard({
                       <p className="text-sm font-black text-slate-900">{game.GAME_STATUS}</p>
                     </div>
                   </div>
-                  <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-500">
-                    This panel is built from completed game results, team box scores and player box scores.
-                    Series fields are intentionally sparse for non-playoff games and some Finals context rows.
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Arena</p>
+                      <p className="text-sm font-black text-slate-900">{detail?.arena?.name || "—"}</p>
+                      <p className="text-[10px] text-slate-500">{detail?.arena?.city || ""}{detail?.arena?.state ? `, ${detail.arena.state}` : ""}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Leaders</p>
+                      <p className="text-[10px] text-slate-700">PTS: {detail?.game_leaders?.points?.PLAYER_NAME || detail?.game_leaders?.points?.n || "—"} ({detail?.game_leaders?.points?.PTS ?? detail?.game_leaders?.points?.v ?? "—"})</p>
+                      <p className="text-[10px] text-slate-700">REB: {detail?.game_leaders?.rebounds?.PLAYER_NAME || detail?.game_leaders?.rebounds?.n || "—"} ({detail?.game_leaders?.rebounds?.REB ?? detail?.game_leaders?.rebounds?.v ?? "—"})</p>
+                      <p className="text-[10px] text-slate-700">AST: {detail?.game_leaders?.assists?.PLAYER_NAME || detail?.game_leaders?.assists?.n || "—"} ({detail?.game_leaders?.assists?.AST ?? detail?.game_leaders?.assists?.v ?? "—"})</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Officials</p>
+                      <p className="text-[10px] text-slate-700">{(detail?.officials || []).slice(0, 3).map((o) => o.name || o.n).filter(Boolean).join(" · ") || "—"}</p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 col-span-2">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Top players</p>
+                      <div className="mt-1 grid grid-cols-2 gap-1 text-[10px] text-slate-700">
+                        {(detail?.player_stats || []).slice(0, 6).map((p: any) => (
+                          <div key={`${p.PLAYER_ID}-${p.TEAM_ABBREVIATION}`} className="flex items-center justify-between gap-2">
+                            <span className="truncate">{p.PLAYER_NAME}</span>
+                            <span className="font-black text-slate-900">{p.PTS ?? p.pts ?? "—"} pts</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -717,6 +756,21 @@ interface HighlightItem {
   top_rebounds: any[];
 }
 
+interface GameDetail {
+  game_id: string;
+  season?: string;
+  season_type?: string;
+  game_date?: string;
+  game_status?: string;
+  arena?: { name?: string | null; city?: string | null; state?: string | null };
+  home_team?: any;
+  away_team?: any;
+  team_stats?: any[];
+  player_stats?: any[];
+  game_leaders?: any;
+  officials?: any[];
+}
+
 function HighlightCard({
   title,
   icon,
@@ -784,6 +838,7 @@ export default function GameResults() {
   const [teamBS, setTeamBS]             = useState<TeamBoxScore[]>([]);
   const [playerBS, setPlayerBS]         = useState<PlayerBoxScore[]>([]);
   const [highlights, setHighlights]     = useState<HighlightItem | null>(null);
+  const [gameDetails, setGameDetails]    = useState<GameDetail[]>([]);
   const [showHighlights, setShowHighlights] = useState(true);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState<string | null>(null);
@@ -793,18 +848,22 @@ export default function GameResults() {
   const [search, setSearch]             = useState("");
   const [sortDesc, setSortDesc]         = useState(true);
   const [page, setPage]                 = useState(1);
+  const [focusedGameId, setFocusedGameId] = useState<string | null>(null);
+  const [focusedGameTab, setFocusedGameTab] = useState<DetailTab>("summary");
 
   useEffect(() => {
     Promise.all([
       fetch("/data/game_results.json").then(r => r.json()),
       fetch("/data/team_boxscores.json").then(r => r.json()),
       fetch("/data/player_boxscores.json").then(r => r.json()),
+      fetch("/data/game_details.json").then(r => r.json()).catch(() => []),
       fetch("/data/highlights.json").then(r => r.json()).catch(() => null),
     ])
-      .then(([r, t, p, h]) => { 
+      .then(([r, t, p, d, h]) => { 
         setResults(r); 
         setTeamBS(t); 
         setPlayerBS(p); 
+        setGameDetails(d); 
         setHighlights(h); 
         setLoading(false); 
       })
@@ -847,10 +906,13 @@ export default function GameResults() {
     setPage(1);
   };
 
-  const handleGameHighlightClick = (gameId: string) => {
+  const handleGameHighlightClick = (gameId: string, preferredTab: DetailTab = "summary") => {
     setFilter("ALL");
     setSelectedWeek("ALL");
     setSearch(gameId);
+    setFocusedGameId(gameId);
+    setFocusedGameTab(preferredTab);
+    setShowHighlights(true);
     setPage(1);
     
     // Smooth scroll down to the games list section
@@ -858,6 +920,10 @@ export default function GameResults() {
       const el = document.getElementById("games-list-section");
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      const card = document.getElementById(`game-result-${gameId}`);
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }, 100);
   };
@@ -919,7 +985,7 @@ export default function GameResults() {
             icon={<Flame size={14} className="text-rose-500" />}
             data={highlights.highest_scoring_games}
             type="team"
-            onGameClick={handleGameHighlightClick}
+            onGameClick={(gameId) => handleGameHighlightClick(gameId, "summary")}
             gradient="from-rose-500/5 to-transparent"
           />
           <HighlightCard
@@ -927,7 +993,7 @@ export default function GameResults() {
             icon={<Snowflake size={14} className="text-blue-500" />}
             data={highlights.lowest_scoring_games}
             type="team"
-            onGameClick={handleGameHighlightClick}
+            onGameClick={(gameId) => handleGameHighlightClick(gameId, "summary")}
             gradient="from-blue-500/5 to-transparent"
           />
           <HighlightCard
@@ -935,7 +1001,7 @@ export default function GameResults() {
             icon={<Award size={14} className="text-amber-500" />}
             data={highlights.top_points}
             type="player"
-            onGameClick={handleGameHighlightClick}
+            onGameClick={(gameId) => handleGameHighlightClick(gameId, "players")}
             gradient="from-amber-500/5 to-transparent"
           />
           <HighlightCard
@@ -943,7 +1009,7 @@ export default function GameResults() {
             icon={<Sparkles size={14} className="text-emerald-500" />}
             data={highlights.top_assists}
             type="player"
-            onGameClick={handleGameHighlightClick}
+            onGameClick={(gameId) => handleGameHighlightClick(gameId, "players")}
             gradient="from-emerald-500/5 to-transparent"
           />
           <HighlightCard
@@ -951,7 +1017,7 @@ export default function GameResults() {
             icon={<Trophy size={14} className="text-[#1d428a]" />}
             data={highlights.top_rebounds}
             type="player"
-            onGameClick={handleGameHighlightClick}
+            onGameClick={(gameId) => handleGameHighlightClick(gameId, "players")}
             gradient="from-sky-500/5 to-transparent"
           />
         </div>
@@ -1066,8 +1132,11 @@ export default function GameResults() {
               game={game}
               teamBoxScores={teamBS}
               playerBoxScores={playerBS}
+              gameDetail={gameDetails.find((d) => d.game_id === game.GAME_ID) ?? null}
               index={i}
               initiallyExpanded={search === game.GAME_ID}
+              autoExpandSignal={focusedGameId === game.GAME_ID ? focusedGameId : undefined}
+              preferredTab={focusedGameId === game.GAME_ID ? focusedGameTab : undefined}
             />
           ))
         )}

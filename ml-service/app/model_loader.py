@@ -37,7 +37,7 @@ class ModelLoader:
 
     def get_version(self) -> Optional[str]:
         if self.metadata:
-            return self.metadata.get("training_date") or self.metadata.get("model_name")
+            return self.metadata.get("version") or self.metadata.get("training_date") or self.metadata.get("model_name")
         return None
 
 
@@ -67,5 +67,5 @@ class ScoreModelLoader:
 
     def get_version(self) -> Optional[str]:
         if self.metadata:
-            return self.metadata.get("model_name") or "score_v2"
+            return self.metadata.get("version") or self.metadata.get("training_date") or self.metadata.get("model_name") or "score_v2"
         return "score_v2"

@@ -25,3 +25,25 @@ logs/**
 **/__pycache__/**
 **/.cache/**
 **/cache/**
+
+# Paket Kilit Dosyaları (Lock files çok büyüktür, AI için package.json yeterlidir)
+**/package-lock.json
+package-lock.json
+
+# Vektörel ve Medya Dosyaları (Örn: frontend/public/icons.svg on binlerce satır path içerebilir)
+**/*.svg
+**/*.ico
+**/*.png
+
+# Geçici, Deneme ve Çıktı Dosyaları (Context'i kirletmemesi için)
+tmp_*.json
+temp_*.py
+scratch_*.py
+tmp_*.*
+
+# Rapor Grafikleri (Text olarak anlamsız veya çok uzun base64/html barındırabilir)
+reports/plots/**
+
+# Derleme Dizinleri (Garanti altına almak için)
+backend/spring-boot-app/target/**
+frontend/dist/**

@@ -28994,5 +28994,27 @@
     "AWAY_SERIES_WINS":null,
     "IS_ELIMINATION_GAME":null,
     "CAN_CLINCH_SERIES":null
+  },
+  {
+    "GAME_ID":"0042500403",
+    "GAME_DATE":"2026-06-08",
+    "HOME_TEAM_ABBREVIATION":"NYK",
+    "HOME_TEAM_NAME":"Knicks",
+    "HOME_SCORE":111,
+    "AWAY_TEAM_ABBREVIATION":"SAS",
+    "AWAY_TEAM_NAME":"Spurs",
+    "AWAY_SCORE":115,
+    "WINNER_TEAM_ABBREVIATION":"SAS",
+    "LOSER_TEAM_ABBREVIATION":"NYK",
+    "SEASON_TYPE":"NBA Finals",
+    "IS_PLAYOFF":true,
+    "GAME_STATUS":"Final",
+    "WEEK":null,
+    "PLAYOFF_ROUND":null,
+    "SERIES_GAME_NUMBER":null,
+    "HOME_SERIES_WINS":null,
+    "AWAY_SERIES_WINS":null,
+    "IS_ELIMINATION_GAME":null,
+    "CAN_CLINCH_SERIES":null
   }
 ]

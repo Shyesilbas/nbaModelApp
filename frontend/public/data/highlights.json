@@ -93,12 +93,12 @@
       "SEASON_TYPE": "Playoffs"
     },
     {
-      "GAME_ID": "0022500397",
-      "GAME_DATE": "2025-12-21",
-      "HOME_TEAM": "BKN",
-      "AWAY_TEAM": "TOR",
-      "HOME_SCORE": 96,
-      "AWAY_SCORE": 81,
+      "GAME_ID": "0022500127",
+      "GAME_DATE": "2025-10-28",
+      "HOME_TEAM": "GSW",
+      "AWAY_TEAM": "LAC",
+      "HOME_SCORE": 98,
+      "AWAY_SCORE": 79,
       "TOTAL_PTS": 177,
       "SEASON_TYPE": "Regular Season"
     }
@@ -129,20 +129,20 @@
       "GAME_ID": "0022500013"
     },
     {
-      "PLAYER_NAME": "Anthony Edwards",
-      "TEAM": "MIN",
-      "MATCHUP": "MIN @ SAS",
-      "GAME_DATE": "2026-01-17",
-      "VALUE": 55,
-      "GAME_ID": "0022500598"
-    },
-    {
       "PLAYER_NAME": "Nikola Joki\u0107",
       "TEAM": "DEN",
       "MATCHUP": "DEN @ LAC",
       "GAME_DATE": "2025-11-12",
       "VALUE": 55,
       "GAME_ID": "0022500224"
+    },
+    {
+      "PLAYER_NAME": "Shai Gilgeous-Alexander",
+      "TEAM": "OKC",
+      "MATCHUP": "OKC @ IND",
+      "GAME_DATE": "2025-10-23",
+      "VALUE": 55,
+      "GAME_ID": "0022500005"
     }
   ],
   "top_assists": [
@@ -163,6 +163,14 @@
       "GAME_ID": "0022500717"
     },
     {
+      "PLAYER_NAME": "Josh Giddey",
+      "TEAM": "CHI",
+      "MATCHUP": "CHI vs. CLE",
+      "GAME_DATE": "2026-03-19",
+      "VALUE": 19,
+      "GAME_ID": "0022501011"
+    },
+    {
       "PLAYER_NAME": "Andrew Nembhard",
       "TEAM": "IND",
       "MATCHUP": "IND vs. LAL",
@@ -177,14 +185,6 @@
       "GAME_DATE": "2026-03-25",
       "VALUE": 19,
       "GAME_ID": "0022501059"
-    },
-    {
-      "PLAYER_NAME": "Josh Giddey",
-      "TEAM": "CHI",
-      "MATCHUP": "CHI vs. CLE",
-      "GAME_DATE": "2026-03-19",
-      "VALUE": 19,
-      "GAME_ID": "0022501011"
     }
   ],
   "top_rebounds": [
@@ -213,20 +213,20 @@
       "GAME_ID": "0042500311"
     },
     {
-      "PLAYER_NAME": "Derik Queen",
-      "TEAM": "NOP",
-      "MATCHUP": "NOP @ MIN",
-      "GAME_DATE": "2026-04-12",
+      "PLAYER_NAME": "Karl-Anthony Towns",
+      "TEAM": "NYK",
+      "MATCHUP": "NYK @ TOR",
+      "GAME_DATE": "2026-01-28",
       "VALUE": 22,
-      "GAME_ID": "0022501195"
+      "GAME_ID": "0022500675"
     },
     {
-      "PLAYER_NAME": "Jalen Duren",
-      "TEAM": "DET",
-      "MATCHUP": "DET vs. UTA",
-      "GAME_DATE": "2025-11-05",
+      "PLAYER_NAME": "Oscar Tshiebwe",
+      "TEAM": "UTA",
+      "MATCHUP": "UTA vs. MEM",
+      "GAME_DATE": "2026-04-10",
       "VALUE": 22,
-      "GAME_ID": "0022500172"
+      "GAME_ID": "0022501181"
     }
   ]
 }

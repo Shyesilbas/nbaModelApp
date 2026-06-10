@@ -1,6 +1,8 @@
 package com.example.nba.prediction;
 
 import org.springframework.stereotype.Service;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Service
 public class NbaPredictionService {
@@ -121,5 +123,52 @@ public class NbaPredictionService {
 
         return resp;
     }
-}
 
+    public Map<String, Object> predictMatchupCompact(NbaWinPredictionRequest req) {
+        NbaMatchupPredictionResponse resp = predictMatchup(req);
+        Map<String, Object> compact = new LinkedHashMap<>();
+        compact.put("home", resp.home_team);
+        compact.put("away", resp.away_team);
+        compact.put("date", resp.prediction_date);
+
+        if (resp.win_probability != null) {
+            Map<String, Object> win = new LinkedHashMap<>();
+            win.put("w", resp.win_probability.predicted_winner);
+            win.put("hp", resp.win_probability.home_win_probability);
+            win.put("ap", resp.win_probability.away_win_probability);
+            win.put("cb", resp.win_probability.confidence_bucket);
+            win.put("mv", resp.win_probability.model_version);
+            if (resp.win_probability.error != null) win.put("e", resp.win_probability.error);
+            compact.put("win", win);
+        }
+
+        if (resp.score_prediction != null) {
+            Map<String, Object> score = new LinkedHashMap<>();
+            score.put("hs", resp.score_prediction.predicted_home_score);
+            score.put("hR", resp.score_prediction.home_score_range);
+            score.put("as", resp.score_prediction.predicted_away_score);
+            score.put("aR", resp.score_prediction.away_score_range);
+            score.put("tp", resp.score_prediction.predicted_total_points);
+            score.put("tR", resp.score_prediction.total_points_range);
+            score.put("m", resp.score_prediction.predicted_margin);
+            score.put("mR", resp.score_prediction.margin_range);
+            score.put("w", resp.score_prediction.score_model_winner);
+            score.put("n", resp.score_prediction.note);
+            score.put("mv", resp.score_prediction.model_version);
+            if (resp.score_prediction.error != null) score.put("e", resp.score_prediction.error);
+            compact.put("score", score);
+        }
+
+        if (resp.final_display_recommendation != null) {
+            Map<String, Object> display = new LinkedHashMap<>();
+            display.put("s", resp.final_display_recommendation.primary_winner_signal);
+            display.put("w", resp.final_display_recommendation.displayed_winner);
+            display.put("ss", resp.final_display_recommendation.displayed_score_summary);
+            display.put("rs", resp.final_display_recommendation.displayed_score_range_summary);
+            display.put("warn", resp.final_display_recommendation.warning);
+            compact.put("display", display);
+        }
+
+        return compact;
+    }
+}

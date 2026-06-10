@@ -2,6 +2,7 @@ package com.example.nba.prediction;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/nba/predictions")
@@ -40,8 +41,11 @@ public class NbaPredictionController {
     }
 
     @PostMapping("/matchup")
-    public ResponseEntity<?> predictMatchup(@RequestBody NbaWinPredictionRequest req) {
+    public ResponseEntity<?> predictMatchup(@RequestParam(defaultValue = "full") String format, @RequestBody NbaWinPredictionRequest req) {
         try {
+            if ("compact".equalsIgnoreCase(format)) {
+                return ResponseEntity.ok(service.predictMatchupCompact(req));
+            }
             NbaMatchupPredictionResponse resp = service.predictMatchup(req);
             return ResponseEntity.ok(resp);
         } catch (NbaPredictionException e) {
@@ -53,4 +57,3 @@ public class NbaPredictionController {
 
     public static record ErrorResponse(String error) {}
 }
-
