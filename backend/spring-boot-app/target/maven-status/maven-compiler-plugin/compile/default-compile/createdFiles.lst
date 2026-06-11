@@ -1,6 +1,10 @@
+com/example/nba/prediction/NbaMatchupPredictionResponse$PlayerPredictionResult.class
 com/example/nba/prediction/NbaScorePredictionRequest.class
 com/example/nba/prediction/NbaPredictionController.class
+com/example/nba/prediction/NbaPlayerPredictionClient$PlayerPrediction.class
 com/example/nba/prediction/NbaMatchupPredictionResponse$FinalDisplayRecommendation.class
+com/example/nba/prediction/NbaPlayerPredictionClient.class
+com/example/nba/prediction/NbaPlayerPredictionClient$NbaPlayerPredictionResponse.class
 com/example/nba/prediction/NbaWinPredictionResponse.class
 com/example/nba/prediction/NbaPredictionApplication.class
 com/example/nba/prediction/NbaMatchupPredictionResponse$WinProbabilityResult.class

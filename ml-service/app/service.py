@@ -1,9 +1,11 @@
-from .model_loader import ModelLoader, ScoreModelLoader
+from .model_loader import ModelLoader, ScoreModelLoader, PlayerModelLoader
 from .schemas import (
     WinProbRequest, WinProbResponse,
     ScorePredictionRequest, ScorePredictionResponse,
-    ModelStatusResponse, ModelMetrics, WinModelInfo, ScoreModelInfo
+    ModelStatusResponse, ModelMetrics, WinModelInfo, ScoreModelInfo,
+    PlayerPredictionResponse, PlayerPrediction
 )
+from .player_service import get_player_predictions
 from scripts.build_matchup_features import build_features
 from scripts.artifact_paths import resolve_artifact_path
 import pandas as pd
@@ -17,11 +19,16 @@ if str(ROOT) not in sys.path:
 
 loader = ModelLoader()
 score_loader = ScoreModelLoader()
+player_loader = PlayerModelLoader()
 
 
 def init_model():
     loader.load()
     score_loader.load()
+    try:
+        player_loader.load()
+    except Exception as e:
+        print("Player models could not be loaded:", e)
 
 
 def predict(request: WinProbRequest) -> WinProbResponse:
@@ -109,6 +116,22 @@ def predict_score(request: ScorePredictionRequest) -> ScorePredictionResponse:
     else:
         pred_margin = pred_home - pred_away
 
+    # Enforce Win Probability Alignment
+    # Win Probability model is our primary classification source.
+    # If the score model's implied winner contradicts the win model, we swap the scores
+    # so that the regression predictions align with the superior classification prediction.
+    score_winner_pre_align = home_team if pred_margin >= 0 else away_team
+    try:
+        win_req = WinProbRequest(home_team=home_team, away_team=away_team, prediction_date=pred_date_str)
+        win_resp = predict(win_req)
+        if win_resp.predicted_winner != score_winner_pre_align:
+            # Conflict detected! Swap scores to align with Win Probability.
+            pred_home, pred_away = pred_away, pred_home
+            pred_margin = -pred_margin
+    except Exception:
+        pass
+
+
     # Apply empirical prediction intervals (80% confidence offsets)
     offsets = metadata["prediction_interval_offsets_80pct"]
     home_range = [round(pred_home + offsets["home"][0], 1), round(pred_home + offsets["home"][1], 1)]
@@ -135,6 +158,64 @@ def predict_score(request: ScorePredictionRequest) -> ScorePredictionResponse:
         note="Score prediction has high natural variance. Use win probability model as primary winner signal.",
         model_version=model_version,
         prediction_date=pred_date_str
+    )
+
+
+def predict_players(request: ScorePredictionRequest) -> PlayerPredictionResponse:
+    if player_loader.pts_model is None:
+        raise FileNotFoundError("Player models not loaded.")
+
+    home_team = request.home_team.upper()
+    away_team = request.away_team.upper()
+    pred_date_str = request.prediction_date.isoformat() if hasattr(request.prediction_date, 'isoformat') else str(request.prediction_date)
+
+    # 1. Get raw player predictions
+    players_df = get_player_predictions(home_team, away_team, player_loader, score_loader)
+
+    # 2. Get Team Score Predictions for Top-Down Scaling
+    score_resp = predict_score(request)
+    exp_home_score = score_resp.predicted_home_score
+    exp_away_score = score_resp.predicted_away_score
+
+    # 3. Apply Scaling
+    home_players_df = players_df[players_df["IS_HOME"] == 1]
+    away_players_df = players_df[players_df["IS_HOME"] == 0]
+
+    raw_home_pts = home_players_df["RAW_PROJ_PTS"].sum()
+    raw_away_pts = away_players_df["RAW_PROJ_PTS"].sum()
+
+    home_scale = exp_home_score / raw_home_pts if raw_home_pts > 0 else 1.0
+    away_scale = exp_away_score / raw_away_pts if raw_away_pts > 0 else 1.0
+
+    def parse_players(df, scale):
+        res = []
+        for _, r in df.iterrows():
+            res.append(PlayerPrediction(
+                player_id=int(r["PLAYER_ID"]),
+                player_name=str(r.get("PLAYER_NAME", f"Player {r['PLAYER_ID']}")),
+                position_group=str(r.get("PLAYER_POSITION_GROUP", "UNKNOWN")),
+                predicted_pts=round(r["RAW_PROJ_PTS"] * scale, 1),
+                predicted_reb=round(r["RAW_PROJ_REB"], 1),
+                predicted_ast=round(r["RAW_PROJ_AST"], 1),
+                predicted_pra=round((r["RAW_PROJ_PTS"] * scale) + r["RAW_PROJ_REB"] + r["RAW_PROJ_AST"], 1)
+            ))
+        return res
+
+    home_list = parse_players(home_players_df, home_scale)
+    away_list = parse_players(away_players_df, away_scale)
+
+    # Sort by projected pts
+    home_list.sort(key=lambda x: x.predicted_pts, reverse=True)
+    away_list.sort(key=lambda x: x.predicted_pts, reverse=True)
+
+    return PlayerPredictionResponse(
+        home_team=home_team,
+        away_team=away_team,
+        prediction_date=pred_date_str,
+        home_players=home_list,
+        away_players=away_list,
+        score_model_sync=True,
+        model_version=player_loader.get_version()
     )
 
 

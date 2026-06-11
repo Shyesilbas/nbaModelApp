@@ -8,10 +8,12 @@ import java.util.Map;
 public class NbaPredictionService {
     private final NbaPredictionClient client;
     private final NbaScorePredictionClient scoreClient;
+    private final NbaPlayerPredictionClient playerClient;
 
-    public NbaPredictionService(NbaPredictionClient client, NbaScorePredictionClient scoreClient) {
+    public NbaPredictionService(NbaPredictionClient client, NbaScorePredictionClient scoreClient, NbaPlayerPredictionClient playerClient) {
         this.client = client;
         this.scoreClient = scoreClient;
+        this.playerClient = playerClient;
     }
 
     public NbaWinPredictionResponse predict(NbaWinPredictionRequest req) {
@@ -91,6 +93,25 @@ public class NbaPredictionService {
             resp.score_prediction.error = scoreError;
         }
 
+        NbaPlayerPredictionClient.NbaPlayerPredictionResponse playerResp = null;
+        String playerError = null;
+        try {
+            NbaScorePredictionRequest scoreReq = new NbaScorePredictionRequest(req.home_team, req.away_team, req.prediction_date);
+            playerResp = playerClient.callMlService(scoreReq);
+        } catch (Exception e) {
+            playerError = e.getMessage();
+        }
+
+        if (playerResp != null) {
+            resp.player_predictions = new NbaMatchupPredictionResponse.PlayerPredictionResult();
+            resp.player_predictions.home_players = playerResp.home_players;
+            resp.player_predictions.away_players = playerResp.away_players;
+            resp.player_predictions.score_model_sync = playerResp.score_model_sync;
+        } else {
+            resp.player_predictions = new NbaMatchupPredictionResponse.PlayerPredictionResult();
+            resp.player_predictions.error = playerError;
+        }
+
         resp.final_display_recommendation = new NbaMatchupPredictionResponse.FinalDisplayRecommendation();
         resp.final_display_recommendation.warning = "Predictions are estimates and not guaranteed outcomes.";
 
@@ -157,6 +178,14 @@ public class NbaPredictionService {
             score.put("mv", resp.score_prediction.model_version);
             if (resp.score_prediction.error != null) score.put("e", resp.score_prediction.error);
             compact.put("score", score);
+        }
+
+        if (resp.player_predictions != null && resp.player_predictions.home_players != null) {
+            Map<String, Object> players = new LinkedHashMap<>();
+            players.put("home", resp.player_predictions.home_players);
+            players.put("away", resp.player_predictions.away_players);
+            if (resp.player_predictions.error != null) players.put("e", resp.player_predictions.error);
+            compact.put("players", players);
         }
 
         if (resp.final_display_recommendation != null) {

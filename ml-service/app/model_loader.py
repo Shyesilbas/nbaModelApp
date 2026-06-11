@@ -69,3 +69,32 @@ class ScoreModelLoader:
         if self.metadata:
             return self.metadata.get("version") or self.metadata.get("training_date") or self.metadata.get("model_name") or "score_v2"
         return "score_v2"
+
+
+class PlayerModelLoader:
+    def __init__(self):
+        self.pts_model = None
+        self.reb_model = None
+        self.ast_model = None
+        self.pra_model = None
+        self.feature_cols = None
+
+    def load(self):
+        pts_path = ROOT / "models/production/player_v3_ridge_pts.pkl"
+        reb_path = ROOT / "models/production/player_v3_ridge_reb.pkl"
+        ast_path = ROOT / "models/production/player_v3_ridge_ast.pkl"
+        pra_path = ROOT / "models/production/player_v3_ridge_pra.pkl"
+        features_path = ROOT / "models/production/player_v3_features.pkl"
+        
+        for p in [pts_path, reb_path, ast_path, pra_path, features_path]:
+            if not p.exists():
+                raise FileNotFoundError(f"Player model file not found at {p}")
+                
+        self.pts_model = joblib.load(pts_path)
+        self.reb_model = joblib.load(reb_path)
+        self.ast_model = joblib.load(ast_path)
+        self.pra_model = joblib.load(pra_path)
+        self.feature_cols = joblib.load(features_path)
+
+    def get_version(self) -> str:
+        return "player_v3_ridge"

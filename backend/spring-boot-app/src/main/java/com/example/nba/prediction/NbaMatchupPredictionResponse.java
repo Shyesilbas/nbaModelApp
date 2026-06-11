@@ -6,6 +6,7 @@ public class NbaMatchupPredictionResponse {
     public String prediction_date;
     public WinProbabilityResult win_probability;
     public ScorePredictionResult score_prediction;
+    public PlayerPredictionResult player_predictions;
     public FinalDisplayRecommendation final_display_recommendation;
 
     public NbaMatchupPredictionResponse() {}
@@ -40,5 +41,12 @@ public class NbaMatchupPredictionResponse {
         public String displayed_score_summary;
         public String displayed_score_range_summary;
         public String warning;
+    }
+
+    public static class PlayerPredictionResult {
+        public java.util.List<NbaPlayerPredictionClient.PlayerPrediction> home_players;
+        public java.util.List<NbaPlayerPredictionClient.PlayerPrediction> away_players;
+        public boolean score_model_sync;
+        public String error;
     }
 }
