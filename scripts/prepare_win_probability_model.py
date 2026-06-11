@@ -23,7 +23,7 @@ from scripts.season_utils import get_default_season
 # Paths
 ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = Path(get_data_paths(get_default_season()).team_model_ready_v2)
-MODELS_DIR = ROOT / "models"
+MODELS_DIR = ROOT / "models/experimental"
 REPORTS_DIR = ROOT / "reports"
 
 os.makedirs(MODELS_DIR, exist_ok=True)
@@ -82,24 +82,34 @@ def main():
     df = pd.read_csv(DATA_PATH)
     print("Rows, cols:", df.shape)
 
-    print("Integrating player projections from V3 Ridge models...")
+    print("Integrating player projections from V4 LightGBM models...")
     try:
         import joblib
-        player_df = pd.read_csv(ROOT / "data/experimental/player_model_ready_v3_matchups.csv")
-        features_path = ROOT / "models/production/player_v3_features.pkl"
+        player_df = pd.read_csv(ROOT / "data/experimental/player_model_ready_v4_usg.csv")
+        features_path = ROOT / "models/production/player_v4_features.pkl"
         player_features = joblib.load(features_path)
         player_df = player_df.dropna(subset=player_features)
         
-        targets = ["pts", "reb", "ast", "pra"]
+        # Load PTS, REB, AST models (PRA is calculated mathematically from them)
+        targets = ["pts", "reb", "ast"]
+        predictions = {}
         for t in targets:
-            model_path = ROOT / f"models/production/player_v3_ridge_{t}.pkl"
+            model_path = ROOT / f"models/production/player_v4_lgb_{t}.pkl"
             if model_path.exists():
                 model = joblib.load(model_path)
-                player_df[f"PROJ_{t.upper()}"] = model.predict(player_df[player_features])
+                pred = model.predict(player_df[player_features])
+                player_df[f"PROJ_{t.upper()}"] = pred
+                predictions[t] = pred
             else:
-                player_df[f"PROJ_{t.upper()}"] = 0
+                player_df[f"PROJ_{t.upper()}"] = 0.0
+                predictions[t] = 0.0
                 
-        proj_cols = [f"PROJ_{t.upper()}" for t in targets]
+        # Compute PRA mathematically
+        player_df["PROJ_PRA"] = predictions["pts"] + predictions["reb"] + predictions["ast"]
+        
+        # We keep the column names as PROJ_... for compatibility
+        targets_with_pra = ["pts", "reb", "ast", "pra"]
+        proj_cols = [f"PROJ_{t.upper()}" for t in targets_with_pra]
         team_agg = player_df.groupby(["GAME_ID", "TEAM_ABBREVIATION"])[proj_cols].agg(['sum', 'mean']).reset_index()
         team_agg.columns = ["GAME_ID", "TEAM_ABBREVIATION"] + [f"{col}_{agg}" for col, agg in team_agg.columns[2:]]
         

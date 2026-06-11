@@ -1,66 +1,47 @@
-# Aktif Üretim Modelleri (Production Models) ve Performans Metrikleri
+# Production Models Audit & Inconsistency Report
 
-Bu doküman, NBA Model Uygulaması'nda şu an frontend tarafında kullanılan aktif üretim modellerinin performans metriklerini ve model eğitiminde kullanılan öznitelikleri (features) içerir.
-
-## 1. Win Model (Kazanan Tahmini)
-
-**Kullanılan Model:** Win Probability V1 (`cross_season_win_logistic_regression`)
-**Algoritma:** Logistic Regression
-**Toplam Feature Sayısı:** 80
-
-### Performans Metrikleri
-- **ROC AUC:** 0.7048
-- **Accuracy (Doğruluk):** 0.642
-- **Brier Score:** 0.219
-
-### Kullanılan Feature'lar
-
-**Takım & Karşılaşma (Base) Özellikleri:**
-- `IS_HOME`, `IS_PLAYOFF`, `DAYS_REST`, `IS_B2B`
-- `PTS_LAST_5`, `PTS_LAST_10`, `WINRATE_LAST_5`, `WINRATE_LAST_10`
-- `OPP_DAYS_REST`, `OPP_IS_B2B`, `OPP_PTS_LAST_5`, `OPP_PTS_LAST_10`, `OPP_WINRATE_LAST_5`, `OPP_WINRATE_LAST_10`
-- `PTS_ALLOWED_LAST_5`, `PTS_ALLOWED_LAST_10`, `OPP_PTS_ALLOWED_LAST_5`, `OPP_PTS_ALLOWED_LAST_10`
-- `HOME_WINRATE_LAST_5`, `HOME_PTS_LAST_5`, `HOME_PTS_ALLOWED_LAST_5`
-- `AWAY_WINRATE_LAST_5`, `AWAY_PTS_LAST_5`, `AWAY_PTS_ALLOWED_LAST_5`
-- `OPP_HOME_WINRATE_LAST_5`, `OPP_HOME_PTS_LAST_5`, `OPP_HOME_PTS_ALLOWED_LAST_5`
-- `OPP_AWAY_WINRATE_LAST_5`, `OPP_AWAY_PTS_LAST_5`, `OPP_AWAY_PTS_ALLOWED_LAST_5`
-- `H2H_GAMES_LAST_5`, `H2H_WINRATE_LAST_5`, `H2H_PTS_LAST_5`, `H2H_PTS_ALLOWED_LAST_5`
-- `OPP_H2H_GAMES_LAST_5`, `OPP_H2H_WINRATE_LAST_5`, `OPP_H2H_PTS_LAST_5`, `OPP_H2H_PTS_ALLOWED_LAST_5`
-
-**Ev Sahibi (Home) Oyuncu Özellikleri:**
-`HOME_CORE_PLAYERS_AVAILABLE_COUNT`, `HOME_CORE_PLAYERS_MISSING_COUNT`, `HOME_TOP1_AVAILABLE`, `HOME_TOP2_AVAILABLE`, `HOME_TOP3_AVAILABLE`, `HOME_CORE_EXPECTED_MIN_SUM`, `HOME_TOP3_EXPECTED_MIN_SUM`, `HOME_CORE_MINUTES_SHARE`, `HOME_CORE_EXPECTED_PTS_SUM`, `HOME_CORE_EXPECTED_AST_SUM`, `HOME_CORE_EXPECTED_REB_SUM`, `HOME_CORE_EXPECTED_PRA_SUM`, `HOME_TOP3_EXPECTED_PTS_SUM`, `HOME_TOP3_EXPECTED_AST_SUM`, `HOME_TOP3_EXPECTED_REB_SUM`, `HOME_TOP3_EXPECTED_PRA_SUM`, `HOME_MISSING_CORE_EXPECTED_MIN`, `HOME_MISSING_CORE_EXPECTED_PTS`, `HOME_MISSING_CORE_EXPECTED_AST`, `HOME_MISSING_CORE_EXPECTED_REB`, `HOME_MISSING_CORE_EXPECTED_PRA`
-
-**Deplasman (Away) Oyuncu Özellikleri:**
-`AWAY_CORE_PLAYERS_AVAILABLE_COUNT`, `AWAY_CORE_PLAYERS_MISSING_COUNT`, `AWAY_TOP1_AVAILABLE`, `AWAY_TOP2_AVAILABLE`, `AWAY_TOP3_AVAILABLE`, `AWAY_CORE_EXPECTED_MIN_SUM`, `AWAY_TOP3_EXPECTED_MIN_SUM`, `AWAY_CORE_MINUTES_SHARE`, `AWAY_CORE_EXPECTED_PTS_SUM`, `AWAY_CORE_EXPECTED_AST_SUM`, `AWAY_CORE_EXPECTED_REB_SUM`, `AWAY_CORE_EXPECTED_PRA_SUM`, `AWAY_TOP3_EXPECTED_PTS_SUM`, `AWAY_TOP3_EXPECTED_AST_SUM`, `AWAY_TOP3_EXPECTED_REB_SUM`, `AWAY_TOP3_EXPECTED_PRA_SUM`, `AWAY_MISSING_CORE_EXPECTED_MIN`, `AWAY_MISSING_CORE_EXPECTED_PTS`, `AWAY_MISSING_CORE_EXPECTED_AST`, `AWAY_MISSING_CORE_EXPECTED_REB`, `AWAY_MISSING_CORE_EXPECTED_PRA`
+This report summarizes the status of the player, score, and win-probability model pipelines, evaluating them for target leakages, mathematical consistency, and training-vs-inference feature alignment.
 
 ---
 
-## 2. Score Model (Skor ve Fark Tahmini)
+## 1. Player Prediction Model (V4)
+- **Status**: **FULLY RESOLVED & LEAKAGE-FREE**
+- **Algorithm**: LightGBM Regressor (PTS, REB, AST)
+- **Features**: 41 columns including newly integrated rolling usage rates (`USG_PCT_LAST_3` etc.) and opponent-position allowed metrics.
+- **Analysis**:
+  - The critical target leakage of `TARGET_PRA` (actual game-day stats) present in the V3 feature definition has been completely eliminated.
+  - PRA is no longer trained as a separate model; it is calculated mathematically as the sum of PTS + REB + AST predictions.
+  - An end-to-end test confirmed that player projections are scaled proportionally to match the expected game pace/tempo (reconciling points, rebounds, and assists).
 
-**Kullanılan Model:** Score Prediction V2 (`home_score_model_v2.pkl` & `away_score_model_v2.pkl`)
-**Algoritma:** Random Forest Regressor (Skorlar ve Toplam Sayı için), Gradient Boosting (Fark/Margin için)
-**Toplam Feature Sayısı:** 75
+---
 
-### Performans Metrikleri
-- **Ev Sahibi Skor (Home):** MAE: 9.62 | RMSE: 12.39 | R2: 0.242
-- **Deplasman Skor (Away):** MAE: 9.68 | RMSE: 12.45 | R2: 0.176
-- **Fark / Margin (Derived):** MAE: 12.95 | RMSE: 16.20 | R2: 0.240
-- **Toplam Sayı / Total (Derived):** MAE: 14.65 | RMSE: 18.84 | R2: 0.187
+## 2. Score Prediction Model (V4)
+- **Status**: **CLEAN & MATHEMATICALLY RECONCILED**
+- **Algorithm**: XGBoost Regressor (PACE, Home RTG, Away RTG, Margin)
+- **Features**: Team-level past performance rolling averages (5/10 games), days rest, travel distance, and core player availability.
+- **Analysis**:
+  - The feature engineering pipeline uses only past historical games (`GAME_DATE < prediction_date`), ensuring zero future leakage.
+  - The endpoint computes expected team scores and ranges based on Pace and offensive/defensive ratings, satisfying the equations:
+    - `Expected Margin = Expected Home Score - Expected Away Score`
+    - `Expected Total = Expected Home Score + Expected Away Score`
+  - This mathematically prevents contradictions in the UI.
 
-### Kullanılan Feature'lar
+---
 
-**V1 Base Özellikleri (33 Adet):**
-- `IS_PLAYOFF`, `DAYS_REST`, `IS_B2B`
-- `PTS_LAST_5`, `PTS_LAST_10`, `WINRATE_LAST_5`, `WINRATE_LAST_10`
-- `OPP_DAYS_REST`, `OPP_IS_B2B`, `OPP_PTS_LAST_5`, `OPP_PTS_LAST_10`, `OPP_WINRATE_LAST_5`, `OPP_WINRATE_LAST_10`
-- `PTS_ALLOWED_LAST_5`, `PTS_ALLOWED_LAST_10`, `OPP_PTS_ALLOWED_LAST_5`, `OPP_PTS_ALLOWED_LAST_10`
-- `HOME_WINRATE_LAST_5`, `HOME_PTS_LAST_5`, `HOME_PTS_ALLOWED_LAST_5`
-- `AWAY_WINRATE_LAST_5`, `AWAY_PTS_LAST_5`, `AWAY_PTS_ALLOWED_LAST_5`
-- `OPP_HOME_WINRATE_LAST_5`, `OPP_HOME_PTS_LAST_5`, `OPP_HOME_PTS_ALLOWED_LAST_5`
-- `OPP_AWAY_WINRATE_LAST_5`, `OPP_AWAY_PTS_LAST_5`, `OPP_AWAY_PTS_ALLOWED_LAST_5`
-- `H2H_GAMES_LAST_5`, `H2H_WINRATE_LAST_5`, `H2H_PTS_LAST_5`, `H2H_PTS_ALLOWED_LAST_5`
+## 3. Win Probability Model (V1)
+- **Status**: **POTENTIAL TRAINING-VS-INFERENCE FEATURE MISMATCH**
+- **Algorithm**: Calibrated Logistic Regression (Sigmoid/Isotonic)
+- **Discovery**:
+  - The Win Probability model relies on player-level projections aggregated at the team level: `TEAM_V3_PROJ_PTS_SUM`, `TEAM_V3_PROJ_REB_SUM`, etc.
+  - During training (in `prepare_win_probability_model.py`), these projections were generated by running the V3 Ridge models on `player_model_ready_v3_matchups.csv`.
+  - Because that training dataset contained the actual game-day `TARGET_PRA` column, the V3 Ridge models generated predictions using the leaked actuals.
+  - In production inference, because `TARGET_PRA` is unknown, the feature builder sets it to `0.0`. This causes the V3 models to return much lower predictions than what they did during training.
+  - This creates a **feature drift / alignment mismatch** where the Win Probability model's inputs during training are at a different scale than what it receives in production.
 
-**Oyuncu Özellikleri (42 Adet):**
-*(Win modeli ile aynı 42 adet oyuncu özelliği)*
-- HOME Core/Top3 Expected Stats (MIN, PTS, AST, REB, PRA), Available Counts, Missing Expected Stats
-- AWAY Core/Top3 Expected Stats (MIN, PTS, AST, REB, PRA), Available Counts, Missing Expected Stats
+### Proposed Recommendation
+To align the Win Probability model and remove this feature mismatch:
+1. Re-run the win feature builder by predicting team player projections using either:
+   - The V3 Ridge models with `TARGET_PRA` set to `0.0` (to simulate production).
+   - The new V4 LightGBM models (which are completely leakage-free and more accurate).
+2. Retrain the Logistic Regression model on these aligned, leakage-free projections.
+3. This will ensure that the win probability classifier expects the exact same distribution of player projections at training time as it receives in production, improving calibration and accuracy.
