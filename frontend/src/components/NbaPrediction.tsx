@@ -567,66 +567,64 @@ export default function NbaPrediction() {
       if (!date) throw new Error("Please select a date for the matchup.");
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Invalid date format. Please use YYYY-MM-DD.");
 
-      const res = await fetch("/api/nba/predictions/matchup?format=compact", {
+      const res = await fetch("http://localhost:8001/predict/game_full", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ home_team: home, away_team: away, prediction_date: date }),
+        body: JSON.stringify({ home_team_id: home, away_team_id: away, prediction_date: date }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Server returned ${res.status}`);
       }
       const data = await res.json();
-      const normalized =
-        data?.display || data?.win || data?.score
-          ? {
-              home_team: data.home,
-              away_team: data.away,
-              prediction_date: data.date,
-              win_probability: data.win
-                ? {
-                    predicted_winner: data.win.w,
-                    home_win_probability: data.win.hp,
-                    away_win_probability: data.win.ap,
-                    confidence_bucket: data.win.cb,
-                    model_version: data.win.mv,
-                    error: data.win.e,
-                  }
-                : undefined,
-              score_prediction: data.score
-                ? {
-                    predicted_home_score: data.score.hs,
-                    home_score_range: data.score.hR,
-                    predicted_away_score: data.score.as,
-                    away_score_range: data.score.aR,
-                    predicted_total_points: data.score.tp,
-                    total_points_range: data.score.tR,
-                    predicted_margin: data.score.m,
-                    margin_range: data.score.mR,
-                    score_model_winner: data.score.w,
-                    note: data.score.n,
-                    model_version: data.score.mv,
-                    error: data.score.e,
-                  }
-                : undefined,
-              final_display_recommendation: data.display
-                ? {
-                    primary_winner_signal: data.display.s,
-                    displayed_winner: data.display.w,
-                    displayed_score_summary: data.display.ss,
-                    displayed_score_range_summary: data.display.rs,
-                    warning: data.display.warn,
-                  }
-                : undefined,
-              player_predictions: data.players
-                ? {
-                    home_players: data.players.home,
-                    away_players: data.players.away,
-                    error: data.players.e,
-                  }
-                : undefined,
-            }
-          : data;
+      
+      const normalized = {
+        home_team: home,
+        away_team: away,
+        prediction_date: date,
+        win_probability: {
+          predicted_winner: data.win_probability.home_win_prob >= 0.5 ? home : away,
+          home_win_probability: data.win_probability.home_win_prob,
+          away_win_probability: data.win_probability.away_win_prob,
+          confidence_bucket: Math.max(data.win_probability.home_win_prob, data.win_probability.away_win_prob) >= 0.7 ? "STRONG" : "MODERATE",
+          model_version: "v4_full",
+        },
+        score_prediction: {
+          predicted_home_score: data.score_prediction.home,
+          home_score_range: data.score_prediction.home_range,
+          predicted_away_score: data.score_prediction.away,
+          away_score_range: data.score_prediction.away_range,
+          predicted_total_points: data.score_prediction.total,
+          total_points_range: data.score_prediction.total_range,
+          predicted_margin: data.score_prediction.margin,
+          margin_range: data.score_prediction.margin_range,
+          score_model_winner: data.score_prediction.margin >= 0 ? home : away,
+          model_version: data.score_prediction.model_version,
+        },
+        final_display_recommendation: {
+          primary_winner_signal: "WIN_PROB",
+        },
+        player_predictions: {
+          home_players: data.home_players.map((p: any) => ({
+            player_id: p.player_name,
+            player_name: p.player_name,
+            position_group: p.position_group,
+            predicted_pts: p.proj_pts,
+            predicted_reb: p.proj_reb,
+            predicted_ast: p.proj_ast,
+            predicted_pra: p.proj_pra
+          })),
+          away_players: data.away_players.map((p: any) => ({
+            player_id: p.player_name,
+            player_name: p.player_name,
+            position_group: p.position_group,
+            predicted_pts: p.proj_pts,
+            predicted_reb: p.proj_reb,
+            predicted_ast: p.proj_ast,
+            predicted_pra: p.proj_pra
+          }))
+        }
+      };
       setResult(normalized);
       setSelectorOpen(false);
     } catch (e: any) {
@@ -711,10 +709,10 @@ export default function NbaPrediction() {
           SECTION 1 — COMPACT SELECTION PANEL
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="surface rounded-[1.5rem] overflow-hidden">
-        <button
+        <div
           id="selector-toggle"
           onClick={() => setSelectorOpen((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4"
+          className="w-full flex items-center justify-between px-5 py-4 cursor-pointer"
         >
           <div className="flex items-center gap-3">
             <Calendar size={15} className="text-slate-500" />
@@ -744,7 +742,7 @@ export default function NbaPrediction() {
             )}
             {selectorOpen ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
           </div>
-        </button>
+        </div>
 
         {selectorOpen && (
           <div className="border-t border-slate-100 px-5 pb-5 pt-4 space-y-4 animate-fade-in">

@@ -3,11 +3,14 @@ from .schemas import (
     WinProbRequest, WinProbResponse,
     ScorePredictionRequest, ScorePredictionResponse,
     ModelStatusResponse, ModelMetrics, WinModelInfo, ScoreModelInfo,
-    PlayerPredictionResponse, PlayerPrediction
+    PlayerPredictionResponse, PlayerPrediction,
+    GameFullRequest, GameFullResponse, ScorePredictionSub, WinProbabilitySub, GameFullPlayer, ScaleFactorsSub
 )
 from .player_service import get_player_predictions
 from scripts.build_matchup_features import build_features
 from scripts.artifact_paths import resolve_artifact_path
+from scripts.inference.top_down_scaling import apply_top_down_scaling
+from datetime import date
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -88,30 +91,31 @@ def predict_score(request: ScorePredictionRequest) -> ScorePredictionResponse:
 
     metadata = score_loader.metadata
     pace_features = metadata.get("pace_features", [])
-    off_rtg_features = metadata.get("off_rtg_features", [])
+    home_off_rtg_features = metadata.get("home_off_rtg_features", metadata.get("off_rtg_features", []))
+    away_off_rtg_features = metadata.get("away_off_rtg_features", metadata.get("off_rtg_features", []))
     margin_features = metadata.get("margin_features", [])
     
     # We need the union of all features to verify they exist
-    model_features = list(set(pace_features + off_rtg_features + margin_features))
+    model_features = list(set(pace_features + home_off_rtg_features + away_off_rtg_features + margin_features))
 
     missing = [c for c in model_features if c not in features]
     if missing:
         raise ValueError(f"Missing features required by score model: {missing}")
 
     X_pace = pd.DataFrame([[features[c] for c in pace_features]], columns=pace_features)
-    X_rtg = pd.DataFrame([[features[c] for c in off_rtg_features]], columns=off_rtg_features)
+    X_home_rtg = pd.DataFrame([[features[c] for c in home_off_rtg_features]], columns=home_off_rtg_features)
     X_margin = pd.DataFrame([[features[c] for c in margin_features]], columns=margin_features)
 
     # Predict Pace and Offensive Ratings
     pred_pace = float(score_loader.pace_model.predict(X_pace)[0])
-    pred_home_rtg = float(score_loader.home_rtg_model.predict(X_rtg)[0])
+    pred_home_rtg = float(score_loader.home_rtg_model.predict(X_home_rtg)[0])
     
     # For Away RTG, we need to map the features because X_rtg is built from the home team's perspective.
     # The build_matchup_features pipeline natively supports "home" and "away" perspective
     # But since build_features returns features from Home's perspective, we must fetch Away's perspective.
     features_away = build_features(away_team, home_team, pred_date_str)
-    X_rtg_away = pd.DataFrame([[features_away[c] for c in off_rtg_features]], columns=off_rtg_features)
-    pred_away_rtg = float(score_loader.away_rtg_model.predict(X_rtg_away)[0])
+    X_away_rtg = pd.DataFrame([[features_away[c] for c in away_off_rtg_features]], columns=away_off_rtg_features)
+    pred_away_rtg = float(score_loader.away_rtg_model.predict(X_away_rtg)[0])
 
     # Derive Expected Scores
     pred_home = pred_pace * pred_home_rtg / 100.0
@@ -121,18 +125,24 @@ def predict_score(request: ScorePredictionRequest) -> ScorePredictionResponse:
     # Margin prediction
     pred_margin = float(score_loader.margin_model.predict(X_margin)[0])
 
-    # Enforce Win Probability Alignment
+    # Enforce Win Probability Alignment and Mathematical Reconciliation
     # Win Probability model is our primary classification source.
-    score_winner_pre_align = home_team if pred_margin >= 0 else away_team
     try:
         win_req = WinProbRequest(home_team=home_team, away_team=away_team, prediction_date=pred_date_str)
         win_resp = predict(win_req)
-        if win_resp.predicted_winner != score_winner_pre_align:
-            # Conflict detected! Swap scores to align with Win Probability.
-            pred_home, pred_away = pred_away, pred_home
+        win_winner = win_resp.predicted_winner
+        
+        # Check margin alignment
+        if (win_winner == home_team and pred_margin < 0) or (win_winner == away_team and pred_margin > 0):
             pred_margin = -pred_margin
+            
     except Exception:
         pass
+
+    # Reconcile scores mathematically: Home - Away = Margin, Home + Away = Total
+    # We use pred_total from Pace * OffRtg as the base expectation for game pace.
+    pred_home = (pred_total + pred_margin) / 2.0
+    pred_away = (pred_total - pred_margin) / 2.0
 
     # Apply empirical prediction intervals (we'll just mock 80% confidence offsets for V3 if not in metadata)
     offsets = metadata.get("prediction_interval_offsets_80pct", {
@@ -178,7 +188,7 @@ def predict_players(request: ScorePredictionRequest) -> PlayerPredictionResponse
     pred_date_str = request.prediction_date.isoformat() if hasattr(request.prediction_date, 'isoformat') else str(request.prediction_date)
 
     # 1. Get raw player predictions
-    players_df = get_player_predictions(home_team, away_team, player_loader, score_loader)
+    players_df = get_player_predictions(home_team, away_team, pred_date_str, player_loader, score_loader)
 
     # 2. Get Team Score Predictions for Top-Down Scaling
     score_resp = predict_score(request)
@@ -254,10 +264,10 @@ def get_model_status() -> ModelStatusResponse:
     )
     
     # Get score model info
-    home_model_path = ROOT / "models/production/score_model_v3_home_rtg.pkl"
-    away_model_path = ROOT / "models/production/score_model_v3_away_rtg.pkl"
-    total_model_path = ROOT / "models/production/score_model_v3_pace.pkl"
-    margin_model_path = ROOT / "models/production/score_model_v3_margin.pkl"
+    home_model_path = ROOT / "models/production/score_model_v4_home_rtg.pkl"
+    away_model_path = ROOT / "models/production/score_model_v4_away_rtg.pkl"
+    total_model_path = ROOT / "models/production/score_model_v4_pace.pkl"
+    margin_model_path = ROOT / "models/production/score_model_v4_margin.pkl"
     
     score_metrics = ModelMetrics()
     score_metadata = score_loader.metadata
@@ -319,4 +329,101 @@ def get_model_status() -> ModelStatusResponse:
         win_model=win_info,
         score_model=score_info,
         experimental_candidate=experimental_candidate
+    )
+
+
+def predict_game_full(request: GameFullRequest) -> GameFullResponse:
+    pred_date_str = request.prediction_date.isoformat() if request.prediction_date else date.today().isoformat()
+    home_team = request.home_team_id.upper()
+    away_team = request.away_team_id.upper()
+    
+    if request.home_score_prediction is not None and request.away_score_prediction is not None:
+        home_score = request.home_score_prediction
+        away_score = request.away_score_prediction
+        margin = home_score - away_score
+        total = home_score + away_score
+        home_range = [home_score - 8.0, home_score + 8.0]
+        away_range = [away_score - 8.0, away_score + 8.0]
+        margin_range = [margin - 10.0, margin + 10.0]
+        total_range = [total - 12.0, total + 12.0]
+        model_version = "manual"
+    else:
+        score_req = ScorePredictionRequest(home_team=home_team, away_team=away_team, prediction_date=pred_date_str)
+        score_resp = predict_score(score_req)
+        home_score = score_resp.predicted_home_score
+        home_range = score_resp.home_score_range
+        away_score = score_resp.predicted_away_score
+        away_range = score_resp.away_score_range
+        margin = score_resp.predicted_margin
+        margin_range = score_resp.margin_range
+        total = score_resp.predicted_total_points
+        total_range = score_resp.total_points_range
+        model_version = score_resp.model_version
+
+    players_df = get_player_predictions(home_team, away_team, pred_date_str, player_loader, score_loader)
+    
+    home_players_df = players_df[players_df["IS_HOME"] == 1]
+    away_players_df = players_df[players_df["IS_HOME"] == 0]
+
+    raw_home_pts = home_players_df["RAW_PROJ_PTS"].tolist()
+    raw_home_reb = home_players_df["RAW_PROJ_REB"].tolist()
+    raw_home_ast = home_players_df["RAW_PROJ_AST"].tolist()
+
+    raw_away_pts = away_players_df["RAW_PROJ_PTS"].tolist()
+    raw_away_reb = away_players_df["RAW_PROJ_REB"].tolist()
+    raw_away_ast = away_players_df["RAW_PROJ_AST"].tolist()
+
+    scaled_home_pts, home_scale = apply_top_down_scaling(home_score, raw_home_pts)
+    scaled_away_pts, away_scale = apply_top_down_scaling(away_score, raw_away_pts)
+    
+    scaled_home_reb = [max(0.0, r * home_scale) for r in raw_home_reb]
+    scaled_home_ast = [max(0.0, a * home_scale) for a in raw_home_ast]
+    
+    scaled_away_reb = [max(0.0, r * away_scale) for r in raw_away_reb]
+    scaled_away_ast = [max(0.0, a * away_scale) for a in raw_away_ast]
+    
+    def build_player_list(df, scaled_pts, scaled_reb, scaled_ast, scale):
+        res = []
+        for i, (_, r) in enumerate(df.iterrows()):
+            res.append(GameFullPlayer(
+                player_name=str(r.get("PLAYER_NAME", f"Player {r['PLAYER_ID']}")),
+                position_group=str(r.get("PLAYER_POSITION_GROUP", "UNKNOWN")),
+                proj_pts=round(scaled_pts[i], 1),
+                proj_reb=round(scaled_reb[i], 1),
+                proj_ast=round(scaled_ast[i], 1),
+                proj_pra=round(scaled_pts[i] + scaled_reb[i] + scaled_ast[i], 1),
+                raw_pts=round(r["RAW_PROJ_PTS"], 1),
+                scale_factor=round(scale, 3)
+            ))
+        return res
+
+    home_list = build_player_list(home_players_df, scaled_home_pts, scaled_home_reb, scaled_home_ast, home_scale)
+    away_list = build_player_list(away_players_df, scaled_away_pts, scaled_away_reb, scaled_away_ast, away_scale)
+    
+    win_req = WinProbRequest(home_team=home_team, away_team=away_team, prediction_date=pred_date_str)
+    win_resp = predict(win_req)
+    
+    return GameFullResponse(
+        game_id=request.game_id,
+        score_prediction=ScorePredictionSub(
+            home=round(home_score, 1),
+            home_range=home_range,
+            away=round(away_score, 1),
+            away_range=away_range,
+            margin=round(margin, 1),
+            margin_range=margin_range,
+            total=round(total, 1),
+            total_range=total_range,
+            model_version=model_version
+        ),
+        win_probability=WinProbabilitySub(
+            home_win_prob=round(win_resp.home_win_probability, 4),
+            away_win_prob=round(win_resp.away_win_probability, 4)
+        ),
+        home_players=home_list,
+        away_players=away_list,
+        scale_factors=ScaleFactorsSub(
+            home=round(home_scale, 3),
+            away=round(away_scale, 3)
+        )
     )

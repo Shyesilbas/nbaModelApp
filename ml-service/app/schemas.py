@@ -95,3 +95,53 @@ class ModelStatusResponse(BaseModel):
     score_model: ScoreModelInfo
     experimental_candidate: Optional[dict] = None
 
+
+class GameFullRequest(BaseModel):
+    game_id: Optional[str] = Field("unknown", description="Unique game identifier")
+    home_team_id: str = Field(..., description="Home team abbreviation")
+    away_team_id: str = Field(..., description="Away team abbreviation")
+    home_score_prediction: Optional[float] = Field(None, description="Optional. If omitted, uses Score Model.")
+    away_score_prediction: Optional[float] = Field(None, description="Optional. If omitted, uses Score Model.")
+    prediction_date: Optional[date] = Field(None, description="YYYY-MM-DD. Defaults to today if omitted.")
+
+
+class ScorePredictionSub(BaseModel):
+    home: float
+    home_range: List[float]
+    away: float
+    away_range: List[float]
+    margin: float
+    margin_range: List[float]
+    total: float
+    total_range: List[float]
+    model_version: Optional[str] = None
+
+
+class WinProbabilitySub(BaseModel):
+    home_win_prob: float
+    away_win_prob: float
+
+
+class GameFullPlayer(BaseModel):
+    player_name: str
+    position_group: str
+    proj_pts: float
+    proj_reb: float
+    proj_ast: float
+    proj_pra: float
+    raw_pts: float
+    scale_factor: float
+
+
+class ScaleFactorsSub(BaseModel):
+    home: float
+    away: float
+
+
+class GameFullResponse(BaseModel):
+    game_id: str
+    score_prediction: ScorePredictionSub
+    win_probability: WinProbabilitySub
+    home_players: List[GameFullPlayer]
+    away_players: List[GameFullPlayer]
+    scale_factors: ScaleFactorsSub
