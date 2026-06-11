@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Trophy } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  ChevronDown,
+  Trophy,
+  Users2,
+} from "lucide-react";
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
@@ -47,7 +53,6 @@ interface PlayerBoxScore {
   STL: number | null;
   BLK: number | null;
   TOV: number | null;
-  PF: number | null;
   PLUS_MINUS: number | null;
 }
 
@@ -56,201 +61,445 @@ const fmtInt = (v: number | null) => (v != null ? Math.round(v).toString() : "�
 const fmtPair = (made: number | null | undefined, att: number | null | undefined) =>
   made != null || att != null ? `${fmtInt(made ?? null)} / ${fmtInt(att ?? null)}` : "—";
 const fmtShortDate = (d: string) =>
-  new Date(`${d}T12:00:00`).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+const playerTeamFilter = (players: PlayerBoxScore[], abbr: string) => players.filter((p) => p.TEAM_ABBREVIATION === abbr);
 
-const fmtDateChip = (d: string) =>
-  new Date(`${d}T12:00:00`)
-    .toLocaleDateString("en-US", {
-      day: "numeric",
-      weekday: "short",
-    })
-    .replace(",", "")
-    .toUpperCase();
-
-const playerTeamFilter = (players: PlayerBoxScore[], abbr: string) =>
-  players.filter((p) => p.TEAM_ABBREVIATION === abbr);
-
-const teamColor = (abbr: string) => (abbr === "BOS" ? "#1d428a" : abbr === "MIA" ? "#c9082a" : "#334155");
-
-function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+function Badge({ children, active = false }: { children: ReactNode; active?: boolean }) {
   return (
-    <div className="space-y-1">
-      <p className="text-[12px] font-black uppercase tracking-[0.3em] text-slate-400">{title}</p>
-      {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
-    </div>
-  );
-}
-
-function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "home" | "away" | "winner" }) {
-  const styles =
-    tone === "home"
-      ? "border-[#1d428a]/15 bg-[#1d428a]/8 text-[#1d428a]"
-      : tone === "away"
-        ? "border-[#c9082a]/15 bg-[#c9082a]/8 text-[#c9082a]"
-        : tone === "winner"
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-          : "border-slate-200 bg-white text-slate-500";
-
-  return (
-    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em] ${styles}`}>
+    <span
+      className={[
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] transition",
+        active ? "border-[#1d428a] bg-[#1d428a]/10 text-[#1d428a]" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800",
+      ].join(" ")}
+    >
       {children}
     </span>
   );
 }
 
-function StatCard({ label, value, sublabel, accent }: { label: string; value: ReactNode; sublabel?: ReactNode; accent?: string }) {
+function MetricCard({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-[20px] bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.1)]">
-      <p className="text-[12px] font-black uppercase tracking-[0.24em] text-slate-400">{label}</p>
-      <p className="mt-2 text-[42px] font-black leading-none text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: accent }}>
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-400">{label}</p>
+      <p className="mt-1 text-2xl font-black text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
         {value}
       </p>
-      {sublabel && <div className="mt-2 text-sm text-slate-500">{sublabel}</div>}
     </div>
   );
 }
 
-function ComparisonRow({
-  label,
-  homeValue,
-  awayValue,
-  homePct,
-  awayPct,
-  homeLabel,
-  awayLabel,
-  homeColor,
-  awayColor,
-  higherIsBetter = true,
-}: {
-  label: string;
-  homeValue: number | null;
-  awayValue: number | null;
-  homePct: string;
-  awayPct: string;
-  homeLabel: string;
-  awayLabel: string;
-  homeColor: string;
-  awayColor: string;
-  higherIsBetter?: boolean;
-}) {
-  const h = homeValue ?? 0;
-  const a = awayValue ?? 0;
-  const max = Math.max(Math.abs(h), Math.abs(a), 1);
-  const homeWinner = higherIsBetter ? h > a : h < a;
-  const awayWinner = higherIsBetter ? a > h : a < h;
-
+function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_96px_minmax(0,1fr)] items-center gap-3 rounded-2xl px-3 py-3 transition hover:bg-slate-50">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <span className={`text-sm font-bold ${homeWinner ? "text-slate-900" : "text-slate-500"}`}>{homeLabel}</span>
-          <span className="text-sm font-black tabular-nums text-slate-900">{homePct}</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(Math.abs(h) / max) * 100}%`, backgroundColor: homeColor }} />
-        </div>
-      </div>
-      <div className="text-center text-[12px] font-black uppercase tracking-[0.24em] text-slate-400">{label}</div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <span className={`text-sm font-bold ${awayWinner ? "text-slate-900" : "text-slate-500"}`}>{awayLabel}</span>
-          <span className="text-sm font-black tabular-nums text-slate-900">{awayPct}</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(Math.abs(a) / max) * 100}%`, backgroundColor: awayColor }} />
-        </div>
-      </div>
+    <div className="space-y-1">
+      <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">{title}</p>
+      {subtitle && <p className="text-sm font-semibold text-slate-600">{subtitle}</p>}
     </div>
   );
 }
 
-function TeamCompactHeader({
-  team,
-  score,
-  abbr,
-  side,
-  winner,
-}: {
-  team: string | null | undefined;
-  score: number | null | undefined;
-  abbr: string;
-  side: "home" | "away";
-  winner: boolean;
-}) {
+function StatPill({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className={`flex items-center gap-4 rounded-[24px] p-5 ${winner ? "bg-slate-900 text-white" : "bg-white text-slate-900"} shadow-[0_12px_30px_rgba(15,23,42,0.08)]`}>
-      {side === "away" && <TeamLogo abbr={abbr} name={team} size={64} />}
-      <div className="min-w-0 flex-1">
-        <p className={`text-[12px] font-black uppercase tracking-[0.28em] ${winner ? "text-white/60" : "text-slate-400"}`}>{side}</p>
-        <p className="truncate text-xl font-black uppercase tracking-tight" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-          {team ?? abbr}
-        </p>
-      </div>
-      <div className="text-right">
-        <p className="text-[64px] font-black leading-none tabular-nums" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-          {score ?? "—"}
-        </p>
-      </div>
-      {side === "home" && <TeamLogo abbr={abbr} name={team} size={64} />}
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+      <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">{label}</p>
+      <p className="mt-1 text-sm font-bold text-slate-800">{value}</p>
     </div>
   );
 }
 
-function SortableHeader({
+function TabButton({
   label,
-  sortKey,
-  activeKey,
-  direction,
+  active,
   onClick,
 }: {
   label: string;
-  sortKey: string;
-  activeKey: string;
-  direction: "asc" | "desc";
+  active: boolean;
   onClick: () => void;
 }) {
-  const active = activeKey === sortKey;
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.22em] transition ${active ? "bg-slate-900 text-white" : "text-slate-400 hover:bg-slate-100 hover:text-slate-700"}`}
+      className={[
+        "rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] transition",
+        active ? "bg-[#1d428a] text-white shadow-sm" : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50",
+      ].join(" ")}
     >
       {label}
-      {active && (direction === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
     </button>
   );
 }
 
-function PlayerRow({ p }: { p: PlayerBoxScore }) {
+function compareBetter(teamVal: number | null | undefined, oppVal: number | null | undefined, higherIsBetter = true) {
+  const a = teamVal ?? 0;
+  const b = oppVal ?? 0;
+  if (a === b) return "text-slate-600";
+  const wins = higherIsBetter ? a > b : a < b;
+  return wins ? "text-slate-900 font-black" : "text-slate-300";
+}
+
+function TeamCompareStrip({ home, away }: { home: TeamBoxScore | null; away: TeamBoxScore | null }) {
+  if (!home || !away) {
+    return <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 text-sm text-slate-500">Team stats are not available for this game.</div>;
+  }
+
+  const rows = [
+    { label: "PTS", h: home.PTS, a: away.PTS, high: true, fmt: fmtInt },
+    { label: "FG", h: home.FGM ?? null, a: away.FGM ?? null, high: true, fmt: (v: number | null) => fmtPair(v, null) },
+    { label: "FG%", h: home.FG_PCT, a: away.FG_PCT, high: true, fmt: fmtPct },
+    { label: "3P", h: home.FG3M ?? null, a: away.FG3M ?? null, high: true, fmt: (v: number | null) => fmtPair(v, null) },
+    { label: "3P%", h: home.FG3_PCT, a: away.FG3_PCT, high: true, fmt: fmtPct },
+    { label: "FT", h: home.FTM ?? null, a: away.FTM ?? null, high: true, fmt: (v: number | null) => fmtPair(v, null) },
+    { label: "FT%", h: home.FT_PCT, a: away.FT_PCT, high: true, fmt: fmtPct },
+    { label: "REB", h: home.REB, a: away.REB, high: true, fmt: fmtInt },
+    { label: "AST", h: home.AST, a: away.AST, high: true, fmt: fmtInt },
+    { label: "TOV", h: home.TOV, a: away.TOV, high: false, fmt: fmtInt },
+  ];
+
   return (
-    <tr className="border-t border-slate-100 transition hover:bg-slate-50/80">
-      <td className="sticky left-0 z-10 bg-inherit px-4 py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME} size={28} />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900">{p.PLAYER_NAME}</p>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{p.TEAM_ABBREVIATION}</p>
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+      <div className="mb-4 flex items-center justify-between">
+        <SectionTitle title="Team snapshot" subtitle="Side-by-side box score edge" />
+        <div className="text-[10px] font-semibold text-slate-400">Better side is highlighted</div>
+      </div>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/80">
+        <table className="w-full text-xs">
+          <thead>
+            <tr>
+              <th className="w-[38%] px-3 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-[#1d428a]">{home.TEAM_ABBREVIATION}</th>
+              <th className="w-[24%] px-3 py-3 text-center text-[9px] font-semibold text-slate-400">Metric</th>
+              <th className="w-[38%] px-3 py-3 text-left text-[9px] font-black uppercase tracking-[0.24em] text-[#c9082a]">{away.TEAM_ABBREVIATION}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.label} className="border-t border-slate-100">
+                <td className={`px-3 py-2.5 text-right ${compareBetter(row.h, row.a, row.high)}`}>{row.fmt(row.h)}</td>
+                <td className="px-3 py-2.5 text-center text-[9px] font-semibold uppercase tracking-[0.24em] text-slate-400">{row.label}</td>
+                <td className={`px-3 py-2.5 text-left ${compareBetter(row.a, row.h, row.high)}`}>{row.fmt(row.a)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function GameCard({
+  game,
+  onOpen,
+}: {
+  game: GameFeedRow;
+  onOpen: () => void;
+}) {
+  const margin = Math.abs((game.HOME_SCORE ?? 0) - (game.AWAY_SCORE ?? 0));
+
+  return (
+    <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_16px_50px_rgba(15,23,42,0.07)]">
+      <button className="w-full text-left" onClick={onOpen}>
+        <div className="grid grid-cols-1 gap-3 p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge>{game.SEASON_TYPE === "Regular Season" ? "Regular" : game.SEASON_TYPE}</Badge>
+                {game.SERIES_GAME_NUMBER != null && <Badge>Game {game.SERIES_GAME_NUMBER}</Badge>}
+                {game.IS_ELIMINATION_GAME && <Badge>Elimination</Badge>}
+              </div>
+              <p className="mt-3 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">{fmtShortDate(game.GAME_DATE)}</p>
+            </div>
+            <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
+              {game.GAME_STATUS}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={40} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-slate-900">{game.AWAY_TEAM_ABBREVIATION}</p>
+                <p className="truncate text-[10px] text-slate-400">Away</p>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-black leading-none text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                {game.AWAY_SCORE} - {game.HOME_SCORE}
+              </p>
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.24em] text-slate-400">{game.WINNER_TEAM_ABBREVIATION} won by {margin}</p>
+            </div>
+            <div className="flex min-w-0 items-center justify-end gap-3">
+              <div className="min-w-0 text-right">
+                <p className="truncate text-sm font-black text-slate-900">{game.HOME_TEAM_ABBREVIATION}</p>
+                <p className="truncate text-[10px] text-slate-400">Home</p>
+              </div>
+              <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={40} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">Logo</p>
+              <div className="mt-2 flex items-center gap-2">
+                <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={20} />
+                <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={20} />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">Score</p>
+              <p className="mt-1 text-sm font-black text-slate-900">{game.AWAY_SCORE} - {game.HOME_SCORE}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">Date</p>
+              <p className="mt-1 truncate text-sm font-bold text-slate-800">{fmtShortDate(game.GAME_DATE)}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">Arena</p>
+              <p className="mt-1 truncate text-sm font-bold text-slate-800">Open</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">Refs</p>
+                <p className="mt-1 truncate text-xs text-slate-500">Open match details for arena, officials, box score and player logs.</p>
+              </div>
+              <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
+                <Users2 size={11} />
+                Details
+              </div>
+            </div>
           </div>
         </div>
-      </td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{p.MIN != null ? Math.round(p.MIN) : "—"}</td>
-      <td className="px-4 py-3 text-right text-sm font-black text-slate-900">{fmtInt(p.PTS)}</td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPair(p.FGM, p.FGA)}</td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPct(p.FG_PCT)}</td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPair(p.FG3M, p.FG3A)}</td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPct(p.FG3_PCT)}</td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPair(p.FTM, p.FTA)}</td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPct(p.FT_PCT)}</td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtInt(p.REB)}</td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtInt(p.AST)}</td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtInt(p.TOV)}</td>
-      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtInt(p.PLUS_MINUS)}</td>
-    </tr>
+      </button>
+    </div>
+  );
+}
+
+function GameCardDetail({
+  game,
+  gameDetail,
+  homeBS,
+  awayBS,
+  homePlayers,
+  awayPlayers,
+}: {
+  game: GameFeedRow;
+  gameDetail: GameDetail | null;
+  homeBS: TeamBoxScore | null;
+  awayBS: TeamBoxScore | null;
+  homePlayers: PlayerBoxScore[];
+  awayPlayers: PlayerBoxScore[];
+}) {
+  const [activeTab, setActiveTab] = useState<"game" | "home" | "away">("game");
+  const margin = Math.abs((game.HOME_SCORE ?? 0) - (game.AWAY_SCORE ?? 0));
+  const topHome = [...homePlayers].sort((a, b) => (b.PTS ?? 0) - (a.PTS ?? 0) || (b.MIN ?? 0) - (a.MIN ?? 0));
+  const topAway = [...awayPlayers].sort((a, b) => (b.PTS ?? 0) - (a.PTS ?? 0) || (b.MIN ?? 0) - (a.MIN ?? 0));
+  const topGame = [...(gameDetail?.player_stats ?? [...homePlayers, ...awayPlayers])]
+    .sort((a: any, b: any) => (b.PTS ?? b.pts ?? 0) - (a.PTS ?? a.pts ?? 0) || (b.MIN ?? b.min ?? 0) - (a.MIN ?? a.min ?? 0));
+
+  const renderPlayerList = (players: PlayerBoxScore[]) => (
+    <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-slate-200 bg-slate-50/80">
+      <table className="w-full text-xs">
+        <thead>
+          <tr>
+            <th className="px-3 py-3 text-left text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">Player</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">MIN</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">PTS</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">FG</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">FG%</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">3P</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">3P%</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">FT</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">FT%</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">REB</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">AST</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">STL</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">BLK</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">TOV</th>
+            <th className="px-2 py-3 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">+/-</th>
+          </tr>
+        </thead>
+        <tbody>
+          {players.length ? players.map((p) => (
+            <tr key={p.PLAYER_ID} className="border-t border-slate-100 bg-white">
+              <td className="px-3 py-2.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME} size={24} />
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-bold text-slate-800">{p.PLAYER_NAME}</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400">
+                      {p.TEAM_ABBREVIATION}
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{p.MIN != null ? Math.round(p.MIN) : "—"}</td>
+              <td className="px-2 py-2.5 text-right font-black text-slate-900">{fmtInt(p.PTS)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPair(p.FGM ?? null, p.FGA ?? null)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPct(p.FG_PCT)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPair(p.FG3M ?? null, p.FG3A ?? null)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPct(p.FG3_PCT)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPair(p.FTM ?? null, p.FTA ?? null)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPct(p.FT_PCT)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.REB)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.AST)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.STL)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.BLK)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.TOV)}</td>
+              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.PLUS_MINUS)}</td>
+            </tr>
+          )) : (
+            <tr>
+              <td colSpan={17} className="px-3 py-4 text-center text-sm text-slate-500 border-t border-slate-100">No player rows for this side.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const officials = (gameDetail?.officials ?? []).filter((o: any) => o?.name || o?.n);
+  const arenaName = gameDetail?.arena?.name?.trim();
+  const arenaCity = [gameDetail?.arena?.city, gameDetail?.arena?.state].filter(Boolean).join(", ");
+  const teamStatHome = (gameDetail?.team_stats ?? []).find((t: any) => t.TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION || t.team_abbreviation === game.HOME_TEAM_ABBREVIATION) ?? homeBS;
+  const teamStatAway = (gameDetail?.team_stats ?? []).find((t: any) => t.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION || t.team_abbreviation === game.AWAY_TEAM_ABBREVIATION) ?? awayBS;
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_16px_50px_rgba(15,23,42,0.05)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+              <Trophy size={12} className="text-[#1d428a]" />
+              Game Details
+            </div>
+            <h1 className="text-4xl font-black uppercase tracking-tight text-slate-900 sm:text-5xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+              {game.AWAY_TEAM_ABBREVIATION} at {game.HOME_TEAM_ABBREVIATION}
+            </h1>
+            <p className="max-w-3xl text-sm leading-relaxed text-slate-500">
+              {fmtShortDate(game.GAME_DATE)} · {game.PLAYOFF_ROUND ?? game.SEASON_TYPE} · {game.GAME_STATUS}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[520px]">
+            <MetricCard label="Away" value={gameDetail?.away_team?.score ?? game.AWAY_SCORE} />
+            <MetricCard label="Home" value={gameDetail?.home_team?.score ?? game.HOME_SCORE} />
+            <MetricCard label="Margin" value={margin} />
+            <MetricCard label="Winner" value={game.WINNER_TEAM_ABBREVIATION} />
+          </div>
+        </div>
+      </section>
+
+      <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <TabButton label="Game" active={activeTab === "game"} onClick={() => setActiveTab("game")} />
+          <TabButton label={`${game.HOME_TEAM_ABBREVIATION} Home Team`} active={activeTab === "home"} onClick={() => setActiveTab("home")} />
+          <TabButton label={`${game.AWAY_TEAM_ABBREVIATION} Away Team`} active={activeTab === "away"} onClick={() => setActiveTab("away")} />
+        </div>
+        <div className="mt-5">
+          {activeTab === "game" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <TeamCompareStrip home={homeBS} away={awayBS} />
+                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                  <SectionTitle title="Game metadata" subtitle={gameDetail?.arena?.name || gameDetail?.game_status || "Venue details"} />
+                  <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <MetricCard label="Arena" value={arenaName || "Venue unavailable in source"} />
+                    <MetricCard label="City" value={arenaCity || "Venue unavailable in source"} />
+                    <MetricCard label="Date" value={gameDetail?.game_date ? fmtShortDate(gameDetail.game_date) : fmtShortDate(game.GAME_DATE)} />
+                    <MetricCard label="Time" value={gameDetail?.game_time || "Time unavailable in source"} />
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <StatPill label="Home team" value={gameDetail?.home_team?.team_name || game.HOME_TEAM_NAME || game.HOME_TEAM_ABBREVIATION} />
+                    <StatPill label="Away team" value={gameDetail?.away_team?.team_name || game.AWAY_TEAM_NAME || game.AWAY_TEAM_ABBREVIATION} />
+                    <StatPill label="Home quarter scores" value={Array.isArray(gameDetail?.home_team?.quarter_scores) ? (gameDetail?.home_team?.quarter_scores || []).join(" - ") : "Quarter data unavailable"} />
+                    <StatPill label="Away quarter scores" value={Array.isArray(gameDetail?.away_team?.quarter_scores) ? (gameDetail?.away_team?.quarter_scores || []).join(" - ") : "Quarter data unavailable"} />
+                  </div>
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">Officials</p>
+                    <p className="mt-1 text-[10px] text-slate-700">{officials.slice(0, 3).map((o: any) => o.name || o.n).filter(Boolean).join(" · ") || "Officials unavailable in source"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                  <SectionTitle title="Top players" subtitle="Best performers from this game" />
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    {topGame.slice(0, 6).map((p: any, idx: number) => (
+                      <div key={`${p.PLAYER_ID ?? idx}-${p.TEAM_ABBREVIATION ?? "NA"}`} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 shadow-sm">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME} size={26} />
+                          <div className="min-w-0">
+                            <p className="truncate text-[11px] font-bold text-slate-800">{p.PLAYER_NAME}</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400">{p.TEAM_ABBREVIATION ?? "NA"} · {p.MIN != null || p.min != null ? `${Math.round(p.MIN ?? p.min)} min` : "—"}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-black text-slate-900">{p.PTS ?? p.pts ?? "—"}</p>
+                          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">PTS</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+                  <SectionTitle title="Game leaders" subtitle="Official leaders from the detailed payload" />
+                  <div className="mt-4 grid gap-3">
+                    {[
+                      { label: "Points", item: gameDetail?.game_leaders?.points },
+                      { label: "Rebounds", item: gameDetail?.game_leaders?.rebounds },
+                      { label: "Assists", item: gameDetail?.game_leaders?.assists },
+                    ].map((entry) => (
+                      <div key={entry.label} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">{entry.label}</p>
+                        <p className="mt-1 text-sm font-bold text-slate-900">
+                          {entry.item?.player_name || entry.item?.n || "—"}{" "}
+                          <span className="text-slate-400">
+                            {entry.item?.team_id ? `· ${entry.item.team_id}` : ""}
+                            {entry.item?.value != null ? ` · ${entry.item.value}` : ""}
+                          </span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <MetricCard label="Home FG" value={fmtPair((teamStatHome as any)?.FGM ?? (teamStatHome as any)?.fgm, (teamStatHome as any)?.FGA ?? (teamStatHome as any)?.fga)} />
+                <MetricCard label="Away FG" value={fmtPair((teamStatAway as any)?.FGM ?? (teamStatAway as any)?.fgm, (teamStatAway as any)?.FGA ?? (teamStatAway as any)?.fga)} />
+                <MetricCard label="Officials" value={officials.length ? officials.length : "Not available"} />
+              </div>
+            </div>
+          )}
+
+          {activeTab === "home" && (
+            <div>
+              <SectionTitle title={`${game.HOME_TEAM_ABBREVIATION} box score`} subtitle={gameDetail?.home_team?.team_name || game.HOME_TEAM_NAME || "Home team"} />
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <MetricCard label="Score" value={gameDetail?.home_team?.score ?? game.HOME_SCORE} />
+                <MetricCard label="REB" value={homeBS?.REB ?? "—"} />
+                <MetricCard label="AST" value={homeBS?.AST ?? "—"} />
+                <MetricCard label="TOV" value={homeBS?.TOV ?? "—"} />
+              </div>
+              <div className="mt-4">{renderPlayerList(topHome)}</div>
+            </div>
+          )}
+
+          {activeTab === "away" && (
+            <div>
+              <SectionTitle title={`${game.AWAY_TEAM_ABBREVIATION} box score`} subtitle={gameDetail?.away_team?.team_name || game.AWAY_TEAM_NAME || "Away team"} />
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <MetricCard label="Score" value={gameDetail?.away_team?.score ?? game.AWAY_SCORE} />
+                <MetricCard label="REB" value={awayBS?.REB ?? "—"} />
+                <MetricCard label="AST" value={awayBS?.AST ?? "—"} />
+                <MetricCard label="TOV" value={awayBS?.TOV ?? "—"} />
+              </div>
+              <div className="mt-4">{renderPlayerList(topAway)}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -258,17 +507,13 @@ export default function GameResults() {
   const [results, setResults] = useState<GameFeedRow[]>([]);
   const [teamBS, setTeamBS] = useState<TeamBoxScore[]>([]);
   const [playerBS, setPlayerBS] = useState<PlayerBoxScore[]>([]);
-  const [gameDetails, setGameDetails] = useState<GameDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [search, setSearch] = useState("");
-  const [teamFilter, setTeamFilter] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [activeTeam, setActiveTeam] = useState<"home" | "away">("home");
-  const [sortKey, setSortKey] = useState<"MIN" | "PTS" | "REB" | "AST" | "TOV" | "PLUS_MINUS">("PTS");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [gameDetails, setGameDetails] = useState<GameDetail[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -290,79 +535,50 @@ export default function GameResults() {
       });
   }, []);
 
-  const filteredResults = useMemo(() => {
+  const sortedResults = useMemo(() => {
     const q = search.trim().toUpperCase();
-    const teamQ = teamFilter.trim().toUpperCase();
     return [...results]
-      .filter(
-        (x) =>
-          (!q ||
-            x.HOME_TEAM_ABBREVIATION.includes(q) ||
-            x.AWAY_TEAM_ABBREVIATION.includes(q) ||
-            (x.HOME_TEAM_NAME ?? "").toUpperCase().includes(q) ||
-            (x.AWAY_TEAM_NAME ?? "").toUpperCase().includes(q) ||
-            x.GAME_ID.includes(q)) &&
-          (!teamQ ||
-            x.HOME_TEAM_ABBREVIATION.includes(teamQ) ||
-            x.AWAY_TEAM_ABBREVIATION.includes(teamQ) ||
-            (x.HOME_TEAM_NAME ?? "").toUpperCase().includes(teamQ) ||
-            (x.AWAY_TEAM_NAME ?? "").toUpperCase().includes(teamQ)),
-      )
+      .filter((x) => !q || x.HOME_TEAM_ABBREVIATION.includes(q) || x.AWAY_TEAM_ABBREVIATION.includes(q) || x.GAME_ID.includes(q))
       .sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
   }, [results, search]);
 
-  const uniqueDates = useMemo(() => Array.from(new Set(filteredResults.map((g) => g.GAME_DATE))).sort((a, b) => b.localeCompare(a)), [filteredResults]);
+  const uniqueDates = useMemo(
+    () => Array.from(new Set(sortedResults.map((g) => g.GAME_DATE))).sort((a, b) => b.localeCompare(a)),
+    [sortedResults],
+  );
 
   useEffect(() => {
     if (!selectedDate && uniqueDates.length) setSelectedDate(uniqueDates[0]);
   }, [selectedDate, uniqueDates]);
 
+  const selectedDateIndex = uniqueDates.indexOf(selectedDate);
+  const selectedDateGames = useMemo(
+    () => sortedResults.filter((g) => g.GAME_DATE === selectedDate),
+    [sortedResults, selectedDate],
+  );
   const selectedGame = useMemo(() => results.find((g) => g.GAME_ID === selectedGameId) ?? null, [results, selectedGameId]);
-  const selectedGameDetail = useMemo(() => gameDetails.find((d) => d.game_id === selectedGameId) ?? null, [gameDetails, selectedGameId]);
-  const selectedIndex = useMemo(() => filteredResults.findIndex((g) => g.GAME_ID === selectedGameId), [filteredResults, selectedGameId]);
-  const prevGame = selectedIndex > 0 ? filteredResults[selectedIndex - 1] : null;
-  const nextGame = selectedIndex >= 0 && selectedIndex < filteredResults.length - 1 ? filteredResults[selectedIndex + 1] : null;
-  const selectedDateIndex = useMemo(() => uniqueDates.indexOf(selectedDate), [uniqueDates, selectedDate]);
-  const visibleDates = useMemo(() => {
-    if (!uniqueDates.length) return [];
-    const count = Math.min(6, uniqueDates.length);
-    const currentIndex = selectedDateIndex >= 0 ? selectedDateIndex : 0;
-    let start = Math.max(0, currentIndex - 2);
-    let end = start + count;
-    if (end > uniqueDates.length) {
-      end = uniqueDates.length;
-      start = Math.max(0, end - count);
-    }
-    return uniqueDates.slice(start, end);
-  }, [selectedDateIndex, uniqueDates]);
-
-  const shiftDate = (delta: -1 | 1) => {
-    if (!uniqueDates.length) return;
-    const currentIndex = selectedDateIndex >= 0 ? selectedDateIndex : 0;
-    const nextIndex = Math.max(0, Math.min(uniqueDates.length - 1, currentIndex + delta));
-    setSelectedDate(uniqueDates[nextIndex]);
-  };
-
-  useEffect(() => {
-    if (selectedGame && selectedGame.GAME_DATE !== selectedDate) {
-      setSelectedDate(selectedGame.GAME_DATE);
-    }
-  }, [selectedGame, selectedDate]);
+  const selectedGameDetail = useMemo(
+    () => gameDetails.find((d) => d.game_id === selectedGameId) ?? null,
+    [gameDetails, selectedGameId],
+  );
 
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-900 border-t-transparent" />
-        <span className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Loading results...</span>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#1d428a] border-t-transparent" />
+        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading results...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-[20px] bg-white p-8 text-center shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
-        <AlertTriangle size={30} className="mx-auto mb-3 text-rose-500" />
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <AlertTriangle size={32} className="mx-auto mb-3 text-rose-500" />
         <p className="text-sm font-bold text-rose-600">{error}</p>
+        <p className="mt-2 text-xs text-slate-400 font-mono">
+          Run: <code className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5">python3 main.py --fetch-boxscores</code>
+        </p>
       </div>
     );
   }
@@ -374,342 +590,104 @@ export default function GameResults() {
     const homePlayers = playerTeamFilter(gamePlayers, selectedGame.HOME_TEAM_ABBREVIATION);
     const awayPlayers = playerTeamFilter(gamePlayers, selectedGame.AWAY_TEAM_ABBREVIATION);
 
-    const margin = Math.abs((selectedGame.HOME_SCORE ?? 0) - (selectedGame.AWAY_SCORE ?? 0));
-    const winnerIsHome = selectedGame.WINNER_TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION;
-    const winnerIsAway = selectedGame.WINNER_TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION;
-    const seasonType = selectedGame.PLAYOFF_ROUND ? selectedGame.PLAYOFF_ROUND : selectedGame.SEASON_TYPE;
-    const heroScoreAway = selectedGameDetail?.away_team?.score ?? selectedGame.AWAY_SCORE;
-    const heroScoreHome = selectedGameDetail?.home_team?.score ?? selectedGame.HOME_SCORE;
-    const allPlayers = [...homePlayers, ...awayPlayers].sort((a, b) => (b.PTS ?? 0) - (a.PTS ?? 0) || (b.MIN ?? 0) - (a.MIN ?? 0));
-    const topPlayers = allPlayers.slice(0, 6);
-
-    const teamStats = [
-      { label: "FG", home: homeBS?.FGM ?? null, away: awayBS?.FGM ?? null, homeDisplay: fmtPair(homeBS?.FGM, homeBS?.FGA), awayDisplay: fmtPair(awayBS?.FGM, awayBS?.FGA), high: true },
-      { label: "FG%", home: homeBS?.FG_PCT ?? null, away: awayBS?.FG_PCT ?? null, homeDisplay: fmtPct(homeBS?.FG_PCT ?? null), awayDisplay: fmtPct(awayBS?.FG_PCT ?? null), high: true },
-      { label: "3PT%", home: homeBS?.FG3_PCT ?? null, away: awayBS?.FG3_PCT ?? null, homeDisplay: fmtPct(homeBS?.FG3_PCT ?? null), awayDisplay: fmtPct(awayBS?.FG3_PCT ?? null), high: true },
-      { label: "FT%", home: homeBS?.FT_PCT ?? null, away: awayBS?.FT_PCT ?? null, homeDisplay: fmtPct(homeBS?.FT_PCT ?? null), awayDisplay: fmtPct(awayBS?.FT_PCT ?? null), high: true },
-      { label: "REB", home: homeBS?.REB ?? null, away: awayBS?.REB ?? null, homeDisplay: fmtInt(homeBS?.REB ?? null), awayDisplay: fmtInt(awayBS?.REB ?? null), high: true },
-      { label: "AST", home: homeBS?.AST ?? null, away: awayBS?.AST ?? null, homeDisplay: fmtInt(homeBS?.AST ?? null), awayDisplay: fmtInt(awayBS?.AST ?? null), high: true },
-      { label: "TOV", home: homeBS?.TOV ?? null, away: awayBS?.TOV ?? null, homeDisplay: fmtInt(homeBS?.TOV ?? null), awayDisplay: fmtInt(awayBS?.TOV ?? null), high: false },
-    ];
-
-    const gameDate = selectedGameDetail?.game_date ?? selectedGame.GAME_DATE;
-    const topScorer = allPlayers[0];
-    const mostRebounds = [...allPlayers].sort((a, b) => (b.REB ?? 0) - (a.REB ?? 0))[0];
-    const mostAssists = [...allPlayers].sort((a, b) => (b.AST ?? 0) - (a.AST ?? 0))[0];
-
-    const activePlayers = activeTeam === "home" ? homePlayers : awayPlayers;
-    const factor = sortDir === "asc" ? 1 : -1;
-    const sortedPlayers = [...activePlayers].sort((a, b) => ((a[sortKey] ?? -Infinity) - (b[sortKey] ?? -Infinity)) * factor);
-
     return (
-      <div className="mx-auto max-w-[1280px] space-y-8">
+      <div className="space-y-6">
         <button
           onClick={() => setSelectedGameId(null)}
-          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:text-slate-800"
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
         >
-          <ArrowLeft size={12} />
+          <ArrowLeftRight size={11} />
           Back to games
         </button>
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-white px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-          <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">Browse</p>
-            <p className="truncate text-sm font-semibold text-slate-700">
-              {selectedIndex >= 0 ? `Game ${selectedIndex + 1} of ${filteredResults.length}` : "Game navigation"}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => prevGame && setSelectedGameId(prevGame.GAME_ID)}
-              disabled={!prevGame}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <ArrowLeft size={12} />
-              Previous
-            </button>
-            <button
-              onClick={() => nextGame && setSelectedGameId(nextGame.GAME_ID)}
-              disabled={!nextGame}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Next
-              <ArrowLeft size={12} className="rotate-180" />
-            </button>
-          </div>
-        </div>
-
-        <section className="overflow-hidden rounded-[28px] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.1)]">
-          <div className="grid gap-6 p-6 lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:p-8">
-            <TeamCompactHeader team={selectedGame.AWAY_TEAM_NAME} score={heroScoreAway} abbr={selectedGame.AWAY_TEAM_ABBREVIATION} side="away" winner={winnerIsAway} />
-            <div className="text-center">
-              <Badge tone={winnerIsHome || winnerIsAway ? "winner" : "neutral"}>VS</Badge>
-              <p className="mt-4 text-[13px] font-black uppercase tracking-[0.28em] text-slate-400">
-                {winnerIsHome ? `${selectedGame.HOME_TEAM_ABBREVIATION} won by ${margin}` : winnerIsAway ? `${selectedGame.AWAY_TEAM_ABBREVIATION} won by ${margin}` : "Result unavailable"}
-              </p>
-              <p className="mt-2 text-sm text-slate-500">{fmtShortDate(gameDate)}</p>
-            </div>
-            <TeamCompactHeader team={selectedGame.HOME_TEAM_NAME} score={heroScoreHome} abbr={selectedGame.HOME_TEAM_ABBREVIATION} side="home" winner={winnerIsHome} />
-          </div>
-          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-6 py-4 lg:px-8">
-            <Badge tone="winner">{selectedGame.WINNER_TEAM_ABBREVIATION ?? "Winner"}</Badge>
-            <Badge>{seasonType}</Badge>
-            {selectedGame.SEASON_TYPE?.toLowerCase().includes("final") || selectedGame.PLAYOFF_ROUND?.toLowerCase().includes("final") ? <Badge>Playoff / Finals</Badge> : null}
-            <Badge>{selectedGame.GAME_STATUS ?? "Final"}</Badge>
-          </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Most Points" value={topScorer?.PLAYER_NAME ?? "—"} sublabel={`${fmtInt(topScorer?.PTS ?? null)} PTS`} accent="#0f172a" />
-          <StatCard label="Most Rebounds" value={mostRebounds?.PLAYER_NAME ?? "—"} sublabel={`${fmtInt(mostRebounds?.REB ?? null)} REB`} accent="#0f172a" />
-          <StatCard label="Most Assists" value={mostAssists?.PLAYER_NAME ?? "—"} sublabel={`${fmtInt(mostAssists?.AST ?? null)} AST`} accent="#0f172a" />
-          <StatCard label="Team Efficiency" value={homeBS?.FG_PCT != null && awayBS?.FG_PCT != null ? fmtPct(homeBS.FG_PCT >= awayBS.FG_PCT ? homeBS.FG_PCT : awayBS.FG_PCT) : "—"} sublabel={homeBS?.FG_PCT != null && awayBS?.FG_PCT != null ? (homeBS.FG_PCT >= awayBS.FG_PCT ? selectedGame.HOME_TEAM_ABBREVIATION : selectedGame.AWAY_TEAM_ABBREVIATION) : "FG% leader"} accent="#0f172a" />
-        </section>
-
-        <section className="rounded-[28px] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-          <SectionTitle title="Team Comparison" subtitle="Side-by-side efficiency view" />
-          <div className="mt-5 space-y-2">
-            {teamStats.map((row) => (
-              <ComparisonRow
-                key={row.label}
-                label={row.label}
-                homeValue={row.home}
-                awayValue={row.away}
-                homePct={row.homeDisplay}
-                awayPct={row.awayDisplay}
-                homeLabel={selectedGame.HOME_TEAM_ABBREVIATION}
-                awayLabel={selectedGame.AWAY_TEAM_ABBREVIATION}
-                homeColor={teamColor(selectedGame.HOME_TEAM_ABBREVIATION)}
-                awayColor={teamColor(selectedGame.AWAY_TEAM_ABBREVIATION)}
-                higherIsBetter={row.high}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <SectionTitle title="Top Performers" subtitle="Six players, maximum" />
-          <div className="grid gap-4 xl:grid-cols-2">
-            {topPlayers.map((p) => (
-              <div key={`${p.PLAYER_ID}-${p.TEAM_ABBREVIATION}`} className="flex items-center gap-4 rounded-[24px] bg-white p-4 shadow-[0_12px_36px_rgba(15,23,42,0.08)] transition duration-200 hover:-translate-y-0.5">
-                <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME} size={56} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <Badge tone={p.TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION ? "home" : "away"}>{p.TEAM_ABBREVIATION}</Badge>
-                    <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{Math.round(p.MIN ?? 0)} min</span>
-                  </div>
-                  <p className="mt-2 truncate text-xl font-black text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>{p.PLAYER_NAME}</p>
-                  <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-500">
-                    <span><strong className="text-slate-900">{fmtInt(p.PTS)}</strong> PTS</span>
-                    <span><strong className="text-slate-900">{fmtInt(p.REB)}</strong> REB</span>
-                    <span><strong className="text-slate-900">{fmtInt(p.AST)}</strong> AST</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-[28px] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-          <button onClick={() => setAdvancedOpen((v) => !v)} className="flex w-full items-center justify-between gap-3 text-left">
-            <div>
-              <SectionTitle title="View Full Team Statistics" subtitle="Advanced team stats for deeper analysis" />
-            </div>
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-              {advancedOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-            </span>
-          </button>
-          {advancedOpen && (
-            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {[
-                homeBS?.FGM != null || awayBS?.FGM != null ? ["FG", fmtPair(homeBS?.FGM, homeBS?.FGA), fmtPair(awayBS?.FGM, awayBS?.FGA)] : null,
-                homeBS?.FG3M != null || awayBS?.FG3M != null ? ["3PT", fmtPair(homeBS?.FG3M, homeBS?.FG3A), fmtPair(awayBS?.FG3M, awayBS?.FG3A)] : null,
-                homeBS?.FTA != null || awayBS?.FTA != null ? ["FTA", fmtInt(homeBS?.FTA ?? null), fmtInt(awayBS?.FTA ?? null)] : null,
-                homeBS?.PLUS_MINUS != null || awayBS?.PLUS_MINUS != null ? ["Plus Minus", fmtInt(homeBS?.PLUS_MINUS ?? null), fmtInt(awayBS?.PLUS_MINUS ?? null)] : null,
-              ].filter(Boolean).map((item) => {
-                const [label, home, away] = item as [string, string, string];
-                return (
-                <div key={label} className="rounded-[20px] bg-slate-50 p-4">
-                  <p className="text-[12px] font-black uppercase tracking-[0.24em] text-slate-400">{label}</p>
-                  <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{selectedGame.HOME_TEAM_ABBREVIATION}</p>
-                      <p className="mt-1 font-semibold text-slate-900">{home as string}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{selectedGame.AWAY_TEAM_ABBREVIATION}</p>
-                      <p className="mt-1 font-semibold text-slate-900">{away as string}</p>
-                    </div>
-                  </div>
-                </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-[28px] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-          <SectionTitle title="Box Score" subtitle="Secondary content with compact tables" />
-          <div className="mt-5 flex flex-wrap gap-2">
-            <button onClick={() => setActiveTeam("home")} className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] ${activeTeam === "home" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"}`}>{selectedGame.HOME_TEAM_ABBREVIATION} Home Team</button>
-            <button onClick={() => setActiveTeam("away")} className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] ${activeTeam === "away" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"}`}>{selectedGame.AWAY_TEAM_ABBREVIATION} Away Team</button>
-          </div>
-          <div className="mt-5 overflow-hidden rounded-[22px] border border-slate-100">
-            <div className="max-h-[720px] overflow-auto">
-              <table className="min-w-full border-separate border-spacing-0 text-left">
-                <thead className="sticky top-0 z-20 bg-white">
-                  <tr className="border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
-                    <th className="sticky left-0 z-30 bg-white px-4 py-3">Player</th>
-                    {[
-                      ["MIN", "MIN"],
-                      ["PTS", "PTS"],
-                      ["FG", "FG"],
-                      ["FG%", "FG_PCT"],
-                      ["3P", "FG3M"],
-                      ["3P%", "FG3_PCT"],
-                      ["FT", "FTM"],
-                      ["FT%", "FT_PCT"],
-                      ["REB", "REB"],
-                      ["AST", "AST"],
-                      ["TOV", "TOV"],
-                      ["+/-", "PLUS_MINUS"],
-                    ].map(([label, key]) => (
-                      <th key={label} className="px-4 py-3 text-right">
-                        <SortableHeader
-                          label={label}
-                          sortKey={key}
-                          activeKey={sortKey}
-                          direction={sortDir}
-                          onClick={() => {
-                            if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-                            else {
-                              setSortKey(key as typeof sortKey);
-                              setSortDir("desc");
-                            }
-                          }}
-                        />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedPlayers.map((p) => <PlayerRow key={p.PLAYER_ID} p={p} />)}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+        <GameCardDetail
+          game={selectedGame}
+          gameDetail={selectedGameDetail}
+          homeBS={homeBS}
+          awayBS={awayBS}
+          homePlayers={homePlayers}
+          awayPlayers={awayPlayers}
+        />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1280px] space-y-8">
-      <section className="rounded-[28px] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+    <div className="space-y-8">
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_16px_50px_rgba(15,23,42,0.05)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
               <Trophy size={12} className="text-[#1d428a]" />
               Game Results
             </div>
-            <h1 className="mt-4 text-4xl font-black uppercase tracking-tight text-slate-900 sm:text-5xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Premium game intelligence
+            <h1 className="text-4xl font-black uppercase tracking-tight text-slate-900 sm:text-5xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+              Scores, box scores, and game context
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500">
-              Select a game to view its analytics-first details page.
+            <p className="max-w-3xl text-sm leading-relaxed text-slate-500">
+              Final scores, team-level edges, and player logs rendered in a clean hierarchy.
             </p>
-          </div>
-          <div className="w-full max-w-md">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by team, name, or game ID"
-              className="w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
-            />
-            <input
-              value={teamFilter}
-              onChange={(e) => setTeamFilter(e.target.value)}
-              placeholder="Filter by team"
-              className="mt-3 w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
-            />
           </div>
         </div>
       </section>
 
-      {uniqueDates.length > 0 && (
-        <section className="rounded-[24px] bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between gap-3">
+      <section className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => shiftDate(-1)}
-              disabled={selectedDateIndex <= 0}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Previous dates"
+              onClick={() => setSelectedDate(uniqueDates[selectedDateIndex + 1] ?? selectedDate)}
+              disabled={selectedDateIndex >= uniqueDates.length - 1}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
             >
-              <ArrowLeft size={16} />
+              <ChevronDown size={11} className="rotate-90" />
+              Prev day
             </button>
-            <div className="flex min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden">
-              {visibleDates.map((date) => {
-                const active = date === selectedDate || (!selectedDate && date === uniqueDates[0]);
-                const [day, dow] = fmtDateChip(date).split(" ");
-                const dayGames = filteredResults.filter((g) => g.GAME_DATE === date);
-                const logoTeams = dayGames.slice(0, 2).flatMap((g) => [g.AWAY_TEAM_ABBREVIATION, g.HOME_TEAM_ABBREVIATION]);
-                return (
-                  <button
-                    key={date}
-                    onClick={() => setSelectedDate(date)}
-                    className={`min-w-[94px] rounded-2xl px-3 py-2 text-center transition ${active ? "bg-slate-900 text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)]" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}
-                  >
-                    <div className="mb-2 flex items-center justify-center gap-1">
-                      {logoTeams.slice(0, 2).map((abbr) => (
-                        <TeamLogo key={`${date}-${abbr}`} abbr={abbr} name={abbr} size={16} />
-                      ))}
-                    </div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.28em] opacity-70">{day}</p>
-                    <p className="mt-1 text-sm font-black uppercase tracking-[0.22em]">{dow}</p>
-                  </button>
-                );
-              })}
+            <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
+              {selectedDate ? fmtShortDate(selectedDate) : "No date selected"}
             </div>
             <button
-              onClick={() => shiftDate(1)}
-              disabled={selectedDateIndex >= uniqueDates.length - 1}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Next dates"
+              onClick={() => setSelectedDate(uniqueDates[selectedDateIndex - 1] ?? selectedDate)}
+              disabled={selectedDateIndex <= 0}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 transition hover:bg-slate-50 disabled:opacity-40"
             >
-              <ArrowLeft size={16} className="rotate-180" />
+              Next day
+              <ChevronDown size={11} className="-rotate-90" />
             </button>
           </div>
-        </section>
-      )}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
+              {selectedDateGames.length} games
+            </div>
+            <div className="rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
+              {uniqueDates.length} days
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div className="grid gap-4">
-        {filteredResults
-          .filter((g) => !selectedDate || g.GAME_DATE === selectedDate)
-          .map((game) => (
-            <button
-              key={game.GAME_ID}
-              onClick={() => setSelectedGameId(game.GAME_ID)}
-            className="rounded-[24px] bg-white p-5 text-left shadow-[0_12px_36px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(15,23,42,0.1)]"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={34} />
-                    <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={34} />
-                  </div>
-                  <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">{fmtShortDate(game.GAME_DATE)}</p>
-                  <p className="mt-2 text-xl font-black text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                    {game.AWAY_TEAM_ABBREVIATION} {game.AWAY_SCORE ?? "—"} - {game.HOME_SCORE ?? "—"} {game.HOME_TEAM_ABBREVIATION}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {game.AWAY_TEAM_NAME ?? game.AWAY_TEAM_ABBREVIATION} at {game.HOME_TEAM_NAME ?? game.HOME_TEAM_ABBREVIATION}
-                  </p>
-                  </div>
-                </div>
-                <Badge tone="winner">{game.WINNER_TEAM_ABBREVIATION ?? "Final"}</Badge>
-              </div>
-            </button>
-          ))}
+      <section className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-400">List</p>
+            <p className="text-sm font-semibold text-slate-700">{selectedDate ? fmtShortDate(selectedDate) : "Select a day"} · {selectedDateGames.length} games</p>
+          </div>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search team or game id"
+            className="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#1d428a] focus:ring-2 focus:ring-[#1d428a]/10 sm:w-72"
+          />
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {selectedDateGames.map((game) => (
+          <GameCard key={game.GAME_ID} game={game} onOpen={() => setSelectedGameId(game.GAME_ID)} />
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-slate-500">
+        <p>{selectedDate ? `${selectedDateGames.length} games on ${fmtShortDate(selectedDate)}` : "No games selected"}</p>
+        <p>{uniqueDates.length} total days</p>
       </div>
     </div>
   );
