@@ -15,11 +15,7 @@ import {
   Table,
   BarChart3,
   SlidersHorizontal,
-  Sparkles,
   Crown,
-  Swords,
-  Shield,
-  BadgeInfo,
 } from "lucide-react";
 import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
 import TeamLogo from "./TeamLogo";
@@ -96,6 +92,11 @@ const getDependenceLabel = (rank: number) => {
   if (rank <= 15) return "High";
   if (rank <= 50) return "Medium";
   return "Low";
+};
+
+const getStrokeDashOffset = (score: number, radius: number) => {
+  const circumference = 2 * Math.PI * radius;
+  return circumference - (score / 100) * circumference;
 };
 
 const StarCandidates: React.FC<StarCandidatesProps> = ({ candidates }) => {
@@ -195,20 +196,23 @@ const StarCandidates: React.FC<StarCandidatesProps> = ({ candidates }) => {
     return result;
   }, [candidates, searchQuery, selectedTeam, selectedTier, minPPG, minMPG, minGP, minImpact, maxImpact, sortBy, sortOrder]);
 
+  const hasFilters = showFilters || minPPG > 0 || minMPG > 0 || minGP > 0 || selectedTeam !== "All" || selectedTier !== "All" || minImpact > 0 || maxImpact < 100;
+
+  const displayedGridCandidates = useMemo(() => {
+    const base = searchQuery !== "" || hasFilters ? filteredCandidates : filteredCandidates.slice(3);
+    const startIdx = (currentPage - 1) * itemsPerPage;
+    return base.slice(startIdx, startIdx + itemsPerPage);
+  }, [filteredCandidates, searchQuery, hasFilters, currentPage]);
+
   const paginatedCandidates = useMemo(() => {
     const startIdx = (currentPage - 1) * itemsPerPage;
     return filteredCandidates.slice(startIdx, startIdx + itemsPerPage);
   }, [filteredCandidates, currentPage]);
 
-  const totalPages = Math.ceil(filteredCandidates.length / itemsPerPage);
-
-  const getStrokeDashOffset = (score: number) => {
-    const radius = 24;
-    const circumference = 2 * Math.PI * radius;
-    return circumference - (score / 100) * circumference;
-  };
-
-  const hasFilters = showFilters || minPPG > 0 || minMPG > 0 || minGP > 0 || selectedTeam !== "All" || selectedTier !== "All" || minImpact > 0 || maxImpact < 100;
+  const totalPages = useMemo(() => {
+    const base = searchQuery !== "" || hasFilters ? filteredCandidates : filteredCandidates.slice(3);
+    return Math.ceil(base.length / itemsPerPage);
+  }, [filteredCandidates, searchQuery, hasFilters]);
 
   return (
     <div className="space-y-8 animate-fade-in-up">
@@ -299,17 +303,20 @@ const StarCandidates: React.FC<StarCandidatesProps> = ({ candidates }) => {
             </div>
           </div>
           <div className="mt-4 grid grid-cols-5 gap-2">
-            {scoreDistribution.map((bucket) => (
-              <div key={bucket.label} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                <div className="flex h-28 items-end justify-center">
-                  <div className="w-full rounded-t-xl bg-slate-900" style={{ height: `${Math.max(bucket.count * 18, 8)}px` }} />
+            {(() => {
+              const maxCount = Math.max(...scoreDistribution.map((b) => b.count), 1);
+              return scoreDistribution.map((bucket) => (
+                <div key={bucket.label} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <div className="flex h-28 items-end justify-center">
+                    <div className="w-full rounded-t-xl bg-slate-900" style={{ height: `${Math.max((bucket.count / maxCount) * 100, 8)}%` }} />
+                  </div>
+                  <div className="mt-2 text-center">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{bucket.label}</p>
+                    <p className="text-sm font-black text-slate-900">{bucket.count}</p>
+                  </div>
                 </div>
-                <div className="mt-2 text-center">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{bucket.label}</p>
-                  <p className="text-sm font-black text-slate-900">{bucket.count}</p>
-                </div>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </div>
 
@@ -441,7 +448,7 @@ const StarCandidates: React.FC<StarCandidatesProps> = ({ candidates }) => {
                         <div className="relative w-12 h-12">
                           <svg className="w-full h-full transform -rotate-90">
                             <circle cx="24" cy="24" r="20" stroke={`${theme.primary}18`} strokeWidth="3" fill="transparent" />
-                            <circle cx="24" cy="24" r="20" stroke={theme.primary} strokeWidth="3" fill="transparent" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={getStrokeDashOffset(player.IMPORTANCE_SCORE)} strokeLinecap="round" />
+                            <circle cx="24" cy="24" r="20" stroke={theme.primary} strokeWidth="3" fill="transparent" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={getStrokeDashOffset(player.IMPORTANCE_SCORE, 20)} strokeLinecap="round" />
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black font-mono text-slate-700">{player.IMPORTANCE_SCORE.toFixed(0)}</div>
                         </div>
@@ -489,7 +496,7 @@ const StarCandidates: React.FC<StarCandidatesProps> = ({ candidates }) => {
                         <div className="relative w-14 h-14">
                           <svg className="w-full h-full transform -rotate-90">
                             <circle cx="28" cy="28" r="24" stroke={`${theme.primary}20`} strokeWidth="3.5" fill="transparent" />
-                            <circle cx="28" cy="28" r="24" stroke={theme.primary} strokeWidth="3.5" fill="transparent" strokeDasharray={2 * Math.PI * 24} strokeDashoffset={getStrokeDashOffset(player.IMPORTANCE_SCORE)} strokeLinecap="round" />
+                            <circle cx="28" cy="28" r="24" stroke={theme.primary} strokeWidth="3.5" fill="transparent" strokeDasharray={2 * Math.PI * 24} strokeDashoffset={getStrokeDashOffset(player.IMPORTANCE_SCORE, 24)} strokeLinecap="round" />
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center text-xs font-black font-mono text-slate-700">{player.IMPORTANCE_SCORE.toFixed(0)}</div>
                         </div>
@@ -536,7 +543,7 @@ const StarCandidates: React.FC<StarCandidatesProps> = ({ candidates }) => {
                         <div className="relative w-12 h-12">
                           <svg className="w-full h-full transform -rotate-90">
                             <circle cx="24" cy="24" r="20" stroke={`${theme.primary}18`} strokeWidth="3" fill="transparent" />
-                            <circle cx="24" cy="24" r="20" stroke={theme.primary} strokeWidth="3" fill="transparent" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={getStrokeDashOffset(player.IMPORTANCE_SCORE)} strokeLinecap="round" />
+                            <circle cx="24" cy="24" r="20" stroke={theme.primary} strokeWidth="3" fill="transparent" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={getStrokeDashOffset(player.IMPORTANCE_SCORE, 20)} strokeLinecap="round" />
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center text-[9px] font-black font-mono text-slate-700">{player.IMPORTANCE_SCORE.toFixed(0)}</div>
                         </div>
@@ -555,7 +562,7 @@ const StarCandidates: React.FC<StarCandidatesProps> = ({ candidates }) => {
               {searchQuery !== "" || hasFilters ? "Filtered Results" : "Remaining Candidates List"}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(searchQuery !== "" || hasFilters ? filteredCandidates : filteredCandidates.slice(3)).slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((player) => {
+              {displayedGridCandidates.map((player) => {
                 const theme = getTeamTheme(player.TEAMS_PLAYED_FOR);
                 const tier = getTier(player.LEAGUE_RANK);
                 return (
@@ -587,7 +594,7 @@ const StarCandidates: React.FC<StarCandidatesProps> = ({ candidates }) => {
                         <div className="relative w-8 h-8">
                           <svg className="w-full h-full transform -rotate-90">
                             <circle cx="16" cy="16" r="14" stroke={`${theme.primary}12`} strokeWidth="2.5" fill="transparent" />
-                            <circle cx="16" cy="16" r="14" stroke={theme.primary} strokeWidth="2.5" fill="transparent" strokeDasharray={2 * Math.PI * 14} strokeDashoffset={getStrokeDashOffset(player.IMPORTANCE_SCORE)} strokeLinecap="round" />
+                            <circle cx="16" cy="16" r="14" stroke={theme.primary} strokeWidth="2.5" fill="transparent" strokeDasharray={2 * Math.PI * 14} strokeDashoffset={getStrokeDashOffset(player.IMPORTANCE_SCORE, 14)} strokeLinecap="round" />
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center text-[9px] font-black font-mono text-slate-700">{player.IMPORTANCE_SCORE.toFixed(0)}</div>
                         </div>

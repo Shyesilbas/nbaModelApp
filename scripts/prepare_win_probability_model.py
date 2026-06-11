@@ -82,6 +82,65 @@ def main():
     df = pd.read_csv(DATA_PATH)
     print("Rows, cols:", df.shape)
 
+    print("Integrating player projections from V3 Ridge models...")
+    try:
+        import joblib
+        player_df = pd.read_csv(ROOT / "data/experimental/player_model_ready_v3_matchups.csv")
+        features_path = ROOT / "models/production/player_v3_features.pkl"
+        player_features = joblib.load(features_path)
+        player_df = player_df.dropna(subset=player_features)
+        
+        targets = ["pts", "reb", "ast", "pra"]
+        for t in targets:
+            model_path = ROOT / f"models/production/player_v3_ridge_{t}.pkl"
+            if model_path.exists():
+                model = joblib.load(model_path)
+                player_df[f"PROJ_{t.upper()}"] = model.predict(player_df[player_features])
+            else:
+                player_df[f"PROJ_{t.upper()}"] = 0
+                
+        proj_cols = [f"PROJ_{t.upper()}" for t in targets]
+        team_agg = player_df.groupby(["GAME_ID", "TEAM_ABBREVIATION"])[proj_cols].agg(['sum', 'mean']).reset_index()
+        team_agg.columns = ["GAME_ID", "TEAM_ABBREVIATION"] + [f"{col}_{agg}" for col, agg in team_agg.columns[2:]]
+        
+        team_features_df = team_agg.rename(columns={
+            "PROJ_PTS_sum": "TEAM_V3_PROJ_PTS_SUM",
+            "PROJ_REB_sum": "TEAM_V3_PROJ_REB_SUM",
+            "PROJ_AST_sum": "TEAM_V3_PROJ_AST_SUM",
+            "PROJ_PRA_sum": "TEAM_V3_PROJ_PRA_SUM",
+            "PROJ_PTS_mean": "TEAM_V3_PROJ_PTS_AVG",
+            "PROJ_REB_mean": "TEAM_V3_PROJ_REB_AVG",
+            "PROJ_AST_mean": "TEAM_V3_PROJ_AST_AVG",
+            "PROJ_PRA_mean": "TEAM_V3_PROJ_PRA_AVG",
+        })
+        
+        opp_features_df = team_agg.rename(columns={
+            "TEAM_ABBREVIATION": "OPPONENT_ABBREVIATION",
+            "PROJ_PTS_sum": "OPP_V3_PROJ_PTS_SUM",
+            "PROJ_REB_sum": "OPP_V3_PROJ_REB_SUM",
+            "PROJ_AST_sum": "OPP_V3_PROJ_AST_SUM",
+            "PROJ_PRA_sum": "OPP_V3_PROJ_PRA_SUM",
+            "PROJ_PTS_mean": "OPP_V3_PROJ_PTS_AVG",
+            "PROJ_REB_mean": "OPP_V3_PROJ_REB_AVG",
+            "PROJ_AST_mean": "OPP_V3_PROJ_AST_AVG",
+            "PROJ_PRA_mean": "OPP_V3_PROJ_PRA_AVG",
+        })
+        
+        df = df.merge(team_features_df, on=["GAME_ID", "TEAM_ABBREVIATION"], how="inner")
+        df = df.merge(opp_features_df, on=["GAME_ID", "OPPONENT_ABBREVIATION"], how="inner")
+        
+        new_cols = [
+            "TEAM_V3_PROJ_PTS_SUM", "TEAM_V3_PROJ_REB_SUM", "TEAM_V3_PROJ_AST_SUM", "TEAM_V3_PROJ_PRA_SUM",
+            "OPP_V3_PROJ_PTS_SUM", "OPP_V3_PROJ_REB_SUM", "OPP_V3_PROJ_AST_SUM", "OPP_V3_PROJ_PRA_SUM",
+            "TEAM_V3_PROJ_PTS_AVG", "TEAM_V3_PROJ_REB_AVG", "TEAM_V3_PROJ_AST_AVG", "TEAM_V3_PROJ_PRA_AVG",
+            "OPP_V3_PROJ_PTS_AVG", "OPP_V3_PROJ_REB_AVG", "OPP_V3_PROJ_AST_AVG", "OPP_V3_PROJ_PRA_AVG"
+        ]
+        df = df.dropna(subset=new_cols)
+        print("Rows, cols after adding projections:", df.shape)
+        
+    except Exception as e:
+        print(f"Could not integrate player projections: {e}")
+
     df_features, df_meta = separate_metadata(df)
     if TARGET_COL not in df_features.columns:
         raise ValueError(f"Target {TARGET_COL} not found in dataset columns")

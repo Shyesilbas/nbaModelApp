@@ -97,9 +97,25 @@ def build_team_features(df: pd.DataFrame) -> pd.DataFrame:
         df["WINRATE_LAST_5"] = np.nan
         df["WINRATE_LAST_10"] = np.nan
 
-    # 10. PTS_ALLOWED (opponent points)
+    # 9b. Base Advanced Metrics (PACE, OFF_RTG) needed for DEF_RTG
+    # POSS = FGA + 0.44 * FTA - OREB + TOV
+    # PACE = 48.0 * (POSS / (MIN / 5))
+    if all(col in df.columns for col in ["FGA", "FTA", "OREB", "TOV", "MIN"]):
+        df["POSS"] = df["FGA"] + 0.44 * df["FTA"] - df["OREB"] + df["TOV"]
+        df["PACE"] = 48.0 * (df["POSS"] / (df["MIN"] / 5))
+        df["OFF_RTG"] = 100.0 * (df["PTS"] / df["POSS"])
+    else:
+        df["POSS"] = np.nan
+        df["PACE"] = np.nan
+        df["OFF_RTG"] = np.nan
+
+    # 10. PTS_ALLOWED (opponent points) and DEF_RTG (opponent off_rtg)
     if "GAME_ID" in df.columns and "PTS" in df.columns:
         pts_map = df[["GAME_ID", "TEAM_ABBREVIATION", "PTS"]].rename(columns={"PTS": "OPP_PTS_TEMP"})
+        if "OFF_RTG" in df.columns:
+            rtg_map = df[["GAME_ID", "TEAM_ABBREVIATION", "OFF_RTG"]].rename(columns={"OFF_RTG": "OPP_OFF_RTG_TEMP"})
+            pts_map = pts_map.merge(rtg_map, on=["GAME_ID", "TEAM_ABBREVIATION"], how="left")
+            
         df = df.merge(
             pts_map,
             left_on=["GAME_ID", "OPPONENT_ABBREVIATION"],
@@ -109,10 +125,18 @@ def build_team_features(df: pd.DataFrame) -> pd.DataFrame:
         )
         if "TEAM_ABBREVIATION_temp_drop" in df.columns:
             df = df.drop(columns=["TEAM_ABBREVIATION_temp_drop"])
+            
         df["PTS_ALLOWED"] = df["OPP_PTS_TEMP"]
         df = df.drop(columns=["OPP_PTS_TEMP"])
+        
+        if "OPP_OFF_RTG_TEMP" in df.columns:
+            df["DEF_RTG"] = df["OPP_OFF_RTG_TEMP"]
+            df = df.drop(columns=["OPP_OFF_RTG_TEMP"])
+        else:
+            df["DEF_RTG"] = np.nan
     else:
         df["PTS_ALLOWED"] = np.nan
+        df["DEF_RTG"] = np.nan
 
     # Fallback to PTS - PLUS_MINUS if PTS_ALLOWED is missing
     if "PTS_ALLOWED" in df.columns and df["PTS_ALLOWED"].isna().any() and "PTS" in df.columns and "PLUS_MINUS" in df.columns:
@@ -180,6 +204,23 @@ def build_team_features(df: pd.DataFrame) -> pd.DataFrame:
         df["H2H_WINRATE_LAST_5"] = np.nan
         df["H2H_PTS_LAST_5"] = np.nan
         df["H2H_PTS_ALLOWED_LAST_5"] = np.nan
+
+    # 14. Rolling Averages for Advanced Metrics
+    if "OFF_RTG" in df.columns and "DEF_RTG" in df.columns:
+        df["NET_RTG"] = df["OFF_RTG"] - df["DEF_RTG"]
+    else:
+        df["NET_RTG"] = np.nan
+
+    # Calculate rolling averages for Advanced Metrics (shifted by 1)
+    if team_col in df.columns:
+        for metric in ["PACE", "OFF_RTG", "DEF_RTG", "NET_RTG"]:
+            if metric in df.columns:
+                df[f"{metric}_LAST_5"] = df.groupby(team_col)[metric].transform(
+                    lambda x: x.shift(1).rolling(window=5, min_periods=1).mean()
+                )
+                df[f"{metric}_LAST_10"] = df.groupby(team_col)[metric].transform(
+                    lambda x: x.shift(1).rolling(window=10, min_periods=1).mean()
+                )
 
     return df
 

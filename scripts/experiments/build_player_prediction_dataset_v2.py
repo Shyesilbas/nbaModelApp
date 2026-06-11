@@ -90,7 +90,7 @@ def compute_team_features():
 
 def load_player_features(season):
     if season == "2024_25":
-        features_path = ROOT / "data/experimental/player_games_features_2024_25.csv"
+        features_path = ROOT / "data/features/player_games_features_2024_25.csv"
     else:
         features_path = ROOT / "data/features/player_games_features_2025_26.csv"
         

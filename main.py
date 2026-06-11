@@ -441,8 +441,8 @@ def main():
         print(f"Generated mock player games: {df_player_raw.shape[0]} rows.")
     else:
         try:
-            df_team_raw = load_team_games(args.raw_team_dir)
-            df_player_raw = load_player_games(args.raw_player_dir)
+            df_team_raw = load_team_games(args.raw_team_dir, season=args.season)
+            df_player_raw = load_player_games(args.raw_player_dir, season=args.season)
         except Exception as e:
             print(f"❌ Error loading raw datasets: {e}")
             print("Please check your directories or run with --mock to test the pipeline.")

@@ -36,11 +36,11 @@ def main() -> int:
         ROOT / "models/production/win_probability_model.pkl",
         ROOT / "models/production/feature_columns.json",
         ROOT / "models/production/model_metadata.json",
-        ROOT / "models/production/home_score_model_v2.pkl",
-        ROOT / "models/production/away_score_model_v2.pkl",
-        ROOT / "models/production/direct_total_points_model_v2.pkl",
-        ROOT / "models/production/direct_point_diff_model_v2.pkl",
-        ROOT / "models/production/score_model_v2_metadata.json",
+        ROOT / "models/production/score_model_v3_home_rtg.pkl",
+        ROOT / "models/production/score_model_v3_away_rtg.pkl",
+        ROOT / "models/production/score_model_v3_pace.pkl",
+        ROOT / "models/production/score_model_v3_margin.pkl",
+        ROOT / "models/production/score_model_v3_metadata.json",
         ROOT / "data/production/core_players.csv",
     ]
     for path in required:

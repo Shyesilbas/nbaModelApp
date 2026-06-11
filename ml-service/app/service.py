@@ -67,12 +67,12 @@ def predict(request: WinProbRequest) -> WinProbResponse:
 
 
 def predict_score(request: ScorePredictionRequest) -> ScorePredictionResponse:
-    if (score_loader.home_model is None or 
-        score_loader.away_model is None or 
-        score_loader.total_model is None or 
-        score_loader.diff_model is None or 
+    if (score_loader.pace_model is None or 
+        score_loader.home_rtg_model is None or 
+        score_loader.away_rtg_model is None or 
+        score_loader.margin_model is None or 
         score_loader.metadata is None):
-        raise FileNotFoundError("Score V2 models not fully loaded. Check service logs.")
+        raise FileNotFoundError("Score V3 models not fully loaded. Check service logs.")
 
     pred_date_str = request.prediction_date.isoformat() if hasattr(request.prediction_date, 'isoformat') else str(request.prediction_date)
     home_team = request.home_team.upper()
@@ -87,39 +87,42 @@ def predict_score(request: ScorePredictionRequest) -> ScorePredictionResponse:
         raise e
 
     metadata = score_loader.metadata
-    v1_features = metadata["features"]["v1"]
-    player_features = metadata["features"]["player"]
-    model_features = v1_features + player_features
+    pace_features = metadata.get("pace_features", [])
+    off_rtg_features = metadata.get("off_rtg_features", [])
+    margin_features = metadata.get("margin_features", [])
+    
+    # We need the union of all features to verify they exist
+    model_features = list(set(pace_features + off_rtg_features + margin_features))
 
     missing = [c for c in model_features if c not in features]
     if missing:
         raise ValueError(f"Missing features required by score model: {missing}")
 
-    row = [features[c] for c in model_features]
-    X = pd.DataFrame([row], columns=model_features)
+    X_pace = pd.DataFrame([[features[c] for c in pace_features]], columns=pace_features)
+    X_rtg = pd.DataFrame([[features[c] for c in off_rtg_features]], columns=off_rtg_features)
+    X_margin = pd.DataFrame([[features[c] for c in margin_features]], columns=margin_features)
 
-    # Predict scores using models
-    pred_home = float(score_loader.home_model.predict(X)[0])
-    pred_away = float(score_loader.away_model.predict(X)[0])
+    # Predict Pace and Offensive Ratings
+    pred_pace = float(score_loader.pace_model.predict(X_pace)[0])
+    pred_home_rtg = float(score_loader.home_rtg_model.predict(X_rtg)[0])
+    
+    # For Away RTG, we need to map the features because X_rtg is built from the home team's perspective.
+    # The build_matchup_features pipeline natively supports "home" and "away" perspective
+    # But since build_features returns features from Home's perspective, we must fetch Away's perspective.
+    features_away = build_features(away_team, home_team, pred_date_str)
+    X_rtg_away = pd.DataFrame([[features_away[c] for c in off_rtg_features]], columns=off_rtg_features)
+    pred_away_rtg = float(score_loader.away_rtg_model.predict(X_rtg_away)[0])
 
-    # Select direct or derived total points
-    total_type = metadata.get("v2_model_evaluation", {}).get("primary_total_selection", "derived")
-    if total_type == "direct":
-        pred_total = float(score_loader.total_model.predict(X)[0])
-    else:
-        pred_total = pred_home + pred_away
+    # Derive Expected Scores
+    pred_home = pred_pace * pred_home_rtg / 100.0
+    pred_away = pred_pace * pred_away_rtg / 100.0
+    pred_total = pred_home + pred_away
 
-    # Select direct or derived margin
-    margin_type = metadata.get("v2_model_evaluation", {}).get("primary_margin_selection", "derived")
-    if margin_type == "direct":
-        pred_margin = float(score_loader.diff_model.predict(X)[0])
-    else:
-        pred_margin = pred_home - pred_away
+    # Margin prediction
+    pred_margin = float(score_loader.margin_model.predict(X_margin)[0])
 
     # Enforce Win Probability Alignment
     # Win Probability model is our primary classification source.
-    # If the score model's implied winner contradicts the win model, we swap the scores
-    # so that the regression predictions align with the superior classification prediction.
     score_winner_pre_align = home_team if pred_margin >= 0 else away_team
     try:
         win_req = WinProbRequest(home_team=home_team, away_team=away_team, prediction_date=pred_date_str)
@@ -131,9 +134,14 @@ def predict_score(request: ScorePredictionRequest) -> ScorePredictionResponse:
     except Exception:
         pass
 
-
-    # Apply empirical prediction intervals (80% confidence offsets)
-    offsets = metadata["prediction_interval_offsets_80pct"]
+    # Apply empirical prediction intervals (we'll just mock 80% confidence offsets for V3 if not in metadata)
+    offsets = metadata.get("prediction_interval_offsets_80pct", {
+        "home": [-8.0, 8.0],
+        "away": [-8.0, 8.0],
+        "total": [-12.0, 12.0],
+        "margin": [-10.0, 10.0]
+    })
+    
     home_range = [round(pred_home + offsets["home"][0], 1), round(pred_home + offsets["home"][1], 1)]
     away_range = [round(pred_away + offsets["away"][0], 1), round(pred_away + offsets["away"][1], 1)]
     total_points_range = [round(pred_total + offsets["total"][0], 1), round(pred_total + offsets["total"][1], 1)]
@@ -246,23 +254,20 @@ def get_model_status() -> ModelStatusResponse:
     )
     
     # Get score model info
-    home_model_path = resolve_artifact_path("score_model", "home_model_path", "models/home_score_model_v2.pkl")
-    away_model_path = resolve_artifact_path("score_model", "away_model_path", "models/away_score_model_v2.pkl")
-    total_model_path = resolve_artifact_path("score_model", "total_model_path", "models/direct_total_points_model_v2.pkl")
-    margin_model_path = resolve_artifact_path("score_model", "margin_model_path", "models/direct_point_diff_model_v2.pkl")
+    home_model_path = ROOT / "models/production/score_model_v3_home_rtg.pkl"
+    away_model_path = ROOT / "models/production/score_model_v3_away_rtg.pkl"
+    total_model_path = ROOT / "models/production/score_model_v3_pace.pkl"
+    margin_model_path = ROOT / "models/production/score_model_v3_margin.pkl"
     
     score_metrics = ModelMetrics()
     score_metadata = score_loader.metadata
     
     if score_metadata:
-        v2_metrics = score_metadata.get("v2_model_evaluation", {})
-        if "home" in v2_metrics:
-            score_metrics.home_mae = v2_metrics["home"]["metrics"]["MAE"]
-        if "away" in v2_metrics:
-            score_metrics.away_mae = v2_metrics["away"]["metrics"]["MAE"]
+        score_metrics.home_mae = score_metadata.get("derived_home_score_mae")
+        score_metrics.away_mae = score_metadata.get("derived_away_score_mae")
     
     score_info = ScoreModelInfo(
-        active=score_loader.home_model is not None,
+        active=score_loader.home_rtg_model is not None,
         home_model_path=str(home_model_path),
         away_model_path=str(away_model_path),
         total_model_path=str(total_model_path),

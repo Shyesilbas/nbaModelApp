@@ -38,16 +38,16 @@
   }
 
   .nav-btn {
-    @apply flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500 transition-all duration-200;
+    @apply flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500 transition-all duration-150;
   }
 
   .nav-btn:hover {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-slate-50 text-slate-800;
   }
 
   .nav-btn-active {
-    @apply bg-[#1d428a] text-white shadow-lg;
-    box-shadow: 0 12px 30px rgba(29, 66, 138, 0.18);
+    @apply bg-[#1d428a] text-white;
+    box-shadow: 0 8px 20px rgba(29, 66, 138, 0.20);
   }
 
   .team-logo-image {
@@ -70,6 +70,12 @@
   .animate-fade-in-up {
     animation: fade-in-up 420ms ease-out both;
   }
+  .animate-fade-in {
+    animation: fade-in 360ms ease-out both;
+  }
+  .animate-scale-in {
+    animation: scale-in 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
 
   .stagger-1 { animation-delay: 40ms; }
   .stagger-2 { animation-delay: 80ms; }
@@ -77,17 +83,79 @@
   .stagger-4 { animation-delay: 160ms; }
   .stagger-5 { animation-delay: 200ms; }
   .stagger-6 { animation-delay: 240ms; }
+  .stagger-7 { animation-delay: 280ms; }
+  .stagger-8 { animation-delay: 320ms; }
+}
+
+@layer components {
+  .prediction-hero {
+    background: linear-gradient(135deg, #0c1628 0%, #0f1f3d 40%, #1a1040 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 32px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  }
+
+  .signal-card {
+    @apply bg-white border border-slate-200/70 rounded-2xl p-4 flex flex-col gap-2 shadow-[0_4px_20px_rgba(15,23,42,0.06)] transition-all duration-200;
+  }
+  .signal-card:hover {
+    @apply shadow-[0_8px_30px_rgba(15,23,42,0.10)] -translate-y-0.5;
+  }
+
+  .player-spotlight-card {
+    background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+    border: 1px solid rgba(255,255,255,0.07);
+    @apply rounded-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.2)];
+  }
+
+  .verdict-card-correct {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #86efac;
+    @apply rounded-2xl p-5;
+  }
+
+  .verdict-card-wrong {
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+    border: 1px solid #fca5a5;
+    @apply rounded-2xl p-5;
+  }
+
+  .diagnostics-card {
+    @apply bg-slate-50/80 border border-slate-200/60 rounded-2xl p-4;
+  }
+
+  .score-box {
+    @apply rounded-2xl border border-slate-200/70 bg-white/90 p-5 text-center shadow-[0_4px_16px_rgba(15,23,42,0.06)] backdrop-blur-sm;
+  }
+
+  .narrative-block {
+    background: linear-gradient(135deg, #f8faff 0%, #f1f5f9 100%);
+    border-left: 3px solid;
+    @apply rounded-r-2xl rounded-l-none p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)];
+  }
 }
 
 @keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.90); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+}
+
+.winner-pulse {
+  animation: pulse-glow 2s ease-in-out infinite;
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
