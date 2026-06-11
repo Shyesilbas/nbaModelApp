@@ -45,6 +45,25 @@ class ScorePredictionResponse(BaseModel):
     error: Optional[str] = None
 
 
+class PlayerPrediction(BaseModel):
+    player_id: int
+    player_name: str
+    position_group: str
+    predicted_pts: float
+    predicted_reb: float
+    predicted_ast: float
+    predicted_pra: float
+
+class PlayerPredictionResponse(BaseModel):
+    home_team: str
+    away_team: str
+    prediction_date: str
+    home_players: List[PlayerPrediction]
+    away_players: List[PlayerPrediction]
+    score_model_sync: bool
+    model_version: Optional[str]
+    error: Optional[str] = None
+
 class ModelMetrics(BaseModel):
     roc_auc: Optional[float] = None
     brier: Optional[float] = None

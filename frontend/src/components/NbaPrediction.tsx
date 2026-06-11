@@ -188,6 +188,11 @@ export default function NbaPrediction() {
           displayed_score_range_summary: data.display.rs,
           warning: data.display.warn,
         } : undefined,
+        player_predictions: data.players ? {
+          home_players: data.players.home,
+          away_players: data.players.away,
+          error: data.players.e
+        } : undefined,
       } : data;
       setResult(normalized);
     } catch (e: any) {
@@ -910,7 +915,92 @@ export default function NbaPrediction() {
                     </div>
                   )}
 
-                  {/* 3. Disclaimers & Notes */}
+                  {/* 3. Player Projections (V3 Model) */}
+                  {result.player_predictions && !result.player_predictions.error && (
+                    <div className="space-y-4 pt-4 border-t border-slate-150">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-2">
+                        <div>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 m-0">Expected Player Stats</p>
+                          <h4 className="text-base font-extrabold text-slate-800 mt-0.5 m-0">V3 Archetype-Aware Projections</h4>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200 font-mono shadow-2xs">
+                            player_v3_ridge
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* Away Players */}
+                        <div>
+                          <h5 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2" style={{ color: awayInfo.color }}>
+                            {awayInfo.abbr} Projections
+                          </h5>
+                          <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm text-xs">
+                            <table className="w-full">
+                              <thead className="bg-slate-50 border-b border-slate-200 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                <tr>
+                                  <th className="px-3 py-2">Player</th>
+                                  <th className="px-2 py-2 text-right">Pos</th>
+                                  <th className="px-2 py-2 text-right text-slate-700">PTS</th>
+                                  <th className="px-2 py-2 text-right">REB</th>
+                                  <th className="px-2 py-2 text-right">AST</th>
+                                  <th className="px-3 py-2 text-right">PRA</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {result.player_predictions.away_players?.map((p: any) => (
+                                  <tr key={p.player_id} className="hover:bg-slate-50/50">
+                                    <td className="px-3 py-2 font-bold text-slate-800">{p.player_name}</td>
+                                    <td className="px-2 py-2 text-right text-[10px] uppercase font-semibold text-slate-400">{p.position_group}</td>
+                                    <td className="px-2 py-2 text-right font-black text-slate-900">{p.predicted_pts.toFixed(1)}</td>
+                                    <td className="px-2 py-2 text-right font-semibold text-slate-600">{p.predicted_reb.toFixed(1)}</td>
+                                    <td className="px-2 py-2 text-right font-semibold text-slate-600">{p.predicted_ast.toFixed(1)}</td>
+                                    <td className="px-3 py-2 text-right font-black text-slate-700">{p.predicted_pra.toFixed(1)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Home Players */}
+                        <div>
+                          <h5 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2" style={{ color: homeInfo.color }}>
+                            {homeInfo.abbr} Projections
+                          </h5>
+                          <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm text-xs">
+                            <table className="w-full">
+                              <thead className="bg-slate-50 border-b border-slate-200 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                <tr>
+                                  <th className="px-3 py-2">Player</th>
+                                  <th className="px-2 py-2 text-right">Pos</th>
+                                  <th className="px-2 py-2 text-right text-slate-700">PTS</th>
+                                  <th className="px-2 py-2 text-right">REB</th>
+                                  <th className="px-2 py-2 text-right">AST</th>
+                                  <th className="px-3 py-2 text-right">PRA</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {result.player_predictions.home_players?.map((p: any) => (
+                                  <tr key={p.player_id} className="hover:bg-slate-50/50">
+                                    <td className="px-3 py-2 font-bold text-slate-800">{p.player_name}</td>
+                                    <td className="px-2 py-2 text-right text-[10px] uppercase font-semibold text-slate-400">{p.position_group}</td>
+                                    <td className="px-2 py-2 text-right font-black text-slate-900">{p.predicted_pts.toFixed(1)}</td>
+                                    <td className="px-2 py-2 text-right font-semibold text-slate-600">{p.predicted_reb.toFixed(1)}</td>
+                                    <td className="px-2 py-2 text-right font-semibold text-slate-600">{p.predicted_ast.toFixed(1)}</td>
+                                    <td className="px-3 py-2 text-right font-black text-slate-700">{p.predicted_pra.toFixed(1)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4. Disclaimers & Notes */}
                   <div className="p-4 rounded-2xl border border-blue-150 bg-blue-50/20 text-blue-900 text-[10px] font-semibold leading-relaxed space-y-1.5 shadow-2xs">
                     <div className="flex items-center gap-1.5 font-black uppercase tracking-wider text-blue-950 text-[11px]">
                       <Sparkles size={12} className="text-blue-700 animate-pulse" />
