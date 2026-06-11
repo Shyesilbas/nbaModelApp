@@ -53,7 +53,22 @@ fi
 sleep 1
 
 # 2) Start backend (Spring Boot JAR)
-JAR_PATH="backend/spring-boot-app/target/nba-prediction-backend-0.1.0.jar"
+BACKEND_DIR="backend/spring-boot-app"
+JAR_PATH="$BACKEND_DIR/target/nba-prediction-backend-0.1.0.jar"
+
+if ! command -v java >/dev/null 2>&1; then
+  echo "Java not found — skipping backend start"
+elif [ ! -f "$JAR_PATH" ]; then
+  echo "Backend JAR missing ($JAR_PATH) — building backend first..."
+  if command -v mvn >/dev/null 2>&1; then
+    (cd "$BACKEND_DIR" && mvn -q -DskipTests package)
+  elif [ -x "$BACKEND_DIR/mvnw" ]; then
+    (cd "$BACKEND_DIR" && ./mvnw -q -DskipTests package)
+  else
+    echo "Maven not found and no wrapper present — skipping backend start"
+  fi
+fi
+
 if command -v java >/dev/null 2>&1 && [ -f "$JAR_PATH" ]; then
   echo "Starting backend from $JAR_PATH..."
   java -jar "$JAR_PATH" &

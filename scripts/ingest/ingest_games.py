@@ -8,7 +8,7 @@ def ingest_games(season: str, output_path: Optional[str] = None) -> pd.DataFrame
     Parameters:
     -----------
     season : str
-        The season identifier (e.g., '2024-25', '2025-26').
+        The season identifier in normalized form (e.g., '2024-25').
     output_path : Optional[str]
         Path to save the canonical games DataFrame as CSV/Parquet.
 

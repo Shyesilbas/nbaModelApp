@@ -11,11 +11,12 @@ from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from src.ingestion.nba_api_client import call_nba_api
+from scripts.season_utils import get_default_season
 
 logger = logging.getLogger("TeamGamesFetcher")
 
-RAW_TEAM_CSV = "data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv"
-RAW_TEAM_PARQUET = "data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.parquet"
+RAW_TEAM_CSV = "data/raw/team_games/nba_team_games_regular_and_playoffs.csv"
+RAW_TEAM_PARQUET = "data/raw/team_games/nba_team_games_regular_and_playoffs.parquet"
 
 EXPECTED_COLUMNS = [
     'SEASON_ID', 'TEAM_ID', 'TEAM_ABBREVIATION', 'TEAM_NAME', 'GAME_ID', 
@@ -24,11 +25,12 @@ EXPECTED_COLUMNS = [
     'REB', 'AST', 'STL', 'BLK', 'TOV', 'PF', 'PLUS_MINUS', 'SEASON_TYPE'
 ]
 
-def fetch_team_games_for_season(season: str = "2025-26", season_types: Optional[List[str]] = None) -> pd.DataFrame:
+def fetch_team_games_for_season(season: str = None, season_types: Optional[List[str]] = None) -> pd.DataFrame:
     """
     Fetches team game logs for a given season and list of season types.
     """
     from nba_api.stats.endpoints import leaguegamelog
+    season = season or get_default_season()
     
     if season_types is None:
         season_types = ["Regular Season", "PlayIn", "Playoffs", "NBA Finals"]
@@ -123,17 +125,17 @@ def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFr
         home_team = sched_row["HOME_TEAM_ABBREVIATION"]
         away_team = sched_row["AWAY_TEAM_ABBREVIATION"]
         
-        # Determine season ID dynamically (2025-26 season is 2025)
+        # Determine season ID dynamically from the normalized season start year.
         # Regular: 22025, PlayIn: 52025, Playoffs/Finals: 42025
         from scripts.season_utils import normalize_season
-        norm_season = normalize_season(season or "2025-26")
+        norm_season = normalize_season(season or get_default_season())
         start_year = int(norm_season.split("-")[0])
         year_suffix = start_year % 100
         
         # Regular Season: 2 + start_year_suffix, PlayIn: 5 + start_year_suffix, Playoffs/Finals: 4 + start_year_suffix
         # e.g., 22025 or 22024. Wait! The NBA API season ID starts with 2 for Regular Season, 4 for playoffs, 5 for playin.
         # It has 5 digits: Digit 1 = Season Type (2=regular, 4=playoffs, 5=play-in). Digits 2-5 = year (e.g. 2024 or 2025).
-        # Let's verify: season_id = 22025 for 2025-26 regular season. Wait, 22025 has 5 digits. 2 is season type. 2025 is year?
+        # The NBA API season_id uses the start year encoded into the numeric prefix.
         # No! 2 (digit 1) + 2025 (4 digits) = 22025. Yes! 2 + 2025 = 22025.
         # So it is 20000 + start_year.
         if season_type == "Regular Season":
@@ -210,7 +212,7 @@ def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFr
 
 def fetch_missing_team_games_by_game_ids(
     game_ids: List[str],
-    season: str = "2025-26",
+    season: str = None,
     schedule_df: Optional[pd.DataFrame] = None,
     max_workers: int = 4
 ) -> pd.DataFrame:

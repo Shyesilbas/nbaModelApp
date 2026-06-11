@@ -1,7 +1,30 @@
 import re
+import os
+from pathlib import Path
 import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def get_default_season() -> str:
+    env_value = os.getenv("NBA_CURRENT_SEASON")
+    if env_value:
+        return normalize_season(env_value)
+    config_path = ROOT / "config" / "data_sources.yaml"
+    if config_path.exists():
+        try:
+            import yaml  # type: ignore
+
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f) or {}
+            current = config.get("current_season")
+            if current:
+                return normalize_season(str(current))
+        except Exception:
+            pass
+    raise ValueError("No default season configured. Set NBA_CURRENT_SEASON or config/data_sources.yaml current_season.")
 def normalize_season(season: str) -> str:
-    """Normalize inputs like '2025_26', '2025-26', '202526' to standard form '2025-26'."""
+    """Normalize season inputs like token, hyphenated, or compact forms to standard form."""
     if not isinstance(season, str):
         raise ValueError("Season must be a string")
     m = re.search(r"(\d{4})[-_]?(\d{2})", season)
@@ -10,18 +33,21 @@ def normalize_season(season: str) -> str:
     raise ValueError(f"Invalid season format: {season}")
 
 def season_to_file_token(season: str) -> str:
-    """Convert standard season (e.g., '2025-26') to file token format (e.g., '2025_26')."""
+    """Convert a normalized season string to file token format."""
     normalized = normalize_season(season)
     return normalized.replace("-", "_")
 
 def file_token_to_season(token: str) -> str:
-    """Convert file token format (e.g., '2025_26') to standard season (e.g., '2025-26')."""
+    """Convert file token format back to normalized season format."""
     return normalize_season(token)
 
 def validate_season_data(df, season: str):
     """
     Strict guard to prevent mixing season data in datasets.
     """
+    season = normalize_season(season)
+    start_year = int(season.split("-")[0])
+    next_year = start_year + 1
     if df.empty:
         raise ValueError(f"Validation failed: Dataframe is empty for season {season}")
     
@@ -29,28 +55,14 @@ def validate_season_data(df, season: str):
         dates = pd.to_datetime(df["GAME_DATE"])
         min_date = dates.min()
         max_date = dates.max()
-        
-        if season == "2024-25":
-            if min_date < pd.Timestamp("2024-10-01") or max_date > pd.Timestamp("2025-07-01"):
-                raise ValueError(f"Validation failed: Dates {min_date.date()} to {max_date.date()} out of bounds for 2024-25")
-        elif season == "2025-26":
-            if min_date < pd.Timestamp("2025-10-01") or max_date > pd.Timestamp("2026-07-01"):
-                raise ValueError(f"Validation failed: Dates {min_date.date()} to {max_date.date()} out of bounds for 2025-26")
+        lower_bound = pd.Timestamp(f"{start_year}-10-01")
+        upper_bound = pd.Timestamp(f"{next_year}-07-01")
+        if min_date < lower_bound or max_date > upper_bound:
+            raise ValueError(f"Validation failed: Dates {min_date.date()} to {max_date.date()} out of bounds for {season}")
 
     if "GAME_ID" in df.columns:
         prefixes = df["GAME_ID"].astype(str).str[:5].unique()
-        
-        if season == "2024-25":
-            valid_prefixes = {"00224", "00424", "00524"}
-            invalid_prefixes = {"00225", "00425", "00525"}
-            if any(p in invalid_prefixes for p in prefixes):
-                raise ValueError(f"Validation failed: 2025-26 GAME_ID prefixes found in 2024-25 dataset: {prefixes}")
-            if not set(prefixes).issubset(valid_prefixes):
-                print(f"Warning: Unexpected GAME_ID prefixes found for 2024-25: {prefixes}")
-        elif season == "2025-26":
-            valid_prefixes = {"00225", "00425", "00525"}
-            invalid_prefixes = {"00224", "00424", "00524"}
-            if any(p in invalid_prefixes for p in prefixes):
-                raise ValueError(f"Validation failed: 2024-25 GAME_ID prefixes found in 2025-26 dataset: {prefixes}")
-            if not set(prefixes).issubset(valid_prefixes):
-                print(f"Warning: Unexpected GAME_ID prefixes found for 2025-26: {prefixes}")
+        suffix = str(start_year)[-2:]
+        valid_prefixes = {f"002{suffix}", f"004{suffix}", f"005{suffix}"}
+        if not set(prefixes).issubset(valid_prefixes):
+            print(f"Warning: Unexpected GAME_ID prefixes found for {season}: {prefixes}")

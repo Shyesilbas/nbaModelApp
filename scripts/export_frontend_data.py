@@ -1,6 +1,10 @@
 import os
 import json
+import math
 import pandas as pd
+
+from scripts.data_paths import get_data_paths
+from scripts.season_utils import get_default_season, normalize_season
 
 def _normalized_season_type(df: pd.DataFrame) -> pd.Series:
     """Return a normalized SEASON_TYPE series with Finals derived from GAME_ID."""
@@ -13,9 +17,21 @@ def _normalized_season_type(df: pd.DataFrame) -> pd.Series:
     season = season.mask(gid.str.startswith("00425004"), "NBA Finals")
     return season
 
-def export_data():
-    raw_team_path = "data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv"
-    raw_player_path = "data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv"
+
+def _json_safe(value):
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(v) for v in value]
+    return value
+
+def export_data(season: str = None):
+    season = normalize_season(season or get_default_season())
+    paths = get_data_paths(season)
+    raw_team_path = paths.team_games_raw
+    raw_player_path = paths.player_games_raw
     
     roster_path = "data/analysis/team_rosters.csv"
     core_path = "data/analysis/core_players.csv"
@@ -23,15 +39,17 @@ def export_data():
     multi_team_path = "data/analysis/multi_team_players.csv"
     lookup_path = "data/analysis/player_name_lookup.csv"
     
-    schedule_combined_path = "data/processed/schedule_combined_2025_26.csv"
-    upcoming_context_path  = "data/processed/upcoming_games_context_2025_26.csv"
+    schedule_combined_path = paths.schedule_combined
+    upcoming_context_path  = paths.upcoming_context
 
-    model_v1_path = "data/processed/team_model_ready_2025_26.csv"
-    model_v2_path = "data/processed/team_model_ready_v2_2025_26.csv"
-    model_v3_path = "data/processed/team_model_ready_v3_2025_26.csv"
+    token = season.replace("-", "_")
+    model_v1_path = f"data/processed/team_model_ready_{token}.csv"
+    model_v2_path = paths.team_model_ready_v2
+    model_v3_path = f"data/processed/team_model_ready_v3_{token}.csv"
     
     out_dir = "frontend/public/data"
     os.makedirs(out_dir, exist_ok=True)
+    games_feed_path = os.path.join(out_dir, "games.json")
     
     print("============================================================")
     print("🚀 NBA INTELLIGENCE LAB - EXPORTING FRONTEND DATASETS 🚀")
@@ -76,6 +94,52 @@ def export_data():
             print(f"✅ Exported {path} -> {out_path} ({len(df)} rows)")
         else:
             print(f"⚠️ Warning: Schedule dataset not found: {path}")
+
+    # 1c. Export canonical merged games feed for the frontend.
+    if os.path.exists(schedule_combined_path):
+        df_schedule = pd.read_csv(schedule_combined_path, dtype={"GAME_ID": str})
+        if "GAME_DATE" in df_schedule.columns:
+            df_schedule["GAME_DATE"] = pd.to_datetime(df_schedule["GAME_DATE"], errors="coerce").dt.strftime("%Y-%m-%d")
+
+        df_games = df_schedule.copy()
+        if os.path.exists(paths.game_results):
+            df_results = pd.read_csv(paths.game_results, dtype={"GAME_ID": str})
+            if "GAME_DATE" in df_results.columns:
+                df_results["GAME_DATE"] = pd.to_datetime(df_results["GAME_DATE"], errors="coerce").dt.strftime("%Y-%m-%d")
+            result_cols = [c for c in df_results.columns if c != "GAME_DATE"]
+            df_games = df_games.merge(df_results[result_cols], on="GAME_ID", how="left", suffixes=("", "_RESULT"))
+
+        if os.path.exists(upcoming_context_path):
+            df_upcoming = pd.read_csv(upcoming_context_path, dtype={"GAME_ID": str})
+            if "GAME_DATE" in df_upcoming.columns:
+                df_upcoming["GAME_DATE"] = pd.to_datetime(df_upcoming["GAME_DATE"], errors="coerce").dt.strftime("%Y-%m-%d")
+            ctx_cols = [c for c in df_upcoming.columns if c != "GAME_DATE"]
+            df_games = df_games.merge(df_upcoming[ctx_cols], on="GAME_ID", how="left", suffixes=("", "_CTX"))
+
+        df_games = df_games.sort_values(["GAME_DATE", "GAME_ID"]).reset_index(drop=True)
+        detail_lookup = {}
+        game_details_path = os.path.join(out_dir, "game_details.json")
+        if os.path.exists(game_details_path):
+            try:
+                with open(game_details_path, "r", encoding="utf-8") as f:
+                    for item in json.load(f):
+                        gid = str(item.get("game_id") or item.get("GAME_ID") or "")
+                        if gid:
+                            detail_lookup[gid] = item
+            except Exception:
+                detail_lookup = {}
+
+        records = []
+        for row in df_games.to_dict(orient="records"):
+            gid = str(row.get("GAME_ID", ""))
+            row["game_detail"] = detail_lookup.get(gid)
+            records.append(_json_safe(row))
+
+        with open(games_feed_path, "w", encoding="utf-8") as f:
+            json.dump(records, f, indent=2, default=str, allow_nan=False)
+        print(f"✅ Exported canonical games feed -> {games_feed_path} ({len(df_games)} rows)")
+    else:
+        print(f"⚠️ Warning: Canonical games feed source not found: {schedule_combined_path}")
 
     # 2. Build summary statistics for overview and health dashboard
     summary = {}

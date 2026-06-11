@@ -3,7 +3,7 @@ import numpy as np
 
 def generate_mock_team_games() -> pd.DataFrame:
     """
-    Generates a mock dataset of team game logs for 2025-26.
+    Generates a mock dataset of team game logs for the current season.
     Includes 2 teams, some back-to-back games, and playoff games.
     """
     # 2 teams: BOS (Boston Celtics) and LAL (Los Angeles Lakers)
@@ -110,7 +110,7 @@ def generate_mock_team_games() -> pd.DataFrame:
 
 def generate_mock_player_games() -> pd.DataFrame:
     """
-    Generates a mock dataset of player game logs for 2025-26.
+    Generates a mock dataset of player game logs for the current season.
     Includes logs for 2 players (e.g. Jayson Tatum, LeBron James).
     """
     dates_tatum = pd.to_datetime([

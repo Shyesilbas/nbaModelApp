@@ -217,6 +217,14 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
         out["OPP_H2H_PTS_LAST_5"] = float(safe_get(away_row, "H2H_PTS_LAST_5", np.nan))
         out["OPP_H2H_PTS_ALLOWED_LAST_5"] = float(safe_get(away_row, "H2H_PTS_ALLOWED_LAST_5", np.nan))
 
+    # Dynamically compute player-level features before ordering so they can be
+    # included in the final model input vector.
+    try:
+        player_feats = compute_player_features_for_inference(home_team, away_team, prediction_date, season=season)
+        out.update(player_feats)
+    except Exception as e:
+        print(f"Warning: failed to compute player features for inference: {e}")
+
     # Final ordering and missing-column handling
     ordered = []
     missing_cols = []
@@ -239,16 +247,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     if any(team_df["GAME_DATE"] >= pred_dt):
         raise RuntimeError("Leakage detected: team features contain games on/after prediction_date")
 
-    base_dict = dict(zip(feat_cols, ordered))
-    
-    # Dynamically compute player-level features
-    try:
-        player_feats = compute_player_features_for_inference(home_team, away_team, prediction_date, season=season)
-        base_dict.update(player_feats)
-    except Exception as e:
-        print(f"Warning: failed to compute player features for inference: {e}")
-        
-    return base_dict
+    return dict(zip(feat_cols, ordered))
 
 
 def compute_player_features_for_inference(home_team: str, away_team: str, prediction_date: str, season: str = None):
@@ -475,7 +474,7 @@ def main():
     parser.add_argument("--away", required=True, help="Away team abbreviation (e.g., BOS)")
     parser.add_argument("--prediction-date", required=True, help="YYYY-MM-DD (tip-off date)")
     parser.add_argument("--out-json", help="Optional output path; prints to stdout if omitted")
-    parser.add_argument("--season", help="Optional season string (e.g., 2025-26)")
+    parser.add_argument("--season", help="Optional season string (e.g., 2024-25)")
     args = parser.parse_args()
 
     feats = build_features(args.home.upper(), args.away.upper(), args.prediction_date, season=args.season)

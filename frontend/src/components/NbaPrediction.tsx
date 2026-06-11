@@ -8,10 +8,11 @@ import {
   RefreshCw,
   Activity
 } from "lucide-react";
+import TeamLogo from "./TeamLogo";
 
 // List of NBA teams with logos and representative brand colors
 const NBA_TEAMS = [
-  { abbr: "ATL", name: "Atlanta Hawks", logo: "🦅", color: "#e31837" },
+  { abbr: "ATL", name: "Atlanta Hawks", logo: "ATL", color: "#e31837" },
   { abbr: "BOS", name: "Boston Celtics", logo: "☘️", color: "#007a33" },
   { abbr: "BKN", name: "Brooklyn Nets", logo: "⚫", color: "#111827" },
   { abbr: "CHA", name: "Charlotte Hornets", logo: "🐝", color: "#00788c" },
@@ -70,32 +71,22 @@ export default function NbaPrediction() {
     const fetchDropdownData = async () => {
       try {
         setLoadingData(true);
-        const [upcomingRes, scheduleRes, gameResultsRes] = await Promise.all([
-          fetch("/data/upcoming_games_context.json").catch(() => null),
-          fetch("/data/schedule.json").catch(() => null),
-          fetch("/data/game_results.json").catch(() => null)
+        const [gamesRes] = await Promise.all([
+          fetch("/data/games.json").catch(() => null),
         ]);
 
-        if (upcomingRes && upcomingRes.ok) {
-          const upcoming = await upcomingRes.json();
-          setUpcomingGames(upcoming);
-        }
-        if (scheduleRes && scheduleRes.ok) {
-          const schedule = await scheduleRes.json();
-          // Filter to unique games by GAME_ID
+        if (gamesRes && gamesRes.ok) {
+          const games = await gamesRes.json();
           const seen = new Set();
-          const uniqueSchedule = schedule.filter((g: any) => {
+          const uniqueGames = games.filter((g: any) => {
             if (!g.GAME_ID || seen.has(g.GAME_ID)) return false;
             seen.add(g.GAME_ID);
             return true;
           });
-          // Sort games by date descending
-          uniqueSchedule.sort((a: any, b: any) => b.GAME_DATE.localeCompare(a.GAME_DATE));
-          setScheduleGames(uniqueSchedule);
-        }
-        if (gameResultsRes && gameResultsRes.ok) {
-          const results = await gameResultsRes.json();
-          setGameResults(results);
+          uniqueGames.sort((a: any, b: any) => b.GAME_DATE.localeCompare(a.GAME_DATE));
+          setScheduleGames(uniqueGames);
+          setUpcomingGames(uniqueGames.filter((g: any) => !(g.GAME_STATUS === "Final" || g.HOME_SCORE != null || g.AWAY_SCORE != null)));
+          setGameResults(uniqueGames.filter((g: any) => g.GAME_STATUS === "Final" || g.HOME_SCORE != null || g.AWAY_SCORE != null));
         }
       } catch (err: any) {
         console.error("Error loading schedule data for predictions:", err);
@@ -123,8 +114,10 @@ export default function NbaPrediction() {
   }, []);
 
   const getTeamInfo = (abbr: string) => {
-    return NBA_TEAMS.find((t) => t.abbr === abbr) || { abbr, name: abbr, logo: "🏀", color: "#475569" };
+    return NBA_TEAMS.find((t) => t.abbr === abbr) || { abbr, name: abbr, logo: abbr, color: "#475569" };
   };
+
+  const teamAbbr = (abbr: string) => abbr?.toUpperCase?.() || "";
 
   const handleSelectGame = (game: any) => {
     setHome(game.HOME_TEAM_ABBREVIATION);
@@ -255,7 +248,7 @@ export default function NbaPrediction() {
     }
   };
 
-  const renderRangeTrack = (teamAbbr: string, teamInfo: any, predVal: number, range: [number, number]) => {
+  const renderRangeTrack = (abbr: string, teamInfo: any, predVal: number, range: [number, number]) => {
     const minVal = 80;
     const maxVal = 140;
     const rangeStartPercent = Math.max(0, Math.min(100, ((range[0] - minVal) / (maxVal - minVal)) * 100));
@@ -266,8 +259,8 @@ export default function NbaPrediction() {
       <div className="space-y-2.5 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl shadow-2xs">
         <div className="flex justify-between items-center text-xs">
           <span className="font-extrabold text-slate-800 flex items-center gap-1.5">
-            <span className="w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] shadow-3xs">{teamInfo.logo}</span>
-            {teamInfo.name} ({teamAbbr})
+            <TeamLogo abbr={teamAbbr(abbr)} name={teamInfo.name} size={18} />
+            {teamInfo.name} ({abbr})
           </span>
           <span className="font-mono text-[10px] font-black text-slate-400 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded shadow-3xs">Range: {range[0]} - {range[1]} pts</span>
         </div>
@@ -322,27 +315,29 @@ export default function NbaPrediction() {
   return (
     <div className="space-y-6">
       {/* Premium Header Banner */}
-      <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white shadow-2xl p-6 lg:p-8">
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: "radial-gradient(circle at 18% 18%, rgba(29, 66, 138, 0.4) 0, transparent 40%)"
-        }} />
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="surface relative overflow-hidden rounded-[2rem] p-6 lg:p-8">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-indigo-300">
-              <Cpu size={12} className="text-indigo-400 animate-pulse" />
-              AI Predictive Engine
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
+              <Cpu size={12} className="text-slate-700" />
+              Predictions
             </div>
-            <h1 className="text-3xl font-black uppercase tracking-tight text-white m-0" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <h1 className="text-4xl font-black uppercase tracking-tight text-slate-900 m-0" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
               NBA Win Probability Model
             </h1>
-            <p className="text-xs text-slate-300 max-w-xl m-0 leading-relaxed">
+            <p className="text-sm text-slate-500 max-w-xl m-0 leading-relaxed">
               Predict win probabilities using our machine learning models trained on historical schedules, rolling team metrics, days of rest, and back-to-back factors.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
-              <p className="text-[9px] font-black uppercase tracking-widest text-indigo-300/80 m-0">Model Deployed</p>
-              <p className="text-base font-black text-white leading-none mt-1.5 m-0">Cross-Season WIN</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="kpi-card">
+              <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-400">Model</p>
+              <p className="mt-1 text-sm font-black text-slate-900">Cross-Season WIN</p>
+            </div>
+            <div className="kpi-card">
+              <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-400">State</p>
+              <p className="mt-1 text-sm font-black text-slate-900">Live simulation</p>
             </div>
           </div>
         </div>
@@ -357,17 +352,17 @@ export default function NbaPrediction() {
 
       {/* Experimental Candidate Info */}
       {modelStatus?.experimental_candidate && (
-        <div className="rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200/60 p-4 shadow-xs">
+        <div className="surface rounded-[1.5rem] p-4">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
               <Sparkles size={16} className="text-violet-600" />
             </div>
             <div className="flex-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-violet-700 m-0">Best Experimental Candidate</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 m-0">Best Experimental Candidate</p>
               <div className="mt-2 flex flex-wrap gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-700">Model:</span>
-                  <span className="text-xs font-mono font-black text-violet-800">{modelStatus.experimental_candidate.model_name}</span>
+                  <span className="text-xs font-mono font-black text-slate-900">{modelStatus.experimental_candidate.model_name}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-700">ROC-AUC:</span>
@@ -394,9 +389,9 @@ export default function NbaPrediction() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Matchup Configuration */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="glass-card rounded-[1.5rem] border border-slate-200/80 bg-white p-5 shadow-sm space-y-4">
+          <div className="surface rounded-[1.5rem] p-5 space-y-4">
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
-              <BarChart2 size={16} className="text-indigo-600" />
+              <BarChart2 size={16} className="text-slate-700" />
               Configure Simulation
             </h3>
 
@@ -410,7 +405,7 @@ export default function NbaPrediction() {
                 }}
                 className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${
                   mode === "scheduled"
-                    ? "bg-white text-indigo-950 shadow-xs border border-slate-200/50"
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200/50"
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
@@ -424,7 +419,7 @@ export default function NbaPrediction() {
                 }}
                 className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${
                   mode === "custom"
-                    ? "bg-white text-indigo-950 shadow-xs border border-slate-200/50"
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200/50"
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
@@ -456,12 +451,8 @@ export default function NbaPrediction() {
                           >
                             <div className="flex items-center gap-3">
                               <div className="flex items-center -space-x-1.5">
-                                <span className="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-xs shadow-2xs">
-                                  {getTeamInfo(g.HOME_TEAM_ABBREVIATION).logo}
-                                </span>
-                                <span className="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-xs shadow-2xs">
-                                  {getTeamInfo(g.AWAY_TEAM_ABBREVIATION).logo}
-                                </span>
+                                <TeamLogo abbr={teamAbbr(g.HOME_TEAM_ABBREVIATION)} name={g.HOME_TEAM_ABBREVIATION} size={22} />
+                                <TeamLogo abbr={teamAbbr(g.AWAY_TEAM_ABBREVIATION)} name={g.AWAY_TEAM_ABBREVIATION} size={22} />
                               </div>
                               <div>
                                 <p className="text-xs font-black text-slate-800 leading-tight">
@@ -505,7 +496,7 @@ export default function NbaPrediction() {
                         <option value="">Select Team 1</option>
                         {NBA_TEAMS.map((team) => (
                           <option key={team.abbr} value={team.abbr}>
-                            {team.logo} {team.abbr} - {team.name}
+                            {team.abbr} - {team.name}
                           </option>
                         ))}
                       </select>
@@ -522,7 +513,7 @@ export default function NbaPrediction() {
                         <option value="">Select Team 2</option>
                         {NBA_TEAMS.map((team) => (
                           <option key={team.abbr} value={team.abbr} disabled={team.abbr === filterTeam1}>
-                            {team.logo} {team.abbr} - {team.name}
+                            {team.abbr} - {team.name}
                           </option>
                         ))}
                       </select>
@@ -587,7 +578,7 @@ export default function NbaPrediction() {
                       <option value="">Select Home</option>
                       {NBA_TEAMS.map((team) => (
                         <option key={team.abbr} value={team.abbr}>
-                          {team.logo} {team.abbr} - {team.name}
+                          {team.abbr} - {team.name}
                         </option>
                       ))}
                     </select>
@@ -607,7 +598,7 @@ export default function NbaPrediction() {
                       <option value="">Select Away</option>
                       {NBA_TEAMS.map((team) => (
                         <option key={team.abbr} value={team.abbr} disabled={team.abbr === home}>
-                          {team.logo} {team.abbr} - {team.name}
+                          {team.abbr} - {team.name}
                         </option>
                       ))}
                     </select>
@@ -636,7 +627,7 @@ export default function NbaPrediction() {
         <div className="lg:col-span-7 space-y-6">
           {(!home || !away || !date) ? (
             /* Empty configuration state */
-            <div className="glass rounded-[1.5rem] border border-slate-200/80 bg-white p-8 text-center flex flex-col items-center justify-center min-h-[360px] shadow-sm">
+            <div className="surface rounded-[1.5rem] p-8 text-center flex flex-col items-center justify-center min-h-[360px]">
               <Activity size={40} className="text-slate-300 mb-3 animate-pulse" />
               <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest m-0">Awaiting Selection</h4>
               <p className="text-xs text-slate-400 mt-1.5 max-w-xs mx-auto leading-relaxed m-0">
@@ -647,7 +638,7 @@ export default function NbaPrediction() {
             /* Matchup configured state */
             <div className="space-y-6">
               {/* Visual VS Matching Card */}
-              <div className="glass rounded-[1.5rem] border border-slate-200/80 bg-white p-6 shadow-sm">
+              <div className="surface rounded-[1.5rem] p-6">
                 <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-1.5 m-0">
                   <Sparkles size={11} className="text-indigo-500" />
                   Active Simulation Matchup
@@ -662,7 +653,7 @@ export default function NbaPrediction() {
                       borderColor: `${homeInfo.color}22`
                     }}
                   >
-                    <span className="text-4xl block mb-2 filter drop-shadow-sm">{homeInfo.logo}</span>
+                    <TeamLogo abbr={teamAbbr(homeInfo.abbr)} name={homeInfo.name} size={52} className="mx-auto mb-2" />
                     <h3 className="text-sm font-extrabold text-slate-800 leading-tight m-0">{homeInfo.name}</h3>
                     <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mt-1 block">
                       {homeInfo.abbr} · Home
@@ -685,7 +676,7 @@ export default function NbaPrediction() {
                       borderColor: `${awayInfo.color}22`
                     }}
                   >
-                    <span className="text-4xl block mb-2 filter drop-shadow-sm">{awayInfo.logo}</span>
+                    <TeamLogo abbr={teamAbbr(awayInfo.abbr)} name={awayInfo.name} size={52} className="mx-auto mb-2" />
                     <h3 className="text-sm font-extrabold text-slate-800 leading-tight m-0">{awayInfo.name}</h3>
                     <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mt-1 block">
                       {awayInfo.abbr} · Away
@@ -722,7 +713,7 @@ export default function NbaPrediction() {
 
               {/* Simulation Result Area */}
               {result && (
-                <div className="glass rounded-[1.5rem] border border-slate-200/80 bg-white p-6 shadow-sm animate-fade-in-up space-y-6">
+                  <div className="surface rounded-[1.5rem] p-6 animate-fade-in-up space-y-6">
                   
                   {/* Warnings/Errors if partial failures occurred */}
                   {(result.win_probability?.error || result.score_prediction?.error) && (
@@ -775,7 +766,10 @@ export default function NbaPrediction() {
                         <div>
                           <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 m-0">Projected Winner (Primary)</p>
                           <p className="text-sm font-extrabold text-slate-800 mt-1 m-0">
-                            {getTeamInfo(result.win_probability.predicted_winner).logo} {getTeamInfo(result.win_probability.predicted_winner).name} ({result.win_probability.predicted_winner})
+                            <span className="inline-flex items-center gap-2">
+                              <TeamLogo abbr={teamAbbr(result.win_probability.predicted_winner)} name={getTeamInfo(result.win_probability.predicted_winner).name} size={22} />
+                              <span>{getTeamInfo(result.win_probability.predicted_winner).name} ({result.win_probability.predicted_winner})</span>
+                            </span>
                           </p>
                         </div>
                       </div>
@@ -785,7 +779,7 @@ export default function NbaPrediction() {
                         <div className="flex justify-between items-end text-xs">
                           <div>
                             <span className="font-extrabold text-slate-800 block">
-                              {homeInfo.logo} {homeInfo.abbr} (Home)
+                              {homeInfo.abbr} (Home)
                             </span>
                           </div>
                           <div className="text-right">
@@ -821,7 +815,7 @@ export default function NbaPrediction() {
                           </div>
                           <div className="text-right">
                             <span className="font-extrabold text-slate-800 block">
-                              {awayInfo.logo} {awayInfo.abbr} (Away)
+                              {awayInfo.abbr} (Away)
                             </span>
                           </div>
                         </div>
@@ -956,7 +950,7 @@ export default function NbaPrediction() {
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Model Predicted</p>
                           <div className="flex items-center gap-2.5">
                             <span className="text-2xl filter drop-shadow-xs">
-                              {getTeamInfo(result.win_probability?.predicted_winner || result.predicted_winner).logo}
+                              <TeamLogo abbr={teamAbbr(result.win_probability?.predicted_winner || result.predicted_winner)} name={getTeamInfo(result.win_probability?.predicted_winner || result.predicted_winner).name} size={28} />
                             </span>
                             <div>
                               <p className="text-xs font-extrabold text-slate-800 leading-none">
@@ -975,7 +969,7 @@ export default function NbaPrediction() {
                         <div className="p-3.5 bg-slate-50 border border-slate-150 rounded-xl space-y-2">
                           <p className="text-[9px] font-black text-slate-450 uppercase tracking-widest">Actual Outcome</p>
                           <div className="flex items-center gap-2.5">
-                            <span className="text-2xl filter drop-shadow-xs">{getTeamInfo(actualGame.WINNER_TEAM_ABBREVIATION).logo}</span>
+                            <TeamLogo abbr={teamAbbr(actualGame.WINNER_TEAM_ABBREVIATION)} name={getTeamInfo(actualGame.WINNER_TEAM_ABBREVIATION).name} size={28} />
                             <div>
                               <p className="text-xs font-extrabold text-slate-800 leading-none">
                                 {getTeamInfo(actualGame.WINNER_TEAM_ABBREVIATION).abbr} Won {actualGame.HOME_SCORE} - {actualGame.AWAY_SCORE}

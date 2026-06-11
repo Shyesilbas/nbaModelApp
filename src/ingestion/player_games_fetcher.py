@@ -10,11 +10,12 @@ import pandas as pd
 from typing import List, Optional
 
 from src.ingestion.nba_api_client import call_nba_api
+from scripts.season_utils import get_default_season
 
 logger = logging.getLogger("PlayerGamesFetcher")
 
-RAW_PLAYER_CSV = "data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv"
-RAW_PLAYER_PARQUET = "data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.parquet"
+RAW_PLAYER_CSV = "data/raw/player_games/nba_player_games_regular_and_playoffs.csv"
+RAW_PLAYER_PARQUET = "data/raw/player_games/nba_player_games_regular_and_playoffs.parquet"
 
 EXPECTED_COLUMNS = [
     'SEASON_ID', 'Player_ID', 'Game_ID', 'GAME_DATE', 'MATCHUP', 'WL', 'MIN', 
@@ -24,11 +25,12 @@ EXPECTED_COLUMNS = [
     
 ]
 
-def fetch_player_games_for_season(season: str = "2025-26", season_types: Optional[List[str]] = None) -> pd.DataFrame:
+def fetch_player_games_for_season(season: str = None, season_types: Optional[List[str]] = None) -> pd.DataFrame:
     """
     Fetches player game logs for a given season and list of season types.
     """
     from nba_api.stats.endpoints import leaguegamelog
+    season = season or get_default_season()
     
     if season_types is None:
         season_types = ["Regular Season", "PlayIn", "Playoffs", "NBA Finals"]
@@ -133,7 +135,7 @@ def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.Data
         away_team = sched_row["AWAY_TEAM_ABBREVIATION"]
         
         from scripts.season_utils import normalize_season
-        norm_season = normalize_season(season or "2025-26")
+        norm_season = normalize_season(season or get_default_season())
         start_year = int(norm_season.split("-")[0])
         
         if season_type == "Regular Season":
@@ -228,7 +230,7 @@ def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.Data
         logger.error(f"Fallback fetch failed for player game {game_id_str}: {e}")
         return pd.DataFrame()
 
-def fetch_missing_player_games_by_game_ids(game_ids: List[str], season: str = "2025-26", schedule_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
+def fetch_missing_player_games_by_game_ids(game_ids: List[str], season: str = None, schedule_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
     """
     Fetches player game logs specifically for missing game IDs.
     """

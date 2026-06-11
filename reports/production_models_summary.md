@@ -1,0 +1,66 @@
+# Aktif Üretim Modelleri (Production Models) ve Performans Metrikleri
+
+Bu doküman, NBA Model Uygulaması'nda şu an frontend tarafında kullanılan aktif üretim modellerinin performans metriklerini ve model eğitiminde kullanılan öznitelikleri (features) içerir.
+
+## 1. Win Model (Kazanan Tahmini)
+
+**Kullanılan Model:** Win Probability V1 (`cross_season_win_logistic_regression`)
+**Algoritma:** Logistic Regression
+**Toplam Feature Sayısı:** 80
+
+### Performans Metrikleri
+- **ROC AUC:** 0.7048
+- **Accuracy (Doğruluk):** 0.642
+- **Brier Score:** 0.219
+
+### Kullanılan Feature'lar
+
+**Takım & Karşılaşma (Base) Özellikleri:**
+- `IS_HOME`, `IS_PLAYOFF`, `DAYS_REST`, `IS_B2B`
+- `PTS_LAST_5`, `PTS_LAST_10`, `WINRATE_LAST_5`, `WINRATE_LAST_10`
+- `OPP_DAYS_REST`, `OPP_IS_B2B`, `OPP_PTS_LAST_5`, `OPP_PTS_LAST_10`, `OPP_WINRATE_LAST_5`, `OPP_WINRATE_LAST_10`
+- `PTS_ALLOWED_LAST_5`, `PTS_ALLOWED_LAST_10`, `OPP_PTS_ALLOWED_LAST_5`, `OPP_PTS_ALLOWED_LAST_10`
+- `HOME_WINRATE_LAST_5`, `HOME_PTS_LAST_5`, `HOME_PTS_ALLOWED_LAST_5`
+- `AWAY_WINRATE_LAST_5`, `AWAY_PTS_LAST_5`, `AWAY_PTS_ALLOWED_LAST_5`
+- `OPP_HOME_WINRATE_LAST_5`, `OPP_HOME_PTS_LAST_5`, `OPP_HOME_PTS_ALLOWED_LAST_5`
+- `OPP_AWAY_WINRATE_LAST_5`, `OPP_AWAY_PTS_LAST_5`, `OPP_AWAY_PTS_ALLOWED_LAST_5`
+- `H2H_GAMES_LAST_5`, `H2H_WINRATE_LAST_5`, `H2H_PTS_LAST_5`, `H2H_PTS_ALLOWED_LAST_5`
+- `OPP_H2H_GAMES_LAST_5`, `OPP_H2H_WINRATE_LAST_5`, `OPP_H2H_PTS_LAST_5`, `OPP_H2H_PTS_ALLOWED_LAST_5`
+
+**Ev Sahibi (Home) Oyuncu Özellikleri:**
+`HOME_CORE_PLAYERS_AVAILABLE_COUNT`, `HOME_CORE_PLAYERS_MISSING_COUNT`, `HOME_TOP1_AVAILABLE`, `HOME_TOP2_AVAILABLE`, `HOME_TOP3_AVAILABLE`, `HOME_CORE_EXPECTED_MIN_SUM`, `HOME_TOP3_EXPECTED_MIN_SUM`, `HOME_CORE_MINUTES_SHARE`, `HOME_CORE_EXPECTED_PTS_SUM`, `HOME_CORE_EXPECTED_AST_SUM`, `HOME_CORE_EXPECTED_REB_SUM`, `HOME_CORE_EXPECTED_PRA_SUM`, `HOME_TOP3_EXPECTED_PTS_SUM`, `HOME_TOP3_EXPECTED_AST_SUM`, `HOME_TOP3_EXPECTED_REB_SUM`, `HOME_TOP3_EXPECTED_PRA_SUM`, `HOME_MISSING_CORE_EXPECTED_MIN`, `HOME_MISSING_CORE_EXPECTED_PTS`, `HOME_MISSING_CORE_EXPECTED_AST`, `HOME_MISSING_CORE_EXPECTED_REB`, `HOME_MISSING_CORE_EXPECTED_PRA`
+
+**Deplasman (Away) Oyuncu Özellikleri:**
+`AWAY_CORE_PLAYERS_AVAILABLE_COUNT`, `AWAY_CORE_PLAYERS_MISSING_COUNT`, `AWAY_TOP1_AVAILABLE`, `AWAY_TOP2_AVAILABLE`, `AWAY_TOP3_AVAILABLE`, `AWAY_CORE_EXPECTED_MIN_SUM`, `AWAY_TOP3_EXPECTED_MIN_SUM`, `AWAY_CORE_MINUTES_SHARE`, `AWAY_CORE_EXPECTED_PTS_SUM`, `AWAY_CORE_EXPECTED_AST_SUM`, `AWAY_CORE_EXPECTED_REB_SUM`, `AWAY_CORE_EXPECTED_PRA_SUM`, `AWAY_TOP3_EXPECTED_PTS_SUM`, `AWAY_TOP3_EXPECTED_AST_SUM`, `AWAY_TOP3_EXPECTED_REB_SUM`, `AWAY_TOP3_EXPECTED_PRA_SUM`, `AWAY_MISSING_CORE_EXPECTED_MIN`, `AWAY_MISSING_CORE_EXPECTED_PTS`, `AWAY_MISSING_CORE_EXPECTED_AST`, `AWAY_MISSING_CORE_EXPECTED_REB`, `AWAY_MISSING_CORE_EXPECTED_PRA`
+
+---
+
+## 2. Score Model (Skor ve Fark Tahmini)
+
+**Kullanılan Model:** Score Prediction V2 (`home_score_model_v2.pkl` & `away_score_model_v2.pkl`)
+**Algoritma:** Random Forest Regressor (Skorlar ve Toplam Sayı için), Gradient Boosting (Fark/Margin için)
+**Toplam Feature Sayısı:** 75
+
+### Performans Metrikleri
+- **Ev Sahibi Skor (Home):** MAE: 9.62 | RMSE: 12.39 | R2: 0.242
+- **Deplasman Skor (Away):** MAE: 9.68 | RMSE: 12.45 | R2: 0.176
+- **Fark / Margin (Derived):** MAE: 12.95 | RMSE: 16.20 | R2: 0.240
+- **Toplam Sayı / Total (Derived):** MAE: 14.65 | RMSE: 18.84 | R2: 0.187
+
+### Kullanılan Feature'lar
+
+**V1 Base Özellikleri (33 Adet):**
+- `IS_PLAYOFF`, `DAYS_REST`, `IS_B2B`
+- `PTS_LAST_5`, `PTS_LAST_10`, `WINRATE_LAST_5`, `WINRATE_LAST_10`
+- `OPP_DAYS_REST`, `OPP_IS_B2B`, `OPP_PTS_LAST_5`, `OPP_PTS_LAST_10`, `OPP_WINRATE_LAST_5`, `OPP_WINRATE_LAST_10`
+- `PTS_ALLOWED_LAST_5`, `PTS_ALLOWED_LAST_10`, `OPP_PTS_ALLOWED_LAST_5`, `OPP_PTS_ALLOWED_LAST_10`
+- `HOME_WINRATE_LAST_5`, `HOME_PTS_LAST_5`, `HOME_PTS_ALLOWED_LAST_5`
+- `AWAY_WINRATE_LAST_5`, `AWAY_PTS_LAST_5`, `AWAY_PTS_ALLOWED_LAST_5`
+- `OPP_HOME_WINRATE_LAST_5`, `OPP_HOME_PTS_LAST_5`, `OPP_HOME_PTS_ALLOWED_LAST_5`
+- `OPP_AWAY_WINRATE_LAST_5`, `OPP_AWAY_PTS_LAST_5`, `OPP_AWAY_PTS_ALLOWED_LAST_5`
+- `H2H_GAMES_LAST_5`, `H2H_WINRATE_LAST_5`, `H2H_PTS_LAST_5`, `H2H_PTS_ALLOWED_LAST_5`
+
+**Oyuncu Özellikleri (42 Adet):**
+*(Win modeli ile aynı 42 adet oyuncu özelliği)*
+- HOME Core/Top3 Expected Stats (MIN, PTS, AST, REB, PRA), Available Counts, Missing Expected Stats
+- AWAY Core/Top3 Expected Stats (MIN, PTS, AST, REB, PRA), Available Counts, Missing Expected Stats

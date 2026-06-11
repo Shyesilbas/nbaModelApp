@@ -33,10 +33,15 @@ class PipelineOrchestrator:
         if self.args.pre_model_readiness:
             main_mod._run_pre_model_readiness_pipeline(self.args)
             return True
+        if self.args.bootstrap_season:
+            from src.orchestration.pipeline_workflows import run_bootstrap_season_pipeline
+
+            run_bootstrap_season_pipeline(self.args)
+            return True
         if self.args.export_frontend_data:
             from scripts.export_frontend_data import export_data
 
-            export_data()
+            export_data(season=self.args.season or get_default_season())
             return True
         if self.args.build_schedule_context:
             main_mod._run_schedule_context_pipeline()
@@ -49,4 +54,4 @@ class PipelineOrchestrator:
             return True
 
         return False
-
+from scripts.season_utils import get_default_season

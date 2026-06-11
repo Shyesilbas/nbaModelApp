@@ -1,6 +1,6 @@
 # NBA Intelligence Lab - Frontend Dashboard
 
-The **NBA Intelligence Lab** is a high-performance, polished, React-based dashboard designed to explore and visualize the preprocessed 2025-26 NBA datasets, team rosters, and feature engineering outputs before we train machine learning models.
+The **NBA Intelligence Lab** is a high-performance, polished, React-based dashboard designed to explore and visualize the current NBA datasets, team rosters, and feature engineering outputs before we train machine learning models.
 
 > [!NOTE]
 > This frontend is a **pure static-data application**. It fetches preprocessed JSON datasets exported directly from our Python data pipeline, removing the need for a live database or running backend server.

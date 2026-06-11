@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,247 +7,90 @@
 @layer base {
   * { box-sizing: border-box; }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
+    margin: 0;
     font-family: 'Inter', system-ui, sans-serif;
-    background-color: #f8fafc;
-    color: #334155;
+    color: #0f172a;
+    background:
+      radial-gradient(circle at top left, rgba(29, 66, 138, 0.08), transparent 28%),
+      radial-gradient(circle at top right, rgba(15, 23, 42, 0.05), transparent 24%),
+      linear-gradient(180deg, #fbfcfe 0%, #f1f5f9 100%);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4, h5, h6 { margin: 0; }
-  p { margin: 0; }
+  h1, h2, h3, h4, h5, h6, p {
+    margin: 0;
+  }
 }
 
-/* ─── Custom Scrollbar ──────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #f8fafc; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-/* ─── Design System Utilities ───────────────────────────── */
 @layer components {
-
-  /* Clean white card - replacing old dark glass */
-  .glass {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.01);
-  }
-
-  /* Support old glass-card names directly for backwards compatibility */
   .glass-card {
-    @apply glass;
+    @apply bg-white/85 border border-white/60 shadow-[0_10px_35px_rgba(15,23,42,0.06)] backdrop-blur-md;
   }
 
-  /* Glass card with glow-on-hover */
-  .glass-hover {
-    @apply glass transition-all duration-300 cursor-pointer;
-  }
-  .glass-hover:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05), 0 2px 8px rgba(15, 23, 42, 0.03);
-    transform: translateY(-1px);
+  .surface {
+    @apply bg-white/90 border border-slate-200/70 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-md;
   }
 
-  .glass-card-hover {
-    @apply glass-hover;
-  }
-
-  /* Finals gold card (light) */
-  .card-finals {
-    background: linear-gradient(135deg, #fffdf5 0%, #ffffff 100%);
-    border: 1px solid rgba(234, 179, 8, 0.3);
-    box-shadow: 0 1px 3px rgba(234, 179, 8, 0.05);
-  }
-  .card-finals:hover {
-    border-color: rgba(234, 179, 8, 0.5);
-    box-shadow: 0 4px 20px rgba(234, 179, 8, 0.08);
-    transform: translateY(-1px);
-  }
-
-  /* Playoff blue card (light) */
-  .card-playoff {
-    background: linear-gradient(135deg, #f5f8ff 0%, #ffffff 100%);
-    border: 1px solid rgba(29, 66, 138, 0.25);
-    box-shadow: 0 1px 3px rgba(29, 66, 138, 0.05);
-  }
-  .card-playoff:hover {
-    border-color: rgba(29, 66, 138, 0.45);
-    box-shadow: 0 4px 20px rgba(29, 66, 138, 0.08);
-    transform: translateY(-1px);
-  }
-
-  /* Team circle badge (light) */
-  .team-ring {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 800;
-    font-size: 16px;
-    letter-spacing: 0.5px;
-    background: #ffffff;
-    border: 1.5px solid #e2e8f0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
-    color: #0f172a;
-    flex-shrink: 0;
-    text-transform: uppercase;
-  }
-
-  .team-ring-finals {
-    @apply team-ring;
-    border-color: rgba(234, 179, 8, 0.5);
-    background: #fffcf0;
-    color: #b45309;
-    box-shadow: 0 2px 8px rgba(234, 179, 8, 0.08);
-  }
-
-  .team-ring-playoff {
-    @apply team-ring;
-    border-color: rgba(29, 66, 138, 0.35);
-    background: #f0f7ff;
-    color: #1d428a;
-    box-shadow: 0 2px 8px rgba(29, 66, 138, 0.08);
-  }
-
-  /* Season type badge */
-  .badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider;
-  }
-
-  .badge-finals {
-    @apply badge;
-    background: rgba(234, 179, 8, 0.1);
-    color: #b45309;
-    border: 1px solid rgba(234, 179, 8, 0.25);
-  }
-
-  .badge-playoff {
-    @apply badge;
-    background: rgba(29, 66, 138, 0.08);
-    color: #1d428a;
-    border: 1px solid rgba(29, 66, 138, 0.2);
-  }
-
-  .badge-playin {
-    @apply badge;
-    background: rgba(139, 92, 246, 0.08);
-    color: #6d28d9;
-    border: 1px solid rgba(139, 92, 246, 0.2);
-  }
-
-  .badge-regular {
-    @apply badge;
-    background: rgba(100, 116, 139, 0.08);
-    color: #475569;
-    border: 1px solid rgba(100, 116, 139, 0.15);
-  }
-
-  .badge-upcoming {
-    @apply badge;
-    background: rgba(22, 163, 74, 0.08);
-    color: #16a34a;
-    border: 1px solid rgba(22, 163, 74, 0.2);
-    animation: pulse-subtle 2.5s ease-in-out infinite;
-  }
-
-  /* Filter pill button */
-  .filter-pill {
-    @apply px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200;
-    border: 1px solid #e2e8f0;
-    color: #64748b;
-    background: #ffffff;
-  }
-
-  .filter-pill:hover {
-    border-color: #cbd5e1;
-    color: #334155;
-    background: #f8fafc;
-  }
-
-  .filter-pill-active {
-    background: rgba(29, 66, 138, 0.08);
-    border-color: rgba(29, 66, 138, 0.3);
-    color: #1d428a;
-  }
-
-  .results-tab {
-    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all duration-200 bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300;
-  }
-
-  .results-tab-active {
-    background: rgba(29, 66, 138, 0.08);
-    border-color: rgba(29, 66, 138, 0.28);
-    color: #1d428a;
-    box-shadow: 0 2px 8px rgba(29, 66, 138, 0.05);
-  }
-
-  .results-segment {
-    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300;
-  }
-
-  .results-segment-active {
-    background: rgba(15, 23, 42, 0.04);
-    border-color: rgba(15, 23, 42, 0.14);
-    color: #0f172a;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-  }
-
-  .filter-pill-finals-active {
-    background: rgba(234, 179, 8, 0.08);
-    border-color: rgba(234, 179, 8, 0.3);
-    color: #b45309;
-  }
-
-  /* Sidebar nav button (light theme) */
   .nav-btn {
-    @apply w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold
-           transition-all duration-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50;
-    letter-spacing: 0.02em;
+    @apply flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500 transition-all duration-200;
+  }
+
+  .nav-btn:hover {
+    @apply bg-slate-50 text-slate-900;
   }
 
   .nav-btn-active {
-    @apply nav-btn;
-    background: #f1f5f9;
-    border-left: 2px solid #1d428a;
-    color: #1d428a;
-    padding-left: calc(0.75rem - 2px);
+    @apply bg-[#1d428a] text-white shadow-lg;
+    box-shadow: 0 12px 30px rgba(29, 66, 138, 0.18);
   }
 
-  /* Stat row cell */
-  .stat-cell {
-    @apply text-xs font-bold tabular-nums py-1.5;
+  .team-logo-image {
+    display: block;
+    object-fit: contain;
+    border-radius: 9999px;
+    background: white;
   }
 
-  /* Disable glow ambient effects for light theme */
-  .glow-bg, .glow-gold {
-    display: none;
+  .team-logo-fallback {
+    @apply inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-[11px] font-black uppercase tracking-[0.18em] text-slate-600;
+  }
+
+  .kpi-card {
+    @apply rounded-[1.5rem] border border-slate-200/70 bg-white/85 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)] backdrop-blur-md;
   }
 }
 
-/* ─── Animations ─────────────────────────────────────────── */
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.65; }
+@layer utilities {
+  .animate-fade-in-up {
+    animation: fade-in-up 420ms ease-out both;
+  }
+
+  .stagger-1 { animation-delay: 40ms; }
+  .stagger-2 { animation-delay: 80ms; }
+  .stagger-3 { animation-delay: 120ms; }
+  .stagger-4 { animation-delay: 160ms; }
+  .stagger-5 { animation-delay: 200ms; }
+  .stagger-6 { animation-delay: 240ms; }
 }
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.animate-fade-in-up {
-  animation: fade-in-up 0.3s ease-out both;
-}
-
-/* Stagger delays for card lists */
-.stagger-1 { animation-delay: 0.02s; }
-.stagger-2 { animation-delay: 0.04s; }
-.stagger-3 { animation-delay: 0.06s; }
-.stagger-4 { animation-delay: 0.08s; }
-.stagger-5 { animation-delay: 0.10s; }
-.stagger-6 { animation-delay: 0.12s; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(226, 232, 240, 0.8); }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.8); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.9); }

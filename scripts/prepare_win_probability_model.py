@@ -17,10 +17,12 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
                              roc_auc_score, brier_score_loss)
 import joblib
+from scripts.data_paths import get_data_paths
+from scripts.season_utils import get_default_season
 
 # Paths
 ROOT = Path(__file__).resolve().parents[1]
-DATA_PATH = ROOT / "data/processed/team_model_ready_v2_2025_26.csv"
+DATA_PATH = Path(get_data_paths(get_default_season()).team_model_ready_v2)
 MODELS_DIR = ROOT / "models"
 REPORTS_DIR = ROOT / "reports"
 

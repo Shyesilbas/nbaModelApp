@@ -3,10 +3,6 @@ schedule_loader.py
 ------------------
 Loads, normalises, and combines the NBA schedule CSV files collected from Colab.
 
-Source files (do NOT re-fetch – these are the local source of truth):
-  data/raw/schedule/nba_schedule_2025_26.csv           — 1317 played games
-  data/raw/schedule/nba_finals_upcoming_2025_26.csv    — 5 upcoming Finals games (manually corrected)
-
 Public API
 ----------
   load_full_schedule()          -> pd.DataFrame
@@ -17,15 +13,9 @@ Public API
 import os
 from typing import Optional
 import pandas as pd
+from scripts.season_utils import get_default_season
 
 # ─────────────────────────────────────────────
-# Paths
-# ─────────────────────────────────────────────
-RAW_SCHEDULE_PATH  = "data/raw/schedule/nba_schedule_2025_26.csv"
-RAW_FINALS_PATH    = "data/raw/schedule/nba_finals_upcoming_2025_26.csv"
-COMBINED_CSV_PATH  = "data/processed/schedule_combined_2025_26.csv"
-COMBINED_PARQ_PATH = "data/processed/schedule_combined_2025_26.parquet"
-
 # Full unified column schema (superset of both source files)
 UNIFIED_COLUMNS = [
     "GAME_ID",
@@ -65,7 +55,7 @@ def load_full_schedule(season: Optional[str] = None) -> pd.DataFrame:
     pd.DataFrame with UNIFIED_COLUMNS schema.
     """
     from scripts.data_paths import get_data_paths
-    paths = get_data_paths(season)
+    paths = get_data_paths(season or get_default_season())
     raw_schedule_path = paths.raw_schedule
 
     if not os.path.exists(raw_schedule_path):
@@ -97,7 +87,7 @@ def load_finals_upcoming_schedule(season: Optional[str] = None) -> pd.DataFrame:
     pd.DataFrame with UNIFIED_COLUMNS schema.
     """
     from scripts.data_paths import get_data_paths
-    paths = get_data_paths(season)
+    paths = get_data_paths(season or get_default_season())
     raw_finals_path = paths.raw_finals_schedule
 
     if not os.path.exists(raw_finals_path):
@@ -136,7 +126,7 @@ def load_combined_schedule(save: bool = True, season: Optional[str] = None) -> p
     pd.DataFrame with UNIFIED_COLUMNS schema sorted by GAME_DATE.
     """
     from scripts.data_paths import get_data_paths
-    paths = get_data_paths(season)
+    paths = get_data_paths(season or get_default_season())
     combined_csv_path = paths.schedule_combined
     combined_parq_path = paths.schedule_combined.replace(".csv", ".parquet")
 

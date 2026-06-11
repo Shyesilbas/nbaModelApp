@@ -1,13 +1,22 @@
 import React, { useState, useMemo } from "react";
-import { 
+import {
   Search, 
   TrendingUp, 
   User, 
   Flame, 
   Award,
   ArrowUpDown,
-  Info
+  Info,
+  Crown,
+  Swords,
+  ShieldHalf,
+  Sparkles,
+  ChevronRight,
+  Layers3
 } from "lucide-react";
+import TeamLogo from "./TeamLogo";
+import PlayerPhoto from "./PlayerPhoto";
+import { TEAM_NAME_BY_ABBR, TEAM_THEME_BY_ABBR } from "../lib/nbaTeams";
 
 interface PlayerRoster {
   TEAM_ABBREVIATION: string;
@@ -26,42 +35,37 @@ interface TeamExplorerProps {
   rosters: PlayerRoster[];
 }
 
-const TEAM_THEMES: { [key: string]: { primary: string; secondary: string } } = {
-  ATL: { primary: "#e03a3e", secondary: "#c1d32f" },
-  BOS: { primary: "#007a33", secondary: "#ba9653" },
-  BKN: { primary: "#080808", secondary: "#777777" },
-  CHA: { primary: "#1d1160", secondary: "#00788c" },
-  CHI: { primary: "#ce1141", secondary: "#080808" },
-  CLE: { primary: "#860038", secondary: "#fdbb30" },
-  DAL: { primary: "#00538c", secondary: "#b0b7bc" },
-  DEN: { primary: "#0e2240", secondary: "#fec524" },
-  DET: { primary: "#1d42ba", secondary: "#c8102e" },
-  GSW: { primary: "#1d428a", secondary: "#ffc72c" },
-  HOU: { primary: "#ce1141", secondary: "#c4ced4" },
-  IND: { primary: "#002d62", secondary: "#fdbb30" },
-  LAC: { primary: "#c8102e", secondary: "#1d428a" },
-  LAL: { primary: "#552583", secondary: "#fdb927" },
-  MEM: { primary: "#12173f", secondary: "#5d76a9" },
-  MIA: { primary: "#98002e", secondary: "#f9a01b" },
-  MIL: { primary: "#00471b", secondary: "#eee1c6" },
-  MIN: { primary: "#0c2340", secondary: "#78be20" },
-  NOP: { primary: "#0c2340", secondary: "#b4975a" },
-  NYK: { primary: "#006bb6", secondary: "#f58426" },
-  OKC: { primary: "#007ac1", secondary: "#ef3b24" },
-  ORL: { primary: "#0077c0", secondary: "#c4ced4" },
-  PHI: { primary: "#006bb6", secondary: "#ed174c" },
-  PHX: { primary: "#1d1160", secondary: "#e56020" },
-  POR: { primary: "#e03a3e", secondary: "#080808" },
-  SAC: { primary: "#5a2d81", secondary: "#63727a" },
-  SAS: { primary: "#c4ced4", secondary: "#080808" },
-  TOR: { primary: "#ce1141", secondary: "#080808" },
-  UTA: { primary: "#002b5c", secondary: "#f9a01b" },
-  WAS: { primary: "#0c2340", secondary: "#e31837" }
+const getTeamTheme = (teamAbbr: string) => {
+  return TEAM_THEME_BY_ABBR[teamAbbr as keyof typeof TEAM_THEME_BY_ABBR] || { primary: "#1d428a", secondary: "#c9082a" };
 };
 
-const getTeamTheme = (teamAbbr: string) => {
-  return TEAM_THEMES[teamAbbr] || { primary: "#1d428a", secondary: "#c9082a" };
-};
+const ROLE_BY_RANK = [
+  {
+    title: "Franchise Cornerstone",
+    description: "Primary offensive engine and highest-impact player.",
+    icon: Crown,
+  },
+  {
+    title: "Secondary Star",
+    description: "High-usage scoring option with strong minutes load.",
+    icon: Swords,
+  },
+  {
+    title: "Core Starter",
+    description: "Reliable two-way contributor across major stat categories.",
+    icon: ShieldHalf,
+  },
+  {
+    title: "Key Rotation",
+    description: "Important supporting piece in the main rotation.",
+    icon: Sparkles,
+  },
+  {
+    title: "Rotation Scorer",
+    description: "Bench or secondary scoring value with meaningful usage.",
+    icon: Sparkles,
+  },
+] as const;
 
 const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
   const [selectedTeam, setSelectedTeam] = useState<string>("BOS");
@@ -131,11 +135,20 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
     };
   }, [rawTeamRoster, corePlayers]);
 
-  const getStrokeDashOffset = (score: number) => {
-    const radius = 20;
-    const circumference = 2 * Math.PI * radius;
-    return circumference - (score / 100) * circumference;
-  };
+  const rosterPowerMap = useMemo(() => {
+    const core = corePlayers.slice(0, 3);
+    const secondary = corePlayers.slice(3, 5);
+    const rotation = rawTeamRoster
+      .filter(player => !corePlayers.some(corePlayer => corePlayer.PLAYER_ID === player.PLAYER_ID))
+      .sort((a, b) => b.IMPORTANCE_SCORE - a.IMPORTANCE_SCORE)
+      .slice(0, 3);
+
+    return [
+      { label: "Core", players: core, color: activeTeamTheme.primary },
+      { label: "Secondary", players: secondary, color: activeTeamTheme.secondary },
+      { label: "Rotation", players: rotation, color: "#64748b" },
+    ];
+  }, [corePlayers, rawTeamRoster, activeTeamTheme.primary, activeTeamTheme.secondary]);
 
   return (
     <div className="space-y-8 animate-fade-in-up">
@@ -162,12 +175,19 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
               Team Explorer
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-500">
-              Explore discovered player listings and dynamic core rosters. Select a team below to load custom stats and dynamic branding filters.
+              Explore discovered player listings and dynamic core rosters. Team identity now comes from the ESPN logo asset instead of plain initials.
             </p>
           </div>
 
           {/* Quick Metrics */}
           <div className="flex flex-wrap gap-4">
+            <div className="glass-card flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-100 shadow-xs">
+              <TeamLogo abbr={selectedTeam} name={TEAM_NAME_BY_ABBR[selectedTeam as keyof typeof TEAM_NAME_BY_ABBR]} size={36} />
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Franchise</p>
+                <p className="text-lg font-black text-slate-800 leading-none mt-1">{selectedTeam}</p>
+              </div>
+            </div>
             <div className="glass-card flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-100 shadow-xs">
               <div className="p-2 bg-slate-50 rounded-lg text-slate-500">
                 <User size={18} />
@@ -211,7 +231,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                 <button
                   key={team}
                   onClick={() => setSelectedTeam(team)}
-                  className="flex-shrink-0 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-200 border cursor-pointer hover:scale-[1.03]"
+                  className="flex-shrink-0 rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer hover:scale-[1.03] flex items-center gap-2"
                   style={{
                     borderColor: isSelected ? theme.primary : "#e2e8f0",
                     backgroundColor: isSelected ? `${theme.primary}15` : "#ffffff",
@@ -219,6 +239,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                     boxShadow: isSelected ? `0 4px 12px ${theme.primary}18, inset 0 0 0 1px ${theme.primary}10` : undefined,
                   }}
                 >
+                  <TeamLogo abbr={team} name={TEAM_NAME_BY_ABBR[team as keyof typeof TEAM_NAME_BY_ABBR]} size={20} />
                   {team}
                 </button>
               );
@@ -227,89 +248,174 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
         </div>
       </section>
 
-      {/* ─── Core Grouping Overview (Top 5 Cards) ─── */}
+      {/* ─── Franchise Hierarchy Overview ─── */}
       <div className="space-y-4">
-        <h2 className="text-xl font-black text-slate-800 m-0 uppercase tracking-wide flex items-center gap-2" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-          <Award size={18} style={{ color: activeTeamTheme.primary }} />
-          Dynamic Core Grouping (Top 5 Roster)
-        </h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {corePlayers.map((player, idx) => (
-            <div 
-              key={player.PLAYER_ID} 
-              className="glass-card p-5 rounded-[1.5rem] border-l-4 relative overflow-hidden flex flex-col justify-between h-56 transition-all duration-300 hover:scale-[1.01] hover:shadow-md"
-              style={{ 
-                borderLeftColor: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary,
-                background: `linear-gradient(135deg, ${activeTeamTheme.primary}08 0%, #ffffff 100%)`
-              }}
-            >
-              <div 
-                className="absolute top-0 right-0 px-2 py-0.5 text-[9px] font-mono rounded-bl-lg border-l border-b font-extrabold"
-                style={{ 
-                  color: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary,
-                  backgroundColor: idx < 3 ? `${activeTeamTheme.primary}10` : `${activeTeamTheme.secondary}10`,
-                  borderColor: idx < 3 ? `${activeTeamTheme.primary}1c` : `${activeTeamTheme.secondary}1c`
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-black text-slate-800 m-0 uppercase tracking-wide flex items-center gap-2" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+              <Award size={18} style={{ color: activeTeamTheme.primary }} />
+              Franchise Hierarchy
+            </h2>
+            <p className="mt-1 max-w-2xl text-xs text-slate-400">
+              Rank 1 through 5 are arranged by importance score, with role labels that explain why each player sits in the franchise structure.
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 shadow-xs">
+            <Layers3 size={12} style={{ color: activeTeamTheme.primary }} />
+            Top 5 hierarchy
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          {corePlayers.map((player, idx) => {
+            const role = ROLE_BY_RANK[idx] ?? ROLE_BY_RANK[4];
+            const Icon = role.icon;
+            const featured = idx === 0;
+            const compact = idx >= 3;
+            return (
+              <div
+                key={player.PLAYER_ID}
+                className={`group relative overflow-hidden rounded-[1.75rem] border bg-white shadow-xs transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
+                  featured ? "lg:col-span-5 min-h-[22rem]" : compact ? "lg:col-span-3 min-h-[15rem]" : "lg:col-span-4 min-h-[18rem]"
+                }`}
+                style={{
+                  borderColor: idx < 3 ? `${activeTeamTheme.primary}22` : `${activeTeamTheme.secondary}22`,
+                  boxShadow: `0 1px 0 rgba(15,23,42,0.02), 0 20px 50px ${idx < 3 ? `${activeTeamTheme.primary}10` : `${activeTeamTheme.secondary}08`}`,
                 }}
               >
-                RANK {idx + 1}
-              </div>
-              
-              <div className="space-y-1.5 pr-6">
-                <span 
-                  className="text-[9px] uppercase font-black tracking-wider leading-none"
-                  style={{ color: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary }}
-                >
-                  {idx < 3 ? 'Core Group' : 'Secondary'}
-                </span>
-                <p className="text-sm font-black text-slate-800 truncate m-0" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  {player.PLAYER_NAME}
-                </p>
-                <p className="text-[9px] text-slate-400 font-semibold font-mono">ID: {player.PLAYER_ID}</p>
-              </div>
-              
-              {/* Stats & Circular Progress bar */}
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <div className="relative w-12 h-12 flex-shrink-0">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="24" cy="24" r="20" stroke="#f1f5f9" strokeWidth="2.5" fill="transparent" />
-                    <circle 
-                      cx="24" 
-                      cy="24" 
-                      r="20" 
-                      stroke={idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary} 
-                      strokeWidth="2.5" 
-                      fill="transparent" 
-                      strokeDasharray={2 * Math.PI * 20}
-                      strokeDashoffset={getStrokeDashOffset(player.IMPORTANCE_SCORE)}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-[10px] font-black font-mono text-slate-700 leading-none">
-                      {player.IMPORTANCE_SCORE.toFixed(0)}
+                <div
+                  className="absolute inset-x-0 top-0 h-1.5"
+                  style={{ background: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary }}
+                />
+                <div className="flex h-full flex-col gap-4 p-5" style={{ background: featured ? `linear-gradient(180deg, ${activeTeamTheme.primary}08 0%, #ffffff 46%)` : "#ffffff" }}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary, backgroundColor: idx < 3 ? `${activeTeamTheme.primary}10` : `${activeTeamTheme.secondary}10`, borderColor: idx < 3 ? `${activeTeamTheme.primary}18` : `${activeTeamTheme.secondary}18` }}>
+                          Rank {idx + 1}
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{player.TEAM_ABBREVIATION}</span>
+                      </div>
+                      <p className={`mt-3 font-black leading-none text-slate-900 ${featured ? "text-3xl" : "text-xl"}`} style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                        {player.PLAYER_NAME}
+                      </p>
+                      <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+                        <Icon size={14} style={{ color: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary }} />
+                        <span className="font-semibold">{role.title}</span>
+                      </div>
+                    </div>
+                    <PlayerPhoto playerId={player.PLAYER_ID} name={player.PLAYER_NAME} size={featured ? 72 : 56} />
+                  </div>
+
+                  <p className="text-sm leading-relaxed text-slate-500">{role.description}</p>
+
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-black" style={{ color: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary, backgroundColor: idx < 3 ? `${activeTeamTheme.primary}10` : `${activeTeamTheme.secondary}10` }}>
+                      Impact {player.IMPORTANCE_SCORE.toFixed(1)}
                     </span>
-                    <span className="text-[5px] text-slate-400 font-black uppercase tracking-wider mt-0.5 leading-none">Score</span>
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                      {player.GP} GP
+                    </span>
+                  </div>
+
+                  <div className={`grid gap-3 ${featured ? "grid-cols-5" : "grid-cols-2"}`}>
+                    <div className="rounded-2xl bg-slate-50/80 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">PPG</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_PTS.toFixed(1)}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50/80 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">RPG</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_REB.toFixed(1)}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50/80 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">APG</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_AST.toFixed(1)}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50/80 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">MIN</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_MIN.toFixed(0)}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50/80 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">G</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{player.GP}</p>
+                    </div>
                   </div>
                 </div>
+              </div>
+            );
+          })}
+        </div>
 
-                <div className="text-right space-y-0.5 font-mono text-[10px] font-semibold text-slate-500">
-                  <div className="flex justify-between gap-3">
-                    <span>PTS:</span>
-                    <strong className="text-slate-800">{player.AVG_PTS.toFixed(1)}</strong>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="lg:col-span-8 rounded-[1.75rem] border border-slate-200/70 bg-white p-5 shadow-xs">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="m-0 text-lg font-black uppercase tracking-wide text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                  Roster Power Map
+                </h3>
+                <p className="mt-1 text-xs text-slate-400">A simple structure view of the current franchise hierarchy.</p>
+              </div>
+              <ChevronRight size={16} className="text-slate-300" />
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              {rosterPowerMap.map((group) => (
+                <div key={group.label} className="rounded-[1.4rem] border border-slate-200 bg-slate-50/70 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{group.label}</span>
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: group.color }} />
                   </div>
-                  <div className="flex justify-between gap-3">
-                    <span>AST:</span>
-                    <strong className="text-slate-800">{player.AVG_AST.toFixed(1)}</strong>
+                  <div className="mt-3 space-y-2">
+                    {group.players.length > 0 ? group.players.map((p) => (
+                      <div key={p.PLAYER_ID} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 shadow-[0_1px_0_rgba(15,23,42,0.03)]">
+                        <span className="truncate text-sm font-semibold text-slate-700">{p.PLAYER_NAME}</span>
+                        <span className="text-xs font-black text-slate-400">#{corePlayers.findIndex(cp => cp.PLAYER_ID === p.PLAYER_ID) + 1}</span>
+                      </div>
+                    )) : (
+                      <p className="text-sm text-slate-400">No players in this tier.</p>
+                    )}
                   </div>
-                  <div className="flex justify-between gap-3">
-                    <span>MIN:</span>
-                    <strong className="text-slate-800">{player.AVG_MIN.toFixed(0)}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="lg:col-span-4 rounded-[1.75rem] border border-slate-200/70 bg-white p-5 shadow-xs">
+            <h3 className="m-0 text-lg font-black uppercase tracking-wide text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+              Core Strength
+            </h3>
+            <p className="mt-1 text-xs text-slate-400">Top 3 impact average for the selected franchise.</p>
+            <div className="mt-5 rounded-[1.5rem] border border-slate-100 bg-slate-50/80 p-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Top 3 Power</p>
+                  <p className="mt-2 text-4xl font-black text-slate-900">{teamSummary.strength.toFixed(1)}%</p>
+                </div>
+                <div className="relative h-20 w-20">
+                  <svg className="h-full w-full -rotate-90">
+                    <circle cx="40" cy="40" r="30" stroke="#e2e8f0" strokeWidth="6" fill="transparent" />
+                    <circle cx="40" cy="40" r="30" stroke={activeTeamTheme.primary} strokeWidth="6" fill="transparent" strokeDasharray={2 * Math.PI * 30} strokeDashoffset={2 * Math.PI * 30 - (teamSummary.strength / 100) * (2 * Math.PI * 30)} strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-sm font-black text-slate-800">{teamSummary.size}</span>
                   </div>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-2xl bg-white p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Roster</p>
+                  <p className="mt-1 text-lg font-black text-slate-900">{teamSummary.size}</p>
+                </div>
+                <div className="rounded-2xl bg-white p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Avg PTS</p>
+                  <p className="mt-1 text-lg font-black text-slate-900">{teamSummary.avgPts.toFixed(1)}</p>
+                </div>
+                <div className="rounded-2xl bg-white p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Roles</p>
+                  <p className="mt-1 text-lg font-black text-slate-900">5</p>
                 </div>
               </div>
             </div>
-          ))}
+          </div>
         </div>
       </div>
 
@@ -329,7 +435,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-600">
-            <thead className="sticky top-0 bg-slate-50 text-slate-400 text-xs uppercase font-bold border-b border-slate-200">
+            <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur text-slate-400 text-xs uppercase font-bold border-b border-slate-200">
               <tr>
                 <th 
                   onClick={() => handleSort("PLAYER_NAME")}
@@ -388,7 +494,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                 const isTop5 = corePlayers.some(cp => cp.PLAYER_ID === player.PLAYER_ID);
                 const isTop3 = corePlayers.slice(0, 3).some(cp => cp.PLAYER_ID === player.PLAYER_ID);
                 return (
-                  <tr key={player.PLAYER_ID} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={player.PLAYER_ID} className="hover:bg-slate-50/70 transition-colors">
                     <td className="p-4 font-bold text-slate-800 flex items-center gap-2">
                       {player.PLAYER_NAME}
                       {isTop3 && (
@@ -409,12 +515,12 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                       )}
                     </td>
                     <td className="p-4 font-mono text-slate-400 text-xs">{player.PLAYER_ID}</td>
-                    <td className="p-4 text-center font-mono">{player.GP}</td>
-                    <td className="p-4 text-right font-mono">{player.AVG_MIN.toFixed(1)}</td>
-                    <td className="p-4 text-right font-mono">{player.AVG_PTS.toFixed(1)}</td>
-                    <td className="p-4 text-right font-mono">{player.AVG_REB.toFixed(1)}</td>
-                    <td className="p-4 text-right font-mono">{player.AVG_AST.toFixed(1)}</td>
-                    <td className="p-4 text-right font-mono font-bold" style={{ color: activeTeamTheme.primary }}>{player.IMPORTANCE_SCORE.toFixed(2)}%</td>
+                    <td className="p-4 text-center font-mono tabular-nums">{player.GP}</td>
+                    <td className="p-4 text-right font-mono tabular-nums">{player.AVG_MIN.toFixed(1)}</td>
+                    <td className="p-4 text-right font-mono tabular-nums">{player.AVG_PTS.toFixed(1)}</td>
+                    <td className="p-4 text-right font-mono tabular-nums">{player.AVG_REB.toFixed(1)}</td>
+                    <td className="p-4 text-right font-mono tabular-nums">{player.AVG_AST.toFixed(1)}</td>
+                    <td className="p-4 text-right font-mono font-bold tabular-nums" style={{ color: activeTeamTheme.primary }}>{player.IMPORTANCE_SCORE.toFixed(2)}%</td>
                   </tr>
                 );
               })}

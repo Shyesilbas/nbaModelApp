@@ -2,7 +2,7 @@ import os
 import yaml
 from pathlib import Path
 from dataclasses import dataclass
-from scripts.season_utils import normalize_season, season_to_file_token
+from scripts.season_utils import get_default_season, normalize_season, season_to_file_token
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,9 +35,8 @@ def get_data_paths(season: str = None) -> DataPaths:
             pass
 
     # 2. Extract current season
-    default_season = config.get("current_season", "2025-26")
     if not season:
-        season = default_season
+        season = config.get("current_season") or get_default_season()
     
     season = normalize_season(season)
     token = season_to_file_token(season)
@@ -47,9 +46,8 @@ def get_data_paths(season: str = None) -> DataPaths:
     processed_root = config.get("processed_data_root", "data/processed")
     features_root = config.get("features_data_root", "data/features")
 
-    # Resolve win/score model dataset paths with fallback/legacy support for 2025_26
-    win_dataset_name = "team_win_model_ready_v2_player_features.csv" if token == "2025_26" else f"team_win_model_ready_v2_player_features_{token}.csv"
-    score_dataset_name = "team_score_model_ready_v2_player_features.csv" if token == "2025_26" else f"team_score_model_ready_v2_player_features_{token}.csv"
+    win_dataset_name = f"team_win_model_ready_v2_player_features_{token}.csv"
+    score_dataset_name = f"team_score_model_ready_v2_player_features_{token}.csv"
 
     return DataPaths(
         team_games_raw=str(ROOT / raw_root / "team_games" / f"nba_team_games_{token}_regular_and_playoffs.csv"),

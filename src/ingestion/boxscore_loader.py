@@ -8,7 +8,7 @@ import os
 import pandas as pd
 from pathlib import Path
 from scripts.data_paths import get_data_paths
-from scripts.season_utils import season_to_file_token
+from scripts.season_utils import get_default_season, season_to_file_token
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -74,7 +74,7 @@ def load_team_boxscores(save: bool = True, season: str = None, output_scope: str
     print(f"  ✅ Team box scores: {len(df):,} rows, {df['GAME_ID'].nunique():,} unique games")
 
     if save:
-        token = season_to_file_token(season or "2025-26")
+        token = season_to_file_token(season or get_default_season())
         out_team_dir = str(ROOT / "data/raw/boxscores/team")
         team_bs_csv = str(ROOT / f"data/raw/boxscores/team/nba_team_boxscores_{token}.csv")
         team_bs_parq = team_bs_csv.replace(".csv", ".parquet")
@@ -145,7 +145,7 @@ def load_player_boxscores(save: bool = True, season: str = None, output_scope: s
     print(f"  ✅ Player box scores: {len(df):,} rows, {df['PLAYER_ID'].nunique():,} unique players")
 
     if save:
-        token = season_to_file_token(season or "2025-26")
+        token = season_to_file_token(season or get_default_season())
         out_player_dir = str(ROOT / "data/raw/boxscores/player")
         player_bs_csv = str(ROOT / f"data/raw/boxscores/player/nba_player_boxscores_{token}.csv")
         player_bs_parq = player_bs_csv.replace(".csv", ".parquet")
@@ -222,10 +222,9 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
         ]
         results = results.merge(sched, on="GAME_ID", how="left")
 
-    # Calculate week number relative to season start
-    # 2024-25 starts Oct 22, 2024; 2025-26 starts Oct 21, 2025
-    is_24_25 = (season_to_file_token(season or "2025-26") == "2024_25")
-    season_start_str = "2024-10-22" if is_24_25 else "2025-10-21"
+    # Calculate week number relative to season start using the season year.
+    start_year = int((season or get_default_season()).split("-")[0])
+    season_start_str = f"{start_year}-10-21"
     season_start = pd.to_datetime(season_start_str)
     game_dates_dt = pd.to_datetime(results["GAME_DATE"])
     results["WEEK"] = (game_dates_dt - season_start).dt.days // 7 + 1
@@ -252,7 +251,7 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
     print(f"  ✅ Game results: {len(results):,} completed games")
 
     if save:
-        token = season_to_file_token(season or "2025-26")
+        token = season_to_file_token(season or get_default_season())
         if output_scope == "experimental":
             os.makedirs(str(ROOT / "data/experimental"), exist_ok=True)
             results_csv = str(ROOT / f"data/experimental/game_results_{token}.csv")
@@ -286,4 +285,3 @@ def run_boxscore_pipeline(season: str = None, output_scope: str = "production") 
     results_df = build_game_results(team_bs_df=team_bs_df, save=True, season=season, output_scope=output_scope)
 
     return team_bs_df, player_bs_df, results_df
-
