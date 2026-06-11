@@ -129,6 +129,16 @@ def _load_v3_matchups():
     return pd.DataFrame()
 
 
+@lru_cache(maxsize=4)
+def _load_v4_matchups():
+    p = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
+    if p.exists():
+        df = pd.read_csv(p)
+        df['GAME_DATE'] = pd.to_datetime(df['GAME_DATE'])
+        return df
+    return pd.DataFrame()
+
+
 
 def _ensure_datetime(df, col):
     if not pd.api.types.is_datetime64_any_dtype(df[col]):
@@ -400,7 +410,8 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
     import joblib
     import os
     
-    features_path = ROOT / "models/production/player_v3_features.pkl"
+    # Use V4 player features and models for leakage-free predictions
+    features_path = ROOT / "models/production/player_v4_features.pkl"
     try:
         player_features = joblib.load(features_path)
     except Exception:
@@ -409,14 +420,14 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
     targets = ["pts", "reb", "ast"]
     models = {}
     for t in targets:
-        m_path = ROOT / f"models/production/player_v3_ridge_{t}.pkl"
+        m_path = ROOT / f"models/production/player_v4_lgb_{t}.pkl"
         if m_path.exists():
             models[t] = joblib.load(m_path)
             
     if len(models) != 3:
         return {}
 
-    df = _load_v3_matchups()
+    df = _load_v4_matchups()
     if df.empty:
         return {}
         
@@ -458,7 +469,7 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
     away_X = build_inference_df(away_roster.copy(), home_def_dict)
     
     res = {}
-    # Compute PTS, REB, AST predictions
+    # Compute PTS, REB, AST predictions using V4 LightGBM models
     home_predictions = {}
     away_predictions = {}
     for t in targets:
@@ -475,7 +486,7 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
         res[f"OPP_V3_PROJ_{t.upper()}_SUM"] = float(away_proj.sum())
         res[f"OPP_V3_PROJ_{t.upper()}_AVG"] = float(away_proj.mean())
         
-    # Calculate PRA mathematically as PTS + REB + AST
+    # Calculate V4 PRA mathematically as PTS + REB + AST
     home_pra = home_predictions["pts"] + home_predictions["reb"] + home_predictions["ast"]
     away_pra = away_predictions["pts"] + away_predictions["reb"] + away_predictions["ast"]
     
