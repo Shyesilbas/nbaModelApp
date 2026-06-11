@@ -217,37 +217,167 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
         out["OPP_H2H_PTS_LAST_5"] = float(safe_get(away_row, "H2H_PTS_LAST_5", np.nan))
         out["OPP_H2H_PTS_ALLOWED_LAST_5"] = float(safe_get(away_row, "H2H_PTS_ALLOWED_LAST_5", np.nan))
 
-    # Dynamically compute player-level features before ordering so they can be
-    # included in the final model input vector.
     try:
         player_feats = compute_player_features_for_inference(home_team, away_team, prediction_date, season=season)
         out.update(player_feats)
     except Exception as e:
         print(f"Warning: failed to compute player features for inference: {e}")
 
-    # Final ordering and missing-column handling
-    ordered = []
+    try:
+        ridge_feats = compute_ridge_player_features_for_inference(home_team, away_team, prediction_date)
+        out.update(ridge_feats)
+    except Exception as e:
+        print(f"Warning: failed to compute ridge player features for inference: {e}")
+
+    # Final mapping and missing-column handling for the original required cols
+    res = {}
     missing_cols = []
     for c in feat_cols:
         if c in out:
-            ordered.append(out[c])
+            res[c] = out[c]
         else:
             # If a required model feature is not computed above, attempt to pull from home_row
             val = safe_get(home_row, c, np.nan)
             if pd.isna(val):
                 missing_cols.append(c)
-            ordered.append(float(val) if pd.notna(val) else np.nan)
+            res[c] = float(val) if pd.notna(val) else np.nan
 
     if missing_cols:
         # warn but continue; downstream code should impute as the model pipeline expects
         print("Warning: the following features could not be directly computed and are NaN:", missing_cols)
+
+    # Append all other features from home_row
+    if home_row is not None:
+        for c in home_row.index:
+            if c not in res:
+                val = home_row[c]
+                if isinstance(val, (int, float, np.integer, np.floating)):
+                    res[c] = float(val) if pd.notna(val) else np.nan
+                elif isinstance(val, pd.Timestamp):
+                    res[c] = str(val)
+                elif isinstance(val, (bool, np.bool_)):
+                    res[c] = bool(val)
+                else:
+                    res[c] = val
+                
+    # Append all other features from away_row as OPP_
+    if away_row is not None:
+        for c in away_row.index:
+            opp_c = f"OPP_{c}"
+            if opp_c not in res:
+                val = away_row[c]
+                if isinstance(val, (int, float, np.integer, np.floating)):
+                    res[opp_c] = float(val) if pd.notna(val) else np.nan
+                elif isinstance(val, pd.Timestamp):
+                    res[opp_c] = str(val)
+                elif isinstance(val, (bool, np.bool_)):
+                    res[opp_c] = bool(val)
+                else:
+                    res[opp_c] = val
+
+    # Map HOME/AWAY player features to TEAM/OPP player features for Score V3
+    for k, v in list(out.items()):
+        if k not in res:
+            res[k] = v
+        # Translate player features:
+        if k.startswith("HOME_"):
+            team_k = k.replace("HOME_", "TEAM_")
+            res[team_k] = v
+        elif k.startswith("AWAY_"):
+            opp_k = k.replace("AWAY_", "OPP_")
+            res[opp_k] = v
+
+    # Manually map aliases to fix V3 score missing player gap feature names
+    res["TEAM_CORE_TOP3_PTS_LAST_5_SUM"] = res.get("HOME_TOP3_EXPECTED_PTS_SUM", 0.0)
+    res["OPP_CORE_TOP3_PTS_LAST_5_SUM"] = res.get("AWAY_TOP3_EXPECTED_PTS_SUM", 0.0)
+    res["TEAM_CORE_TOP3_PLAYED_COUNT"] = res.get("HOME_TOP3_AVAILABLE", 0.0)
+    res["OPP_CORE_TOP3_PLAYED_COUNT"] = res.get("AWAY_TOP3_AVAILABLE", 0.0)
+    res["TEAM_CORE_TOP3_AVAILABLE_RATE"] = res.get("HOME_TOP3_AVAILABLE", 0.0) / 3.0
 
     # Validation: ensure all values derived from rows have GAME_DATE < prediction_date
     # (we filtered at top; assert again)
     if any(team_df["GAME_DATE"] >= pred_dt):
         raise RuntimeError("Leakage detected: team features contain games on/after prediction_date")
 
-    return dict(zip(feat_cols, ordered))
+    return res
+
+
+def compute_ridge_player_features_for_inference(home_team: str, away_team: str, prediction_date: str):
+    import joblib
+    import os
+    
+    features_path = ROOT / "models/production/player_v3_features.pkl"
+    try:
+        player_features = joblib.load(features_path)
+    except Exception:
+        return {}
+        
+    targets = ["pts", "reb", "ast", "pra"]
+    models = {}
+    for t in targets:
+        m_path = ROOT / f"models/production/player_v3_ridge_{t}.pkl"
+        if m_path.exists():
+            models[t] = joblib.load(m_path)
+            
+    if len(models) != 4:
+        return {}
+
+    v3_path = ROOT / "data/experimental/player_model_ready_v3_matchups.csv"
+    if not v3_path.exists():
+        return {}
+        
+    df = pd.read_csv(v3_path)
+    df['GAME_DATE'] = pd.to_datetime(df['GAME_DATE'])
+    pred_dt = pd.to_datetime(prediction_date)
+    df = df[df['GAME_DATE'] < pred_dt]
+    
+    if df.empty:
+        return {}
+
+    last_games = df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
+    
+    home_roster = last_games[last_games["TEAM_ABBREVIATION"] == home_team].sort_values("MIN_EMA_10", ascending=False).head(10)
+    away_roster = last_games[last_games["TEAM_ABBREVIATION"] == away_team].sort_values("MIN_EMA_10", ascending=False).head(10)
+    
+    if len(home_roster) == 0 or len(away_roster) == 0:
+        return {}
+
+    home_def = df[df["OPPONENT_ABBREVIATION"] == home_team].sort_values("GAME_DATE").tail(1)
+    if len(home_def) == 0:
+        home_def = df.tail(1)
+        
+    away_def = df[df["OPPONENT_ABBREVIATION"] == away_team].sort_values("GAME_DATE").tail(1)
+    if len(away_def) == 0:
+        away_def = df.tail(1)
+
+    opp_cols = [c for c in df.columns if c.startswith("OPP_") and "ALLOWED" in c]
+    home_def_dict = {c: home_def[c].values[0] for c in opp_cols}
+    away_def_dict = {c: away_def[c].values[0] for c in opp_cols}
+
+    def build_inference_df(roster_df, def_dict):
+        for k, v in def_dict.items():
+            roster_df[k] = v
+        for f in player_features:
+            if f not in roster_df.columns:
+                roster_df[f] = 0
+        return roster_df
+
+    home_X = build_inference_df(home_roster.copy(), away_def_dict)
+    away_X = build_inference_df(away_roster.copy(), home_def_dict)
+    
+    res = {}
+    for t in targets:
+        model = models[t]
+        home_proj = model.predict(home_X[player_features])
+        away_proj = model.predict(away_X[player_features])
+        
+        res[f"TEAM_V3_PROJ_{t.upper()}_SUM"] = float(home_proj.sum())
+        res[f"TEAM_V3_PROJ_{t.upper()}_AVG"] = float(home_proj.mean())
+        
+        res[f"OPP_V3_PROJ_{t.upper()}_SUM"] = float(away_proj.sum())
+        res[f"OPP_V3_PROJ_{t.upper()}_AVG"] = float(away_proj.mean())
+        
+    return res
 
 
 def compute_player_features_for_inference(home_team: str, away_team: str, prediction_date: str, season: str = None):

@@ -1,19 +1,34 @@
 {
-  "model_name": "cross_season_win_logistic_regression",
-  "status": "production",
-  "promoted_from": "historical cross-season WIN candidate",
-  "training_dataset": "historical cross-season merged WIN dataset",
-  "training_protocol": "strict season split: train 2024-25, test 2025-26",
-  "version": "2026-06-10T13-21-30Z",
+  "model_name": "logistic_regression",
+  "training_date": "2026-06-11T17:40:31.359438Z",
+  "number_of_rows": 1762,
+  "number_of_features": 54,
   "metrics": {
-    "roc_auc": 0.7048,
-    "brier": 0.219,
-    "accuracy": 0.642,
     "uncalibrated": {
-      "roc_auc": 0.7048,
-      "brier_score": 0.219,
-      "accuracy": 0.642
+      "accuracy": 0.6871345029239766,
+      "precision": 0.686046511627907,
+      "recall": 0.6900584795321637,
+      "f1": 0.6880466472303207,
+      "roc_auc": 0.7590711671967443,
+      "brier_score": 0.1968774986114968
+    },
+    "sigmoid": {
+      "accuracy": 0.6900584795321637,
+      "precision": 0.6756756756756757,
+      "recall": 0.7309941520467836,
+      "f1": 0.702247191011236,
+      "roc_auc": 0.7590711671967443,
+      "brier_score": 0.19735854548936374
+    },
+    "isotonic": {
+      "accuracy": 0.6549707602339181,
+      "precision": 0.6081632653061224,
+      "recall": 0.8713450292397661,
+      "f1": 0.7163461538461539,
+      "roc_auc": 0.7553093259464451,
+      "brier_score": 0.198486738759716
     }
   },
-  "notes": "Promoted cross-season logistic regression candidate after compatibility audit."
+  "selected_calibration": "uncalibrated",
+  "target_column": "WIN"
 }

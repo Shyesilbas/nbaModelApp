@@ -55,7 +55,17 @@ def build_opponent_features(team_features_df: pd.DataFrame) -> pd.DataFrame:
         "H2H_GAMES_LAST_5_opp": "OPP_H2H_GAMES_LAST_5",
         "H2H_WINRATE_LAST_5_opp": "OPP_H2H_WINRATE_LAST_5",
         "H2H_PTS_LAST_5_opp": "OPP_H2H_PTS_LAST_5",
-        "H2H_PTS_ALLOWED_LAST_5_opp": "OPP_H2H_PTS_ALLOWED_LAST_5"
+        "H2H_PTS_ALLOWED_LAST_5_opp": "OPP_H2H_PTS_ALLOWED_LAST_5",
+        
+        # Advanced Metrics Opponent mapping
+        "PACE_LAST_5_opp": "OPP_PACE_LAST_5",
+        "PACE_LAST_10_opp": "OPP_PACE_LAST_10",
+        "OFF_RTG_LAST_5_opp": "OPP_OFF_RTG_LAST_5",
+        "OFF_RTG_LAST_10_opp": "OPP_OFF_RTG_LAST_10",
+        "DEF_RTG_LAST_5_opp": "OPP_DEF_RTG_LAST_5",
+        "DEF_RTG_LAST_10_opp": "OPP_DEF_RTG_LAST_10",
+        "NET_RTG_LAST_5_opp": "OPP_NET_RTG_LAST_5",
+        "NET_RTG_LAST_10_opp": "OPP_NET_RTG_LAST_10"
     }
     
     # Verify columns exist before renaming

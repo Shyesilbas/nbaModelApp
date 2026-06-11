@@ -43,32 +43,36 @@ class ModelLoader:
 
 class ScoreModelLoader:
     def __init__(self):
-        self.home_model = None
-        self.away_model = None
-        self.total_model = None
-        self.diff_model = None
+        self.pace_model = None
+        self.home_rtg_model = None
+        self.away_rtg_model = None
+        self.margin_model = None
         self.metadata = None
 
     def load(self):
-        home_model_path = resolve_artifact_path("score_model", "home_model_path", "models/home_score_model_v2.pkl")
-        away_model_path = resolve_artifact_path("score_model", "away_model_path", "models/away_score_model_v2.pkl")
-        total_model_path = resolve_artifact_path("score_model", "total_model_path", "models/direct_total_points_model_v2.pkl")
-        diff_model_path = resolve_artifact_path("score_model", "margin_model_path", "models/direct_point_diff_model_v2.pkl")
-        metadata_path = resolve_artifact_path("score_model", "metadata_path", "models/score_model_v2_metadata.json")
-        for p in [home_model_path, away_model_path, total_model_path, diff_model_path, metadata_path]:
+        # We will load V3 models explicitly
+        pace_path = ROOT / "models/production/score_model_v3_pace.pkl"
+        home_rtg_path = ROOT / "models/production/score_model_v3_home_rtg.pkl"
+        away_rtg_path = ROOT / "models/production/score_model_v3_away_rtg.pkl"
+        margin_path = ROOT / "models/production/score_model_v3_margin.pkl"
+        metadata_path = ROOT / "models/production/score_model_v3_metadata.json"
+        
+        for p in [pace_path, home_rtg_path, away_rtg_path, margin_path, metadata_path]:
             if not p.exists():
-                raise FileNotFoundError(f"Score model file not found at {p}")
-        self.home_model = joblib.load(home_model_path)
-        self.away_model = joblib.load(away_model_path)
-        self.total_model = joblib.load(total_model_path)
-        self.diff_model = joblib.load(diff_model_path)
+                raise FileNotFoundError(f"Score V3 model file not found at {p}")
+                
+        self.pace_model = joblib.load(pace_path)
+        self.home_rtg_model = joblib.load(home_rtg_path)
+        self.away_rtg_model = joblib.load(away_rtg_path)
+        self.margin_model = joblib.load(margin_path)
+        
         with open(metadata_path, "r") as f:
             self.metadata = json.load(f)
 
     def get_version(self) -> Optional[str]:
         if self.metadata:
-            return self.metadata.get("version") or self.metadata.get("training_date") or self.metadata.get("model_name") or "score_v2"
-        return "score_v2"
+            return self.metadata.get("version", "score_v3")
+        return "score_v3"
 
 
 class PlayerModelLoader:
