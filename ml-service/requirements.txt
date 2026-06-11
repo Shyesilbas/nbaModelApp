@@ -7,3 +7,4 @@ numpy
 scikit-learn==1.5.2
 pyarrow
 xgboost
+lightgbm

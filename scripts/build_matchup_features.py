@@ -23,8 +23,53 @@ sys.path.insert(0, str(ROOT))
 from scripts.data_paths import get_data_paths
 from scripts.artifact_paths import resolve_artifact_path
 
+from functools import lru_cache
+import math
+
 MODEL_FEATURE_COLS = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns.json")
 
+NBA_TEAMS_LOCATIONS = {
+    "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
+    "BKN": {"lat": 40.6826, "lon": -73.9754, "tz_offset": -5},
+    "NYK": {"lat": 40.7505, "lon": -73.9934, "tz_offset": -5},
+    "PHI": {"lat": 39.9012, "lon": -75.1719, "tz_offset": -5},
+    "TOR": {"lat": 43.6435, "lon": -79.3791, "tz_offset": -5},
+    "CHI": {"lat": 41.8806, "lon": -87.6742, "tz_offset": -6},
+    "CLE": {"lat": 41.4965, "lon": -81.6881, "tz_offset": -5},
+    "DET": {"lat": 42.3411, "lon": -83.0550, "tz_offset": -5},
+    "IND": {"lat": 39.7641, "lon": -86.1555, "tz_offset": -5},
+    "MIL": {"lat": 43.0451, "lon": -87.9172, "tz_offset": -6},
+    "ATL": {"lat": 33.7573, "lon": -84.3963, "tz_offset": -5},
+    "CHA": {"lat": 35.2251, "lon": -80.8392, "tz_offset": -5},
+    "MIA": {"lat": 25.7814, "lon": -80.1870, "tz_offset": -5},
+    "ORL": {"lat": 28.5392, "lon": -81.3839, "tz_offset": -5},
+    "WAS": {"lat": 38.8981, "lon": -77.0209, "tz_offset": -5},
+    "DEN": {"lat": 39.7486, "lon": -105.0075, "tz_offset": -7},
+    "MIN": {"lat": 44.9795, "lon": -93.2761, "tz_offset": -6},
+    "OKC": {"lat": 35.4634, "lon": -97.5151, "tz_offset": -6},
+    "POR": {"lat": 45.5316, "lon": -122.6668, "tz_offset": -8},
+    "UTA": {"lat": 40.7683, "lon": -111.9011, "tz_offset": -7},
+    "GSW": {"lat": 37.7680, "lon": -122.3877, "tz_offset": -8},
+    "LAC": {"lat": 34.0430, "lon": -118.2673, "tz_offset": -8},
+    "LAL": {"lat": 34.0430, "lon": -118.2673, "tz_offset": -8},
+    "PHX": {"lat": 33.4457, "lon": -112.0712, "tz_offset": -7},
+    "SAC": {"lat": 38.5802, "lon": -121.4997, "tz_offset": -8},
+    "DAL": {"lat": 32.7905, "lon": -96.8103, "tz_offset": -6},
+    "HOU": {"lat": 29.7508, "lon": -95.3621, "tz_offset": -6},
+    "MEM": {"lat": 35.1381, "lon": -90.0506, "tz_offset": -6},
+    "NOP": {"lat": 29.9490, "lon": -90.0821, "tz_offset": -6},
+    "SAS": {"lat": 29.4270, "lon": -98.4375, "tz_offset": -6}
+}
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+@lru_cache(maxsize=4)
 def _load_team_features(season: str = None):
     paths = get_data_paths(season)
     p_parq = Path(paths.team_features.replace(".csv", ".parquet"))
@@ -38,6 +83,7 @@ def _load_team_features(season: str = None):
     raise FileNotFoundError(f"team_games_features not found; expected at {p_parq} or {p_csv}")
 
 
+@lru_cache(maxsize=4)
 def _load_game_results(season: str = None):
     paths = get_data_paths(season)
     p_parq = Path(paths.game_results.replace(".csv", ".parquet"))
@@ -49,6 +95,39 @@ def _load_game_results(season: str = None):
             else:
                 return pd.read_csv(p)
     raise FileNotFoundError(f"game_results not found; expected at {p_parq} or {p_csv}")
+
+
+@lru_cache(maxsize=4)
+def _load_player_games(season: str = None):
+    paths = get_data_paths(season)
+    p_parq = Path(paths.player_games_raw.replace(".csv", ".parquet"))
+    p_csv = Path(paths.player_games_raw)
+    for p in [p_parq, p_csv]:
+        if p.exists():
+            return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+    return pd.DataFrame()
+
+
+@lru_cache(maxsize=4)
+def _load_team_games(season: str = None):
+    paths = get_data_paths(season)
+    p_parq = Path(paths.team_games_raw.replace(".csv", ".parquet"))
+    p_csv = Path(paths.team_games_raw)
+    for p in [p_parq, p_csv]:
+        if p.exists():
+            return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+    return pd.DataFrame()
+
+
+@lru_cache(maxsize=4)
+def _load_v3_matchups():
+    p = ROOT / "data/experimental/player_model_ready_v3_matchups.csv"
+    if p.exists():
+        df = pd.read_csv(p)
+        df['GAME_DATE'] = pd.to_datetime(df['GAME_DATE'])
+        return df
+    return pd.DataFrame()
+
 
 
 def _ensure_datetime(df, col):
@@ -139,6 +218,19 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     out["DAYS_REST"] = days_rest_home if not pd.isna(days_rest_home) else np.nan
     out["IS_B2B"] = is_b2b_home
 
+    # Location features
+    home_loc = NBA_TEAMS_LOCATIONS.get(home_team)
+    away_loc = NBA_TEAMS_LOCATIONS.get(away_team)
+    if home_loc and away_loc:
+        dist = haversine(home_loc["lat"], home_loc["lon"], away_loc["lat"], away_loc["lon"])
+        tz_diff = abs(home_loc["tz_offset"] - away_loc["tz_offset"])
+    else:
+        dist = 0.0
+        tz_diff = 0.0
+
+    out["TRAVEL_DISTANCE"] = 0.0
+    out["TIMEZONE_DIFF"] = 0.0
+
     # PTS_LAST_5, PTS_LAST_10, WINRATE_LAST_5, WINRATE_LAST_10 for home
     out["PTS_LAST_5"] = float(safe_get(home_row, "PTS_LAST_5", np.nan))
     out["PTS_LAST_10"] = float(safe_get(home_row, "PTS_LAST_10", np.nan))
@@ -148,6 +240,8 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     # Opponent equivalents (OPP_...): use away_row as opponent viewpoint
     out["OPP_DAYS_REST"] = days_rest_away if not pd.isna(days_rest_away) else np.nan
     out["OPP_IS_B2B"] = is_b2b_away
+    out["OPP_TRAVEL_DISTANCE"] = dist
+    out["OPP_TIMEZONE_DIFF"] = tz_diff
     out["OPP_PTS_LAST_5"] = float(safe_get(away_row, "PTS_LAST_5", np.nan))
     out["OPP_PTS_LAST_10"] = float(safe_get(away_row, "PTS_LAST_10", np.nan))
     out["OPP_WINRATE_LAST_5"] = float(safe_get(away_row, "WINRATE_LAST_5", np.nan))
@@ -312,22 +406,20 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
     except Exception:
         return {}
         
-    targets = ["pts", "reb", "ast", "pra"]
+    targets = ["pts", "reb", "ast"]
     models = {}
     for t in targets:
         m_path = ROOT / f"models/production/player_v3_ridge_{t}.pkl"
         if m_path.exists():
             models[t] = joblib.load(m_path)
             
-    if len(models) != 4:
+    if len(models) != 3:
         return {}
 
-    v3_path = ROOT / "data/experimental/player_model_ready_v3_matchups.csv"
-    if not v3_path.exists():
+    df = _load_v3_matchups()
+    if df.empty:
         return {}
         
-    df = pd.read_csv(v3_path)
-    df['GAME_DATE'] = pd.to_datetime(df['GAME_DATE'])
     pred_dt = pd.to_datetime(prediction_date)
     df = df[df['GAME_DATE'] < pred_dt]
     
@@ -366,16 +458,31 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
     away_X = build_inference_df(away_roster.copy(), home_def_dict)
     
     res = {}
+    # Compute PTS, REB, AST predictions
+    home_predictions = {}
+    away_predictions = {}
     for t in targets:
         model = models[t]
         home_proj = model.predict(home_X[player_features])
         away_proj = model.predict(away_X[player_features])
+        
+        home_predictions[t] = home_proj
+        away_predictions[t] = away_proj
         
         res[f"TEAM_V3_PROJ_{t.upper()}_SUM"] = float(home_proj.sum())
         res[f"TEAM_V3_PROJ_{t.upper()}_AVG"] = float(home_proj.mean())
         
         res[f"OPP_V3_PROJ_{t.upper()}_SUM"] = float(away_proj.sum())
         res[f"OPP_V3_PROJ_{t.upper()}_AVG"] = float(away_proj.mean())
+        
+    # Calculate PRA mathematically as PTS + REB + AST
+    home_pra = home_predictions["pts"] + home_predictions["reb"] + home_predictions["ast"]
+    away_pra = away_predictions["pts"] + away_predictions["reb"] + away_predictions["ast"]
+    
+    res["TEAM_V3_PROJ_PRA_SUM"] = float(home_pra.sum())
+    res["TEAM_V3_PROJ_PRA_AVG"] = float(home_pra.mean())
+    res["OPP_V3_PROJ_PRA_SUM"] = float(away_pra.sum())
+    res["OPP_V3_PROJ_PRA_AVG"] = float(away_pra.mean())
         
     return res
 
@@ -396,15 +503,11 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
         "AWAY_MISSING_CORE_EXPECTED_MIN", "AWAY_MISSING_CORE_EXPECTED_PTS", "AWAY_MISSING_CORE_EXPECTED_AST", "AWAY_MISSING_CORE_EXPECTED_REB", "AWAY_MISSING_CORE_EXPECTED_PRA"
     ]
 
-    paths = get_data_paths(season)
-    player_games_path = Path(paths.player_games_raw)
-    team_games_path = Path(paths.team_games_raw)
-
-    if not player_games_path.exists() or not team_games_path.exists():
+    df_player_games = _load_player_games(season)
+    df_team_games = _load_team_games(season)
+    
+    if df_player_games.empty or df_team_games.empty:
         return {f: 0.0 for f in player_features_list}
-
-    df_player_games = pd.read_csv(player_games_path)
-    df_team_games = pd.read_csv(team_games_path)
 
     pred_dt = pd.to_datetime(prediction_date)
     df_player_games["GAME_DATE"] = pd.to_datetime(df_player_games["GAME_DATE"], errors="coerce")
@@ -414,6 +517,7 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
     df_player_hist = df_player_games[df_player_games["GAME_DATE"] < pred_dt]
     df_team_hist = df_team_games[df_team_games["GAME_DATE"] < pred_dt]
 
+    paths = get_data_paths(season)
     is_24_25 = (season == "2024-25" or (season and "2024_25" in season) or (paths.team_games_raw and "2024_25" in paths.team_games_raw))
 
     if is_24_25:

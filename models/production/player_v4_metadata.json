@@ -1,0 +1,10 @@
+{
+    "version": "4.0_LightGBM",
+    "updated_at": "2026-06-11T22:54:30.331650Z",
+    "features_count": 41,
+    "targets": [
+        "TARGET_PTS",
+        "TARGET_REB",
+        "TARGET_AST"
+    ]
+}

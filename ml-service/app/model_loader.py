@@ -51,11 +51,11 @@ class ScoreModelLoader:
 
     def load(self):
         # We will load V3 models explicitly
-        pace_path = ROOT / "models/production/score_model_v3_pace.pkl"
-        home_rtg_path = ROOT / "models/production/score_model_v3_home_rtg.pkl"
-        away_rtg_path = ROOT / "models/production/score_model_v3_away_rtg.pkl"
-        margin_path = ROOT / "models/production/score_model_v3_margin.pkl"
-        metadata_path = ROOT / "models/production/score_model_v3_metadata.json"
+        pace_path = ROOT / "models/production/score_model_v4_pace.pkl"
+        home_rtg_path = ROOT / "models/production/score_model_v4_home_rtg.pkl"
+        away_rtg_path = ROOT / "models/production/score_model_v4_away_rtg.pkl"
+        margin_path = ROOT / "models/production/score_model_v4_margin.pkl"
+        metadata_path = ROOT / "models/production/score_model_v4_metadata.json"
         
         for p in [pace_path, home_rtg_path, away_rtg_path, margin_path, metadata_path]:
             if not p.exists():
@@ -80,25 +80,39 @@ class PlayerModelLoader:
         self.pts_model = None
         self.reb_model = None
         self.ast_model = None
-        self.pra_model = None
         self.feature_cols = None
+        self.version = "player_v3_ridge"
 
     def load(self):
-        pts_path = ROOT / "models/production/player_v3_ridge_pts.pkl"
-        reb_path = ROOT / "models/production/player_v3_ridge_reb.pkl"
-        ast_path = ROOT / "models/production/player_v3_ridge_ast.pkl"
-        pra_path = ROOT / "models/production/player_v3_ridge_pra.pkl"
-        features_path = ROOT / "models/production/player_v3_features.pkl"
+        # Detect V4 LightGBM player models
+        pts_path_v4 = ROOT / "models/production/player_v4_lgb_pts.pkl"
+        reb_path_v4 = ROOT / "models/production/player_v4_lgb_reb.pkl"
+        ast_path_v4 = ROOT / "models/production/player_v4_lgb_ast.pkl"
+        features_path_v4 = ROOT / "models/production/player_v4_features.pkl"
         
-        for p in [pts_path, reb_path, ast_path, pra_path, features_path]:
-            if not p.exists():
-                raise FileNotFoundError(f"Player model file not found at {p}")
-                
-        self.pts_model = joblib.load(pts_path)
-        self.reb_model = joblib.load(reb_path)
-        self.ast_model = joblib.load(ast_path)
-        self.pra_model = joblib.load(pra_path)
-        self.feature_cols = joblib.load(features_path)
+        if pts_path_v4.exists() and reb_path_v4.exists() and ast_path_v4.exists() and features_path_v4.exists():
+            self.pts_model = joblib.load(pts_path_v4)
+            self.reb_model = joblib.load(reb_path_v4)
+            self.ast_model = joblib.load(ast_path_v4)
+            self.feature_cols = joblib.load(features_path_v4)
+            self.version = "player_v4_lgb"
+            print("Loaded V4 LightGBM Player Models successfully.")
+        else:
+            pts_path_v3 = ROOT / "models/production/player_v3_ridge_pts.pkl"
+            reb_path_v3 = ROOT / "models/production/player_v3_ridge_reb.pkl"
+            ast_path_v3 = ROOT / "models/production/player_v3_ridge_ast.pkl"
+            features_path_v3 = ROOT / "models/production/player_v3_features.pkl"
+            
+            for p in [pts_path_v3, reb_path_v3, ast_path_v3, features_path_v3]:
+                if not p.exists():
+                    raise FileNotFoundError(f"Player model file not found at {p}")
+                    
+            self.pts_model = joblib.load(pts_path_v3)
+            self.reb_model = joblib.load(reb_path_v3)
+            self.ast_model = joblib.load(ast_path_v3)
+            self.feature_cols = joblib.load(features_path_v3)
+            self.version = "player_v3_ridge"
+            print("Loaded V3 Ridge Player Models as fallback.")
 
     def get_version(self) -> str:
-        return "player_v3_ridge"
+        return self.version

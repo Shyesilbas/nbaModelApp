@@ -37,7 +37,7 @@ def train_v3():
                     'PLAYER_NAME', 'SEASON_TYPE', 'OPPONENT_ABBREVIATION', 'GAME_ID', 
                     'Game_ID', 'TEAM_ABBREVIATION', 'PLAYER_POSITION_GROUP']
     
-    target_cols = ['TARGET_PTS', 'TARGET_REB', 'TARGET_AST', 'TARGET_PRA']
+    target_cols = ['TARGET_PTS', 'TARGET_REB', 'TARGET_AST']
     
     features = [c for c in df.columns if c not in exclude_cols and c not in target_cols]
     
