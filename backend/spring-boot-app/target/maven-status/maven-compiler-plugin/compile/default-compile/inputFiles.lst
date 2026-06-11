@@ -1,0 +1,12 @@
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaWinPredictionRequest.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaScorePredictionService.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaScorePredictionClient.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaPredictionService.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaPredictionController.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaScorePredictionResponse.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaPredictionException.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaMatchupPredictionResponse.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaPredictionClient.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaPredictionApplication.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaScorePredictionRequest.java
+/Users/serhat/agProjects/nbaModelApp/backend/spring-boot-app/src/main/java/com/example/nba/prediction/NbaWinPredictionResponse.java

@@ -9,7 +9,7 @@ sys.path.append(str(ROOT))
 sys.path.append(str(ROOT / "scripts"))
 
 from scripts.data_paths import get_data_paths
-from scripts.season_utils import season_to_file_token
+from scripts.season_utils import get_default_season, season_to_file_token
 from scripts.build_matchup_features import compute_player_features_for_inference
 
 def _pick_column(df, candidates):
@@ -45,7 +45,7 @@ def _build_gameid_mapping_from_results(df_results: pd.DataFrame) -> pd.DataFrame
 
 
 def build_player_features_dataset(season=None, output_scope="production"):
-    season = season or "2025-26"
+    season = season or get_default_season()
     token = season_to_file_token(season)
     dp = get_data_paths(season)
 

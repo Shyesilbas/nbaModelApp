@@ -29,10 +29,10 @@ class BoxscoreService:
 
             _save_json(results_df.copy(), "game_results.json")
 
-            team_recent = team_bs_df.sort_values("GAME_DATE", ascending=False).head(2000).copy()
+            team_recent = team_bs_df.sort_values("GAME_DATE", ascending=False).copy()
             _save_json(team_recent, "team_boxscores.json")
 
-            player_recent = player_bs_df.sort_values("GAME_DATE", ascending=False).head(3000).copy()
+            player_recent = player_bs_df.sort_values("GAME_DATE", ascending=False).copy()
             _save_json(player_recent, "player_boxscores.json")
 
             # Game details: merge game results with the corresponding team and player box scores.
@@ -81,6 +81,7 @@ class BoxscoreService:
                         "season": row.get("SEASON"),
                         "season_type": row.get("SEASON_TYPE"),
                         "game_date": str(row.get("GAME_DATE")),
+                        "game_time": row.get("GAME_TIME"),
                         "game_status": row.get("GAME_STATUS", "Final"),
                         "arena": {
                             "name": row.get("ARENA"),
@@ -102,9 +103,10 @@ class BoxscoreService:
                             "quarter_scores": row.get("AWAY_QUARTER_SCORES", None),
                         },
                         "team_stats": team_stats,
-                        "player_stats": player_stats[:20],
+                        "player_stats": player_stats,
                         "game_leaders": leaders,
-                        "officials": [],
+                        "officials": row.get("OFFICIALS", []) or [],
+                        "game_result": _row_to_dict(row),
                     })
 
             game_details_path = os.path.join(OUT_DIR, "game_details.json")

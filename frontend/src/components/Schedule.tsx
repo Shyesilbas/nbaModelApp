@@ -8,51 +8,14 @@ import {
   Zap,
   Award,
 } from "lucide-react";
+import TeamLogo from "./TeamLogo";
+import PlayerPhoto from "./PlayerPhoto";
+import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 
 // ─────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────
-interface ScheduleGame {
-  GAME_ID: string;
-  GAME_DATE: string;
-  HOME_TEAM_ABBREVIATION: string;
-  AWAY_TEAM_ABBREVIATION: string;
-  HOME_TEAM_NAME: string | null;
-  AWAY_TEAM_NAME: string | null;
-  SEASON_TYPE: string;
-  IS_PLAYOFF: boolean | null;
-  GAME_STATUS: string | null;
-  PLAYOFF_ROUND: string | null;
-  SERIES_GAME_NUMBER: number | null;
-  HOME_SERIES_WINS: number | null;
-  AWAY_SERIES_WINS: number | null;
-  IS_ELIMINATION_GAME: boolean | null;
-  CAN_CLINCH_SERIES: boolean | null;
-  ARENA?: string | null;
-  LOCATION?: string | null;
-  HOME_SCORE?: number | null;
-  AWAY_SCORE?: number | null;
-  WINNER_TEAM_ABBREVIATION?: string | null;
-  LOSER_TEAM_ABBREVIATION?: string | null;
-  // Context fields (only for upcoming games)
-  HOME_TEAM_WINRATE_LAST_5?: number | null;
-  HOME_TEAM_WINRATE_LAST_10?: number | null;
-  HOME_TEAM_PTS_LAST_5?: number | null;
-  HOME_TEAM_PTS_LAST_10?: number | null;
-  HOME_TEAM_DAYS_REST?: number | null;
-  HOME_TEAM_IS_B2B?: boolean | null;
-  AWAY_TEAM_WINRATE_LAST_5?: number | null;
-  AWAY_TEAM_WINRATE_LAST_10?: number | null;
-  AWAY_TEAM_PTS_LAST_5?: number | null;
-  AWAY_TEAM_PTS_LAST_10?: number | null;
-  AWAY_TEAM_DAYS_REST?: number | null;
-  AWAY_TEAM_IS_B2B?: boolean | null;
-  HOME_TOP3_CORE_PLAYERS?: string | null;
-  HOME_TOP5_CORE_PLAYERS?: string | null;
-  AWAY_TOP3_CORE_PLAYERS?: string | null;
-  AWAY_TOP5_CORE_PLAYERS?: string | null;
-  _isUpcoming?: boolean;
-}
+type ScheduleGame = GameFeedRow;
 
 interface PlayerBoxScore {
   GAME_ID: string;
@@ -185,12 +148,14 @@ function FinalsGameCard({
   index,
   focusTeam,
   players,
+  gameDetail,
   onPredict,
 }: {
   game: ScheduleGame;
   index: number;
   focusTeam: string | null;
   players: PlayerBoxScore[];
+  gameDetail?: GameDetail | null;
   onPredict?: (g: ScheduleGame) => void;
 }) {
   const [expanded, setExpanded] = useState(index < 2);
@@ -221,6 +186,13 @@ function FinalsGameCard({
   const activePlayers = playerView === "home" ? homePlayers : awayPlayers;
   const activeTeam = playerView === "home" ? homeName : awayName;
   const activeTeamAbbr = playerView === "home" ? game.HOME_TEAM_ABBREVIATION : game.AWAY_TEAM_ABBREVIATION;
+  const rosterPlayers = useMemo(() => {
+    const source = gameDetail?.player_stats?.length ? gameDetail.player_stats : activePlayers;
+    return source
+      .filter((p: any) => p?.TEAM_ABBREVIATION === activeTeamAbbr)
+      .sort((a: any, b: any) => (b.PTS ?? 0) - (a.PTS ?? 0) || (b.MIN ?? 0) - (a.MIN ?? 0))
+      .slice(0, 9);
+  }, [activePlayers, activeTeamAbbr, gameDetail]);
 
   const topPlayers = [...activePlayers]
     .sort((a, b) => (b.PTS ?? 0) - (a.PTS ?? 0) || (b.MIN ?? 0) - (a.MIN ?? 0))
@@ -300,9 +272,7 @@ function FinalsGameCard({
                 {game.HOME_TEAM_ABBREVIATION}
               </p>
             </div>
-            <div className="team-ring" style={{ borderColor: homeFocused ? homePal.border : undefined }}>
-              {game.HOME_TEAM_ABBREVIATION}
-            </div>
+            <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={homeName} size={54} fallbackClassName="!text-[10px]" />
           </div>
           <div className="mt-4 flex items-end justify-between gap-3">
             <div className="flex items-end gap-3">
@@ -368,9 +338,7 @@ function FinalsGameCard({
                 {game.AWAY_TEAM_ABBREVIATION}
               </p>
             </div>
-            <div className="team-ring" style={{ borderColor: awayFocused ? awayPal.border : undefined }}>
-              {game.AWAY_TEAM_ABBREVIATION}
-            </div>
+            <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={awayName} size={54} fallbackClassName="!text-[10px]" />
           </div>
           <div className="mt-4 flex items-end justify-between gap-3">
             <div className="flex items-end gap-3">
@@ -472,11 +440,9 @@ function FinalsGameCard({
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
                     <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400">Leading five</p>
                     <div className="mt-3 space-y-2">
-                      {topPlayers.slice(0, 5).map((player, idx) => (
+                      {topPlayers.slice(0, 5).map((player) => (
                         <div key={player.PLAYER_ID} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-[10px] font-black text-slate-500">
-                            {idx + 1}
-                          </div>
+                          <PlayerPhoto playerId={player.PLAYER_ID} name={player.PLAYER_NAME} size={28} />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-bold text-slate-800">{player.PLAYER_NAME}</p>
                             <p className="text-[10px] uppercase tracking-widest text-slate-400">
@@ -534,6 +500,39 @@ function FinalsGameCard({
                       </table>
                     </div>
                   </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400">Roster view</p>
+                        <p className="text-sm font-bold text-slate-700">{activeTeamAbbr} player log</p>
+                      </div>
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        {rosterPlayers.length} players
+                      </span>
+                    </div>
+                    <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                      {rosterPlayers.map((player: any, idx: number) => (
+                        <div key={player.PLAYER_ID ?? `${activeTeamAbbr}-${player.PLAYER_NAME}-${idx}`} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <PlayerPhoto playerId={player.PLAYER_ID} name={player.PLAYER_NAME} size={30} />
+                            <div className="min-w-0">
+                            <p className="truncate text-[11px] font-bold text-slate-800">{player.PLAYER_NAME}</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400">
+                              {player.MIN != null ? `${Math.round(player.MIN)} min` : "—"} · {player.REB != null ? `${Math.round(player.REB)} reb` : "—"}
+                            </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-black text-[#c9082a]">{fmtInt(player.PTS)}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                              {player.PLUS_MINUS != null ? (player.PLUS_MINUS > 0 ? `+${player.PLUS_MINUS}` : player.PLUS_MINUS) : "—"}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
@@ -562,6 +561,7 @@ function FinalsGameCard({
 export default function Schedule() {
   const [games, setGames] = useState<ScheduleGame[]>([]);
   const [playerBS, setPlayerBS] = useState<PlayerBoxScore[]>([]);
+  const [gameDetails, setGameDetails] = useState<GameDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeLens, setActiveLens] = useState<Lens>("series");
@@ -575,16 +575,8 @@ export default function Schedule() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/data/schedule.json").then((r) => {
-        if (!r.ok) throw new Error("schedule.json");
-        return r.json();
-      }),
-      fetch("/data/upcoming_games_context.json").then((r) => {
-        if (!r.ok) throw new Error("upcoming_games_context.json");
-        return r.json();
-      }),
-      fetch("/data/game_results.json").then((r) => {
-        if (!r.ok) throw new Error("game_results.json");
+      fetch("/data/games.json").then((r) => {
+        if (!r.ok) throw new Error("games.json");
         return r.json();
       }),
       fetch("/data/player_boxscores.json").then((r) => {
@@ -592,52 +584,24 @@ export default function Schedule() {
         return r.json();
       }),
     ])
-      .then(([schedule, upcoming, results, playerBoxscores]) => {
-        const scheduleRows = schedule as ScheduleGame[];
-        const upcomingRows = upcoming as ScheduleGame[];
-        const resultRows = results as ScheduleGame[];
+      .then(([games, playerBoxscores]) => {
+        const scheduleRows = games as ScheduleGame[];
         const playerRows = playerBoxscores as PlayerBoxScore[];
+        const detailRows = scheduleRows.map((row) => row.game_detail).filter(Boolean) as GameDetail[];
 
-        const upcomingMap = new Map(upcomingRows.map((row) => [row.GAME_ID, row]));
-        const resultMap = new Map(resultRows.map((row) => [row.GAME_ID, row]));
-        const resultTeamNameMap = new Map<string, string>();
-        resultRows.forEach((row) => {
-          if (row.HOME_TEAM_ABBREVIATION && row.HOME_TEAM_NAME) {
-            resultTeamNameMap.set(row.HOME_TEAM_ABBREVIATION, row.HOME_TEAM_NAME);
-          }
-          if (row.AWAY_TEAM_ABBREVIATION && row.AWAY_TEAM_NAME) {
-            resultTeamNameMap.set(row.AWAY_TEAM_ABBREVIATION, row.AWAY_TEAM_NAME);
-          }
-        });
-
-        const upcomingIds = new Set(upcomingRows.map((row) => row.GAME_ID));
         const merged = scheduleRows
           .filter((row) => isFinalsGame(row.GAME_ID, row.SEASON_TYPE))
           .map((row) => {
-            const result = resultMap.get(row.GAME_ID);
-            const context = upcomingMap.get(row.GAME_ID);
             return {
               ...row,
-              ...result,
-              ...context,
-              HOME_TEAM_NAME: row.HOME_TEAM_NAME ?? resultTeamNameMap.get(row.HOME_TEAM_ABBREVIATION) ?? context?.HOME_TEAM_NAME ?? null,
-              AWAY_TEAM_NAME: row.AWAY_TEAM_NAME ?? resultTeamNameMap.get(row.AWAY_TEAM_ABBREVIATION) ?? context?.AWAY_TEAM_NAME ?? null,
-              _isUpcoming: upcomingIds.has(row.GAME_ID),
+              _isUpcoming: !(row.GAME_STATUS === "Final" || row.HOME_SCORE != null || row.AWAY_SCORE != null),
             };
           });
 
-        const extraUpcoming = upcomingRows
-          .filter((row) => isFinalsGame(row.GAME_ID, row.SEASON_TYPE) && !merged.some((game) => game.GAME_ID === row.GAME_ID))
-          .map((row) => ({
-            ...row,
-            HOME_TEAM_NAME: row.HOME_TEAM_NAME ?? resultTeamNameMap.get(row.HOME_TEAM_ABBREVIATION) ?? null,
-            AWAY_TEAM_NAME: row.AWAY_TEAM_NAME ?? resultTeamNameMap.get(row.AWAY_TEAM_ABBREVIATION) ?? null,
-            _isUpcoming: true,
-          }));
-
-        const finals = [...merged, ...extraUpcoming].sort((a, b) => a.GAME_DATE.localeCompare(b.GAME_DATE) || a.GAME_ID.localeCompare(b.GAME_ID));
+        const finals = merged.sort((a, b) => a.GAME_DATE.localeCompare(b.GAME_DATE) || a.GAME_ID.localeCompare(b.GAME_ID));
         setGames(finals);
         setPlayerBS(playerRows);
+        setGameDetails(detailRows);
         setLoading(false);
       })
       .catch((e) => {
@@ -874,6 +838,7 @@ export default function Schedule() {
                 index={index}
                 focusTeam={activeLens === "series" ? null : activeLens}
                 players={playerBS}
+                gameDetail={gameDetails.find((d) => d.game_id === game.GAME_ID) ?? null}
                 onPredict={handlePredict}
               />
             ))}

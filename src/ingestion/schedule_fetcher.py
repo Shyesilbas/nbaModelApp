@@ -11,11 +11,12 @@ from datetime import datetime, date
 from typing import List, Dict, Any, Optional, Tuple
 
 from src.ingestion.nba_api_client import call_nba_api
+from scripts.season_utils import get_default_season
 
 logger = logging.getLogger("ScheduleFetcher")
 
-RAW_SCHEDULE_CSV = "data/raw/schedule/nba_schedule_2025_26.csv"
-RAW_FINALS_CSV = "data/raw/schedule/nba_finals_upcoming_2025_26.csv"
+RAW_SCHEDULE_CSV = "data/raw/schedule/nba_schedule.csv"
+RAW_FINALS_CSV = "data/raw/schedule/nba_finals_upcoming.csv"
 
 SCHEDULE_COLUMNS = [
     'GAME_ID', 'GAME_DATE', 'HOME_TEAM_ABBREVIATION', 'AWAY_TEAM_ABBREVIATION', 
@@ -28,13 +29,14 @@ FINALS_COLUMNS = [
     'SEASON_TYPE', 'IS_PLAYOFF'
 ]
 
-def fetch_schedule_for_season(season: str = "2025-26") -> pd.DataFrame:
+def fetch_schedule_for_season(season: str = None) -> pd.DataFrame:
     """
     Fetches the schedule for a given season using ScheduleLeagueV2 and maps it
     to the project's unified schema.
     """
     from nba_api.stats.endpoints import scheduleleaguev2
     
+    season = season or get_default_season()
     try:
         logger.info(f"Fetching full league schedule for season {season}...")
         sl = call_nba_api(scheduleleaguev2.ScheduleLeagueV2, season=season)
@@ -163,7 +165,7 @@ def fetch_scoreboard_by_date(game_date: date) -> List[Dict[str, Any]]:
         
     return games_list
 
-def fetch_upcoming_or_recent_games(date_range: Tuple[date, date], season: str = "2025-26") -> pd.DataFrame:
+def fetch_upcoming_or_recent_games(date_range: Tuple[date, date], season: str = None) -> pd.DataFrame:
     """
     Retrieves schedule records within a specific date range from the full season schedule.
     """
@@ -176,7 +178,7 @@ def fetch_upcoming_or_recent_games(date_range: Tuple[date, date], season: str = 
     df_filtered = df_full[(df_full["GAME_DATE_DT"] >= start_date) & (df_full["GAME_DATE_DT"] <= end_date)]
     return df_filtered.drop(columns=["GAME_DATE_DT"])
 
-def update_schedule_files(season: str = "2025-26") -> Tuple[int, int]:
+def update_schedule_files(season: str = None) -> Tuple[int, int]:
     """
     Refreshes the local schedule files by querying the NBA API.
     Saves:
@@ -186,6 +188,7 @@ def update_schedule_files(season: str = "2025-26") -> Tuple[int, int]:
     Returns (num_schedule_rows, num_finals_rows).
     """
     from scripts.data_paths import get_data_paths
+    season = season or get_default_season()
     paths = get_data_paths(season)
     raw_schedule_csv = paths.raw_schedule
     raw_finals_csv = paths.raw_finals_schedule

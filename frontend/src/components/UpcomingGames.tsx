@@ -30,6 +30,8 @@ interface UpcomingGame {
   AWAY_SERIES_WINS: number | null;
   IS_ELIMINATION_GAME: boolean | null;
   CAN_CLINCH_SERIES: boolean | null;
+  HOME_SCORE?: number | null;
+  AWAY_SCORE?: number | null;
   HOME_TEAM_WINRATE_LAST_5: number | null;
   HOME_TEAM_WINRATE_LAST_10: number | null;
   HOME_TEAM_PTS_LAST_5: number | null;
@@ -383,13 +385,13 @@ export default function UpcomingGames() {
   const [predictionError, setPredictionError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/data/upcoming_games_context.json")
+    fetch("/data/games.json")
       .then((r) => {
-        if (!r.ok) throw new Error("Failed to load upcoming games data.");
+        if (!r.ok) throw new Error("Failed to load games data.");
         return r.json();
       })
       .then((data) => {
-        setGames(data);
+        setGames(data.filter((g: UpcomingGame) => !(g.GAME_STATUS === "Final" || g.HOME_SCORE != null || g.AWAY_SCORE != null)));
         setLoading(false);
       })
       .catch((e) => {
@@ -464,7 +466,7 @@ export default function UpcomingGames() {
           </h1>
         </div>
         <p className="text-sm text-slate-500 m-0">
-          2025-26 NBA Season · Schedule &amp; Context Layer
+          Current NBA season · Schedule &amp; Context Layer
         </p>
       </div>
 
@@ -535,13 +537,13 @@ export default function UpcomingGames() {
       <div className="rounded-xl bg-slate-50/50 border border-slate-200/60 px-5 py-4 text-[10px] text-slate-500 font-mono space-y-1 shadow-2xs">
         <p className="font-bold text-slate-700 text-xs not-italic">Data Sources</p>
         <p>
-          Schedule: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">data/raw/schedule/nba_schedule_2025_26.csv</code>{" "}
+          Schedule: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">season-aware schedule source</code>{" "}
           (played games) +{" "}
-          <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">data/raw/schedule/nba_finals_upcoming_2025_26.csv</code>{" "}
+          <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">season-aware Finals source</code>{" "}
           (manually corrected)
         </p>
         <p>
-          Team context: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">data/processed/team_model_ready_v2_2025_26.csv</code>{" "}
+          Team context: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">season-aware V2 team context</code>{" "}
           — last available row per team
         </p>
         <p>

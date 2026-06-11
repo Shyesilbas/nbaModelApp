@@ -93,12 +93,12 @@
       "SEASON_TYPE": "Playoffs"
     },
     {
-      "GAME_ID": "0022500127",
-      "GAME_DATE": "2025-10-28",
-      "HOME_TEAM": "GSW",
-      "AWAY_TEAM": "LAC",
-      "HOME_SCORE": 98,
-      "AWAY_SCORE": 79,
+      "GAME_ID": "0022500397",
+      "GAME_DATE": "2025-12-21",
+      "HOME_TEAM": "BKN",
+      "AWAY_TEAM": "TOR",
+      "HOME_SCORE": 96,
+      "AWAY_SCORE": 81,
       "TOTAL_PTS": 177,
       "SEASON_TYPE": "Regular Season"
     }
@@ -129,20 +129,20 @@
       "GAME_ID": "0022500013"
     },
     {
-      "PLAYER_NAME": "Nikola Joki\u0107",
-      "TEAM": "DEN",
-      "MATCHUP": "DEN @ LAC",
-      "GAME_DATE": "2025-11-12",
+      "PLAYER_NAME": "Anthony Edwards",
+      "TEAM": "MIN",
+      "MATCHUP": "MIN @ SAS",
+      "GAME_DATE": "2026-01-17",
       "VALUE": 55,
-      "GAME_ID": "0022500224"
+      "GAME_ID": "0022500598"
     },
     {
-      "PLAYER_NAME": "Shai Gilgeous-Alexander",
-      "TEAM": "OKC",
-      "MATCHUP": "OKC @ IND",
-      "GAME_DATE": "2025-10-23",
+      "PLAYER_NAME": "James Harden",
+      "TEAM": "LAC",
+      "MATCHUP": "LAC @ CHA",
+      "GAME_DATE": "2025-11-22",
       "VALUE": 55,
-      "GAME_ID": "0022500005"
+      "GAME_ID": "0022500268"
     }
   ],
   "top_assists": [
@@ -197,14 +197,6 @@
       "GAME_ID": "0022500441"
     },
     {
-      "PLAYER_NAME": "Andre Drummond",
-      "TEAM": "PHI",
-      "MATCHUP": "PHI vs. MIA",
-      "GAME_DATE": "2025-11-23",
-      "VALUE": 24,
-      "GAME_ID": "0022500275"
-    },
-    {
       "PLAYER_NAME": "Victor Wembanyama",
       "TEAM": "SAS",
       "MATCHUP": "SAS @ OKC",
@@ -213,20 +205,28 @@
       "GAME_ID": "0042500311"
     },
     {
-      "PLAYER_NAME": "Karl-Anthony Towns",
-      "TEAM": "NYK",
-      "MATCHUP": "NYK @ TOR",
-      "GAME_DATE": "2026-01-28",
-      "VALUE": 22,
-      "GAME_ID": "0022500675"
+      "PLAYER_NAME": "Andre Drummond",
+      "TEAM": "PHI",
+      "MATCHUP": "PHI vs. MIA",
+      "GAME_DATE": "2025-11-23",
+      "VALUE": 24,
+      "GAME_ID": "0022500275"
     },
     {
-      "PLAYER_NAME": "Oscar Tshiebwe",
-      "TEAM": "UTA",
-      "MATCHUP": "UTA vs. MEM",
-      "GAME_DATE": "2026-04-10",
+      "PLAYER_NAME": "Mitchell Robinson",
+      "TEAM": "NYK",
+      "MATCHUP": "NYK @ IND",
+      "GAME_DATE": "2026-03-13",
       "VALUE": 22,
-      "GAME_ID": "0022501181"
+      "GAME_ID": "0022500962"
+    },
+    {
+      "PLAYER_NAME": "Derik Queen",
+      "TEAM": "NOP",
+      "MATCHUP": "NOP @ MIN",
+      "GAME_DATE": "2026-04-12",
+      "VALUE": 22,
+      "GAME_ID": "0022501195"
     }
   ]
 }

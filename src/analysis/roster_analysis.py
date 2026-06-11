@@ -4,6 +4,7 @@ import numpy as np
 import unicodedata
 from typing import Tuple
 from src.processing.cleaning import clean_minutes_column
+from scripts.season_utils import get_default_season
 
 def normalize_player_name(name: str) -> str:
     """
@@ -32,7 +33,7 @@ def _df_to_markdown_simple(df: pd.DataFrame) -> str:
     return header_str + sep_str + "".join(row_strs)
 
 def run_roster_analysis(
-    player_games_path: str = "data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv",
+    player_games_path: str = None,
     output_dir: str = "outputs/analysis",
     data_dir: str = "data/analysis"
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -54,6 +55,10 @@ def run_roster_analysis(
     print("============================================================\n")
     
     # Load player logs
+    if player_games_path is None:
+        from scripts.data_paths import get_data_paths
+
+        player_games_path = get_data_paths(get_default_season()).player_games_raw
     if not os.path.exists(player_games_path):
         raise FileNotFoundError(f"Player games dataset not found at: {player_games_path}")
         
@@ -207,7 +212,7 @@ def run_roster_analysis(
     # Roster Report
     roster_report_path = os.path.join(output_dir, "team_roster_report.md")
     with open(roster_report_path, "w") as f:
-        f.write("# NBA Team Rosters & Performance Discovery Report (2025-26)\n\n")
+        f.write(f"# NBA Team Rosters & Performance Discovery Report ({get_default_season()})\n\n")
         f.write("This report lists all players that appeared for each team, sorted by average minutes played.\n\n")
         
         sorted_teams = sorted(roster_df["TEAM_ABBREVIATION"].unique())
@@ -232,7 +237,7 @@ def run_roster_analysis(
     # Core Player Report
     core_report_path = os.path.join(output_dir, "core_player_report.md")
     with open(core_report_path, "w") as f:
-        f.write("# NBA Team Core & Secondary Player Discovery Report (2025-26)\n\n")
+        f.write(f"# NBA Team Core & Secondary Player Discovery Report ({get_default_season()})\n\n")
         f.write("This report categorizes players for each team based on an automated Importance Score:\n")
         f.write("$$\\text{Importance Score} = (\\text{AVG\\_MIN} \\times 0.5) + (\\text{AVG\\_PTS} \\times 1.0) + (\\text{AVG\\_AST} \\times 0.8) + (\\text{AVG\\_REB} \\times 0.6)$$\n\n")
         

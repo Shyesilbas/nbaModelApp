@@ -1,38 +1,38 @@
 {
-  "total_team_game_rows": 2636,
+  "total_team_game_rows": 2640,
   "team_games_regular": 2460,
   "team_games_playin": 12,
   "team_games_playoffs": 160,
-  "team_games_finals": 4,
-  "total_player_game_rows": 27902,
+  "team_games_finals": 8,
+  "total_player_game_rows": 27943,
   "player_games_regular": 25923,
   "player_games_playin": 126,
   "player_games_playoffs": 1834,
-  "player_games_finals": 19,
+  "player_games_finals": 60,
   "total_teams": 30,
   "total_players": 516,
   "v1_rows": 2592,
   "v1_features": 9,
-  "v2_rows": 1758,
+  "v2_rows": 1762,
   "v2_features": 39,
   "v3_rows": 2590,
   "v3_features": 55,
   "files_status": [
     {
       "name": "Raw Team Game Logs",
-      "path": "data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv",
+      "path": "/Users/serhat/agProjects/nbaModelApp/data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv",
       "exists": true,
-      "rows": 2636,
+      "rows": 2640,
       "columns": 29,
-      "size_kb": 405.38
+      "size_kb": 405.94
     },
     {
       "name": "Raw Player Game Logs",
-      "path": "data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv",
+      "path": "/Users/serhat/agProjects/nbaModelApp/data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv",
       "exists": true,
-      "rows": 27902,
+      "rows": 27943,
       "columns": 29,
-      "size_kb": 4591.49
+      "size_kb": 4488.86
     },
     {
       "name": "Team Rosters",
@@ -84,11 +84,11 @@
     },
     {
       "name": "V2 Model-Ready Dataset",
-      "path": "data/processed/team_model_ready_v2_2025_26.csv",
+      "path": "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v2_2025_26.csv",
       "exists": true,
-      "rows": 1758,
+      "rows": 1762,
       "columns": 46,
-      "size_kb": 471.99
+      "size_kb": 472.98
     },
     {
       "name": "V3 Model-Ready Dataset",
@@ -100,7 +100,7 @@
     },
     {
       "name": "Combined Schedule",
-      "path": "data/processed/schedule_combined_2025_26.csv",
+      "path": "/Users/serhat/agProjects/nbaModelApp/data/processed/schedule_combined_2025_26.csv",
       "exists": true,
       "rows": 1323,
       "columns": 17,
@@ -108,11 +108,11 @@
     },
     {
       "name": "Upcoming Games Context",
-      "path": "data/processed/upcoming_games_context_2025_26.csv",
+      "path": "/Users/serhat/agProjects/nbaModelApp/data/processed/upcoming_games_context_2025_26.csv",
       "exists": true,
-      "rows": 5,
+      "rows": 3,
       "columns": 33,
-      "size_kb": 2.41
+      "size_kb": 1.68
     }
   ]
 }

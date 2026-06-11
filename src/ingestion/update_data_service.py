@@ -1,12 +1,14 @@
 from typing import List
 from datetime import date
 import os
+import pandas as pd
 
 from src.ingestion.schedule_fetcher import update_schedule_files
 from src.validation.data_freshness_service import DataFreshnessService
 from src.ingestion.team_games_fetcher import fetch_missing_team_games_by_game_ids, append_team_games_to_raw_dataset
 from src.ingestion.player_games_fetcher import fetch_missing_player_games_by_game_ids, append_player_games_to_raw_dataset
-from scripts.export_frontend_data import export_data
+from src.orchestration import PipelineRunner
+from scripts.season_utils import get_default_season
 
 
 class UpdateDataService:
@@ -26,7 +28,8 @@ class UpdateDataService:
 
         # Step 1: Refresh schedule
         print("Step 1: Refreshing league schedule from NBA API...")
-        s_count, f_count = update_schedule_files(season=self.season or "2025-26")
+        season_str = self.season or get_default_season()
+        s_count, f_count = update_schedule_files(season=season_str)
         print(f"Schedule refreshed: {s_count} games, {f_count} Finals games.\n")
 
         # Step 2: Load local datasets and detect missing completed games
@@ -38,7 +41,6 @@ class UpdateDataService:
         from src.ingestion.team_games_fetcher import fetch_team_games_for_season
         from src.ingestion.player_games_fetcher import fetch_player_games_for_season
 
-        season_str = self.season or "2025-26"
         if df_team_pre is None or df_team_pre.empty:
             print(f"Team raw games empty/missing. Performing bulk fetch for season {season_str}...")
             bulk_team_df = fetch_team_games_for_season(season=season_str)
@@ -92,7 +94,7 @@ class UpdateDataService:
             try:
                 df_new_team = fetch_missing_team_games_by_game_ids(
                     missing_game_ids,
-                    season=self.season or "2025-26",
+                    season=season_str,
                     schedule_df=df_schedule,
                     max_workers=self.fetch_workers
                 )
@@ -121,7 +123,7 @@ class UpdateDataService:
             try:
                 df_new_player = fetch_missing_player_games_by_game_ids(
                     missing_game_ids,
-                    season=self.season or "2025-26",
+                    season=season_str,
                     schedule_df=df_schedule
                 )
                 if not df_new_player.empty:
@@ -150,24 +152,33 @@ class UpdateDataService:
 
         rebuilds_ran = not self.skip_post_update_rebuilds
         if rebuilds_ran:
-            # Step 6: Re-run feature pipeline sync and other rebuilds by invoking main's functions
+            runner = PipelineRunner(
+                season=self.season,
+                raw_team_dir=self.raw_team_dir,
+                raw_player_dir=self.raw_player_dir,
+            )
+
             print("\nStep 6: Re-running feature pipeline sync...")
-            from main import _run_sync_pipeline, _run_game_results_regeneration, _run_build_enhanced_v2, _run_schedule_context_pipeline
+            runner.sync_features()
 
-            _run_sync_pipeline(args)
-
-            # Step 7: Regenerate game results
-            print("\nStep 7: Normalizing matchups and regenerating game results summary...")
-            _run_game_results_regeneration()
+            # Step 7: Regenerate game results and frontend detailed datasets (game_details.json)
+            print("\nStep 7: Normalizing matchups and regenerating game results summary & details...")
+            from src.ingestion.boxscore_service import BoxscoreService
+            svc = BoxscoreService(save=True, season=self.season, output_scope=runner.output_scope)
+            svc.run_and_export()
 
             # Step 8: Rebuild enhanced V2 dataset
             print("\nStep 8: Rebuilding enhanced V2 dataset...")
-            _run_build_enhanced_v2(args)
+            v2_df, _ = runner.build_model_ready_v2()
+            out_root = "data/experimental" if runner.output_scope == "experimental" else "data/processed"
+            os.makedirs(out_root, exist_ok=True)
+            v2_path = os.path.join(out_root, f"team_model_ready_v2_{runner.token}.csv")
+            v2_df.to_csv(v2_path, index=False)
+            v2_df.to_parquet(v2_path.replace(".csv", ".parquet"), index=False, engine="pyarrow")
 
             # Step 9: Export schedule/context and frontend data
             print("\nStep 9: Exporting schedule context and frontend datasets...")
-            _run_schedule_context_pipeline()
-            export_data()
+            runner.build_schedule_context(save=True)
         else:
             print("\nSteps 6-9: Skipped heavy rebuilds (--skip-post-update-rebuilds enabled).")
 
@@ -181,16 +192,18 @@ class UpdateDataService:
         # Load V2 dataset stats and features counts
         post_v2_count = 0
         try:
-            if os.path.exists("data/processed/team_model_ready_v2_2025_26.csv"):
-                df_v2 = pd.read_csv("data/processed/team_model_ready_v2_2025_26.csv")
+            v2_path = PipelineRunner(season=self.season or season_str).paths.team_model_ready_v2
+            if os.path.exists(v2_path):
+                df_v2 = pd.read_csv(v2_path)
                 post_v2_count = len(df_v2)
         except:
             pass
 
         post_feat_team = 0
         try:
-            if os.path.exists("data/features/team_games_features_2025_26.csv"):
-                df_feat = pd.read_csv("data/features/team_games_features_2025_26.csv")
+            feat_path = PipelineRunner(season=self.season or season_str).paths.team_features
+            if os.path.exists(feat_path):
+                df_feat = pd.read_csv(feat_path)
                 post_feat_team = len(df_feat)
         except:
             pass

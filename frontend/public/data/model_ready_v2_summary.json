@@ -1,5 +1,5 @@
 {
-  "row_count": 1758,
+  "row_count": 1762,
   "metadata_columns": [
     "TEAM_ID",
     "TEAM_ABBREVIATION",
@@ -52,14 +52,14 @@
   ],
   "feature_count": 38,
   "target_distribution": {
-    "1": 879,
-    "0": 879
+    "1": 881,
+    "0": 881
   },
   "leakage_warnings": [
     "V2 dataset is 100% leakage-free. All rolling averages use shift(1) and do not contain information from the game being predicted.",
     "Defensive allowed points, split home/away form, and head-to-head metrics are computed strictly using historical games prior to the matchup date."
   ],
-  "latest_game_date": "2026-06-05",
+  "latest_game_date": "2026-06-10",
   "earliest_game_date": "2025-10-29",
   "sync_status": "SYNCHRONIZED"
 }

@@ -1,67 +1,47 @@
-import { useEffect, useState, useMemo, type ReactNode } from "react";
-import {
-  Trophy,
-  Search,
-  ChevronDown,
-  ChevronUp,
-  BarChart2,
-  Users,
-  AlertTriangle,
-  SortAsc,
-  SortDesc,
-  Flame,
-  Snowflake,
-  Sparkles,
-  Award,
-  Calendar,
-} from "lucide-react";
-
-// ─────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────
-interface GameResult {
-  GAME_ID: string;
-  GAME_DATE: string;
-  HOME_TEAM_ABBREVIATION: string;
-  HOME_TEAM_NAME: string | null;
-  HOME_SCORE: number;
-  AWAY_TEAM_ABBREVIATION: string;
-  AWAY_TEAM_NAME: string | null;
-  AWAY_SCORE: number;
-  WINNER_TEAM_ABBREVIATION: string;
-  LOSER_TEAM_ABBREVIATION: string;
-  SEASON_TYPE: string;
-  IS_PLAYOFF: boolean;
-  GAME_STATUS: string;
-  PLAYOFF_ROUND: string | null;
-  SERIES_GAME_NUMBER: number | null;
-  HOME_SERIES_WINS: number | null;
-  AWAY_SERIES_WINS: number | null;
-  IS_ELIMINATION_GAME: boolean | null;
-  CAN_CLINCH_SERIES: boolean | null;
-  WEEK?: number | null;
-}
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Trophy } from "lucide-react";
+import TeamLogo from "./TeamLogo";
+import PlayerPhoto from "./PlayerPhoto";
+import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 
 interface TeamBoxScore {
   GAME_ID: string;
-  GAME_DATE: string;
   TEAM_ABBREVIATION: string;
   TEAM_NAME: string | null;
   MATCHUP: string | null;
   WL: string | null;
+  PTS: number | null;
+  FGM?: number | null;
+  FGA?: number | null;
+  FG_PCT: number | null;
+  FG3M?: number | null;
+  FG3A?: number | null;
+  FG3_PCT: number | null;
+  FTM?: number | null;
+  FTA?: number | null;
+  FT_PCT: number | null;
+  REB: number | null;
+  AST: number | null;
+  TOV: number | null;
+  PLUS_MINUS: number | null;
+}
+
+interface PlayerBoxScore {
+  GAME_ID: string;
+  TEAM_ABBREVIATION: string;
+  PLAYER_ID: number;
+  PLAYER_NAME: string;
   MIN: number | null;
   PTS: number | null;
-  FGM: number | null;
-  FGA: number | null;
+  FGM?: number | null;
+  FGA?: number | null;
   FG_PCT: number | null;
-  FG3M: number | null;
-  FG3A: number | null;
+  FG3M?: number | null;
+  FG3A?: number | null;
   FG3_PCT: number | null;
-  FTM: number | null;
-  FTA: number | null;
+  FTM?: number | null;
+  FTA?: number | null;
   FT_PCT: number | null;
-  OREB: number | null;
-  DREB: number | null;
   REB: number | null;
   AST: number | null;
   STL: number | null;
@@ -71,1114 +51,665 @@ interface TeamBoxScore {
   PLUS_MINUS: number | null;
 }
 
-interface PlayerBoxScore {
-  GAME_ID: string;
-  GAME_DATE: string;
-  TEAM_ABBREVIATION: string;
-  PLAYER_ID: number;
-  PLAYER_NAME: string;
-  MIN: number | null;
-  PTS: number | null;
-  REB: number | null;
-  AST: number | null;
-  STL: number | null;
-  BLK: number | null;
-  TOV: number | null;
-  FGM: number | null;
-  FGA: number | null;
-  FG_PCT: number | null;
-  FG3M: number | null;
-  FG3A: number | null;
-  FG3_PCT: number | null;
-  FTM: number | null;
-  FTA: number | null;
-  FT_PCT: number | null;
-  PLUS_MINUS: number | null;
-  WL: string | null;
-}
-
-type SeasonFilter = "ALL" | "Regular Season" | "Playoffs" | "PlayIn";
-type DetailTab = "summary" | "teams" | "players" | "data";
-type TeamSide = "away" | "home";
-
-// ─────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────
 const fmtPct = (v: number | null) => (v != null ? `${(v * 100).toFixed(1)}%` : "—");
 const fmtInt = (v: number | null) => (v != null ? Math.round(v).toString() : "—");
-
-const seasonMeta = (type: string) => {
-  if (type === "Playoffs")       return { badge: "badge-playoff", card: "card-playoff" };
-  if (type === "PlayIn")         return { badge: "badge-playin",  card: "glass" };
-  return { badge: "badge-regular", card: "glass" };
-};
-
-const DETAIL_TABS: { key: DetailTab; label: string; icon: ReactNode }[] = [
-  { key: "summary", label: "Summary", icon: <Sparkles size={11} /> },
-  { key: "teams", label: "Teams", icon: <BarChart2 size={11} /> },
-  { key: "players", label: "Players", icon: <Users size={11} /> },
-  { key: "data", label: "Data", icon: <AlertTriangle size={11} /> },
-];
-
-const TEAM_SIDES: { key: TeamSide; label: string }[] = [
-  { key: "away", label: "Away" },
-  { key: "home", label: "Home" },
-];
-
-const fmtSigned = (v: number | null | undefined) =>
-  v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)}`;
-
+const fmtPair = (made: number | null | undefined, att: number | null | undefined) =>
+  made != null || att != null ? `${fmtInt(made ?? null)} / ${fmtInt(att ?? null)}` : "—";
 const fmtShortDate = (d: string) =>
-  new Date(d + "T12:00:00").toLocaleDateString("en-US", {
+  new Date(`${d}T12:00:00`).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
+    year: "numeric",
   });
 
-const getTeamSideConfig = (side: TeamSide) => ({
-  label: side === "home" ? "HOME" : "AWAY",
-  ringClass: side === "home" ? "team-ring-playoff" : "team-ring",
-  accent: side === "home" ? "#1d428a" : "#c9082a",
-  panel: side === "home" ? "border-[#1d428a]/20 bg-[#1d428a]/5" : "border-[#c9082a]/20 bg-[#c9082a]/5",
-});
-
-const compareBetter = (teamVal: number | null | undefined, oppVal: number | null | undefined, higherIsBetter = true) => {
-  const a = teamVal ?? 0;
-  const b = oppVal ?? 0;
-  if (a === b) return "text-slate-600";
-  const wins = higherIsBetter ? a > b : a < b;
-  return wins ? "text-slate-900 font-black" : "text-slate-300";
-};
+const fmtDateChip = (d: string) =>
+  new Date(`${d}T12:00:00`)
+    .toLocaleDateString("en-US", {
+      day: "numeric",
+      weekday: "short",
+    })
+    .replace(",", "")
+    .toUpperCase();
 
 const playerTeamFilter = (players: PlayerBoxScore[], abbr: string) =>
   players.filter((p) => p.TEAM_ABBREVIATION === abbr);
 
-// ─────────────────────────────────────────────────────────────
-// Sub-components
-// ─────────────────────────────────────────────────────────────
+const teamColor = (abbr: string) => (abbr === "BOS" ? "#1d428a" : abbr === "MIA" ? "#c9082a" : "#334155");
 
-function TeamCompareStrip({
-  home,
-  away,
-}: {
-  home: TeamBoxScore | null;
-  away: TeamBoxScore | null;
-}) {
-  if (!home || !away) {
-    return <p className="text-xs text-slate-500 text-center py-2">Team stats not loaded yet</p>;
-  }
+function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[12px] font-black uppercase tracking-[0.3em] text-slate-400">{title}</p>
+      {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+    </div>
+  );
+}
 
-  const rows = [
-    { label: "FG%", h: home.FG_PCT, a: away.FG_PCT, high: true, fmt: fmtPct },
-    { label: "3PT%", h: home.FG3_PCT, a: away.FG3_PCT, high: true, fmt: fmtPct },
-    { label: "FT%", h: home.FT_PCT, a: away.FT_PCT, high: true, fmt: fmtPct },
-    { label: "REB", h: home.REB, a: away.REB, high: true, fmt: fmtInt },
-    { label: "AST", h: home.AST, a: away.AST, high: true, fmt: fmtInt },
-    { label: "TOV", h: home.TOV, a: away.TOV, high: false, fmt: fmtInt },
-  ];
+function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "home" | "away" | "winner" }) {
+  const styles =
+    tone === "home"
+      ? "border-[#1d428a]/15 bg-[#1d428a]/8 text-[#1d428a]"
+      : tone === "away"
+        ? "border-[#c9082a]/15 bg-[#c9082a]/8 text-[#c9082a]"
+        : tone === "winner"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border-slate-200 bg-white text-slate-500";
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Team snapshot</p>
-          <p className="text-sm font-bold text-slate-700">Side-by-side box score edge</p>
+    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em] ${styles}`}>
+      {children}
+    </span>
+  );
+}
+
+function StatCard({ label, value, sublabel, accent }: { label: string; value: ReactNode; sublabel?: ReactNode; accent?: string }) {
+  return (
+    <div className="rounded-[20px] bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.1)]">
+      <p className="text-[12px] font-black uppercase tracking-[0.24em] text-slate-400">{label}</p>
+      <p className="mt-2 text-[42px] font-black leading-none text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: accent }}>
+        {value}
+      </p>
+      {sublabel && <div className="mt-2 text-sm text-slate-500">{sublabel}</div>}
+    </div>
+  );
+}
+
+function ComparisonRow({
+  label,
+  homeValue,
+  awayValue,
+  homePct,
+  awayPct,
+  homeLabel,
+  awayLabel,
+  homeColor,
+  awayColor,
+  higherIsBetter = true,
+}: {
+  label: string;
+  homeValue: number | null;
+  awayValue: number | null;
+  homePct: string;
+  awayPct: string;
+  homeLabel: string;
+  awayLabel: string;
+  homeColor: string;
+  awayColor: string;
+  higherIsBetter?: boolean;
+}) {
+  const h = homeValue ?? 0;
+  const a = awayValue ?? 0;
+  const max = Math.max(Math.abs(h), Math.abs(a), 1);
+  const homeWinner = higherIsBetter ? h > a : h < a;
+  const awayWinner = higherIsBetter ? a > h : a < h;
+
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_96px_minmax(0,1fr)] items-center gap-3 rounded-2xl px-3 py-3 transition hover:bg-slate-50">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <span className={`text-sm font-bold ${homeWinner ? "text-slate-900" : "text-slate-500"}`}>{homeLabel}</span>
+          <span className="text-sm font-black tabular-nums text-slate-900">{homePct}</span>
         </div>
-        <div className="text-[10px] text-slate-400 font-semibold">
-          Better side is highlighted
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(Math.abs(h) / max) * 100}%`, backgroundColor: homeColor }} />
         </div>
       </div>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-slate-50">
-              <th className="text-right pb-2 pr-3 pt-2 text-[9px] font-black text-[#1d428a] uppercase tracking-widest w-[38%]">
-                {home.TEAM_ABBREVIATION}
-              </th>
-              <th className="pb-2 pt-2 text-center text-[9px] font-semibold text-slate-400 w-[24%]">Metric</th>
-              <th className="text-left pb-2 pl-3 pt-2 text-[9px] font-black text-[#c9082a] uppercase tracking-widest w-[38%]">
-                {away.TEAM_ABBREVIATION}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ label, h, a, high, fmt }) => (
-              <tr key={label} className="border-b border-slate-100 last:border-0">
-                <td className={`stat-cell text-right pr-3 ${compareBetter(h, a, high)}`}>
-                  {fmt(h)}
-                </td>
-                <td className="stat-cell text-center text-[9px] text-slate-400 font-semibold uppercase tracking-wider">
-                  {label}
-                </td>
-                <td className={`stat-cell text-left pl-3 ${compareBetter(a, h, high)}`}>
-                  {fmt(a)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="text-center text-[12px] font-black uppercase tracking-[0.24em] text-slate-400">{label}</div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <span className={`text-sm font-bold ${awayWinner ? "text-slate-900" : "text-slate-500"}`}>{awayLabel}</span>
+          <span className="text-sm font-black tabular-nums text-slate-900">{awayPct}</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(Math.abs(a) / max) * 100}%`, backgroundColor: awayColor }} />
+        </div>
       </div>
     </div>
   );
 }
 
-function TeamDetailCard({
+function TeamCompactHeader({
   team,
-  opponent,
+  score,
+  abbr,
   side,
-  game,
+  winner,
 }: {
-  team: TeamBoxScore | null;
-  opponent: TeamBoxScore | null;
-  side: TeamSide;
-  game: GameResult;
+  team: string | null | undefined;
+  score: number | null | undefined;
+  abbr: string;
+  side: "home" | "away";
+  winner: boolean;
 }) {
-  if (!team) {
-    return <p className="text-xs text-slate-500 text-center py-3">Team box score not available</p>;
-  }
-
-  const cfg = getTeamSideConfig(side);
-  const isWinner = game.WINNER_TEAM_ABBREVIATION === team.TEAM_ABBREVIATION;
-
-  const statCards = [
-    { label: "PTS", value: fmtInt(team.PTS), accent: "text-slate-900" },
-    { label: "FG%", value: fmtPct(team.FG_PCT), accent: "text-slate-900" },
-    { label: "REB", value: fmtInt(team.REB), accent: "text-slate-900" },
-    { label: "AST", value: fmtInt(team.AST), accent: "text-slate-900" },
-    { label: "TOV", value: fmtInt(team.TOV), accent: "text-slate-900" },
-    { label: "+/-", value: fmtSigned(team.PLUS_MINUS), accent: isWinner ? "text-emerald-600" : "text-rose-600" },
-  ];
-
   return (
-    <div className={`rounded-2xl border ${cfg.panel} bg-white p-4 shadow-sm`}>
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className={cfg.ringClass} style={{ width: 48, height: 48, fontSize: 15 }}>
-            {team.TEAM_ABBREVIATION}
-          </div>
+    <div className={`flex items-center gap-4 rounded-[24px] p-5 ${winner ? "bg-slate-900 text-white" : "bg-white text-slate-900"} shadow-[0_12px_30px_rgba(15,23,42,0.08)]`}>
+      {side === "away" && <TeamLogo abbr={abbr} name={team} size={64} />}
+      <div className="min-w-0 flex-1">
+        <p className={`text-[12px] font-black uppercase tracking-[0.28em] ${winner ? "text-white/60" : "text-slate-400"}`}>{side}</p>
+        <p className="truncate text-xl font-black uppercase tracking-tight" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+          {team ?? abbr}
+        </p>
+      </div>
+      <div className="text-right">
+        <p className="text-[64px] font-black leading-none tabular-nums" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+          {score ?? "—"}
+        </p>
+      </div>
+      {side === "home" && <TeamLogo abbr={abbr} name={team} size={64} />}
+    </div>
+  );
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  activeKey,
+  direction,
+  onClick,
+}: {
+  label: string;
+  sortKey: string;
+  activeKey: string;
+  direction: "asc" | "desc";
+  onClick: () => void;
+}) {
+  const active = activeKey === sortKey;
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.22em] transition ${active ? "bg-slate-900 text-white" : "text-slate-400 hover:bg-slate-100 hover:text-slate-700"}`}
+    >
+      {label}
+      {active && (direction === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+    </button>
+  );
+}
+
+function PlayerRow({ p }: { p: PlayerBoxScore }) {
+  return (
+    <tr className="border-t border-slate-100 transition hover:bg-slate-50/80">
+      <td className="sticky left-0 z-10 bg-inherit px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME} size={28} />
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-base font-black text-slate-900 tracking-tight" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                {team.TEAM_ABBREVIATION}
-              </h3>
-              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${isWinner ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-50 border-slate-200 text-slate-500"}`}>
-                {isWinner ? "Winner" : "Loss"}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 truncate">{team.TEAM_NAME ?? team.TEAM_ABBREVIATION}</p>
-            <p className="text-[10px] font-semibold text-slate-400">{team.MATCHUP}</p>
+            <p className="truncate text-sm font-semibold text-slate-900">{p.PLAYER_NAME}</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{p.TEAM_ABBREVIATION}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-3xl font-black text-slate-900 leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-            {team.PTS}
-          </p>
-          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Points</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-4">
-        {statCards.map((s) => (
-          <div key={s.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
-            <p className={`text-sm font-black ${s.accent}`}>{s.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-xl border border-slate-200 px-3 py-2">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Shooting</p>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-slate-600">FG</span>
-            <span className="font-bold">{fmtPct(team.FG_PCT)}</span>
-          </div>
-          <div className="flex items-center justify-between mt-0.5">
-            <span className="text-slate-600">3P</span>
-            <span className="font-bold">{fmtPct(team.FG3_PCT)}</span>
-          </div>
-          <div className="flex items-center justify-between mt-0.5">
-            <span className="text-slate-600">FT</span>
-            <span className="font-bold">{fmtPct(team.FT_PCT)}</span>
-          </div>
-        </div>
-        <div className="rounded-xl border border-slate-200 px-3 py-2">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Rebounds & Defense</p>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-slate-600">OREB / DREB</span>
-            <span className="font-bold">{fmtInt(team.OREB)} / {fmtInt(team.DREB)}</span>
-          </div>
-          <div className="flex items-center justify-between mt-0.5">
-            <span className="text-slate-600">STL / BLK</span>
-            <span className="font-bold">{fmtInt(team.STL)} / {fmtInt(team.BLK)}</span>
-          </div>
-          <div className="flex items-center justify-between mt-0.5">
-            <span className="text-slate-600">TO / PF</span>
-            <span className="font-bold">{fmtInt(team.TOV)} / {fmtInt(team.PF)}</span>
-          </div>
-        </div>
-      </div>
-
-      {opponent && (
-        <div className="mt-4 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-500">
-          <span className="font-bold text-slate-700">{team.TEAM_ABBREVIATION}</span> vs <span className="font-bold text-slate-700">{opponent.TEAM_ABBREVIATION}</span>{" "}
-          | margin {fmtSigned(team.PLUS_MINUS)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PlayerTable({
-  players,
-  teamLabel,
-}: {
-  players: PlayerBoxScore[];
-  teamLabel?: string;
-}) {
-  if (players.length === 0) return (
-    <p className="text-xs text-slate-400 text-center py-3">No player data available for this game</p>
-  );
-
-  // Sort by PTS desc, then minutes desc
-  const sorted = [...players].sort((a, b) => {
-    if ((b.PTS ?? 0) !== (a.PTS ?? 0)) return (b.PTS ?? 0) - (a.PTS ?? 0);
-    return (b.MIN ?? 0) - (a.MIN ?? 0);
-  });
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      {teamLabel && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/80">
-          <div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Roster view</p>
-            <p className="text-sm font-bold text-slate-700">{teamLabel} player log</p>
-          </div>
-          <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-white border border-slate-200 text-slate-500">
-            {players.length} players
-          </span>
-        </div>
-      )}
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs whitespace-nowrap">
-        <thead>
-          <tr className="border-b border-slate-200">
-            {["Team", "Player", "MIN", "PTS", "REB", "AST", "STL", "BLK", "TOV", "FG%", "3P%", "FT%", "+/-"].map(h => (
-              <th key={h} className="px-2 py-1.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((p, i) => (
-            <tr key={`${p.PLAYER_ID}-${i}`} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-              <td className="px-2 py-1.5 font-bold text-[#1d428a]">{p.TEAM_ABBREVIATION}</td>
-              <td className="px-2 py-1.5 text-slate-700 font-semibold max-w-[140px] truncate">{p.PLAYER_NAME}</td>
-              <td className="px-2 py-1.5 text-slate-500">{p.MIN != null ? Math.round(p.MIN) : "—"}</td>
-              <td className={`px-2 py-1.5 font-black ${(p.PTS ?? 0) >= 25 ? "text-[#c9082a]" : (p.PTS ?? 0) >= 15 ? "text-slate-800" : "text-slate-600"}`}>
-                {fmtInt(p.PTS)}
-              </td>
-              <td className="px-2 py-1.5 text-slate-600">{fmtInt(p.REB)}</td>
-              <td className="px-2 py-1.5 text-slate-600">{fmtInt(p.AST)}</td>
-              <td className="px-2 py-1.5 text-slate-500">{fmtInt(p.STL)}</td>
-              <td className="px-2 py-1.5 text-slate-500">{fmtInt(p.BLK)}</td>
-              <td className="px-2 py-1.5 text-slate-500">{fmtInt(p.TOV)}</td>
-              <td className="px-2 py-1.5 text-slate-500">{fmtPct(p.FG_PCT)}</td>
-              <td className="px-2 py-1.5 text-slate-500">{fmtPct(p.FG3_PCT)}</td>
-              <td className="px-2 py-1.5 text-slate-500">{fmtPct(p.FT_PCT)}</td>
-              <td className={`px-2 py-1.5 font-bold ${(p.PLUS_MINUS ?? 0) > 0 ? "text-emerald-600" : (p.PLUS_MINUS ?? 0) < 0 ? "text-rose-600" : "text-slate-400"}`}>
-                {p.PLUS_MINUS != null ? (p.PLUS_MINUS > 0 ? `+${p.PLUS_MINUS}` : p.PLUS_MINUS) : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
-    </div>
-  );
-}
-
-/** Single game result row/card */
-function GameCard({
-  game,
-  teamBoxScores,
-  playerBoxScores,
-  gameDetail,
-  index,
-  initiallyExpanded = false,
-  autoExpandSignal,
-  preferredTab,
-}: {
-  game: GameResult;
-  teamBoxScores: TeamBoxScore[];
-  playerBoxScores: PlayerBoxScore[];
-  gameDetail?: GameDetail | null;
-  index: number;
-  initiallyExpanded?: boolean;
-  autoExpandSignal?: string;
-  preferredTab?: DetailTab;
-}) {
-  const [expanded, setExpanded] = useState(initiallyExpanded);
-  const [detailTab, setDetailTab] = useState<DetailTab>("summary");
-  const [teamSide, setTeamSide] = useState<TeamSide>("away");
-  const [playerSide, setPlayerSide] = useState<TeamSide>("away");
-
-  useEffect(() => {
-    if (initiallyExpanded) {
-      setExpanded(true);
-      setDetailTab("summary");
-    }
-  }, [initiallyExpanded]);
-
-  useEffect(() => {
-    if (autoExpandSignal) {
-      setExpanded(true);
-      setDetailTab(preferredTab || "summary");
-    }
-  }, [autoExpandSignal, preferredTab]);
-
-  const meta = seasonMeta(game.SEASON_TYPE);
-  const margin = Math.abs(game.HOME_SCORE - game.AWAY_SCORE);
-  const homeWon = game.WINNER_TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION;
-  const homeSide = getTeamSideConfig("home");
-  const awaySide = getTeamSideConfig("away");
-
-  // Find team box scores for this game
-  const homeBS = teamBoxScores.find(t => t.GAME_ID === game.GAME_ID && t.TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION) ?? null;
-  const awayBS = teamBoxScores.find(t => t.GAME_ID === game.GAME_ID && t.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION) ?? null;
-  const gamePlayers = playerBoxScores.filter(p => p.GAME_ID === game.GAME_ID);
-  const homePlayers = playerTeamFilter(gamePlayers, game.HOME_TEAM_ABBREVIATION);
-  const awayPlayers = playerTeamFilter(gamePlayers, game.AWAY_TEAM_ABBREVIATION);
-  const detail = gameDetail;
-
-  const staggerClass = `stagger-${Math.min((index % 6) + 1, 6)}`;
-
-  const quickStats = [
-    { label: "FG%", home: homeBS?.FG_PCT, away: awayBS?.FG_PCT, fmt: fmtPct },
-    { label: "REB", home: homeBS?.REB, away: awayBS?.REB, fmt: fmtInt },
-    { label: "AST", home: homeBS?.AST, away: awayBS?.AST, fmt: fmtInt },
-    { label: "TO", home: homeBS?.TOV, away: awayBS?.TOV, fmt: fmtInt },
-  ];
-
-  return (
-    <div id={`game-result-${game.GAME_ID}`} className={`animate-fade-in-up ${staggerClass} ${meta.card} rounded-2xl overflow-hidden transition-all duration-300`}>
-      <button
-        className="w-full text-left"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="px-4 sm:px-5 py-4">
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-14 h-14 rounded-2xl border border-slate-200 bg-white flex flex-col items-center justify-center shadow-sm">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">
-                  {new Date(game.GAME_DATE + "T12:00:00").toLocaleDateString("en-US", { month: "short" })}
-                </span>
-                <span className="text-xl font-black text-slate-700 leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  {new Date(game.GAME_DATE + "T12:00:00").getDate()}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className={meta.badge}>{game.SEASON_TYPE === "Regular Season" ? "Regular" : game.SEASON_TYPE}</span>
-                  {game.SERIES_GAME_NUMBER != null && (
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                      Game {game.SERIES_GAME_NUMBER}
-                    </span>
-                  )}
-                  {margin <= 3 && (
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
-                      Close {margin}pt
-                    </span>
-                  )}
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-black tracking-tight uppercase text-slate-900 leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  {game.AWAY_TEAM_ABBREVIATION} <span className="text-slate-300 font-normal">vs</span> {game.HOME_TEAM_ABBREVIATION}
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  {fmtShortDate(game.GAME_DATE)} · {game.GAME_STATUS}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-500">
-                <Calendar size={11} />
-                {game.WINNER_TEAM_ABBREVIATION}
-              </div>
-              {expanded ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto_1fr] gap-4 items-center">
-            <div className="flex items-center gap-3">
-              <div className={game.WINNER_TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION ? awaySide.ringClass : "team-ring"} style={{ width: 52, height: 52 }}>
-                {game.AWAY_TEAM_ABBREVIATION}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-black text-slate-900 truncate">{game.AWAY_TEAM_NAME ?? game.AWAY_TEAM_ABBREVIATION}</p>
-                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">Away</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-3 px-4">
-              <div className={`text-5xl sm:text-6xl font-black tabular-nums ${homeWon ? "text-slate-300" : "text-slate-900"}`} style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                {game.AWAY_SCORE}
-              </div>
-              <div className="text-center">
-                <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Final</div>
-                <div className="mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-600">
-                  {game.WINNER_TEAM_ABBREVIATION} won by {margin}
-                </div>
-              </div>
-              <div className={`text-5xl sm:text-6xl font-black tabular-nums ${homeWon ? "text-slate-900" : "text-slate-300"}`} style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                {game.HOME_SCORE}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3">
-              <div className="text-right min-w-0">
-                <p className="text-sm font-black text-slate-900 truncate">{game.HOME_TEAM_NAME ?? game.HOME_TEAM_ABBREVIATION}</p>
-                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-widest">Home</p>
-              </div>
-              <div className={game.WINNER_TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION ? homeSide.ringClass : "team-ring"} style={{ width: 52, height: 52 }}>
-                {game.HOME_TEAM_ABBREVIATION}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {quickStats.map((s) => (
-              <div key={s.label} className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p>
-                <div className="mt-1 flex items-center justify-between text-xs">
-                  <span className={`font-black ${compareBetter(s.home, s.away, s.label !== "TO")}`}>{s.fmt(s.home ?? null)}</span>
-                  <span className="text-slate-300 font-bold">vs</span>
-                  <span className={`font-black ${compareBetter(s.away, s.home, s.label !== "TO")}`}>{s.fmt(s.away ?? null)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </button>
-
-      {/* Expanded detail panel */}
-      {expanded && (
-        <div className="border-t border-slate-100 px-4 sm:px-5 pb-5 pt-4 space-y-4 bg-slate-50/60">
-          <div className="flex flex-wrap items-center gap-2">
-            {DETAIL_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setDetailTab(tab.key)}
-                className={`results-tab ${detailTab === tab.key ? "results-tab-active" : ""}`}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-            {game.IS_ELIMINATION_GAME && (
-              <span className="ml-auto text-[9px] font-black px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
-                ELIMINATION GAME
-              </span>
-            )}
-          </div>
-
-          {detailTab === "summary" && (
-            <div className="space-y-4 animate-fade-in-up">
-              <TeamCompareStrip home={homeBS} away={awayBS} />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Game context</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Winner</p>
-                      <p className="text-sm font-black text-slate-900">{game.WINNER_TEAM_ABBREVIATION}</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Margin</p>
-                      <p className="text-sm font-black text-slate-900">{margin}</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Season</p>
-                      <p className="text-sm font-black text-slate-900">{game.SEASON_TYPE}</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</p>
-                      <p className="text-sm font-black text-slate-900">{game.GAME_STATUS}</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Arena</p>
-                      <p className="text-sm font-black text-slate-900">{detail?.arena?.name || "—"}</p>
-                      <p className="text-[10px] text-slate-500">{detail?.arena?.city || ""}{detail?.arena?.state ? `, ${detail.arena.state}` : ""}</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Leaders</p>
-                      <p className="text-[10px] text-slate-700">PTS: {detail?.game_leaders?.points?.PLAYER_NAME || detail?.game_leaders?.points?.n || "—"} ({detail?.game_leaders?.points?.PTS ?? detail?.game_leaders?.points?.v ?? "—"})</p>
-                      <p className="text-[10px] text-slate-700">REB: {detail?.game_leaders?.rebounds?.PLAYER_NAME || detail?.game_leaders?.rebounds?.n || "—"} ({detail?.game_leaders?.rebounds?.REB ?? detail?.game_leaders?.rebounds?.v ?? "—"})</p>
-                      <p className="text-[10px] text-slate-700">AST: {detail?.game_leaders?.assists?.PLAYER_NAME || detail?.game_leaders?.assists?.n || "—"} ({detail?.game_leaders?.assists?.AST ?? detail?.game_leaders?.assists?.v ?? "—"})</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Officials</p>
-                      <p className="text-[10px] text-slate-700">{(detail?.officials || []).slice(0, 3).map((o) => o.name || o.n).filter(Boolean).join(" · ") || "—"}</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 col-span-2">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Top players</p>
-                      <div className="mt-1 grid grid-cols-2 gap-1 text-[10px] text-slate-700">
-                        {(detail?.player_stats || []).slice(0, 6).map((p: any) => (
-                          <div key={`${p.PLAYER_ID}-${p.TEAM_ABBREVIATION}`} className="flex items-center justify-between gap-2">
-                            <span className="truncate">{p.PLAYER_NAME}</span>
-                            <span className="font-black text-slate-900">{p.PTS ?? p.pts ?? "—"} pts</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Top player spark</p>
-                  <div className="space-y-2">
-                    {[awayPlayers, homePlayers].map((teamPlayers, idx) => {
-                      const label = idx === 0 ? game.AWAY_TEAM_ABBREVIATION : game.HOME_TEAM_ABBREVIATION;
-                      const top = [...teamPlayers].sort((a, b) => (b.PTS ?? 0) - (a.PTS ?? 0)).slice(0, 3);
-                      return (
-                        <div key={label} className="rounded-xl border border-slate-200 px-3 py-2">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs font-black text-slate-800">{label}</p>
-                            <span className="text-[9px] text-slate-400 font-bold">{top.length} shown</span>
-                          </div>
-                          <div className="space-y-1">
-                            {top.map((p) => (
-                              <div key={p.PLAYER_ID} className="flex items-center justify-between text-[11px]">
-                                <span className="text-slate-600 truncate pr-2">{p.PLAYER_NAME}</span>
-                                <span className="font-black text-[#c9082a]">{fmtInt(p.PTS)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {detailTab === "teams" && (
-            <div className="space-y-4 animate-fade-in-up">
-              <div className="flex items-center gap-2">
-                {TEAM_SIDES.map((side) => (
-                  <button
-                    key={side.key}
-                    onClick={() => setTeamSide(side.key)}
-                    className={`results-segment ${teamSide === side.key ? "results-segment-active" : ""}`}
-                  >
-                    {side.label}
-                  </button>
-                ))}
-              </div>
-              <TeamDetailCard
-                team={teamSide === "home" ? homeBS : awayBS}
-                opponent={teamSide === "home" ? awayBS : homeBS}
-                side={teamSide}
-                game={game}
-              />
-            </div>
-          )}
-
-          {detailTab === "players" && (
-            <div className="space-y-4 animate-fade-in-up">
-              <div className="flex items-center gap-2">
-                {TEAM_SIDES.map((side) => (
-                  <button
-                    key={side.key}
-                    onClick={() => setPlayerSide(side.key)}
-                    className={`results-segment ${playerSide === side.key ? "results-segment-active" : ""}`}
-                  >
-                    {side.label}
-                  </button>
-                ))}
-              </div>
-              <PlayerTable
-                players={playerSide === "home" ? homePlayers : awayPlayers}
-                teamLabel={playerSide === "home" ? game.HOME_TEAM_ABBREVIATION : game.AWAY_TEAM_ABBREVIATION}
-              />
-            </div>
-          )}
-
-          {detailTab === "data" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in-up">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">What we have</p>
-                <ul className="space-y-2 text-xs text-slate-600">
-                  <li>Game-level: date, teams, scores, winner/loser, season type, playoff flags, series metadata.</li>
-                  <li>Team-level: FGM/FGA, FG%, 3PM/3PA, FT%, REB, AST, STL, BLK, TOV, PF, plus/minus.</li>
-                  <li>Player-level: minutes, points, rebounds, assists, steals, blocks, turnovers, shooting splits, plus/minus.</li>
-                  <li>Export coverage: `game_results.json`, `team_boxscores.json`, `player_boxscores.json`, `highlights.json`.</li>
-                </ul>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">What is missing / worth adding</p>
-                <ul className="space-y-2 text-xs text-slate-600">
-                  <li>Advanced team metrics: pace, offensive/defensive rating, true shooting, possessions, eFG%, points in paint.</li>
-                  <li>Player context: starters/bench label, usage rate, minutes share, lineup context, on/off impact.</li>
-                  <li>Game flow: quarter-by-quarter scoring, lead changes, biggest run, clutch possessions.</li>
-                  <li>External context: injuries, rest disadvantage, travel, back-to-back flags, projected lineups.</li>
-                </ul>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// Main Page
-// ─────────────────────────────────────────────────────────────
-const PAGE_SIZE = 30;
-
-const getWeekLabel = (w: number) => {
-  const seasonStart = new Date("2025-10-21T12:00:00");
-  const wStart = new Date(seasonStart.getTime() + (w - 1) * 7 * 24 * 60 * 60 * 1000);
-  const wEnd = new Date(wStart.getTime() + 6 * 24 * 60 * 60 * 1000);
-  const startStr = wStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const endStr = wEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `W${w} (${startStr} – ${endStr})`;
-};
-
-interface HighlightItem {
-  highest_scoring_games: any[];
-  lowest_scoring_games: any[];
-  top_points: any[];
-  top_assists: any[];
-  top_rebounds: any[];
-}
-
-interface GameDetail {
-  game_id: string;
-  season?: string;
-  season_type?: string;
-  game_date?: string;
-  game_status?: string;
-  arena?: { name?: string | null; city?: string | null; state?: string | null };
-  home_team?: any;
-  away_team?: any;
-  team_stats?: any[];
-  player_stats?: any[];
-  game_leaders?: any;
-  officials?: any[];
-}
-
-function HighlightCard({
-  title,
-  icon,
-  data,
-  type,
-  onGameClick,
-  gradient,
-}: {
-  title: string;
-  icon: ReactNode;
-  data: any[];
-  type: "team" | "player";
-  onGameClick: (gameId: string) => void;
-  gradient: string;
-}) {
-  return (
-    <div className={`bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between hover:border-slate-300 hover:scale-[1.01] transition-all duration-300 bg-gradient-to-br ${gradient}`}>
-      <div>
-        <div className="flex items-center gap-1.5 mb-2.5 border-b border-slate-100 pb-1.5">
-          {icon}
-          <h3 className="text-[10px] font-black text-slate-700 uppercase tracking-wider">{title}</h3>
-        </div>
-        <div className="space-y-1.5">
-          {data && data.length > 0 ? (
-            data.map((item, idx) => {
-              const isTeam = type === "team";
-              return (
-                <div
-                  key={idx}
-                  onClick={() => onGameClick(item.GAME_ID)}
-                  className="flex items-center justify-between text-[10px] py-1 px-1.5 rounded hover:bg-slate-50 cursor-pointer transition-colors"
-                >
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="font-bold text-slate-800 truncate block max-w-[120px]">
-                      {isTeam ? `${item.AWAY_TEAM} @ ${item.HOME_TEAM}` : item.PLAYER_NAME}
-                    </span>
-                    <span className="text-[8px] text-slate-400 font-semibold block truncate">
-                      {isTeam ? item.GAME_DATE : `${item.TEAM} · ${item.GAME_DATE}`}
-                    </span>
-                  </div>
-                  <div className="text-right ml-2 flex-shrink-0">
-                    <span className="text-xs font-black text-[#c9082a] tabular-nums">
-                      {isTeam ? item.TOTAL_PTS : item.VALUE}
-                    </span>
-                    {isTeam && (
-                      <span className="block text-[8px] text-slate-400 font-bold">
-                        {item.AWAY_SCORE}–{item.HOME_SCORE}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-[9px] text-slate-400 text-center py-4">No data available</p>
-          )}
-        </div>
-      </div>
-    </div>
+      </td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{p.MIN != null ? Math.round(p.MIN) : "—"}</td>
+      <td className="px-4 py-3 text-right text-sm font-black text-slate-900">{fmtInt(p.PTS)}</td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPair(p.FGM, p.FGA)}</td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPct(p.FG_PCT)}</td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPair(p.FG3M, p.FG3A)}</td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPct(p.FG3_PCT)}</td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPair(p.FTM, p.FTA)}</td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtPct(p.FT_PCT)}</td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtInt(p.REB)}</td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtInt(p.AST)}</td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtInt(p.TOV)}</td>
+      <td className="px-4 py-3 text-right text-sm text-slate-500">{fmtInt(p.PLUS_MINUS)}</td>
+    </tr>
   );
 }
 
 export default function GameResults() {
-  const [results, setResults]           = useState<GameResult[]>([]);
-  const [teamBS, setTeamBS]             = useState<TeamBoxScore[]>([]);
-  const [playerBS, setPlayerBS]         = useState<PlayerBoxScore[]>([]);
-  const [highlights, setHighlights]     = useState<HighlightItem | null>(null);
-  const [gameDetails, setGameDetails]    = useState<GameDetail[]>([]);
-  const [showHighlights, setShowHighlights] = useState(true);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState<string | null>(null);
-
-  const [filter, setFilter]             = useState<SeasonFilter>("ALL");
-  const [selectedWeek, setSelectedWeek] = useState<number | "ALL">("ALL");
-  const [search, setSearch]             = useState("");
-  const [sortDesc, setSortDesc]         = useState(true);
-  const [page, setPage]                 = useState(1);
-  const [focusedGameId, setFocusedGameId] = useState<string | null>(null);
-  const [focusedGameTab, setFocusedGameTab] = useState<DetailTab>("summary");
+  const [results, setResults] = useState<GameFeedRow[]>([]);
+  const [teamBS, setTeamBS] = useState<TeamBoxScore[]>([]);
+  const [playerBS, setPlayerBS] = useState<PlayerBoxScore[]>([]);
+  const [gameDetails, setGameDetails] = useState<GameDetail[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [teamFilter, setTeamFilter] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [activeTeam, setActiveTeam] = useState<"home" | "away">("home");
+  const [sortKey, setSortKey] = useState<"MIN" | "PTS" | "REB" | "AST" | "TOV" | "PLUS_MINUS">("PTS");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
-      fetch("/data/game_results.json").then(r => r.json()),
-      fetch("/data/team_boxscores.json").then(r => r.json()),
-      fetch("/data/player_boxscores.json").then(r => r.json()),
-      fetch("/data/game_details.json").then(r => r.json()).catch(() => []),
-      fetch("/data/highlights.json").then(r => r.json()).catch(() => null),
+      fetch("/data/games.json").then((r) => r.json()),
+      fetch("/data/team_boxscores.json").then((r) => r.json()),
+      fetch("/data/player_boxscores.json").then((r) => r.json()),
+      fetch("/data/game_details.json").then((r) => r.json()).catch(() => []),
     ])
-      .then(([r, t, p, d, h]) => { 
-        setResults(r); 
-        setTeamBS(t); 
-        setPlayerBS(p); 
-        setGameDetails(d); 
-        setHighlights(h); 
-        setLoading(false); 
+      .then(([r, t, p, d]) => {
+        setResults(r);
+        setTeamBS(t);
+        setPlayerBS(p);
+        setGameDetails(d);
+        setLoading(false);
       })
-      .catch(e => { setError(e.message); setLoading(false); });
+      .catch((e) => {
+        setError(e.message);
+        setLoading(false);
+      });
   }, []);
 
-  const filtered = useMemo(() => {
-    let g = results;
-    if (filter !== "ALL") g = g.filter(x => x.SEASON_TYPE === filter);
-    if (search.trim()) {
-      const q = search.trim().toUpperCase();
-      g = g.filter(x => 
-        x.HOME_TEAM_ABBREVIATION.includes(q) || 
-        x.AWAY_TEAM_ABBREVIATION.includes(q) ||
-        x.GAME_ID.includes(q)
-      );
+  const filteredResults = useMemo(() => {
+    const q = search.trim().toUpperCase();
+    const teamQ = teamFilter.trim().toUpperCase();
+    return [...results]
+      .filter(
+        (x) =>
+          (!q ||
+            x.HOME_TEAM_ABBREVIATION.includes(q) ||
+            x.AWAY_TEAM_ABBREVIATION.includes(q) ||
+            (x.HOME_TEAM_NAME ?? "").toUpperCase().includes(q) ||
+            (x.AWAY_TEAM_NAME ?? "").toUpperCase().includes(q) ||
+            x.GAME_ID.includes(q)) &&
+          (!teamQ ||
+            x.HOME_TEAM_ABBREVIATION.includes(teamQ) ||
+            x.AWAY_TEAM_ABBREVIATION.includes(teamQ) ||
+            (x.HOME_TEAM_NAME ?? "").toUpperCase().includes(teamQ) ||
+            (x.AWAY_TEAM_NAME ?? "").toUpperCase().includes(teamQ)),
+      )
+      .sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
+  }, [results, search]);
+
+  const uniqueDates = useMemo(() => Array.from(new Set(filteredResults.map((g) => g.GAME_DATE))).sort((a, b) => b.localeCompare(a)), [filteredResults]);
+
+  useEffect(() => {
+    if (!selectedDate && uniqueDates.length) setSelectedDate(uniqueDates[0]);
+  }, [selectedDate, uniqueDates]);
+
+  const selectedGame = useMemo(() => results.find((g) => g.GAME_ID === selectedGameId) ?? null, [results, selectedGameId]);
+  const selectedGameDetail = useMemo(() => gameDetails.find((d) => d.game_id === selectedGameId) ?? null, [gameDetails, selectedGameId]);
+  const selectedIndex = useMemo(() => filteredResults.findIndex((g) => g.GAME_ID === selectedGameId), [filteredResults, selectedGameId]);
+  const prevGame = selectedIndex > 0 ? filteredResults[selectedIndex - 1] : null;
+  const nextGame = selectedIndex >= 0 && selectedIndex < filteredResults.length - 1 ? filteredResults[selectedIndex + 1] : null;
+  const selectedDateIndex = useMemo(() => uniqueDates.indexOf(selectedDate), [uniqueDates, selectedDate]);
+  const visibleDates = useMemo(() => {
+    if (!uniqueDates.length) return [];
+    const count = Math.min(6, uniqueDates.length);
+    const currentIndex = selectedDateIndex >= 0 ? selectedDateIndex : 0;
+    let start = Math.max(0, currentIndex - 2);
+    let end = start + count;
+    if (end > uniqueDates.length) {
+      end = uniqueDates.length;
+      start = Math.max(0, end - count);
     }
-    if (filter === "Regular Season" && selectedWeek !== "ALL") {
-      g = g.filter(x => x.WEEK === selectedWeek);
-    }
-    return sortDesc
-      ? [...g].sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE))
-      : [...g].sort((a, b) => a.GAME_DATE.localeCompare(b.GAME_DATE));
-  }, [results, filter, search, sortDesc, selectedWeek]);
+    return uniqueDates.slice(start, end);
+  }, [selectedDateIndex, uniqueDates]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const pageGames  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const stats = useMemo(() => ({
-    total:   results.length,
-    regular: results.filter(g => g.SEASON_TYPE === "Regular Season").length,
-    playin:  results.filter(g => g.SEASON_TYPE === "PlayIn").length,
-    playoff: results.filter(g => g.SEASON_TYPE === "Playoffs").length,
-    close:   results.filter(g => Math.abs(g.HOME_SCORE - g.AWAY_SCORE) <= 3).length,
-  }), [results]);
-
-  const handleFilterChange = (newFilter: SeasonFilter) => {
-    setFilter(newFilter);
-    setSelectedWeek("ALL");
-    setPage(1);
+  const shiftDate = (delta: -1 | 1) => {
+    if (!uniqueDates.length) return;
+    const currentIndex = selectedDateIndex >= 0 ? selectedDateIndex : 0;
+    const nextIndex = Math.max(0, Math.min(uniqueDates.length - 1, currentIndex + delta));
+    setSelectedDate(uniqueDates[nextIndex]);
   };
 
-  const handleGameHighlightClick = (gameId: string, preferredTab: DetailTab = "summary") => {
-    setFilter("ALL");
-    setSelectedWeek("ALL");
-    setSearch(gameId);
-    setFocusedGameId(gameId);
-    setFocusedGameTab(preferredTab);
-    setShowHighlights(true);
-    setPage(1);
-    
-    // Smooth scroll down to the games list section
-    setTimeout(() => {
-      const el = document.getElementById("games-list-section");
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-      const card = document.getElementById(`game-result-${gameId}`);
-      if (card) {
-        card.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 100);
-  };
+  useEffect(() => {
+    if (selectedGame && selectedGame.GAME_DATE !== selectedDate) {
+      setSelectedDate(selectedGame.GAME_DATE);
+    }
+  }, [selectedGame, selectedDate]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64 gap-3">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#1d428a] border-t-transparent" />
-      <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Loading Results...</span>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-900 border-t-transparent" />
+        <span className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Loading results...</span>
+      </div>
+    );
+  }
 
-  if (error) return (
-    <div className="text-center py-16 bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
-      <AlertTriangle size={32} className="mx-auto text-rose-500 mb-3" />
-      <p className="text-sm font-bold text-rose-600">{error}</p>
-      <p className="text-xs text-slate-400 mt-2 font-mono">
-        Run: <code className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">python3 main.py --fetch-boxscores</code>
-      </p>
-    </div>
-  );
+  if (error) {
+    return (
+      <div className="rounded-[20px] bg-white p-8 text-center shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
+        <AlertTriangle size={30} className="mx-auto mb-3 text-rose-500" />
+        <p className="text-sm font-bold text-rose-600">{error}</p>
+      </div>
+    );
+  }
 
-  const FILTERS: { key: SeasonFilter; label: string; count: number }[] = [
-    { key: "ALL",            label: "All Results",     count: stats.total },
-    { key: "Playoffs",       label: "Playoffs",        count: stats.playoff },
-    { key: "PlayIn",         label: "Play-In",         count: stats.playin },
-    { key: "Regular Season", label: "Regular Season",  count: stats.regular },
-  ];
+  if (selectedGame) {
+    const homeBS = teamBS.find((t) => t.GAME_ID === selectedGame.GAME_ID && t.TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION) ?? null;
+    const awayBS = teamBS.find((t) => t.GAME_ID === selectedGame.GAME_ID && t.TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION) ?? null;
+    const gamePlayers = playerBS.filter((p) => p.GAME_ID === selectedGame.GAME_ID);
+    const homePlayers = playerTeamFilter(gamePlayers, selectedGame.HOME_TEAM_ABBREVIATION);
+    const awayPlayers = playerTeamFilter(gamePlayers, selectedGame.AWAY_TEAM_ABBREVIATION);
+
+    const margin = Math.abs((selectedGame.HOME_SCORE ?? 0) - (selectedGame.AWAY_SCORE ?? 0));
+    const winnerIsHome = selectedGame.WINNER_TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION;
+    const winnerIsAway = selectedGame.WINNER_TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION;
+    const seasonType = selectedGame.PLAYOFF_ROUND ? selectedGame.PLAYOFF_ROUND : selectedGame.SEASON_TYPE;
+    const heroScoreAway = selectedGameDetail?.away_team?.score ?? selectedGame.AWAY_SCORE;
+    const heroScoreHome = selectedGameDetail?.home_team?.score ?? selectedGame.HOME_SCORE;
+    const allPlayers = [...homePlayers, ...awayPlayers].sort((a, b) => (b.PTS ?? 0) - (a.PTS ?? 0) || (b.MIN ?? 0) - (a.MIN ?? 0));
+    const topPlayers = allPlayers.slice(0, 6);
+
+    const teamStats = [
+      { label: "FG", home: homeBS?.FGM ?? null, away: awayBS?.FGM ?? null, homeDisplay: fmtPair(homeBS?.FGM, homeBS?.FGA), awayDisplay: fmtPair(awayBS?.FGM, awayBS?.FGA), high: true },
+      { label: "FG%", home: homeBS?.FG_PCT ?? null, away: awayBS?.FG_PCT ?? null, homeDisplay: fmtPct(homeBS?.FG_PCT ?? null), awayDisplay: fmtPct(awayBS?.FG_PCT ?? null), high: true },
+      { label: "3PT%", home: homeBS?.FG3_PCT ?? null, away: awayBS?.FG3_PCT ?? null, homeDisplay: fmtPct(homeBS?.FG3_PCT ?? null), awayDisplay: fmtPct(awayBS?.FG3_PCT ?? null), high: true },
+      { label: "FT%", home: homeBS?.FT_PCT ?? null, away: awayBS?.FT_PCT ?? null, homeDisplay: fmtPct(homeBS?.FT_PCT ?? null), awayDisplay: fmtPct(awayBS?.FT_PCT ?? null), high: true },
+      { label: "REB", home: homeBS?.REB ?? null, away: awayBS?.REB ?? null, homeDisplay: fmtInt(homeBS?.REB ?? null), awayDisplay: fmtInt(awayBS?.REB ?? null), high: true },
+      { label: "AST", home: homeBS?.AST ?? null, away: awayBS?.AST ?? null, homeDisplay: fmtInt(homeBS?.AST ?? null), awayDisplay: fmtInt(awayBS?.AST ?? null), high: true },
+      { label: "TOV", home: homeBS?.TOV ?? null, away: awayBS?.TOV ?? null, homeDisplay: fmtInt(homeBS?.TOV ?? null), awayDisplay: fmtInt(awayBS?.TOV ?? null), high: false },
+    ];
+
+    const gameDate = selectedGameDetail?.game_date ?? selectedGame.GAME_DATE;
+    const topScorer = allPlayers[0];
+    const mostRebounds = [...allPlayers].sort((a, b) => (b.REB ?? 0) - (a.REB ?? 0))[0];
+    const mostAssists = [...allPlayers].sort((a, b) => (b.AST ?? 0) - (a.AST ?? 0))[0];
+
+    const activePlayers = activeTeam === "home" ? homePlayers : awayPlayers;
+    const factor = sortDir === "asc" ? 1 : -1;
+    const sortedPlayers = [...activePlayers].sort((a, b) => ((a[sortKey] ?? -Infinity) - (b[sortKey] ?? -Infinity)) * factor);
+
+    return (
+      <div className="mx-auto max-w-[1280px] space-y-8">
+        <button
+          onClick={() => setSelectedGameId(null)}
+          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:text-slate-800"
+        >
+          <ArrowLeft size={12} />
+          Back to games
+        </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-white px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">Browse</p>
+            <p className="truncate text-sm font-semibold text-slate-700">
+              {selectedIndex >= 0 ? `Game ${selectedIndex + 1} of ${filteredResults.length}` : "Game navigation"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => prevGame && setSelectedGameId(prevGame.GAME_ID)}
+              disabled={!prevGame}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ArrowLeft size={12} />
+              Previous
+            </button>
+            <button
+              onClick={() => nextGame && setSelectedGameId(nextGame.GAME_ID)}
+              disabled={!nextGame}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+              <ArrowLeft size={12} className="rotate-180" />
+            </button>
+          </div>
+        </div>
+
+        <section className="overflow-hidden rounded-[28px] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.1)]">
+          <div className="grid gap-6 p-6 lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:p-8">
+            <TeamCompactHeader team={selectedGame.AWAY_TEAM_NAME} score={heroScoreAway} abbr={selectedGame.AWAY_TEAM_ABBREVIATION} side="away" winner={winnerIsAway} />
+            <div className="text-center">
+              <Badge tone={winnerIsHome || winnerIsAway ? "winner" : "neutral"}>VS</Badge>
+              <p className="mt-4 text-[13px] font-black uppercase tracking-[0.28em] text-slate-400">
+                {winnerIsHome ? `${selectedGame.HOME_TEAM_ABBREVIATION} won by ${margin}` : winnerIsAway ? `${selectedGame.AWAY_TEAM_ABBREVIATION} won by ${margin}` : "Result unavailable"}
+              </p>
+              <p className="mt-2 text-sm text-slate-500">{fmtShortDate(gameDate)}</p>
+            </div>
+            <TeamCompactHeader team={selectedGame.HOME_TEAM_NAME} score={heroScoreHome} abbr={selectedGame.HOME_TEAM_ABBREVIATION} side="home" winner={winnerIsHome} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-6 py-4 lg:px-8">
+            <Badge tone="winner">{selectedGame.WINNER_TEAM_ABBREVIATION ?? "Winner"}</Badge>
+            <Badge>{seasonType}</Badge>
+            {selectedGame.SEASON_TYPE?.toLowerCase().includes("final") || selectedGame.PLAYOFF_ROUND?.toLowerCase().includes("final") ? <Badge>Playoff / Finals</Badge> : null}
+            <Badge>{selectedGame.GAME_STATUS ?? "Final"}</Badge>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="Most Points" value={topScorer?.PLAYER_NAME ?? "—"} sublabel={`${fmtInt(topScorer?.PTS ?? null)} PTS`} accent="#0f172a" />
+          <StatCard label="Most Rebounds" value={mostRebounds?.PLAYER_NAME ?? "—"} sublabel={`${fmtInt(mostRebounds?.REB ?? null)} REB`} accent="#0f172a" />
+          <StatCard label="Most Assists" value={mostAssists?.PLAYER_NAME ?? "—"} sublabel={`${fmtInt(mostAssists?.AST ?? null)} AST`} accent="#0f172a" />
+          <StatCard label="Team Efficiency" value={homeBS?.FG_PCT != null && awayBS?.FG_PCT != null ? fmtPct(homeBS.FG_PCT >= awayBS.FG_PCT ? homeBS.FG_PCT : awayBS.FG_PCT) : "—"} sublabel={homeBS?.FG_PCT != null && awayBS?.FG_PCT != null ? (homeBS.FG_PCT >= awayBS.FG_PCT ? selectedGame.HOME_TEAM_ABBREVIATION : selectedGame.AWAY_TEAM_ABBREVIATION) : "FG% leader"} accent="#0f172a" />
+        </section>
+
+        <section className="rounded-[28px] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+          <SectionTitle title="Team Comparison" subtitle="Side-by-side efficiency view" />
+          <div className="mt-5 space-y-2">
+            {teamStats.map((row) => (
+              <ComparisonRow
+                key={row.label}
+                label={row.label}
+                homeValue={row.home}
+                awayValue={row.away}
+                homePct={row.homeDisplay}
+                awayPct={row.awayDisplay}
+                homeLabel={selectedGame.HOME_TEAM_ABBREVIATION}
+                awayLabel={selectedGame.AWAY_TEAM_ABBREVIATION}
+                homeColor={teamColor(selectedGame.HOME_TEAM_ABBREVIATION)}
+                awayColor={teamColor(selectedGame.AWAY_TEAM_ABBREVIATION)}
+                higherIsBetter={row.high}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <SectionTitle title="Top Performers" subtitle="Six players, maximum" />
+          <div className="grid gap-4 xl:grid-cols-2">
+            {topPlayers.map((p) => (
+              <div key={`${p.PLAYER_ID}-${p.TEAM_ABBREVIATION}`} className="flex items-center gap-4 rounded-[24px] bg-white p-4 shadow-[0_12px_36px_rgba(15,23,42,0.08)] transition duration-200 hover:-translate-y-0.5">
+                <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME} size={56} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Badge tone={p.TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION ? "home" : "away"}>{p.TEAM_ABBREVIATION}</Badge>
+                    <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{Math.round(p.MIN ?? 0)} min</span>
+                  </div>
+                  <p className="mt-2 truncate text-xl font-black text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>{p.PLAYER_NAME}</p>
+                  <div className="mt-2 flex flex-wrap gap-3 text-sm text-slate-500">
+                    <span><strong className="text-slate-900">{fmtInt(p.PTS)}</strong> PTS</span>
+                    <span><strong className="text-slate-900">{fmtInt(p.REB)}</strong> REB</span>
+                    <span><strong className="text-slate-900">{fmtInt(p.AST)}</strong> AST</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-[28px] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+          <button onClick={() => setAdvancedOpen((v) => !v)} className="flex w-full items-center justify-between gap-3 text-left">
+            <div>
+              <SectionTitle title="View Full Team Statistics" subtitle="Advanced team stats for deeper analysis" />
+            </div>
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+              {advancedOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </span>
+          </button>
+          {advancedOpen && (
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {[
+                homeBS?.FGM != null || awayBS?.FGM != null ? ["FG", fmtPair(homeBS?.FGM, homeBS?.FGA), fmtPair(awayBS?.FGM, awayBS?.FGA)] : null,
+                homeBS?.FG3M != null || awayBS?.FG3M != null ? ["3PT", fmtPair(homeBS?.FG3M, homeBS?.FG3A), fmtPair(awayBS?.FG3M, awayBS?.FG3A)] : null,
+                homeBS?.FTA != null || awayBS?.FTA != null ? ["FTA", fmtInt(homeBS?.FTA ?? null), fmtInt(awayBS?.FTA ?? null)] : null,
+                homeBS?.PLUS_MINUS != null || awayBS?.PLUS_MINUS != null ? ["Plus Minus", fmtInt(homeBS?.PLUS_MINUS ?? null), fmtInt(awayBS?.PLUS_MINUS ?? null)] : null,
+              ].filter(Boolean).map((item) => {
+                const [label, home, away] = item as [string, string, string];
+                return (
+                <div key={label} className="rounded-[20px] bg-slate-50 p-4">
+                  <p className="text-[12px] font-black uppercase tracking-[0.24em] text-slate-400">{label}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{selectedGame.HOME_TEAM_ABBREVIATION}</p>
+                      <p className="mt-1 font-semibold text-slate-900">{home as string}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{selectedGame.AWAY_TEAM_ABBREVIATION}</p>
+                      <p className="mt-1 font-semibold text-slate-900">{away as string}</p>
+                    </div>
+                  </div>
+                </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-[28px] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+          <SectionTitle title="Box Score" subtitle="Secondary content with compact tables" />
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button onClick={() => setActiveTeam("home")} className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] ${activeTeam === "home" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"}`}>{selectedGame.HOME_TEAM_ABBREVIATION} Home Team</button>
+            <button onClick={() => setActiveTeam("away")} className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] ${activeTeam === "away" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"}`}>{selectedGame.AWAY_TEAM_ABBREVIATION} Away Team</button>
+          </div>
+          <div className="mt-5 overflow-hidden rounded-[22px] border border-slate-100">
+            <div className="max-h-[720px] overflow-auto">
+              <table className="min-w-full border-separate border-spacing-0 text-left">
+                <thead className="sticky top-0 z-20 bg-white">
+                  <tr className="border-b border-slate-100 text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
+                    <th className="sticky left-0 z-30 bg-white px-4 py-3">Player</th>
+                    {[
+                      ["MIN", "MIN"],
+                      ["PTS", "PTS"],
+                      ["FG", "FG"],
+                      ["FG%", "FG_PCT"],
+                      ["3P", "FG3M"],
+                      ["3P%", "FG3_PCT"],
+                      ["FT", "FTM"],
+                      ["FT%", "FT_PCT"],
+                      ["REB", "REB"],
+                      ["AST", "AST"],
+                      ["TOV", "TOV"],
+                      ["+/-", "PLUS_MINUS"],
+                    ].map(([label, key]) => (
+                      <th key={label} className="px-4 py-3 text-right">
+                        <SortableHeader
+                          label={label}
+                          sortKey={key}
+                          activeKey={sortKey}
+                          direction={sortDir}
+                          onClick={() => {
+                            if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                            else {
+                              setSortKey(key as typeof sortKey);
+                              setSortDir("desc");
+                            }
+                          }}
+                        />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedPlayers.map((p) => <PlayerRow key={p.PLAYER_ID} p={p} />)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8 relative">
-      {/* ── Header ──────────────────────────────────────────── */}
-      <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Trophy size={22} className="text-[#1d428a]" />
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Game Results & Box Scores
-            </h1>
-          </div>
-          <p className="text-sm text-slate-500">2025-26 NBA Season · Final scores, team stats, player logs</p>
-        </div>
-
-        {highlights && (
-          <button
-            onClick={() => setShowHighlights(!showHighlights)}
-            className="bg-white border border-slate-200 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 shadow-sm transition-all flex items-center gap-1.5"
-          >
-            <Sparkles size={13} className={showHighlights ? "text-amber-500 animate-pulse" : "text-slate-400"} />
-            {showHighlights ? "Hide Season Highlights" : "Show Season Highlights"}
-          </button>
-        )}
-      </div>
-
-      {/* ── Statistical Highlights Dashboard ────────────────── */}
-      {showHighlights && highlights && (
-        <div className="relative z-10 animate-fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <HighlightCard
-            title="Highest Scoring"
-            icon={<Flame size={14} className="text-rose-500" />}
-            data={highlights.highest_scoring_games}
-            type="team"
-            onGameClick={(gameId) => handleGameHighlightClick(gameId, "summary")}
-            gradient="from-rose-500/5 to-transparent"
-          />
-          <HighlightCard
-            title="Lowest Scoring"
-            icon={<Snowflake size={14} className="text-blue-500" />}
-            data={highlights.lowest_scoring_games}
-            type="team"
-            onGameClick={(gameId) => handleGameHighlightClick(gameId, "summary")}
-            gradient="from-blue-500/5 to-transparent"
-          />
-          <HighlightCard
-            title="Most Points"
-            icon={<Award size={14} className="text-amber-500" />}
-            data={highlights.top_points}
-            type="player"
-            onGameClick={(gameId) => handleGameHighlightClick(gameId, "players")}
-            gradient="from-amber-500/5 to-transparent"
-          />
-          <HighlightCard
-            title="Most Assists"
-            icon={<Sparkles size={14} className="text-emerald-500" />}
-            data={highlights.top_assists}
-            type="player"
-            onGameClick={(gameId) => handleGameHighlightClick(gameId, "players")}
-            gradient="from-emerald-500/5 to-transparent"
-          />
-          <HighlightCard
-            title="Most Rebounds"
-            icon={<Trophy size={14} className="text-[#1d428a]" />}
-            data={highlights.top_rebounds}
-            type="player"
-            onGameClick={(gameId) => handleGameHighlightClick(gameId, "players")}
-            gradient="from-sky-500/5 to-transparent"
-          />
-        </div>
-      )}
-
-      {/* ── Stat pills ───────────────────────────────────────── */}
-      <div className="relative z-10 flex flex-wrap gap-2">
-        {[
-          { label: "Completed Games", value: stats.total.toLocaleString(), color: "text-slate-800" },
-          { label: "Regular Season",  value: stats.regular,                color: "text-slate-800" },
-          { label: "Play-In",         value: stats.playin,                 color: "text-violet-700" },
-          { label: "Playoffs",        value: stats.playoff,                color: "text-[#1d428a]" },
-          { label: "Close Games (≤3pt)",value: stats.close,               color: "text-amber-700" },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="glass flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-sm">
-            <span className="text-slate-400">{label}</span>
-            <span className={color}>{value}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Controls ─────────────────────────────────────────── */}
-      <div className="relative z-10 space-y-4">
-        {/* Filter pills */}
-        <div className="flex flex-wrap gap-2">
-          {FILTERS.map(({ key, label, count }) => (
-            <button
-              key={key}
-              onClick={() => handleFilterChange(key)}
-              className={`filter-pill ${filter === key ? "filter-pill-active" : ""}`}
-            >
-              {label} <span className="opacity-50 ml-1">{count}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Regular Season Week Selector (Horizontal Scrollable Tabs) */}
-        {filter === "Regular Season" && (
-          <div className="flex flex-col gap-2 pt-2 animate-fade-in border-t border-slate-200/60 mt-2">
-            <div className="flex items-center gap-2">
-              <Calendar size={12} className="text-[#1d428a]" />
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Select Regular Season Week:</span>
+    <div className="mx-auto max-w-[1280px] space-y-8">
+      <section className="rounded-[28px] bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+              <Trophy size={12} className="text-[#1d428a]" />
+              Game Results
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-              <button
-                onClick={() => { setSelectedWeek("ALL"); setPage(1); }}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap ${selectedWeek === "ALL" ? "bg-[#1d428a]/10 text-[#1d428a] border border-[#1d428a]/30" : "bg-white border border-slate-200 text-slate-500 hover:text-slate-800 shadow-sm"}`}
-              >
-                All Weeks
-              </button>
-              {Array.from({ length: 25 }, (_, i) => {
-                const w = i + 1;
-                const active = selectedWeek === w;
+            <h1 className="mt-4 text-4xl font-black uppercase tracking-tight text-slate-900 sm:text-5xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+              Premium game intelligence
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-slate-500">
+              Select a game to view its analytics-first details page.
+            </p>
+          </div>
+          <div className="w-full max-w-md">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by team, name, or game ID"
+              className="w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
+            />
+            <input
+              value={teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value)}
+              placeholder="Filter by team"
+              className="mt-3 w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
+            />
+          </div>
+        </div>
+      </section>
+
+      {uniqueDates.length > 0 && (
+        <section className="rounded-[24px] bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              onClick={() => shiftDate(-1)}
+              disabled={selectedDateIndex <= 0}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Previous dates"
+            >
+              <ArrowLeft size={16} />
+            </button>
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden">
+              {visibleDates.map((date) => {
+                const active = date === selectedDate || (!selectedDate && date === uniqueDates[0]);
+                const [day, dow] = fmtDateChip(date).split(" ");
+                const dayGames = filteredResults.filter((g) => g.GAME_DATE === date);
+                const logoTeams = dayGames.slice(0, 2).flatMap((g) => [g.AWAY_TEAM_ABBREVIATION, g.HOME_TEAM_ABBREVIATION]);
                 return (
                   <button
-                    key={w}
-                    onClick={() => { setSelectedWeek(w); setPage(1); }}
-                    className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${active ? "bg-[#1d428a]/10 text-[#1d428a] border border-[#1d428a]/30" : "bg-white border border-slate-200 text-slate-500 hover:text-slate-800 shadow-sm"}`}
+                    key={date}
+                    onClick={() => setSelectedDate(date)}
+                    className={`min-w-[94px] rounded-2xl px-3 py-2 text-center transition ${active ? "bg-slate-900 text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)]" : "bg-slate-50 text-slate-500 hover:bg-slate-100"}`}
                   >
-                    {getWeekLabel(w)}
+                    <div className="mb-2 flex items-center justify-center gap-1">
+                      {logoTeams.slice(0, 2).map((abbr) => (
+                        <TeamLogo key={`${date}-${abbr}`} abbr={abbr} name={abbr} size={16} />
+                      ))}
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.28em] opacity-70">{day}</p>
+                    <p className="mt-1 text-sm font-black uppercase tracking-[0.22em]">{dow}</p>
                   </button>
                 );
               })}
             </div>
-          </div>
-        )}
-
-        {/* Search + sort */}
-        <div id="games-list-section" className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-200/60">
-          <div className="relative">
-            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Team (e.g. BOS, GAME_ID)"
-              value={search}
-              onChange={e => { setSearch(e.target.value.toUpperCase()); setPage(1); }}
-              className="pl-8 pr-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none w-48 text-xs shadow-sm"
-            />
-          </div>
-          <button
-            onClick={() => { setSortDesc(!sortDesc); setPage(1); }}
-            className="bg-white border border-slate-200 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-slate-500 hover:text-slate-800 transition-colors shadow-sm"
-          >
-            {sortDesc ? <SortDesc size={10} /> : <SortAsc size={10} />}
-            {sortDesc ? "Newest First" : "Oldest First"}
-          </button>
-          {search && (
             <button
-              onClick={() => { setSearch(""); setPage(1); }}
-              className="bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-rose-600 hover:bg-rose-100/50 shadow-sm transition-colors"
+              onClick={() => shiftDate(1)}
+              disabled={selectedDateIndex >= uniqueDates.length - 1}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Next dates"
             >
-              Clear Search
+              <ArrowLeft size={16} className="rotate-180" />
             </button>
-          )}
-          <span className="text-[10px] text-slate-400 font-semibold ml-auto">
-            {filtered.length.toLocaleString()} games · Click a row to expand stats
-          </span>
-        </div>
-      </div>
-
-      {/* ── Game list ────────────────────────────────────────── */}
-      <div className="relative z-10 space-y-1.5">
-        {pageGames.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
-            <Search size={32} className="mx-auto text-slate-300 mb-3 opacity-30" />
-            <p className="text-sm font-bold text-slate-500">No results found</p>
           </div>
-        ) : (
-          pageGames.map((game, i) => (
-            <GameCard
-              key={game.GAME_ID}
-              game={game}
-              teamBoxScores={teamBS}
-              playerBoxScores={playerBS}
-              gameDetail={gameDetails.find((d) => d.game_id === game.GAME_ID) ?? null}
-              index={i}
-              initiallyExpanded={search === game.GAME_ID}
-              autoExpandSignal={focusedGameId === game.GAME_ID ? focusedGameId : undefined}
-              preferredTab={focusedGameId === game.GAME_ID ? focusedGameTab : undefined}
-            />
-          ))
-        )}
-      </div>
-
-      {/* ── Pagination ───────────────────────────────────────── */}
-      {totalPages > 1 && (
-        <div className="relative z-10 flex items-center justify-between pt-2">
-          <p className="text-[10px] text-slate-400 font-semibold">
-            Page {page} of {totalPages}
-          </p>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-500 disabled:opacity-30 hover:text-slate-800 transition-colors shadow-sm"
-            >← Prev</button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const p = page <= 3 ? i + 1 : page >= totalPages - 2 ? totalPages - 4 + i : page - 2 + i;
-              if (p < 1 || p > totalPages) return null;
-              return (
-                <button key={p} onClick={() => setPage(p)}
-                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${p === page ? "bg-[#1d428a]/10 text-[#1d428a] border border-[#1d428a]/30" : "bg-white border border-slate-200 text-slate-500 hover:text-slate-800 shadow-sm"}`}>
-                  {p}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-500 disabled:opacity-30 hover:text-slate-800 transition-colors shadow-sm"
-            >Next →</button>
-          </div>
-        </div>
+        </section>
       )}
 
-      {/* Data provenance note */}
-      <div className="relative z-10 rounded-xl bg-slate-100 border border-slate-200 px-5 py-3 text-[9px] text-slate-500 font-mono space-y-0.5">
-        <p className="text-slate-600 font-bold text-xs not-italic">Data Sources</p>
-        <p>Results: <code>data/processed/game_results_2025_26.csv</code></p>
-        <p>Team stats: <code>data/raw/boxscores/team/nba_team_boxscores_2025_26.csv</code> (last 2,000 rows exposed)</p>
-        <p>Player stats: <code>data/raw/boxscores/player/nba_player_boxscores_2025_26.csv</code> (last 3,000 rows exposed)</p>
+      <div className="grid gap-4">
+        {filteredResults
+          .filter((g) => !selectedDate || g.GAME_DATE === selectedDate)
+          .map((game) => (
+            <button
+              key={game.GAME_ID}
+              onClick={() => setSelectedGameId(game.GAME_ID)}
+            className="rounded-[24px] bg-white p-5 text-left shadow-[0_12px_36px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(15,23,42,0.1)]"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={34} />
+                    <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={34} />
+                  </div>
+                  <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">{fmtShortDate(game.GAME_DATE)}</p>
+                  <p className="mt-2 text-xl font-black text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                    {game.AWAY_TEAM_ABBREVIATION} {game.AWAY_SCORE ?? "—"} - {game.HOME_SCORE ?? "—"} {game.HOME_TEAM_ABBREVIATION}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {game.AWAY_TEAM_NAME ?? game.AWAY_TEAM_ABBREVIATION} at {game.HOME_TEAM_NAME ?? game.HOME_TEAM_ABBREVIATION}
+                  </p>
+                  </div>
+                </div>
+                <Badge tone="winner">{game.WINNER_TEAM_ABBREVIATION ?? "Final"}</Badge>
+              </div>
+            </button>
+          ))}
       </div>
     </div>
   );

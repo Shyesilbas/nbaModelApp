@@ -10,8 +10,7 @@ Builds an enriched upcoming-games context dataset by joining:
 
 Outputs
 -------
-  data/processed/upcoming_games_context_2025_26.csv
-  data/processed/upcoming_games_context_2025_26.parquet
+  season-aware upcoming_games_context CSV and Parquet outputs
 
 No model training.  No predictions.  No betting language.
 """
@@ -22,16 +21,10 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-# ─────────────────────────────────────────────
-# Paths
-# ─────────────────────────────────────────────
-COMBINED_SCHEDULE_PATH = "data/processed/schedule_combined_2025_26.csv"
-V2_MODEL_PATH          = "data/processed/team_model_ready_v2_2025_26.csv"
-CORE_PLAYERS_PATH      = "data/analysis/core_players.csv"
-OUT_CSV                = "data/processed/upcoming_games_context_2025_26.csv"
-OUT_PARQ               = "data/processed/upcoming_games_context_2025_26.parquet"
+from scripts.data_paths import get_data_paths
+from scripts.season_utils import get_default_season
 
-
+# ─────────────────────────────────────────────
 def _get_latest_team_features(v2_df: pd.DataFrame) -> pd.DataFrame:
     """
     For each TEAM_ABBREVIATION, return the single row with the most recent GAME_DATE.
@@ -91,15 +84,23 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
     pd.DataFrame — one row per upcoming game, enriched with team features
     and core player strings.
     """
+    season = get_default_season()
+    paths = get_data_paths(season)
+    combined_schedule_path = paths.schedule_combined
+    v2_model_path = paths.team_model_ready_v2
+    core_players_path = "data/analysis/core_players.csv"
+    out_csv = paths.upcoming_context
+    out_parq = paths.upcoming_context.replace(".csv", ".parquet")
+
     # ── 1. Load combined schedule ──────────────────────────────────────────
-    if not os.path.exists(COMBINED_SCHEDULE_PATH):
+    if not os.path.exists(combined_schedule_path):
         raise FileNotFoundError(
-            f"Combined schedule not found at {COMBINED_SCHEDULE_PATH}.\n"
+            f"Combined schedule not found at {combined_schedule_path}.\n"
             "Run `python3 main.py --build-schedule-context` first (or call "
             "load_combined_schedule() to generate it)."
         )
 
-    schedule_df = pd.read_csv(COMBINED_SCHEDULE_PATH, dtype={"GAME_ID": str})
+    schedule_df = pd.read_csv(combined_schedule_path, dtype={"GAME_ID": str})
     schedule_df["GAME_DATE"] = pd.to_datetime(schedule_df["GAME_DATE"], errors="coerce")
 
     today = pd.Timestamp(date.today())
@@ -111,13 +112,13 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
         return upcoming
 
     # ── 2. Load V2 team features and get latest per team ──────────────────
-    if not os.path.exists(V2_MODEL_PATH):
+    if not os.path.exists(v2_model_path):
         raise FileNotFoundError(
-            f"V2 model-ready dataset not found at {V2_MODEL_PATH}.\n"
+            f"V2 model-ready dataset not found at {v2_model_path}.\n"
             "Run `python3 main.py --build-model-dataset` first."
         )
 
-    v2_df = pd.read_csv(V2_MODEL_PATH)
+    v2_df = pd.read_csv(v2_model_path)
     latest_features = _get_latest_team_features(v2_df)
     print(f"  📊 Loaded V2 team features for {len(latest_features)} teams")
 
@@ -146,14 +147,14 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
     ctx = ctx.merge(away_features, on="AWAY_TEAM_ABBREVIATION", how="left")
 
     # ── 4. Add core player strings ─────────────────────────────────────────
-    if not os.path.exists(CORE_PLAYERS_PATH):
-        print(f"  ⚠️  Core players file not found at {CORE_PLAYERS_PATH}. Skipping player context.")
+    if not os.path.exists(core_players_path):
+        print(f"  ⚠️  Core players file not found at {core_players_path}. Skipping player context.")
         ctx["HOME_TOP3_CORE_PLAYERS"] = None
         ctx["HOME_TOP5_CORE_PLAYERS"] = None
         ctx["AWAY_TOP3_CORE_PLAYERS"] = None
         ctx["AWAY_TOP5_CORE_PLAYERS"] = None
     else:
-        core_df  = pd.read_csv(CORE_PLAYERS_PATH)
+        core_df  = pd.read_csv(core_players_path)
         core_str = _build_core_player_strings(core_df)
 
         home_core = core_str.rename(columns={
@@ -176,9 +177,9 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
     # ── 6. Save ────────────────────────────────────────────────────────────
     if save:
         os.makedirs("data/processed", exist_ok=True)
-        ctx.to_csv(OUT_CSV, index=False)
-        ctx.to_parquet(OUT_PARQ, index=False, engine="pyarrow")
-        print(f"  💾 Saved: {OUT_CSV}")
-        print(f"  💾 Saved: {OUT_PARQ}")
+        ctx.to_csv(out_csv, index=False)
+        ctx.to_parquet(out_parq, index=False, engine="pyarrow")
+        print(f"  💾 Saved: {out_csv}")
+        print(f"  💾 Saved: {out_parq}")
 
     return ctx
