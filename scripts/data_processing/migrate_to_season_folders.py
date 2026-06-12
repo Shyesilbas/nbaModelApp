@@ -7,10 +7,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.season_utils import normalize_season, season_to_file_token
+from scripts.season_utils import normalize_season, season_to_file_token, discover_seasons
 from scripts.data_paths import get_data_paths
-
-SEASONS = ["2022-23", "2023-24", "2024-25", "2025-26"]
 
 def migrate_file(source_rel: str, target_abs: str) -> None:
     source_abs = str(ROOT / source_rel)
@@ -34,8 +32,9 @@ def migrate_file(source_rel: str, target_abs: str) -> None:
 
 def main() -> None:
     print("Starting NBA Data migration to season-partitioned folders...")
+    seasons = discover_seasons()
 
-    for season in SEASONS:
+    for season in seasons.keys():
         normalized = normalize_season(season)
         token = season_to_file_token(normalized)
         paths = get_data_paths(normalized)

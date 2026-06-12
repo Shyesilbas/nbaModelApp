@@ -18,6 +18,10 @@ class BoxscoreService:
     def run_and_export(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         team_bs_df, player_bs_df, results_df = run_boxscore_pipeline(season=self.season, output_scope=self.output_scope)
 
+        from scripts.season_utils import get_default_season, normalize_season
+        current_season = normalize_season(self.season or get_default_season())
+        default_season = get_default_season()
+
         if self.save and self.output_scope != "experimental":
             os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -27,13 +31,22 @@ class BoxscoreService:
                 path = os.path.join(OUT_DIR, filename)
                 df.to_json(path, orient="records", indent=2, double_precision=4, date_format="iso")
 
-            _save_json(results_df.copy(), "game_results.json")
+            if current_season == default_season:
+                _save_json(results_df.copy(), "game_results.json")
 
-            team_recent = team_bs_df.sort_values("GAME_DATE", ascending=False).copy()
-            _save_json(team_recent, "team_boxscores.json")
+                team_recent = team_bs_df.sort_values("GAME_DATE", ascending=False).copy()
+                _save_json(team_recent, "team_boxscores.json")
 
-            player_recent = player_bs_df.sort_values("GAME_DATE", ascending=False).copy()
-            _save_json(player_recent, "player_boxscores.json")
+                player_recent = player_bs_df.sort_values("GAME_DATE", ascending=False).copy()
+                _save_json(player_recent, "player_boxscores.json")
+            else:
+                _save_json(results_df.copy(), f"game_results_{current_season}.json")
+
+                team_recent = team_bs_df.sort_values("GAME_DATE", ascending=False).copy()
+                _save_json(team_recent, f"team_boxscores_{current_season}.json")
+
+                player_recent = player_bs_df.sort_values("GAME_DATE", ascending=False).copy()
+                _save_json(player_recent, f"player_boxscores_{current_season}.json")
 
             # Game details: merge game results with the corresponding team and player box scores.
             game_details = []

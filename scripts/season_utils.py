@@ -66,3 +66,15 @@ def validate_season_data(df, season: str):
         valid_prefixes = {f"002{suffix}", f"004{suffix}", f"005{suffix}"}
         if not set(prefixes).issubset(valid_prefixes):
             print(f"Warning: Unexpected GAME_ID prefixes found for {season}: {prefixes}")
+
+def discover_seasons() -> dict:
+    """Discover all available seasons under data/ directory matching season=YYYY-YY."""
+    import glob
+    import re
+    seasons = {}
+    data_dir = ROOT / "data"
+    for path in glob.glob(str(data_dir / "season=*")):
+        m = re.search(r"season=(\d{4}-\d{2})", path)
+        if m:
+            seasons[m.group(1)] = path
+    return dict(sorted(seasons.items()))

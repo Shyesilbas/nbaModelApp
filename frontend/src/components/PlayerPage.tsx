@@ -100,7 +100,6 @@ interface GameRow {
 }
 
 /* ─────────── Helpers ─────────── */
-const SEASONS_LIST = ["2022-23", "2023-24", "2024-25", "2025-26"];
 
 const fmtPct = (v: number | null | undefined) =>
   v != null ? `${(v * 100).toFixed(1)}%` : "—";
@@ -581,65 +580,68 @@ function DiscoveryGrid({
   profiles,
   averagesData,
   onSelect,
+  seasons,
 }: {
   profiles: PlayerProfile[];
   averagesData: Record<string, Record<string, SeasonAverages>>;
   onSelect: (p: PlayerProfile) => void;
+  seasons: string[];
 }) {
-  const RECENT_SEASONS = ["2025-26", "2024-25", "2023-24", "2022-23"] as const;
+  const latestSeason = seasons[seasons.length - 1] || "2025-26";
+  const otherSeasons = seasons.filter((s) => s !== latestSeason);
 
   const getBestAvgs = (pid: number, preferSeason?: string): { avgs: SeasonAverages; season: string } | null => {
     const pidStr = String(pid);
     const pAvgs = averagesData[pidStr];
     if (!pAvgs) return null;
     const ordered = preferSeason
-      ? [preferSeason, ...RECENT_SEASONS.filter((s) => s !== preferSeason)]
-      : [...RECENT_SEASONS];
+      ? [preferSeason, ...seasons.filter((s) => s !== preferSeason).reverse()]
+      : [...seasons].reverse();
     for (const s of ordered) {
       if (pAvgs[s] && pAvgs[s].games_played >= 15) return { avgs: pAvgs[s], season: s };
     }
     return null;
   };
 
-  // Top scorers in 2025-26
+  // Top scorers in latestSeason
   const topScorers = useMemo(() =>
     profiles
-      .map((p) => ({ p, res: getBestAvgs(p.PLAYER_ID, "2025-26") }))
-      .filter((x) => x.res?.season === "2025-26" && (x.res.avgs.PTS ?? 0) > 0)
+      .map((p) => ({ p, res: getBestAvgs(p.PLAYER_ID, latestSeason) }))
+      .filter((x) => x.res?.season === latestSeason && (x.res.avgs.PTS ?? 0) > 0)
       .sort((a, b) => (b.res!.avgs.PTS ?? 0) - (a.res!.avgs.PTS ?? 0))
       .slice(0, 5)
       .map(({ p, res }) => ({ p, avgs: res!.avgs, label: "Scorer" })),
-  [profiles, averagesData]);
+  [profiles, averagesData, seasons, latestSeason]);
 
-  // Top playmakers 2025-26
+  // Top playmakers latestSeason
   const topPlaymakers = useMemo(() =>
     profiles
-      .map((p) => ({ p, res: getBestAvgs(p.PLAYER_ID, "2025-26") }))
-      .filter((x) => x.res?.season === "2025-26" && (x.res.avgs.AST ?? 0) > 0)
+      .map((p) => ({ p, res: getBestAvgs(p.PLAYER_ID, latestSeason) }))
+      .filter((x) => x.res?.season === latestSeason && (x.res.avgs.AST ?? 0) > 0)
       .sort((a, b) => (b.res!.avgs.AST ?? 0) - (a.res!.avgs.AST ?? 0))
       .slice(0, 4)
       .map(({ p, res }) => ({ p, avgs: res!.avgs, label: "Playmaker" })),
-  [profiles, averagesData]);
+  [profiles, averagesData, seasons, latestSeason]);
 
-  // Top rebounders 2025-26
+  // Top rebounders latestSeason
   const topRebounders = useMemo(() =>
     profiles
-      .map((p) => ({ p, res: getBestAvgs(p.PLAYER_ID, "2025-26") }))
-      .filter((x) => x.res?.season === "2025-26" && (x.res.avgs.REB ?? 0) > 0)
+      .map((p) => ({ p, res: getBestAvgs(p.PLAYER_ID, latestSeason) }))
+      .filter((x) => x.res?.season === latestSeason && (x.res.avgs.REB ?? 0) > 0)
       .sort((a, b) => (b.res!.avgs.REB ?? 0) - (a.res!.avgs.REB ?? 0))
       .slice(0, 4)
       .map(({ p, res }) => ({ p, avgs: res!.avgs, label: "Rebounder" })),
-  [profiles, averagesData]);
+  [profiles, averagesData, seasons, latestSeason]);
 
-  // Legacy — players NOT in 2025-26 but played 2022-25
+  // Legacy — players NOT in latestSeason
   const legacyPlayers = useMemo(() => {
     return profiles
       .filter((p) => {
         const pAvgs = averagesData[String(p.PLAYER_ID)];
         if (!pAvgs) return false;
-        const inCurrent = pAvgs["2025-26"] && pAvgs["2025-26"].games_played > 5;
+        const inCurrent = pAvgs[latestSeason] && pAvgs[latestSeason].games_played > 5;
         if (inCurrent) return false;
-        return ["2024-25", "2023-24", "2022-23"].some(
+        return otherSeasons.some(
           (s) => pAvgs[s] && pAvgs[s].games_played >= 20
         );
       })
@@ -650,7 +652,7 @@ function DiscoveryGrid({
       .filter((x) => x.avgs != null)
       .sort((a, b) => (b.avgs?.PTS ?? 0) - (a.avgs?.PTS ?? 0))
       .slice(0, 5);
-  }, [profiles, averagesData]);
+  }, [profiles, averagesData, seasons, latestSeason, otherSeasons]);
 
   const renderSection = (
     title: string,
@@ -691,6 +693,7 @@ function DiscoveryGrid({
 
 /* ─────────── Main Component ─────────── */
 export default function PlayerPage() {
+  const [seasonsList, setSeasonsList] = useState<string[]>(["2022-23", "2023-24", "2024-25", "2025-26"]);
   const [profiles, setProfiles] = useState<PlayerProfile[]>([]);
   const [gamesData, setGamesData] = useState<Record<string, Record<string, GameRow[]>>>({});
   const [averagesData, setAveragesData] = useState<Record<string, Record<string, SeasonAverages>>>({});
@@ -707,6 +710,16 @@ export default function PlayerPage() {
   useEffect(() => {
     const load = async () => {
       try {
+        fetch("/data/seasons.json")
+          .then((r) => r.json())
+          .then((data) => {
+            if (Array.isArray(data) && data.length > 0) {
+              const asc = [...data].sort((a, b) => a.localeCompare(b));
+              setSeasonsList(asc);
+            }
+          })
+          .catch(() => {});
+
         const [profRes, gamesRes, avgsRes] = await Promise.all([
           fetch("/data/player_profiles.json"),
           fetch("/data/player_season_games.json"),
@@ -741,7 +754,7 @@ export default function PlayerPage() {
     if (!selectedPlayer) return;
     const pid = String(selectedPlayer.PLAYER_ID);
     const playerGames = gamesData[pid] ?? {};
-    const available = SEASONS_LIST.filter((s) => playerGames[s]?.length > 0);
+    const available = seasonsList.filter((s) => playerGames[s]?.length > 0);
     if (available.length > 0 && !available.includes(selectedSeason)) {
       setSelectedSeason(available[available.length - 1]);
     }
@@ -765,7 +778,7 @@ export default function PlayerPage() {
   const pid = selectedPlayer ? String(selectedPlayer.PLAYER_ID) : null;
   const playerGames = pid ? (gamesData[pid] ?? {}) : {};
   const playerAvgs = pid ? (averagesData[pid] ?? {}) : {};
-  const availableSeasons = SEASONS_LIST.filter((s) => playerGames[s]?.length > 0);
+  const availableSeasons = seasonsList.filter((s) => playerGames[s]?.length > 0);
   const currentAvgs = playerAvgs[selectedSeason] ?? null;
 
   const currentGames = useMemo(() => {
@@ -1093,6 +1106,7 @@ export default function PlayerPage() {
             profiles={profiles}
             averagesData={averagesData}
             onSelect={handleSelectPlayer}
+            seasons={seasonsList}
           />
         </div>
       )}

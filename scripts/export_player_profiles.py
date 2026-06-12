@@ -21,13 +21,8 @@ import os
 import sys
 
 import pandas as pd
+from scripts.season_utils import discover_seasons
 
-SEASONS = {
-    "2022-23": "data/season=2022-23",
-    "2023-24": "data/season=2023-24",
-    "2024-25": "data/season=2024-25",
-    "2025-26": "data/season=2025-26",
-}
 OUT_DIR = "frontend/public/data"
 
 
@@ -120,13 +115,15 @@ def main():
                 "ROSTER_STATUS": nan_safe(row.get("ROSTER_STATUS")),
             }
 
+    seasons = discover_seasons()
+
     # ── Per-season processing ──────────────────────────────────────────
     # These dicts accumulate across seasons
     player_season_games: dict = {}
     player_season_averages: dict = {}
     player_name_from_bs: dict = {}
 
-    for season_key, season_path in SEASONS.items():
+    for season_key, season_path in seasons.items():
         print(f"\nProcessing {season_key}...")
 
         bs = load_boxscores(season_key, season_path)
