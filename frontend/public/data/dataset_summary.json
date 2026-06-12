@@ -9,8 +9,8 @@
   "player_games_playin": 126,
   "player_games_playoffs": 1834,
   "player_games_finals": 60,
-  "total_teams": 0,
-  "total_players": 0,
+  "total_teams": 30,
+  "total_players": 518,
   "v1_rows": 2610,
   "v1_features": 9,
   "v2_rows": 1762,
@@ -36,43 +36,43 @@
     },
     {
       "name": "Team Rosters",
-      "path": "data/analysis/team_rosters.csv",
-      "exists": false,
-      "rows": 0,
-      "columns": 0,
-      "size_kb": 0.0
+      "path": "data/season=2025-26/analysis/team_rosters.csv",
+      "exists": true,
+      "rows": 518,
+      "columns": 10,
+      "size_kb": 59.84
     },
     {
       "name": "Core Players List",
-      "path": "data/analysis/core_players.csv",
-      "exists": false,
-      "rows": 0,
-      "columns": 0,
-      "size_kb": 0.0
+      "path": "data/season=2025-26/analysis/core_players.csv",
+      "exists": true,
+      "rows": 518,
+      "columns": 7,
+      "size_kb": 29.07
     },
     {
       "name": "Star Candidates",
-      "path": "data/analysis/star_candidates.csv",
-      "exists": false,
-      "rows": 0,
-      "columns": 0,
-      "size_kb": 0.0
+      "path": "data/season=2025-26/analysis/star_candidates.csv",
+      "exists": true,
+      "rows": 518,
+      "columns": 10,
+      "size_kb": 59.17
     },
     {
       "name": "Multi-Team Players",
-      "path": "data/analysis/multi_team_players.csv",
-      "exists": false,
-      "rows": 0,
-      "columns": 0,
-      "size_kb": 0.0
+      "path": "data/season=2025-26/analysis/multi_team_players.csv",
+      "exists": true,
+      "rows": 68,
+      "columns": 4,
+      "size_kb": 2.41
     },
     {
       "name": "Player Name Lookup",
-      "path": "data/analysis/player_name_lookup.csv",
-      "exists": false,
-      "rows": 0,
-      "columns": 0,
-      "size_kb": 0.0
+      "path": "data/season=2025-26/analysis/player_name_lookup.csv",
+      "exists": true,
+      "rows": 518,
+      "columns": 3,
+      "size_kb": 18.44
     },
     {
       "name": "V1 Model-Ready Dataset",

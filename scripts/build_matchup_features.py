@@ -439,8 +439,61 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
 
     last_games = df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
     
-    home_roster = last_games[last_games["TEAM_ABBREVIATION"] == home_team].sort_values("MIN_EMA_10", ascending=False).head(10)
-    away_roster = last_games[last_games["TEAM_ABBREVIATION"] == away_team].sort_values("MIN_EMA_10", ascending=False).head(10)
+    # Roster-aware filtering using the team_rosters.csv dataset
+    year = pred_dt.year
+    month = pred_dt.month
+    if month < 10:
+        start_year = year - 1
+    else:
+        start_year = year
+    season_str = f"{start_year}-{str(start_year+1)[-2:]}"
+    
+    roster_path = ROOT / f"data/season={season_str}/analysis/team_rosters.csv"
+    home_active = None
+    away_active = None
+    if roster_path.exists():
+        try:
+            roster_df = pd.read_csv(roster_path)
+            home_active = set(roster_df[roster_df["TEAM_ABBREVIATION"] == home_team]["PLAYER_ID"].unique())
+            away_active = set(roster_df[roster_df["TEAM_ABBREVIATION"] == away_team]["PLAYER_ID"].unique())
+        except Exception:
+            pass
+
+    if home_active:
+        home_roster_candidates = last_games[last_games["PLAYER_ID"].isin(home_active)].copy()
+        home_roster_candidates["TEAM_ABBREVIATION"] = home_team
+        if len(home_roster_candidates) == 0:
+            home_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == home_team]
+    else:
+        home_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == home_team]
+
+    if away_active:
+        away_roster_candidates = last_games[last_games["PLAYER_ID"].isin(away_active)].copy()
+        away_roster_candidates["TEAM_ABBREVIATION"] = away_team
+        if len(away_roster_candidates) == 0:
+            away_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == away_team]
+    else:
+        away_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == away_team]
+        
+    # Filter to only players who have played at least one of the team's last 15 games
+    home_dates = sorted(df[df["TEAM_ABBREVIATION"] == home_team]["GAME_DATE"].unique())
+    if len(home_dates) >= 5:
+        home_last_15 = home_dates[-15:]
+        home_recent_active = set(df[(df["TEAM_ABBREVIATION"] == home_team) & (df["GAME_DATE"].isin(home_last_15))]["PLAYER_ID"].unique())
+        filtered = home_roster_candidates[home_roster_candidates["PLAYER_ID"].isin(home_recent_active)]
+        if len(filtered) > 0:
+            home_roster_candidates = filtered
+            
+    away_dates = sorted(df[df["TEAM_ABBREVIATION"] == away_team]["GAME_DATE"].unique())
+    if len(away_dates) >= 5:
+        away_last_15 = away_dates[-15:]
+        away_recent_active = set(df[(df["TEAM_ABBREVIATION"] == away_team) & (df["GAME_DATE"].isin(away_last_15))]["PLAYER_ID"].unique())
+        filtered = away_roster_candidates[away_roster_candidates["PLAYER_ID"].isin(away_recent_active)]
+        if len(filtered) > 0:
+            away_roster_candidates = filtered
+        
+    home_roster = home_roster_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
+    away_roster = away_roster_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
     
     if len(home_roster) == 0 or len(away_roster) == 0:
         return {}
@@ -499,6 +552,16 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
 
 
 def compute_player_features_for_inference(home_team: str, away_team: str, prediction_date: str, season: str = None):
+    if not season:
+        pred_dt = pd.to_datetime(prediction_date)
+        year = pred_dt.year
+        month = pred_dt.month
+        if month < 10:
+            start_year = year - 1
+        else:
+            start_year = year
+        season = f"{start_year}-{str(start_year+1)[-2:]}"
+
     player_features_list = [
         "HOME_CORE_PLAYERS_AVAILABLE_COUNT", "HOME_CORE_PLAYERS_MISSING_COUNT",
         "HOME_TOP1_AVAILABLE", "HOME_TOP2_AVAILABLE", "HOME_TOP3_AVAILABLE",
@@ -572,7 +635,9 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
             how="inner"
         )
     else:
-        core_path = ROOT / "data/production/core_players.csv"
+        core_path = ROOT / f"data/season={season}/analysis/core_players.csv"
+        if not core_path.exists():
+            core_path = ROOT / "data/production/core_players.csv"
         if not core_path.exists():
             core_path = ROOT / "data/canonical/core_players.csv"
         if not core_path.exists():
