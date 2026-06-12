@@ -40,11 +40,11 @@ def export_data(season: str = None):
     raw_team_path = paths.team_games_raw
     raw_player_path = paths.player_games_raw
     
-    roster_path = "data/analysis/team_rosters.csv"
-    core_path = "data/analysis/core_players.csv"
-    star_path = "data/analysis/star_candidates.csv"
-    multi_team_path = "data/analysis/multi_team_players.csv"
-    lookup_path = "data/analysis/player_name_lookup.csv"
+    roster_path = f"data/season={normalized_s}/analysis/team_rosters.csv"
+    core_path = f"data/season={normalized_s}/analysis/core_players.csv"
+    star_path = f"data/season={normalized_s}/analysis/star_candidates.csv"
+    multi_team_path = f"data/season={normalized_s}/analysis/multi_team_players.csv"
+    lookup_path = f"data/season={normalized_s}/analysis/player_name_lookup.csv"
     
     schedule_combined_path = paths.schedule_combined
     upcoming_context_path  = paths.upcoming_context

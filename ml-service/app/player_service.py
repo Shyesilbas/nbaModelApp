@@ -7,6 +7,16 @@ ROOT = Path(__file__).resolve().parents[2]
 
 _v3_df_cache = None
 
+def date_to_season(dt) -> str:
+    year = dt.year
+    month = dt.month
+    if month < 10:
+        start_year = year - 1
+    else:
+        start_year = year
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
+
 def get_player_predictions(home_team: str, away_team: str, prediction_date: str, player_loader, score_loader):
     """
     Generate player predictions for home and away teams using the V3 Ridge models.
@@ -46,8 +56,56 @@ def get_player_predictions(home_team: str, away_team: str, prediction_date: str,
             
         last_games = past_df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
         
-        home_roster = last_games[last_games["TEAM_ABBREVIATION"] == home_team].sort_values("MIN_EMA_10", ascending=False).head(10)
-        away_roster = last_games[last_games["TEAM_ABBREVIATION"] == away_team].sort_values("MIN_EMA_10", ascending=False).head(10)
+        # Season-aware filtering using the team_rosters.csv dataset
+        season_str = date_to_season(pred_dt)
+        roster_path = ROOT / f"data/season={season_str}/analysis/team_rosters.csv"
+        
+        home_active = None
+        away_active = None
+        
+        if roster_path.exists():
+            try:
+                roster_df = pd.read_csv(roster_path)
+                home_active = set(roster_df[roster_df["TEAM_ABBREVIATION"] == home_team]["PLAYER_ID"].unique())
+                away_active = set(roster_df[roster_df["TEAM_ABBREVIATION"] == away_team]["PLAYER_ID"].unique())
+            except Exception:
+                pass
+                
+        if home_active:
+            home_roster_candidates = last_games[last_games["PLAYER_ID"].isin(home_active)].copy()
+            home_roster_candidates["TEAM_ABBREVIATION"] = home_team
+            if len(home_roster_candidates) == 0:
+                home_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == home_team]
+        else:
+            home_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == home_team]
+            
+        if away_active:
+            away_roster_candidates = last_games[last_games["PLAYER_ID"].isin(away_active)].copy()
+            away_roster_candidates["TEAM_ABBREVIATION"] = away_team
+            if len(away_roster_candidates) == 0:
+                away_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == away_team]
+        else:
+            away_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == away_team]
+            
+        # Filter to only players who have played at least one of the team's last 15 games
+        home_dates = sorted(past_df[past_df["TEAM_ABBREVIATION"] == home_team]["GAME_DATE"].unique())
+        if len(home_dates) >= 5:
+            home_last_15 = home_dates[-15:]
+            home_recent_active = set(past_df[(past_df["TEAM_ABBREVIATION"] == home_team) & (past_df["GAME_DATE"].isin(home_last_15))]["PLAYER_ID"].unique())
+            filtered = home_roster_candidates[home_roster_candidates["PLAYER_ID"].isin(home_recent_active)]
+            if len(filtered) > 0:
+                home_roster_candidates = filtered
+                
+        away_dates = sorted(past_df[past_df["TEAM_ABBREVIATION"] == away_team]["GAME_DATE"].unique())
+        if len(away_dates) >= 5:
+            away_last_15 = away_dates[-15:]
+            away_recent_active = set(past_df[(past_df["TEAM_ABBREVIATION"] == away_team) & (past_df["GAME_DATE"].isin(away_last_15))]["PLAYER_ID"].unique())
+            filtered = away_roster_candidates[away_roster_candidates["PLAYER_ID"].isin(away_recent_active)]
+            if len(filtered) > 0:
+                away_roster_candidates = filtered
+            
+        home_roster = home_roster_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
+        away_roster = away_roster_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
         
         if len(home_roster) == 0 or len(away_roster) == 0:
             raise ValueError(f"No active players found for {home_team} or {away_team} before {prediction_date}")
