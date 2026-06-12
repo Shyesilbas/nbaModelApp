@@ -985,54 +985,93 @@ function GameCard({ game, onOpen }: { game: GameFeedRow; onOpen: () => void }) {
   );
 }
 
+const ALL_SEASONS = ["2025-26", "2024-25", "2023-24", "2022-23"];
+
 /* ── Main exported component ── */
 export default function GameResults() {
+  const [allResults,  setAllResults]  = useState<(GameFeedRow & { SEASON?: string })[]>([]);
   const [results,     setResults]     = useState<GameFeedRow[]>([]);
   const [teamBS,      setTeamBS]      = useState<TeamBoxScore[]>([]);
   const [playerBS,    setPlayerBS]    = useState<PlayerBoxScore[]>([]);
+  // Per-season lazy-loaded boxscores cache
+  const [seasonTeamBS,   setSeasonTeamBS]   = useState<Record<string, TeamBoxScore[]>>({ "2025-26": [] });
+  const [seasonPlayerBS, setSeasonPlayerBS] = useState<Record<string, PlayerBoxScore[]>>({ "2025-26": [] });
+  const [bsLoading,   setBsLoading]   = useState<Record<string, boolean>>({});
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState<string | null>(null);
   const [search,      setSearch]      = useState("");
   const [selectedDate,setSelectedDate]= useState<string>("");
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [gameDetails, setGameDetails] = useState<GameDetail[]>([]);
+  const [selectedSeason, setSelectedSeason] = useState<string>("2025-26");
 
+  // Initial load: games index + current season boxscores
   useEffect(() => {
     Promise.all([
+      fetch("/data/all_seasons_games.json").then((r) => r.json()).catch(() => []),
       fetch("/data/games.json").then((r) => r.json()),
       fetch("/data/team_boxscores.json").then((r) => r.json()),
       fetch("/data/player_boxscores.json").then((r) => r.json()),
       fetch("/data/game_details.json").then((r) => r.json()).catch(() => []),
     ])
-      .then(([r, t, p, d]) => {
-        setResults(r); setTeamBS(t); setPlayerBS(p); setGameDetails(d);
+      .then(([allGames, r, t, p, d]) => {
+        const currentIds = new Set((r as GameFeedRow[]).map((g) => g.GAME_ID));
+        const taggedCurrent = (r as any[]).map((g) => ({ ...g, SEASON: "2025-26" }));
+        const historical = (allGames as any[]).filter(
+          (g: any) => !currentIds.has(g.GAME_ID) && g.SEASON !== "2025-26"
+        );
+        setAllResults([...taggedCurrent, ...historical]);
+        setResults(r);
+        setTeamBS(t);
+        setPlayerBS(p);
+        setGameDetails(d);
+        // Seed 2025-26 into per-season cache
+        setSeasonTeamBS({ "2025-26": t });
+        setSeasonPlayerBS({ "2025-26": p });
         setLoading(false);
       })
       .catch((e) => { setError(e.message); setLoading(false); });
   }, []);
 
+  // Lazy-load boxscores when switching to a historical season
+  useEffect(() => {
+    if (selectedSeason === "2025-26") return;
+    if (seasonTeamBS[selectedSeason] || bsLoading[selectedSeason]) return;
+    setBsLoading((prev) => ({ ...prev, [selectedSeason]: true }));
+    Promise.all([
+      fetch(`/data/team_boxscores_${selectedSeason}.json`).then((r) => r.json()).catch(() => []),
+      fetch(`/data/player_boxscores_${selectedSeason}.json`).then((r) => r.json()).catch(() => []),
+    ]).then(([t, p]) => {
+      setSeasonTeamBS((prev) => ({ ...prev, [selectedSeason]: t }));
+      setSeasonPlayerBS((prev) => ({ ...prev, [selectedSeason]: p }));
+      setBsLoading((prev) => ({ ...prev, [selectedSeason]: false }));
+    });
+  }, [selectedSeason]);
+
   const sortedResults = useMemo(() => {
     const q = search.trim().toUpperCase();
-    return [...results]
-      .filter((x) => !q || x.HOME_TEAM_ABBREVIATION.includes(q) || x.AWAY_TEAM_ABBREVIATION.includes(q) || x.GAME_ID.includes(q))
-      .sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
-  }, [results, search]);
+    const seasonPool = selectedSeason === "2025-26" ? results : allResults.filter((g: any) => g.SEASON === selectedSeason);
+    return [...seasonPool]
+      .filter((x) => !q || (x.HOME_TEAM_ABBREVIATION ?? "").includes(q) || (x.AWAY_TEAM_ABBREVIATION ?? "").includes(q) || x.GAME_ID.includes(q))
+      .sort((a, b) => (b.GAME_DATE ?? "").localeCompare(a.GAME_DATE ?? ""));
+  }, [results, allResults, selectedSeason, search]);
 
   const uniqueDates = useMemo(
-    () => Array.from(new Set(sortedResults.map((g) => g.GAME_DATE))).sort((a, b) => b.localeCompare(a)),
+    () => Array.from(new Set(sortedResults.map((g) => g.GAME_DATE ?? "").filter(Boolean))).sort((a, b) => b.localeCompare(a)),
     [sortedResults],
   );
 
   useEffect(() => {
-    if (!selectedDate && uniqueDates.length) setSelectedDate(uniqueDates[0]);
-  }, [selectedDate, uniqueDates]);
+    // Reset date when season changes
+    setSelectedDate(uniqueDates[0] ?? "");
+  }, [selectedSeason, uniqueDates.length]);
 
   const selectedDateIndex = uniqueDates.indexOf(selectedDate);
   const selectedDateGames = useMemo(
     () => sortedResults.filter((g) => g.GAME_DATE === selectedDate),
     [sortedResults, selectedDate],
   );
-  const selectedGame       = useMemo(() => results.find((g) => g.GAME_ID === selectedGameId) ?? null, [results, selectedGameId]);
+  const selectedGame       = useMemo(() => results.find((g) => g.GAME_ID === selectedGameId) ?? (allResults.find((g) => g.GAME_ID === selectedGameId) as GameFeedRow | undefined) ?? null, [results, allResults, selectedGameId]);
   const selectedGameDetail = useMemo(() => gameDetails.find((d) => d.game_id === selectedGameId) ?? null, [gameDetails, selectedGameId]);
 
   if (loading) {
@@ -1056,10 +1095,16 @@ export default function GameResults() {
     );
   }
 
+  // Resolve active boxscore arrays for selected season
+  const activeTeamBS   = seasonTeamBS[selectedSeason]   ?? teamBS;
+  const activePlayerBS = seasonPlayerBS[selectedSeason] ?? playerBS;
+  const isSeasonBsLoading = !!bsLoading[selectedSeason];
+
   if (selectedGame) {
-    const homeBS      = teamBS.find((t) => t.GAME_ID === selectedGame.GAME_ID && t.TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION) ?? null;
-    const awayBS      = teamBS.find((t) => t.GAME_ID === selectedGame.GAME_ID && t.TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION) ?? null;
-    const gamePlayers = playerBS.filter((p) => p.GAME_ID === selectedGame.GAME_ID);
+    const gid = selectedGame.GAME_ID;
+    const homeBS      = activeTeamBS.find((t) => t.GAME_ID === gid && t.TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION) ?? null;
+    const awayBS      = activeTeamBS.find((t) => t.GAME_ID === gid && t.TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION) ?? null;
+    const gamePlayers = activePlayerBS.filter((p) => p.GAME_ID === gid);
 
     return (
       <div className="space-y-4">
@@ -1070,14 +1115,21 @@ export default function GameResults() {
           <ArrowLeft size={11} />
           Back to games
         </button>
-        <GameCardDetail
-          game={selectedGame}
-          gameDetail={selectedGameDetail}
-          homeBS={homeBS}
-          awayBS={awayBS}
-          homePlayers={playerTeamFilter(gamePlayers, selectedGame.HOME_TEAM_ABBREVIATION)}
-          awayPlayers={playerTeamFilter(gamePlayers, selectedGame.AWAY_TEAM_ABBREVIATION)}
-        />
+        {isSeasonBsLoading ? (
+          <div className="flex h-32 items-center justify-center gap-2">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#1d428a] border-t-transparent" />
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading box scores...</span>
+          </div>
+        ) : (
+          <GameCardDetail
+            game={selectedGame}
+            gameDetail={selectedGameDetail}
+            homeBS={homeBS}
+            awayBS={awayBS}
+            homePlayers={playerTeamFilter(gamePlayers, selectedGame.HOME_TEAM_ABBREVIATION)}
+            awayPlayers={playerTeamFilter(gamePlayers, selectedGame.AWAY_TEAM_ABBREVIATION)}
+          />
+        )}
       </div>
     );
   }
@@ -1086,17 +1138,42 @@ export default function GameResults() {
     <div className="space-y-4">
       {/* ── Hero ── */}
       <section className="rounded-[1.75rem] border border-slate-200 bg-white px-5 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1d428a]/10">
-            <Trophy size={15} className="text-[#1d428a]" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1d428a]/10">
+              <Trophy size={15} className="text-[#1d428a]" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-tight text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                Game Scores
+              </h2>
+              <p className="text-xs text-slate-500">Final scores, team edges and player logs.</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-black uppercase tracking-tight text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Game Scores
-            </h2>
-            <p className="text-xs text-slate-500">Final scores, team edges and player logs.</p>
+          {/* Season selector pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {ALL_SEASONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => { setSelectedSeason(s); setSelectedGameId(null); }}
+                className={[
+                  "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] transition-all duration-200",
+                  selectedSeason === s
+                    ? "bg-[#1d428a] text-white shadow-md shadow-[#1d428a]/25"
+                    : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700",
+                ].join(" ")}
+              >
+                {s}
+              </button>
+            ))}
           </div>
         </div>
+        {isSeasonBsLoading && (
+          <p className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-semibold text-slate-500">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#1d428a] border-t-transparent" />
+            Loading {selectedSeason} box scores...
+          </p>
+        )}
       </section>
 
       {/* ── Date navigation ── */}

@@ -69,3 +69,6 @@ outputs/analysis/
 !models/
 !outputs/
 !notebooks/
+
+# Frontend generated JSON data assets (large files)
+frontend/public/data/*.json

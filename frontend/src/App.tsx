@@ -5,6 +5,7 @@ import {
   Trophy,
   RefreshCw,
   BarChart2,
+  UserCircle,
 } from "lucide-react";
 import GameResults from "./components/GameResults";
 import TeamExplorer from "./components/TeamExplorer";
@@ -12,16 +13,18 @@ import CorePlayers from "./components/CorePlayers";
 import StarCandidates from "./components/StarCandidates";
 import MultiTeamPlayers from "./components/MultiTeamPlayers";
 import NbaPrediction from "./components/NbaPrediction";
+import PlayerPage from "./components/PlayerPage";
 import TeamLogo from "./components/TeamLogo";
 import { TEAM_NAME_BY_ABBR } from "./lib/nbaTeams";
 
 const MENU = [
-  { id: "game-results",   label: "Game Results",   icon: <Trophy size={15} />,   section: null },
-  { id: "team-explorer",  label: "Team Explorer",  icon: <Search size={15} />,   section: "Analysis" },
-  { id: "core-players",   label: "Core Players",   icon: <Layers size={15} />,   section: null },
-  { id: "star-candidates",label: "Star Candidates",icon: <Trophy size={15} />,   section: null },
-  { id: "multi-team",     label: "Trade Discovery",icon: <RefreshCw size={15} />,section: null },
-  { id: "nba-prediction", label: "Predictions",    icon: <BarChart2 size={15} />,section: "Models" },
+  { id: "game-results",   label: "Game Results",   icon: <Trophy size={15} />,      section: null },
+  { id: "player-profile", label: "Player Profile", icon: <UserCircle size={15} />,  section: null },
+  { id: "team-explorer",  label: "Team Explorer",  icon: <Search size={15} />,      section: "Analysis" },
+  { id: "core-players",   label: "Core Players",   icon: <Layers size={15} />,      section: null },
+  { id: "star-candidates",label: "Star Candidates",icon: <Trophy size={15} />,      section: null },
+  { id: "multi-team",     label: "Trade Discovery",icon: <RefreshCw size={15} />,   section: null },
+  { id: "nba-prediction", label: "Predictions",    icon: <BarChart2 size={15} />,   section: "Models" },
 ];
 
 export default function App() {
@@ -151,6 +154,7 @@ export default function App() {
             ) : (
               <div className="space-y-5">
                 {activeTab === "game-results"   && <GameResults />}
+                {activeTab === "player-profile" && <PlayerPage />}
                 {activeTab === "team-explorer"  && <TeamExplorer rosters={rosters} />}
                 {activeTab === "core-players"   && <CorePlayers corePlayers={corePlayers} rosters={rosters} />}
                 {activeTab === "star-candidates"&& <StarCandidates candidates={starCandidates} />}
