@@ -410,8 +410,13 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
     import joblib
     import os
     
-    # Use V4 player features and models for leakage-free predictions
-    features_path = ROOT / "models/production/player_v4_features.pkl"
+    # Use V5 player features and models for leakage-free predictions with fallback to V4
+    features_path = ROOT / "models/production/player_v5_features.pkl"
+    model_prefix = "player_v5_lgb_"
+    if not features_path.exists():
+        features_path = ROOT / "models/production/player_v4_features.pkl"
+        model_prefix = "player_v4_lgb_"
+        
     try:
         player_features = joblib.load(features_path)
     except Exception:
@@ -420,7 +425,7 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
     targets = ["pts", "reb", "ast"]
     models = {}
     for t in targets:
-        m_path = ROOT / f"models/production/player_v4_lgb_{t}.pkl"
+        m_path = ROOT / f"models/production/{model_prefix}{t}.pkl"
         if m_path.exists():
             models[t] = joblib.load(m_path)
             

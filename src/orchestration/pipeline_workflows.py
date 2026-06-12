@@ -162,7 +162,11 @@ def run_update_data(args: Any) -> None:
 
 
 def run_build_player_dataset_pipeline(args: Any) -> None:
-    seasons = [args.season] if args.season else ["2024-25", "2025-26"]
+    if args.season:
+        seasons = [args.season]
+    else:
+        from scripts.season_utils import discover_seasons
+        seasons = list(discover_seasons().keys())
     build_player_dataset_v4(seasons=seasons)
 
 

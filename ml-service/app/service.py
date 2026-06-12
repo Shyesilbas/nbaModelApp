@@ -264,10 +264,10 @@ def get_model_status() -> ModelStatusResponse:
     )
     
     # Get score model info
-    home_model_path = ROOT / "models/production/score_model_v4_home_rtg.pkl"
-    away_model_path = ROOT / "models/production/score_model_v4_away_rtg.pkl"
-    total_model_path = ROOT / "models/production/score_model_v4_pace.pkl"
-    margin_model_path = ROOT / "models/production/score_model_v4_margin.pkl"
+    home_model_path = score_loader.home_rtg_path or (ROOT / "models/production/score_model_v4_home_rtg.pkl")
+    away_model_path = score_loader.away_rtg_path or (ROOT / "models/production/score_model_v4_away_rtg.pkl")
+    total_model_path = score_loader.pace_path or (ROOT / "models/production/score_model_v4_pace.pkl")
+    margin_model_path = score_loader.margin_path or (ROOT / "models/production/score_model_v4_margin.pkl")
     
     score_metrics = ModelMetrics()
     score_metadata = score_loader.metadata
@@ -288,42 +288,63 @@ def get_model_status() -> ModelStatusResponse:
     
     # Check for experimental candidate
     experimental_candidate = None
-    experimental_path = ROOT / "models" / "experimental" / "cross_season_win_logistic_regression.pkl"
-    if experimental_path.exists():
-        # Try to load experimental metadata if it exists
-        exp_metadata_path = experimental_path.parent / "cross_season_win_metadata.json"
+    v5_exp_path = ROOT / "models" / "experimental" / "win_probability_model.pkl"
+    if v5_exp_path.exists():
+        exp_metadata_path = ROOT / "models" / "experimental" / "model_metadata.json"
         if exp_metadata_path.exists():
             import json
             with open(exp_metadata_path, "r") as f:
                 exp_metadata = json.load(f)
                 exp_metrics = exp_metadata.get("metrics", {})
-                uncalibrated_metrics = exp_metrics.get("uncalibrated", {}) if isinstance(exp_metrics.get("uncalibrated", {}), dict) else {}
+                best_cal = exp_metadata.get("selected_calibration", "uncalibrated")
+                best_metrics = exp_metrics.get(best_cal, {}) or exp_metrics.get("uncalibrated", {}) or {}
+                experimental_candidate = {
+                    "model_name": "win_probability_model_v5",
+                    "path": str(v5_exp_path),
+                    "training_date": exp_metadata.get("training_date"),
+                    "version": exp_metadata.get("version") or exp_metadata.get("training_date") or "5.0",
+                    "metrics": {
+                        "roc_auc": best_metrics.get("roc_auc"),
+                        "brier": best_metrics.get("brier_score") or best_metrics.get("brier"),
+                        "brier_score": best_metrics.get("brier_score") or best_metrics.get("brier"),
+                        "accuracy": best_metrics.get("accuracy")
+                    }
+                }
+    else:
+        experimental_path = ROOT / "models" / "experimental" / "cross_season_win_logistic_regression.pkl"
+        if experimental_path.exists():
+            exp_metadata_path = experimental_path.parent / "cross_season_win_metadata.json"
+            if exp_metadata_path.exists():
+                import json
+                with open(exp_metadata_path, "r") as f:
+                    exp_metadata = json.load(f)
+                    exp_metrics = exp_metadata.get("metrics", {})
+                    uncalibrated_metrics = exp_metrics.get("uncalibrated", {}) if isinstance(exp_metrics.get("uncalibrated", {}), dict) else {}
+                    experimental_candidate = {
+                        "model_name": "cross_season_win_logistic_regression",
+                        "path": str(experimental_path),
+                        "training_date": exp_metadata.get("training_date"),
+                        "version": exp_metadata.get("version") or exp_metadata.get("training_date"),
+                        "metrics": {
+                            "roc_auc": exp_metrics.get("roc_auc", uncalibrated_metrics.get("roc_auc")),
+                            "brier": exp_metrics.get("brier", uncalibrated_metrics.get("brier_score")),
+                            "brier_score": exp_metrics.get("brier_score", uncalibrated_metrics.get("brier_score")),
+                            "accuracy": exp_metrics.get("accuracy", uncalibrated_metrics.get("accuracy"))
+                        }
+                    }
+            else:
                 experimental_candidate = {
                     "model_name": "cross_season_win_logistic_regression",
                     "path": str(experimental_path),
-                    "training_date": exp_metadata.get("training_date"),
-                    "version": exp_metadata.get("version") or exp_metadata.get("training_date"),
+                    "training_date": "2026-06-09",
+                    "version": "2026-06-09",
                     "metrics": {
-                        "roc_auc": exp_metrics.get("roc_auc", uncalibrated_metrics.get("roc_auc")),
-                        "brier": exp_metrics.get("brier", uncalibrated_metrics.get("brier_score")),
-                        "brier_score": exp_metrics.get("brier_score", uncalibrated_metrics.get("brier_score")),
-                        "accuracy": exp_metrics.get("accuracy", uncalibrated_metrics.get("accuracy"))
-                    }
+                        "roc_auc": 0.7048,
+                        "brier": 0.2190,
+                        "accuracy": 0.6422
+                    },
+                    "note": "Best experimental candidate from cross-season training"
                 }
-        else:
-            # Use training report data as fallback
-            experimental_candidate = {
-                "model_name": "cross_season_win_logistic_regression",
-                "path": str(experimental_path),
-                "training_date": "2026-06-09",
-                "version": "2026-06-09",
-                "metrics": {
-                    "roc_auc": 0.7048,
-                    "brier": 0.2190,
-                    "accuracy": 0.6422
-                },
-                "note": "Best experimental candidate from cross-season training"
-            }
     
     return ModelStatusResponse(
         win_model=win_info,
