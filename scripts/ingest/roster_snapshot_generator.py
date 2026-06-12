@@ -1,7 +1,15 @@
 import pandas as pd
 import numpy as np
 import os
+import sys
 from typing import Optional
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.season_utils import get_default_season, normalize_season, season_to_file_token
 
 def build_player_team_affiliations_from_observed_events(events_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -42,14 +50,17 @@ def build_player_team_affiliations_from_observed_events(events_df: pd.DataFrame)
 
     return df
 
-def build_player_team_affiliations(transactions_df: pd.DataFrame) -> pd.DataFrame:
+def build_player_team_affiliations(transactions_df: pd.DataFrame, season: Optional[str] = None) -> pd.DataFrame:
     """
     Legacy compatible wrapper to determine player-to-team affiliations.
     Falls back to observed affiliation events if transactions are empty/stubbed.
     """
     if transactions_df.empty:
+        # Resolve season token dynamically
+        actual_season = normalize_season(season or get_default_season())
+        token = season_to_file_token(actual_season)
         # Fallback to experimental observed events if available
-        obs_path = "data/experimental/observed_affiliation_events_2024_25.csv"
+        obs_path = f"data/experimental/observed_affiliation_events_{token}.csv"
         if os.path.exists(obs_path):
             obs_df = pd.read_csv(obs_path)
             return build_player_team_affiliations_from_observed_events(obs_df)
@@ -103,7 +114,8 @@ def build_player_team_affiliations(transactions_df: pd.DataFrame) -> pd.DataFram
 def build_roster_snapshots_from_affiliations(
     affiliations_df: pd.DataFrame, 
     start_date: str,
-    end_date: str
+    end_date: str,
+    season: Optional[str] = None
 ) -> pd.DataFrame:
     """
     Build daily roster snapshots from affiliation windows.
@@ -116,6 +128,8 @@ def build_roster_snapshots_from_affiliations(
         Start date of range (YYYY-MM-DD).
     end_date : str
         End date of range (YYYY-MM-DD).
+    season : Optional[str]
+        Season token or hyphenated format.
 
     Returns:
     --------
@@ -125,9 +139,12 @@ def build_roster_snapshots_from_affiliations(
     date_range = pd.date_range(start=start_date, end=end_date)
     snapshots = []
 
+    actual_season = normalize_season(season or get_default_season())
+    token = season_to_file_token(actual_season)
+
     # Load player registry or core players for role & minutes mapping if available
     metadata_map = {}
-    for path in ["data/experimental/player_registry_2024_25.csv", "data/production/core_players.csv"]:
+    for path in [f"data/experimental/player_registry_{token}.csv", "data/production/core_players.csv"]:
         if os.path.exists(path):
             meta_df = pd.read_csv(path)
             # Find columns
@@ -194,13 +211,14 @@ def build_roster_snapshots(
     transactions_df: pd.DataFrame, 
     initial_rosters_df: pd.DataFrame,
     start_date: str,
-    end_date: str
+    end_date: str,
+    season: Optional[str] = None
 ) -> pd.DataFrame:
     """
     Legacy signature compatible daily roster snapshot generator.
     """
-    affiliations_df = build_player_team_affiliations(transactions_df)
-    return build_roster_snapshots_from_affiliations(affiliations_df, start_date, end_date)
+    affiliations_df = build_player_team_affiliations(transactions_df, season=season)
+    return build_roster_snapshots_from_affiliations(affiliations_df, start_date, end_date, season=season)
 
 def get_roster_as_of(team_id: str, prediction_date: str, roster_snapshots_df: pd.DataFrame) -> pd.DataFrame:
     """
