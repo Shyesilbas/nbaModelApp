@@ -48,11 +48,16 @@ data/processed/**/*.csv
 data/processed/**/*.parquet
 data/features/**/*.csv
 data/features/**/*.parquet
+data/season=*/**/*.csv
+data/season=*/**/*.parquet
+data/season=*/analysis/
+data/season=*/experimental/
 models/**/*.pkl
 models/**/*.joblib
 models/**/*.h5
 models/**/*.pt
 outputs/
+outputs/analysis/
 
 # Keep data directory structure in Git using .gitkeep if needed
 !data/

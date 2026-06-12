@@ -41,27 +41,28 @@ def get_data_paths(season: str = None) -> DataPaths:
     season = normalize_season(season)
     token = season_to_file_token(season)
 
-    # Roots
-    raw_root = config.get("raw_data_root", "data/raw")
-    processed_root = config.get("processed_data_root", "data/processed")
-    features_root = config.get("features_data_root", "data/features")
+    # Roots relative to the season partition folder
+    season_dir = ROOT / "data" / f"season={season}"
+    raw_root = season_dir / "raw"
+    processed_root = season_dir / "processed"
+    features_root = season_dir / "features"
 
-    win_dataset_name = f"team_win_model_ready_v2_player_features_{token}.csv"
-    score_dataset_name = f"team_score_model_ready_v2_player_features_{token}.csv"
+    win_dataset_name = "team_win_model_ready_v2_player_features.csv"
+    score_dataset_name = "team_score_model_ready_v2_player_features.csv"
 
     return DataPaths(
-        team_games_raw=str(ROOT / raw_root / "team_games" / f"nba_team_games_{token}_regular_and_playoffs.csv"),
-        player_games_raw=str(ROOT / raw_root / "player_games" / f"nba_player_games_{token}_regular_and_playoffs.csv"),
-        raw_schedule=str(ROOT / raw_root / "schedule" / f"nba_schedule_{token}.csv"),
-        raw_finals_schedule=str(ROOT / raw_root / "schedule" / f"nba_finals_upcoming_{token}.csv"),
-        raw_team_boxscores=str(ROOT / raw_root / "boxscores" / "team" / f"nba_team_boxscores_{token}.csv"),
-        raw_player_boxscores=str(ROOT / raw_root / "boxscores" / "player" / f"nba_player_boxscores_{token}.csv"),
-        game_results=str(ROOT / processed_root / f"game_results_{token}.csv"),
-        schedule_combined=str(ROOT / processed_root / f"schedule_combined_{token}.csv"),
-        upcoming_context=str(ROOT / processed_root / f"upcoming_games_context_{token}.csv"),
-        team_features=str(ROOT / features_root / f"team_games_features_{token}.csv"),
-        player_features=str(ROOT / features_root / f"player_games_features_{token}.csv"),
-        win_model_dataset=str(ROOT / processed_root / win_dataset_name),
-        score_model_dataset=str(ROOT / processed_root / score_dataset_name),
-        team_model_ready_v2=str(ROOT / processed_root / f"team_model_ready_v2_{token}.csv"),
+        team_games_raw=str(raw_root / "team_games.csv"),
+        player_games_raw=str(raw_root / "player_games.csv"),
+        raw_schedule=str(raw_root / "schedule.csv"),
+        raw_finals_schedule=str(raw_root / "finals_schedule.csv"),
+        raw_team_boxscores=str(raw_root / "boxscores" / "team_boxscores.csv"),
+        raw_player_boxscores=str(raw_root / "boxscores" / "player_boxscores.csv"),
+        game_results=str(processed_root / "game_results.csv"),
+        schedule_combined=str(processed_root / "schedule_combined.csv"),
+        upcoming_context=str(processed_root / "upcoming_games_context.csv"),
+        team_features=str(features_root / "team_features.csv"),
+        player_features=str(features_root / "player_features.csv"),
+        win_model_dataset=str(processed_root / win_dataset_name),
+        score_model_dataset=str(processed_root / score_dataset_name),
+        team_model_ready_v2=str(processed_root / "team_model_ready_v2.csv"),
     )
