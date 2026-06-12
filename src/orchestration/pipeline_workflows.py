@@ -25,6 +25,10 @@ from scripts.data_paths import get_data_paths
 from scripts.export_frontend_data import export_data
 from scripts.season_manifest import write_season_manifest
 from scripts.season_utils import get_default_season, normalize_season, season_to_file_token
+from src.processing.player_dataset_builder import build_player_dataset_v4
+from src.training.player_trainer import PlayerModelTrainer
+from src.training.score_trainer import ScoreModelTrainer
+from src.training.win_trainer import WinModelTrainer
 
 
 def run_schedule_context_pipeline() -> None:
@@ -155,3 +159,23 @@ def run_update_data(args: Any) -> None:
         season=args.season,
     )
     svc.run(args)
+
+
+def run_build_player_dataset_pipeline(args: Any) -> None:
+    seasons = [args.season] if args.season else ["2024-25", "2025-26"]
+    build_player_dataset_v4(seasons=seasons)
+
+
+def run_train_player_models_pipeline(args: Any) -> None:
+    trainer = PlayerModelTrainer()
+    trainer.train_and_export()
+
+
+def run_train_score_models_pipeline(args: Any) -> None:
+    trainer = ScoreModelTrainer()
+    trainer.train_and_export()
+
+
+def run_train_win_model_pipeline(args: Any) -> None:
+    trainer = WinModelTrainer()
+    trainer.train_and_export()

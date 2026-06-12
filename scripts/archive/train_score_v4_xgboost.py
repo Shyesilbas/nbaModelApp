@@ -204,11 +204,11 @@ print(f"Derived Home Score MAE: {home_score_mae:.2f}")
 print(f"Derived Away Score MAE: {away_score_mae:.2f}")
 
 # Save models
-os.makedirs("models/production", exist_ok=True)
-joblib.dump(pace_model, "models/production/score_model_v4_pace.pkl")
-joblib.dump(home_model, "models/production/score_model_v4_home_rtg.pkl")
-joblib.dump(away_model, "models/production/score_model_v4_away_rtg.pkl")
-joblib.dump(margin_model, "models/production/score_model_v4_margin.pkl")
+os.makedirs("models/experimental", exist_ok=True)
+joblib.dump(pace_model, "models/experimental/score_model_v4_pace.pkl")
+joblib.dump(home_model, "models/experimental/score_model_v4_home_rtg.pkl")
+joblib.dump(away_model, "models/experimental/score_model_v4_away_rtg.pkl")
+joblib.dump(margin_model, "models/experimental/score_model_v4_margin.pkl")
 
 metadata = {
     "version": "4.0_XGBoost",
@@ -225,7 +225,7 @@ metadata = {
     "margin_features": margin_features
 }
 
-with open("models/production/score_model_v4_metadata.json", "w") as f:
+with open("models/experimental/score_model_v4_metadata.json", "w") as f:
     json.dump(metadata, f, indent=4)
 
-print("\n✅ V4 Models trained and saved to models/production/")
+print("\nV4 Models trained and saved to models/experimental/")

@@ -15,9 +15,39 @@
 - Experiment reports must be registered before they are treated as active outputs.
 
 ## Current Production Decision
-- Win Probability V1 is the production winner model.
-- Score Prediction V2 is the production score/range model.
-- Win V2, EMA, and tuned RF are experimental unless explicitly promoted.
+- Win Probability: Calibrated Cross-Season Logistic Regression with player projections is the active production model.
+- Score Prediction: Score Prediction V4 (XGBoost models for Pace, Home/Away Off_Rtg, Margin) is the active production model.
+- Player Prediction: Player Prediction V4 (LightGBM models for PTS, REB, AST) is the active production model.
+
+## Common Pipelines and CLI Commands
+
+### Model Lifecycle Commands
+- Build Player Dataset V4: `PYTHONPATH=. python3 main.py --build-player-dataset-v4`
+- Train Player Models: `PYTHONPATH=. python3 main.py --train-player-models`
+- Train Score Models: `PYTHONPATH=. python3 main.py --train-score-models`
+- Train Win Model: `PYTHONPATH=. python3 main.py --train-win-model`
+
+### Daily Operations & Data Freshness
+- Daily Data Update (fetches latest completed game logs): `PYTHONPATH=. python3 main.py --update-data`
+- Package Frontend Schedule Context: `PYTHONPATH=. python3 main.py --build-schedule-context`
+- Roster & Core Player Analysis: `PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis`
+
+### Quality Control & Audits
+- Verify Project Structure: `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py`
+- Verify Path Refactoring: `PYTHONPATH=. python3 scripts/audit/validate_season_path_refactor.py`
+
+### New Season Onboarding Workflow
+To fully ingest and bootstrap a new NBA season (e.g., `2020-21`), run the following commands sequentially:
+1. **Bulk Ingest Raw Boxscores & Schedule**:
+   `PYTHONPATH=. python3 main.py --season YYYY-YY --update-data`
+2. **Discover Core Rosters & Ranks**:
+   `PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis`
+3. **Extract Observed Trade Affiliations**:
+   `PYTHONPATH=. python3 scripts/ingest/build_observed_affiliation_events.py --season YYYY-YY`
+4. **Bootstrap Features & Generate Manifest**:
+   `PYTHONPATH=. python3 main.py --season YYYY-YY --bootstrap-season`
+5. **Run Auditing Checks**:
+   `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py && PYTHONPATH=. python3 scripts/audit/validate_season_path_refactor.py`
 
 ## Model Responsibility
 - Winner prediction must come from the win probability model.
