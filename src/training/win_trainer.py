@@ -23,10 +23,10 @@ warnings.filterwarnings("ignore")
 class WinModelTrainer:
     def __init__(self, data_path=None, output_dir=None, player_data_path=None, player_models_dir=None):
         root = Path(__file__).resolve().parents[2]
-        self.data_path = Path(data_path or get_data_paths(get_default_season()).team_model_ready_v2)
+        self.data_pattern = data_path or str(root / "data/season=*/processed/team_model_ready_v2.csv")
         self.output_dir = Path(output_dir or root / "models/experimental")
         self.player_data_path = Path(player_data_path or root / "data/experimental/player_model_ready_v4_usg.csv")
-        self.player_models_dir = Path(player_models_dir or root / "models/production")
+        self.player_models_dir = Path(player_models_dir or root / "models/experimental")
         self.target_col = "WIN"
 
     def separate_metadata(self, df):
@@ -72,15 +72,48 @@ class WinModelTrainer:
         return dict(accuracy=acc, precision=prec, recall=rec, f1=f1, roc_auc=roc, brier_score=brier)
 
     def train_and_export(self):
-        if not self.data_path.exists():
-            raise FileNotFoundError(f"Dataset path {self.data_path} does not exist.")
+        import glob
+        if isinstance(self.data_pattern, Path):
+            files = [self.data_pattern]
+        elif os.path.exists(self.data_pattern) and os.path.isfile(self.data_pattern):
+            files = [Path(self.data_pattern)]
+        else:
+            files = [Path(p) for p in glob.glob(str(self.data_pattern))]
             
-        df = pd.read_csv(self.data_path)
+        if not files:
+            raise FileNotFoundError(f"No V2 datasets found matching {self.data_pattern}")
+            
+        df_list = []
+        for f in files:
+            if os.path.exists(f):
+                df_list.append(pd.read_csv(f))
+        if not df_list:
+            raise FileNotFoundError(f"No V2 datasets could be read from pattern {self.data_pattern}")
+        df = pd.concat(df_list, ignore_index=True)
         
         if self.player_data_path.exists() and self.player_models_dir.exists():
             try:
                 player_df = pd.read_csv(self.player_data_path)
-                features_path = self.player_models_dir / "player_v4_features.pkl"
+                
+                root_models_prod = Path(__file__).resolve().parents[2] / "models/production"
+                features_path = self.player_models_dir / "player_v5_features.pkl"
+                models_dir = self.player_models_dir
+                model_prefix = "player_v5_lgb_"
+                
+                if not features_path.exists():
+                    if (root_models_prod / "player_v5_features.pkl").exists():
+                        features_path = root_models_prod / "player_v5_features.pkl"
+                        models_dir = root_models_prod
+                        model_prefix = "player_v5_lgb_"
+                    elif (self.player_models_dir / "player_v4_features.pkl").exists():
+                        features_path = self.player_models_dir / "player_v4_features.pkl"
+                        models_dir = self.player_models_dir
+                        model_prefix = "player_v4_lgb_"
+                    else:
+                        features_path = root_models_prod / "player_v4_features.pkl"
+                        models_dir = root_models_prod
+                        model_prefix = "player_v4_lgb_"
+                        
                 if features_path.exists():
                     player_features = joblib.load(features_path)
                     player_df = player_df.dropna(subset=player_features)
@@ -88,7 +121,7 @@ class WinModelTrainer:
                     targets = ["pts", "reb", "ast"]
                     predictions = {}
                     for t in targets:
-                        model_path = self.player_models_dir / f"player_v4_lgb_{t}.pkl"
+                        model_path = models_dir / f"{model_prefix}{t}.pkl"
                         if model_path.exists():
                             model = joblib.load(model_path)
                             pred = model.predict(player_df[player_features])
@@ -220,6 +253,7 @@ class WinModelTrainer:
             
         metadata = {
             "model_name": "logistic_regression",
+            "version": "5.0",
             "training_date": datetime.utcnow().isoformat() + "Z",
             "number_of_rows": int(df.shape[0]),
             "number_of_features": int(X.shape[1]),

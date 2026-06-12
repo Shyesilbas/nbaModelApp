@@ -11,6 +11,12 @@ import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 
+// Normalize GAME_ID to 10-digit zero-padded string.
+// all_seasons_games.json stores IDs without leading zeros (e.g. "42300405")
+// but boxscore files always use 10-digit padded IDs (e.g. "0042300405").
+const normGid = (id: string | null | undefined): string =>
+  id ? id.padStart(10, "0") : "";
+
 interface TeamBoxScore {
   GAME_ID: string;
   TEAM_ABBREVIATION: string;
@@ -1109,10 +1115,10 @@ export default function GameResults() {
   const isSeasonBsLoading = !!bsLoading[selectedSeason];
 
   if (selectedGame) {
-    const gid = selectedGame.GAME_ID;
-    const homeBS      = activeTeamBS.find((t) => t.GAME_ID === gid && t.TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION) ?? null;
-    const awayBS      = activeTeamBS.find((t) => t.GAME_ID === gid && t.TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION) ?? null;
-    const gamePlayers = activePlayerBS.filter((p) => p.GAME_ID === gid);
+    const gid = normGid(selectedGame.GAME_ID);
+    const homeBS      = activeTeamBS.find((t) => normGid(t.GAME_ID) === gid && t.TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION) ?? null;
+    const awayBS      = activeTeamBS.find((t) => normGid(t.GAME_ID) === gid && t.TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION) ?? null;
+    const gamePlayers = activePlayerBS.filter((p) => normGid(p.GAME_ID) === gid);
 
     return (
       <div className="space-y-4">

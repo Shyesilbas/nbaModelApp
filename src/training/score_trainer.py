@@ -180,13 +180,13 @@ class ScoreModelTrainer:
         away_score_mae = mean_absolute_error(df_eval["ACTUAL_AWAY_PTS"], df_eval["EXPECTED_AWAY_SCORE"])
         
         os.makedirs(self.output_dir, exist_ok=True)
-        joblib.dump(pace_model, self.output_dir / "score_model_v4_pace.pkl")
-        joblib.dump(home_model, self.output_dir / "score_model_v4_home_rtg.pkl")
-        joblib.dump(away_model, self.output_dir / "score_model_v4_away_rtg.pkl")
-        joblib.dump(margin_model, self.output_dir / "score_model_v4_margin.pkl")
+        joblib.dump(pace_model, self.output_dir / "score_model_v5_pace.pkl")
+        joblib.dump(home_model, self.output_dir / "score_model_v5_home_rtg.pkl")
+        joblib.dump(away_model, self.output_dir / "score_model_v5_away_rtg.pkl")
+        joblib.dump(margin_model, self.output_dir / "score_model_v5_margin.pkl")
         
         metadata = {
-            "version": "4.0_XGBoost",
+            "version": "5.0_XGBoost",
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "pace_mae": float(pace_mae),
             "home_rtg_mae": float(home_mae),
@@ -200,7 +200,7 @@ class ScoreModelTrainer:
             "margin_features": self.margin_features
         }
         
-        metadata_path = self.output_dir / "score_model_v4_metadata.json"
+        metadata_path = self.output_dir / "score_model_v5_metadata.json"
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=4)
             

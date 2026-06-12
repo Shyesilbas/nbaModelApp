@@ -41,7 +41,7 @@ def load_game_results(season_key: str, season_path: str) -> list[dict]:
     rows = []
     for _, row in df.iterrows():
         rows.append({
-            "GAME_ID": str(row["GAME_ID"]).strip(),
+            "GAME_ID": str(int(str(row["GAME_ID"]).strip())).zfill(10),
             "GAME_DATE": nan_safe(row.get("GAME_DATE")),
             "HOME_TEAM_ABBREVIATION": nan_safe(row.get("HOME_TEAM_ABBREVIATION")),
             "HOME_TEAM_NAME": nan_safe(row.get("HOME_TEAM_NAME")),
