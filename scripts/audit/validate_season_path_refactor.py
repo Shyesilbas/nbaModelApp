@@ -18,29 +18,30 @@ def test_get_data_paths_values():
     
     # Assert defaults and normalization
     assert paths_explicit.team_games_raw == paths_default.team_games_raw
-    assert token in paths_default.team_games_raw
+    assert token in paths_default.team_games_raw or f"season={season}" in paths_default.team_games_raw
     
     # Check that paths point to correct file names
-    assert paths_default.team_games_raw.endswith(f"nba_team_games_{token}_regular_and_playoffs.csv")
-    assert paths_default.player_games_raw.endswith(f"nba_player_games_{token}_regular_and_playoffs.csv")
-    assert paths_default.raw_schedule.endswith(f"nba_schedule_{token}.csv")
-    assert paths_default.raw_finals_schedule.endswith(f"nba_finals_upcoming_{token}.csv")
-    assert paths_default.raw_team_boxscores.endswith(f"nba_team_boxscores_{token}.csv")
-    assert paths_default.raw_player_boxscores.endswith(f"nba_player_boxscores_{token}.csv")
-    assert paths_default.game_results.endswith(f"game_results_{token}.csv")
-    assert paths_default.schedule_combined.endswith(f"schedule_combined_{token}.csv")
-    assert paths_default.upcoming_context.endswith(f"upcoming_games_context_{token}.csv")
-    assert paths_default.team_features.endswith(f"team_games_features_{token}.csv")
-    assert paths_default.player_features.endswith(f"player_games_features_{token}.csv")
-    assert paths_default.win_model_dataset.endswith(f"team_win_model_ready_v2_player_features_{token}.csv")
-    assert paths_default.score_model_dataset.endswith(f"team_score_model_ready_v2_player_features_{token}.csv")
+    assert paths_default.team_games_raw.endswith(f"season={season}/raw/team_games.csv")
+    assert paths_default.player_games_raw.endswith(f"season={season}/raw/player_games.csv")
+    assert paths_default.raw_schedule.endswith(f"season={season}/raw/schedule.csv")
+    assert paths_default.raw_finals_schedule.endswith(f"season={season}/raw/finals_schedule.csv")
+    assert paths_default.raw_team_boxscores.endswith(f"season={season}/raw/boxscores/team_boxscores.csv")
+    assert paths_default.raw_player_boxscores.endswith(f"season={season}/raw/boxscores/player_boxscores.csv")
+    assert paths_default.game_results.endswith(f"season={season}/processed/game_results.csv")
+    assert paths_default.schedule_combined.endswith(f"season={season}/processed/schedule_combined.csv")
+    assert paths_default.upcoming_context.endswith(f"season={season}/processed/upcoming_games_context.csv")
+    assert paths_default.team_features.endswith(f"season={season}/features/team_features.csv")
+    assert paths_default.player_features.endswith(f"season={season}/features/player_features.csv")
+    assert paths_default.win_model_dataset.endswith(f"season={season}/processed/team_win_model_ready_v2_player_features.csv")
+    assert paths_default.score_model_dataset.endswith(f"season={season}/processed/team_score_model_ready_v2_player_features.csv")
+    assert paths_default.team_model_ready_v2.endswith(f"season={season}/processed/team_model_ready_v2.csv")
     
     # Test a different season resolves correctly
     other_season = "2024-25" if season != "2024-25" else "2023-24"
     other_token = season_to_file_token(other_season)
     paths_prev = get_data_paths(other_season)
-    assert other_token in paths_prev.team_games_raw
-    assert paths_prev.win_model_dataset.endswith(f"team_win_model_ready_v2_player_features_{other_token}.csv")
+    assert other_token in paths_prev.team_games_raw or f"season={other_season}" in paths_prev.team_games_raw
+    assert paths_prev.win_model_dataset.endswith(f"season={other_season}/processed/team_win_model_ready_v2_player_features.csv")
     
     print("✅ get_data_paths tests passed successfully.")
 

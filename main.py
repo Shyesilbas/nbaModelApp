@@ -335,7 +335,13 @@ def main():
     if args.run_roster_analysis:
         from src.analysis.roster_analysis import run_roster_analysis
         player_csv = paths.player_games_raw
-        roster_df, core_players_df, star_candidates_df, multi_team_players_df, player_name_lookup_df = run_roster_analysis(player_csv)
+        season_data_dir = os.path.join("data", f"season={season}", "analysis")
+        season_output_dir = os.path.join("outputs", "analysis", f"season={season}")
+        roster_df, core_players_df, star_candidates_df, multi_team_players_df, player_name_lookup_df = run_roster_analysis(
+            player_csv,
+            data_dir=season_data_dir,
+            output_dir=season_output_dir
+        )
         
         print("\n============================================================")
         print("📊 ROSTER ANALYSIS DATASETS GENERATED SUCCESSFULLY 📊")
@@ -343,40 +349,40 @@ def main():
         
         # Shapes & Storage locations
         print("1. TEAM ROSTERS:")
-        print(f"   - CSV Path:     data/analysis/team_rosters.csv")
-        print(f"   - Parquet Path: data/analysis/team_rosters.parquet")
+        print(f"   - CSV Path:     {os.path.join(season_data_dir, 'team_rosters.csv')}")
+        print(f"   - Parquet Path: {os.path.join(season_data_dir, 'team_rosters.parquet')}")
         print(f"   - Shape:        {roster_df.shape}")
         print("   - Sample Rows:")
         print(roster_df.head(3).to_string(index=False))
         print("\n" + "-"*60 + "\n")
         
         print("2. CORE PLAYERS:")
-        print(f"   - CSV Path:     data/analysis/core_players.csv")
-        print(f"   - Parquet Path: data/analysis/core_players.parquet")
+        print(f"   - CSV Path:     {os.path.join(season_data_dir, 'core_players.csv')}")
+        print(f"   - Parquet Path: {os.path.join(season_data_dir, 'core_players.parquet')}")
         print(f"   - Shape:        {core_players_df.shape}")
         print("   - Sample Rows:")
         print(core_players_df.head(3).to_string(index=False))
         print("\n" + "-"*60 + "\n")
         
         print("3. LEAGUE-WIDE STAR CANDIDATES:")
-        print(f"   - CSV Path:     data/analysis/star_candidates.csv")
-        print(f"   - Parquet Path: data/analysis/star_candidates.parquet")
+        print(f"   - CSV Path:     {os.path.join(season_data_dir, 'star_candidates.csv')}")
+        print(f"   - Parquet Path: {os.path.join(season_data_dir, 'star_candidates.parquet')}")
         print(f"   - Shape:        {star_candidates_df.shape}")
         print("   - Sample (Top 3):")
         print(star_candidates_df.head(3).to_string(index=False))
         print("\n" + "-"*60 + "\n")
         
         print("4. MULTI-TEAM PLAYERS:")
-        print(f"   - CSV Path:     data/analysis/multi_team_players.csv")
-        print(f"   - Parquet Path: data/analysis/multi_team_players.parquet")
+        print(f"   - CSV Path:     {os.path.join(season_data_dir, 'multi_team_players.csv')}")
+        print(f"   - Parquet Path: {os.path.join(season_data_dir, 'multi_team_players.parquet')}")
         print(f"   - Shape:        {multi_team_players_df.shape}")
         print("   - Sample Rows:")
         print(multi_team_players_df.head(3).to_string(index=False))
         print("\n" + "-"*60 + "\n")
         
         print("5. NAME NORMALIZATION LOOKUP:")
-        print(f"   - CSV Path:     data/analysis/player_name_lookup.csv")
-        print(f"   - Parquet Path: data/analysis/player_name_lookup.parquet")
+        print(f"   - CSV Path:     {os.path.join(season_data_dir, 'player_name_lookup.csv')}")
+        print(f"   - Parquet Path: {os.path.join(season_data_dir, 'player_name_lookup.parquet')}")
         print(f"   - Shape:        {player_name_lookup_df.shape}")
         print("   - Sample Rows (with Accent Characters):")
         accented_samples = player_name_lookup_df[

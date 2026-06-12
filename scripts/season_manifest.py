@@ -24,10 +24,9 @@ def build_season_manifest(season: str, command: str, artifacts: Dict[str, Any]) 
 
 def write_season_manifest(season: str, command: str, artifacts: Dict[str, Any]) -> Path:
     normalized = normalize_season(season)
-    token = season_to_file_token(normalized)
-    out_dir = ROOT / "data" / "manifests"
+    out_dir = ROOT / "data" / f"season={normalized}"
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"season_{token}_manifest.json"
+    path = out_dir / "manifest.json"
     manifest = build_season_manifest(normalized, command, artifacts)
     path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return path
