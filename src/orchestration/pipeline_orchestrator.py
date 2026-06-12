@@ -24,6 +24,18 @@ class PipelineOrchestrator:
         if self.args.update_data:
             main_mod._run_update_data(self.args)
             return True
+        if self.args.build_player_dataset_v4:
+            main_mod._run_build_player_dataset_v4(self.args)
+            return True
+        if self.args.train_player_models:
+            main_mod._run_train_player_models(self.args)
+            return True
+        if self.args.train_score_models:
+            main_mod._run_train_score_models(self.args)
+            return True
+        if self.args.train_win_model:
+            main_mod._run_train_win_model(self.args)
+            return True
         if self.args.startup_check:
             main_mod._run_startup_check(self.args)
             return True

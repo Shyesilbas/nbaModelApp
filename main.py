@@ -203,6 +203,26 @@ def _run_update_data(args):
     run_update_data(args)
 
 
+def _run_build_player_dataset_v4(args):
+    from src.orchestration.pipeline_workflows import run_build_player_dataset_pipeline
+    run_build_player_dataset_pipeline(args)
+
+
+def _run_train_player_models(args):
+    from src.orchestration.pipeline_workflows import run_train_player_models_pipeline
+    run_train_player_models_pipeline(args)
+
+
+def _run_train_score_models(args):
+    from src.orchestration.pipeline_workflows import run_train_score_models_pipeline
+    run_train_score_models_pipeline(args)
+
+
+def _run_train_win_model(args):
+    from src.orchestration.pipeline_workflows import run_train_win_model_pipeline
+    run_train_win_model_pipeline(args)
+
+
 def main():
     parser = argparse.ArgumentParser(description="NBA ML Project Preprocessing & Feature Engineering Pipeline")
     parser.add_argument(
@@ -255,6 +275,26 @@ def main():
         "--run-roster-analysis",
         action="store_true",
         help="Run roster discovery and player importance score analysis"
+    )
+    parser.add_argument(
+        "--build-player-dataset-v4",
+        action="store_true",
+        help="Build V4 player prediction dataset with usage rate features"
+    )
+    parser.add_argument(
+        "--train-player-models",
+        action="store_true",
+        help="Train LightGBM player statistic prediction models"
+    )
+    parser.add_argument(
+        "--train-score-models",
+        action="store_true",
+        help="Train XGBoost game score component prediction models"
+    )
+    parser.add_argument(
+        "--train-win-model",
+        action="store_true",
+        help="Train calibrated Logistic Regression win probability model"
     )
     parser.add_argument(
         "--build-schedule-context",
