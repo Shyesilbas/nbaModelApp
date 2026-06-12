@@ -13,6 +13,8 @@ import {
   Ruler,
   Weight,
   Hash,
+  ArrowRightLeft,
+  Users2,
 } from "lucide-react";
 import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
@@ -39,6 +41,7 @@ interface PlayerProfile {
 interface SeasonAverages {
   games_played: number;
   games_total: number;
+  teams?: string[];
   MIN: number | null;
   PTS: number | null;
   REB: number | null;
@@ -163,14 +166,16 @@ function InfoChip({
   icon,
   label,
   value,
+  className,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | null | undefined;
+  className?: string;
 }) {
   if (!value) return null;
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+    <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${className || "border-slate-200 bg-slate-50"}`}>
       <span className="shrink-0 text-slate-400">{icon}</span>
       <div className="min-w-0">
         <p className="text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">{label}</p>
@@ -264,6 +269,10 @@ function AveragesGrid({ avgs }: { avgs: SeasonAverages }) {
   );
 }
 
+type RenderItem =
+  | { type: "game"; data: GameRow }
+  | { type: "trade"; from: string; to: string; dateBefore: string | null; dateAfter: string | null };
+
 function GameLogTable({
   games,
   onGameClick,
@@ -273,8 +282,36 @@ function GameLogTable({
 }) {
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 20;
-  const totalPages = Math.ceil(games.length / PAGE_SIZE);
-  const visible = games.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const renderItems = useMemo(() => {
+    const items: RenderItem[] = [];
+    for (let i = 0; i < games.length; i++) {
+      const g = games[i];
+      items.push({ type: "game", data: g });
+
+      const nextGame = games[i + 1];
+      if (
+        nextGame &&
+        g.TEAM_ABBREVIATION &&
+        nextGame.TEAM_ABBREVIATION &&
+        g.TEAM_ABBREVIATION !== nextGame.TEAM_ABBREVIATION
+      ) {
+        // In descending order, g is the newer game (new team), nextGame is the older game (old team).
+        // So the trade went from nextGame.TEAM_ABBREVIATION to g.TEAM_ABBREVIATION.
+        items.push({
+          type: "trade",
+          from: nextGame.TEAM_ABBREVIATION,
+          to: g.TEAM_ABBREVIATION,
+          dateBefore: nextGame.GAME_DATE,
+          dateAfter: g.GAME_DATE,
+        });
+      }
+    }
+    return items;
+  }, [games]);
+
+  const totalPages = Math.ceil(renderItems.length / PAGE_SIZE);
+  const visible = renderItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const wlColor = (wl: string | null) => {
     if (wl === "W") return "text-emerald-600 font-black";
@@ -314,7 +351,35 @@ function GameLogTable({
             </tr>
           </thead>
           <tbody>
-            {visible.map((g, idx) => {
+            {visible.map((item, idx) => {
+              if (item.type === "trade") {
+                return (
+                  <tr key={`trade-${idx}`} className="bg-amber-50/40 border-t border-b border-amber-100/80">
+                    <td colSpan={16} className="px-3 py-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
+                            <ArrowRightLeft size={10} className="animate-pulse" />
+                            Trade Transaction
+                          </div>
+                          <div className="flex items-center gap-2 font-bold text-slate-800 text-[11px]">
+                            <TeamLogo abbr={item.from} name="" size={18} />
+                            <span className="text-slate-400 font-semibold">{item.from}</span>
+                            <ArrowRightLeft size={12} className="text-amber-400 mx-1 animate-pulse" />
+                            <TeamLogo abbr={item.to} name="" size={18} />
+                            <span className="text-[#1d428a] font-bold">{item.to}</span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] font-semibold text-slate-400">
+                          Stint Transition: {fmtDate(item.dateBefore)} ➔ {fmtDate(item.dateAfter)}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+
+              const g = item.data;
               const isDnp = g.DID_NOT_PLAY;
               const score =
                 g.HOME_SCORE != null && g.AWAY_SCORE != null
@@ -862,6 +927,21 @@ export default function PlayerPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {currentAvgs?.teams && currentAvgs.teams.length > 1 && (
+                      <InfoChip
+                        icon={<ArrowRightLeft size={12} className="text-amber-500 animate-pulse" />}
+                        label="Teams (Traded)"
+                        value={currentAvgs.teams.join(" ➔ ")}
+                        className="bg-amber-50/50 border-amber-200/80"
+                      />
+                    )}
+                    {currentAvgs?.teams && currentAvgs.teams.length === 1 && (
+                      <InfoChip
+                        icon={<Users2 size={12} className="text-[#1d428a]" />}
+                        label="Current Team"
+                        value={currentAvgs.teams[0]}
+                      />
+                    )}
                     <InfoChip icon={<Ruler size={12} />} label="Height" value={selectedPlayer.HEIGHT} />
                     <InfoChip icon={<Weight size={12} />} label="Weight" value={selectedPlayer.WEIGHT ? `${selectedPlayer.WEIGHT} lbs` : null} />
                     <InfoChip icon={<Globe size={12} />} label="Country" value={selectedPlayer.COUNTRY} />
