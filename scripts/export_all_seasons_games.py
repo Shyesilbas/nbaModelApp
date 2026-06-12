@@ -17,13 +17,8 @@ import math
 import os
 
 import pandas as pd
+from scripts.season_utils import discover_seasons
 
-SEASONS = {
-    "2022-23": "data/season=2022-23",
-    "2023-24": "data/season=2023-24",
-    "2024-25": "data/season=2024-25",
-    "2025-26": "data/season=2025-26",
-}
 OUT_DIR = "frontend/public/data"
 
 
@@ -71,9 +66,10 @@ def load_game_results(season_key: str, season_path: str) -> list[dict]:
 
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
+    seasons = discover_seasons()
 
     all_games = []
-    for season_key, season_path in SEASONS.items():
+    for season_key, season_path in seasons.items():
         print(f"Loading {season_key}...")
         games = load_game_results(season_key, season_path)
         all_games.extend(games)
@@ -87,6 +83,13 @@ def main():
     with open(out_path, "w") as f:
         json.dump(all_games, f, separators=(",", ":"))
     print(f"Wrote -> {out_path}")
+
+    # Write dynamically discovered seasons list
+    seasons_list = sorted(list(seasons.keys()), reverse=True)
+    seasons_path = os.path.join(OUT_DIR, "seasons.json")
+    with open(seasons_path, "w") as f:
+        json.dump(seasons_list, f, separators=(",", ":"))
+    print(f"Wrote seasons list -> {seasons_path}")
 
 
 if __name__ == "__main__":

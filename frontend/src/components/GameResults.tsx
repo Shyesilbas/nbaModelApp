@@ -985,10 +985,9 @@ function GameCard({ game, onOpen }: { game: GameFeedRow; onOpen: () => void }) {
   );
 }
 
-const ALL_SEASONS = ["2025-26", "2024-25", "2023-24", "2022-23"];
-
 /* ── Main exported component ── */
 export default function GameResults() {
+  const [seasonsList, setSeasonsList] = useState<string[]>(["2025-26", "2024-25", "2023-24", "2022-23"]);
   const [allResults,  setAllResults]  = useState<(GameFeedRow & { SEASON?: string })[]>([]);
   const [results,     setResults]     = useState<GameFeedRow[]>([]);
   const [teamBS,      setTeamBS]      = useState<TeamBoxScore[]>([]);
@@ -1007,6 +1006,15 @@ export default function GameResults() {
 
   // Initial load: games index + current season boxscores
   useEffect(() => {
+    fetch("/data/seasons.json")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setSeasonsList(data);
+        }
+      })
+      .catch(() => {});
+
     Promise.all([
       fetch("/data/all_seasons_games.json").then((r) => r.json()).catch(() => []),
       fetch("/data/games.json").then((r) => r.json()),
@@ -1152,7 +1160,7 @@ export default function GameResults() {
           </div>
           {/* Season selector pills */}
           <div className="flex flex-wrap gap-1.5">
-            {ALL_SEASONS.map((s) => (
+            {seasonsList.map((s) => (
               <button
                 key={s}
                 onClick={() => { setSelectedSeason(s); setSelectedGameId(null); }}

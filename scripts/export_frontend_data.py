@@ -28,8 +28,15 @@ def _json_safe(value):
     return value
 
 def export_data(season: str = None):
-    season = normalize_season(season or get_default_season())
-    paths = get_data_paths(season)
+    from scripts.season_utils import get_default_season
+    normalized_s = normalize_season(season or get_default_season())
+    default_s = get_default_season()
+
+    if normalized_s != default_s:
+        print(f"Skipping frontend export for historical season {normalized_s} (only active season {default_s} is exported via export_frontend_data).")
+        return
+
+    paths = get_data_paths(normalized_s)
     raw_team_path = paths.team_games_raw
     raw_player_path = paths.player_games_raw
     
@@ -42,7 +49,7 @@ def export_data(season: str = None):
     schedule_combined_path = paths.schedule_combined
     upcoming_context_path  = paths.upcoming_context
 
-    token = season.replace("-", "_")
+    token = normalized_s.replace("-", "_")
     model_v1_path = f"data/processed/team_model_ready_{token}.csv"
     model_v2_path = paths.team_model_ready_v2
     model_v3_path = f"data/processed/team_model_ready_v3_{token}.csv"

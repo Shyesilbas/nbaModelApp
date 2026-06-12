@@ -91142,10 +91142,10 @@
     "AWAY_TEAM_PTS_LAST_10": 115.6,
     "AWAY_TEAM_DAYS_REST": 2.0,
     "AWAY_TEAM_IS_B2B": false,
-    "HOME_TOP3_CORE_PLAYERS": "Victor Wembanyama, Stephon Castle, De'Aaron Fox",
-    "HOME_TOP5_CORE_PLAYERS": "Victor Wembanyama, Stephon Castle, De'Aaron Fox, Devin Vassell, Julian Champagnie",
-    "AWAY_TOP3_CORE_PLAYERS": "Jalen Brunson, Karl-Anthony Towns, OG Anunoby",
-    "AWAY_TOP5_CORE_PLAYERS": "Jalen Brunson, Karl-Anthony Towns, OG Anunoby, Mikal Bridges, Josh Hart",
+    "HOME_TOP3_CORE_PLAYERS": null,
+    "HOME_TOP5_CORE_PLAYERS": null,
+    "AWAY_TOP3_CORE_PLAYERS": null,
+    "AWAY_TOP5_CORE_PLAYERS": null,
     "game_detail": null
   },
   {
@@ -91211,10 +91211,10 @@
     "AWAY_TEAM_PTS_LAST_10": 110.3,
     "AWAY_TEAM_DAYS_REST": 2.0,
     "AWAY_TEAM_IS_B2B": false,
-    "HOME_TOP3_CORE_PLAYERS": "Jalen Brunson, Karl-Anthony Towns, OG Anunoby",
-    "HOME_TOP5_CORE_PLAYERS": "Jalen Brunson, Karl-Anthony Towns, OG Anunoby, Mikal Bridges, Josh Hart",
-    "AWAY_TOP3_CORE_PLAYERS": "Victor Wembanyama, Stephon Castle, De'Aaron Fox",
-    "AWAY_TOP5_CORE_PLAYERS": "Victor Wembanyama, Stephon Castle, De'Aaron Fox, Devin Vassell, Julian Champagnie",
+    "HOME_TOP3_CORE_PLAYERS": null,
+    "HOME_TOP5_CORE_PLAYERS": null,
+    "AWAY_TOP3_CORE_PLAYERS": null,
+    "AWAY_TOP5_CORE_PLAYERS": null,
     "game_detail": null
   },
   {
@@ -91280,10 +91280,10 @@
     "AWAY_TEAM_PTS_LAST_10": 115.6,
     "AWAY_TEAM_DAYS_REST": 2.0,
     "AWAY_TEAM_IS_B2B": false,
-    "HOME_TOP3_CORE_PLAYERS": "Victor Wembanyama, Stephon Castle, De'Aaron Fox",
-    "HOME_TOP5_CORE_PLAYERS": "Victor Wembanyama, Stephon Castle, De'Aaron Fox, Devin Vassell, Julian Champagnie",
-    "AWAY_TOP3_CORE_PLAYERS": "Jalen Brunson, Karl-Anthony Towns, OG Anunoby",
-    "AWAY_TOP5_CORE_PLAYERS": "Jalen Brunson, Karl-Anthony Towns, OG Anunoby, Mikal Bridges, Josh Hart",
+    "HOME_TOP3_CORE_PLAYERS": null,
+    "HOME_TOP5_CORE_PLAYERS": null,
+    "AWAY_TOP3_CORE_PLAYERS": null,
+    "AWAY_TOP5_CORE_PLAYERS": null,
     "game_detail": null
   }
 ]

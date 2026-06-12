@@ -9,18 +9,18 @@
   "player_games_playin": 126,
   "player_games_playoffs": 1834,
   "player_games_finals": 60,
-  "total_teams": 30,
-  "total_players": 516,
-  "v1_rows": 2592,
+  "total_teams": 0,
+  "total_players": 0,
+  "v1_rows": 2610,
   "v1_features": 9,
   "v2_rows": 1762,
   "v2_features": 39,
-  "v3_rows": 2590,
-  "v3_features": 55,
+  "v3_rows": 1762,
+  "v3_features": 98,
   "files_status": [
     {
       "name": "Raw Team Game Logs",
-      "path": "/Users/serhat/agProjects/nbaModelApp/data/raw/team_games/nba_team_games_2025_26_regular_and_playoffs.csv",
+      "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/raw/team_games.csv",
       "exists": true,
       "rows": 2640,
       "columns": 29,
@@ -28,7 +28,7 @@
     },
     {
       "name": "Raw Player Game Logs",
-      "path": "/Users/serhat/agProjects/nbaModelApp/data/raw/player_games/nba_player_games_2025_26_regular_and_playoffs.csv",
+      "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/raw/player_games.csv",
       "exists": true,
       "rows": 27943,
       "columns": 29,
@@ -37,54 +37,54 @@
     {
       "name": "Team Rosters",
       "path": "data/analysis/team_rosters.csv",
-      "exists": true,
-      "rows": 590,
-      "columns": 10,
-      "size_kb": 66.54
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
     },
     {
       "name": "Core Players List",
       "path": "data/analysis/core_players.csv",
-      "exists": true,
-      "rows": 590,
-      "columns": 7,
-      "size_kb": 33.0
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
     },
     {
       "name": "Star Candidates",
       "path": "data/analysis/star_candidates.csv",
-      "exists": true,
-      "rows": 516,
-      "columns": 10,
-      "size_kb": 58.56
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
     },
     {
       "name": "Multi-Team Players",
       "path": "data/analysis/multi_team_players.csv",
-      "exists": true,
-      "rows": 68,
-      "columns": 4,
-      "size_kb": 2.41
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
     },
     {
       "name": "Player Name Lookup",
       "path": "data/analysis/player_name_lookup.csv",
-      "exists": true,
-      "rows": 516,
-      "columns": 3,
-      "size_kb": 18.37
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
     },
     {
       "name": "V1 Model-Ready Dataset",
       "path": "data/processed/team_model_ready_2025_26.csv",
       "exists": true,
-      "rows": 2592,
+      "rows": 2610,
       "columns": 16,
-      "size_kb": 282.13
+      "size_kb": 283.92
     },
     {
       "name": "V2 Model-Ready Dataset",
-      "path": "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v2_2025_26.csv",
+      "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/team_model_ready_v2.csv",
       "exists": true,
       "rows": 1762,
       "columns": 46,
@@ -94,13 +94,13 @@
       "name": "V3 Model-Ready Dataset",
       "path": "data/processed/team_model_ready_v3_2025_26.csv",
       "exists": true,
-      "rows": 2590,
-      "columns": 62,
-      "size_kb": 904.66
+      "rows": 1762,
+      "columns": 105,
+      "size_kb": 1464.52
     },
     {
       "name": "Combined Schedule",
-      "path": "/Users/serhat/agProjects/nbaModelApp/data/processed/schedule_combined_2025_26.csv",
+      "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/schedule_combined.csv",
       "exists": true,
       "rows": 1323,
       "columns": 17,
@@ -108,11 +108,11 @@
     },
     {
       "name": "Upcoming Games Context",
-      "path": "/Users/serhat/agProjects/nbaModelApp/data/processed/upcoming_games_context_2025_26.csv",
+      "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/upcoming_games_context.csv",
       "exists": true,
       "rows": 3,
       "columns": 33,
-      "size_kb": 1.68
+      "size_kb": 0.94
     }
   ]
 }

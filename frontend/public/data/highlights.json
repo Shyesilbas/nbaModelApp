@@ -1,232 +1,232 @@
 {
   "highest_scoring_games": [
     {
-      "GAME_ID": "0022500396",
-      "GAME_DATE": "2025-12-21",
-      "HOME_TEAM": "ATL",
-      "AWAY_TEAM": "CHI",
-      "HOME_SCORE": 150,
-      "AWAY_SCORE": 152,
-      "TOTAL_PTS": 302,
+      "GAME_ID": "0022100899",
+      "GAME_DATE": "2022-02-25",
+      "HOME_TEAM": "WAS",
+      "AWAY_TEAM": "SAS",
+      "HOME_SCORE": 153,
+      "AWAY_SCORE": 157,
+      "TOTAL_PTS": 310,
       "SEASON_TYPE": "Regular Season"
     },
     {
-      "GAME_ID": "0022500240",
-      "GAME_DATE": "2025-11-16",
-      "HOME_TEAM": "UTA",
-      "AWAY_TEAM": "CHI",
-      "HOME_SCORE": 150,
-      "AWAY_SCORE": 147,
-      "TOTAL_PTS": 297,
+      "GAME_ID": "0022100297",
+      "GAME_DATE": "2021-11-27",
+      "HOME_TEAM": "HOU",
+      "AWAY_TEAM": "CHA",
+      "HOME_SCORE": 146,
+      "AWAY_SCORE": 143,
+      "TOTAL_PTS": 289,
       "SEASON_TYPE": "Regular Season"
     },
     {
-      "GAME_ID": "0022501053",
-      "GAME_DATE": "2026-03-25",
-      "HOME_TEAM": "PHI",
-      "AWAY_TEAM": "CHI",
-      "HOME_SCORE": 157,
-      "AWAY_SCORE": 137,
-      "TOTAL_PTS": 294,
-      "SEASON_TYPE": "Regular Season"
-    },
-    {
-      "GAME_ID": "0022501153",
-      "GAME_DATE": "2026-04-07",
-      "HOME_TEAM": "NOP",
-      "AWAY_TEAM": "UTA",
-      "HOME_SCORE": 156,
-      "AWAY_SCORE": 137,
-      "TOTAL_PTS": 293,
-      "SEASON_TYPE": "Regular Season"
-    },
-    {
-      "GAME_ID": "0022500321",
-      "GAME_DATE": "2025-12-02",
-      "HOME_TEAM": "NOP",
+      "GAME_ID": "0022101024",
+      "GAME_DATE": "2022-03-14",
+      "HOME_TEAM": "SAS",
       "AWAY_TEAM": "MIN",
-      "HOME_SCORE": 142,
+      "HOME_SCORE": 139,
       "AWAY_SCORE": 149,
-      "TOTAL_PTS": 291,
+      "TOTAL_PTS": 288,
+      "SEASON_TYPE": "Regular Season"
+    },
+    {
+      "GAME_ID": "0022101220",
+      "GAME_DATE": "2022-04-10",
+      "HOME_TEAM": "DEN",
+      "AWAY_TEAM": "LAL",
+      "HOME_SCORE": 141,
+      "AWAY_SCORE": 146,
+      "TOTAL_PTS": 287,
+      "SEASON_TYPE": "Regular Season"
+    },
+    {
+      "GAME_ID": "0022100723",
+      "GAME_DATE": "2022-01-26",
+      "HOME_TEAM": "IND",
+      "AWAY_TEAM": "CHA",
+      "HOME_SCORE": 126,
+      "AWAY_SCORE": 158,
+      "TOTAL_PTS": 284,
       "SEASON_TYPE": "Regular Season"
     }
   ],
   "lowest_scoring_games": [
     {
-      "GAME_ID": "0022500826",
-      "GAME_DATE": "2026-02-22",
-      "HOME_TEAM": "PHX",
-      "AWAY_TEAM": "POR",
-      "HOME_SCORE": 77,
-      "AWAY_SCORE": 92,
-      "TOTAL_PTS": 169,
-      "SEASON_TYPE": "Regular Season"
-    },
-    {
-      "GAME_ID": "0042500106",
-      "GAME_DATE": "2026-05-01",
-      "HOME_TEAM": "ORL",
-      "AWAY_TEAM": "DET",
+      "GAME_ID": "0022100064",
+      "GAME_DATE": "2021-10-27",
+      "HOME_TEAM": "LAC",
+      "AWAY_TEAM": "CLE",
       "HOME_SCORE": 79,
-      "AWAY_SCORE": 93,
+      "AWAY_SCORE": 92,
+      "TOTAL_PTS": 171,
+      "SEASON_TYPE": "Regular Season"
+    },
+    {
+      "GAME_ID": "0022100110",
+      "GAME_DATE": "2021-11-03",
+      "HOME_TEAM": "ORL",
+      "AWAY_TEAM": "BOS",
+      "HOME_SCORE": 79,
+      "AWAY_SCORE": 92,
+      "TOTAL_PTS": 171,
+      "SEASON_TYPE": "Regular Season"
+    },
+    {
+      "GAME_ID": "0022100616",
+      "GAME_DATE": "2022-01-11",
+      "HOME_TEAM": "LAC",
+      "AWAY_TEAM": "DEN",
+      "HOME_SCORE": 87,
+      "AWAY_SCORE": 85,
       "TOTAL_PTS": 172,
-      "SEASON_TYPE": "Playoffs"
-    },
-    {
-      "GAME_ID": "0022501185",
-      "GAME_DATE": "2026-04-10",
-      "HOME_TEAM": "LAL",
-      "AWAY_TEAM": "PHX",
-      "HOME_SCORE": 101,
-      "AWAY_SCORE": 73,
-      "TOTAL_PTS": 174,
       "SEASON_TYPE": "Regular Season"
     },
     {
-      "GAME_ID": "0042500176",
-      "GAME_DATE": "2026-05-01",
-      "HOME_TEAM": "HOU",
-      "AWAY_TEAM": "LAL",
-      "HOME_SCORE": 78,
-      "AWAY_SCORE": 98,
-      "TOTAL_PTS": 176,
-      "SEASON_TYPE": "Playoffs"
+      "GAME_ID": "0022100518",
+      "GAME_DATE": "2021-12-29",
+      "HOME_TEAM": "BOS",
+      "AWAY_TEAM": "LAC",
+      "HOME_SCORE": 82,
+      "AWAY_SCORE": 91,
+      "TOTAL_PTS": 173,
+      "SEASON_TYPE": "Regular Season"
     },
     {
-      "GAME_ID": "0022500397",
-      "GAME_DATE": "2025-12-21",
-      "HOME_TEAM": "BKN",
-      "AWAY_TEAM": "TOR",
-      "HOME_SCORE": 96,
-      "AWAY_SCORE": 81,
-      "TOTAL_PTS": 177,
-      "SEASON_TYPE": "Regular Season"
+      "GAME_ID": "0042100305",
+      "GAME_DATE": "2022-05-25",
+      "HOME_TEAM": "MIA",
+      "AWAY_TEAM": "BOS",
+      "HOME_SCORE": 80,
+      "AWAY_SCORE": 93,
+      "TOTAL_PTS": 173,
+      "SEASON_TYPE": "Playoffs"
     }
   ],
   "top_points": [
     {
-      "PLAYER_NAME": "Bam Adebayo",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA vs. WAS",
-      "GAME_DATE": "2026-03-10",
-      "VALUE": 83,
-      "GAME_ID": "0022500938"
-    },
-    {
-      "PLAYER_NAME": "Luka Don\u010di\u0107",
-      "TEAM": "LAL",
-      "MATCHUP": "LAL @ MIA",
-      "GAME_DATE": "2026-03-19",
-      "VALUE": 60,
-      "GAME_ID": "0022501010"
-    },
-    {
-      "PLAYER_NAME": "Nikola Joki\u0107",
-      "TEAM": "DEN",
-      "MATCHUP": "DEN vs. MIN",
-      "GAME_DATE": "2025-12-25",
-      "VALUE": 56,
-      "GAME_ID": "0022500013"
-    },
-    {
-      "PLAYER_NAME": "Anthony Edwards",
+      "PLAYER_NAME": "Karl-Anthony Towns",
       "TEAM": "MIN",
       "MATCHUP": "MIN @ SAS",
-      "GAME_DATE": "2026-01-17",
-      "VALUE": 55,
-      "GAME_ID": "0022500598"
+      "GAME_DATE": "2022-03-14",
+      "VALUE": 60,
+      "GAME_ID": "0022101024"
     },
     {
-      "PLAYER_NAME": "James Harden",
-      "TEAM": "LAC",
-      "MATCHUP": "LAC @ CHA",
-      "GAME_DATE": "2025-11-22",
+      "PLAYER_NAME": "Kyrie Irving",
+      "TEAM": "BKN",
+      "MATCHUP": "BKN @ ORL",
+      "GAME_DATE": "2022-03-15",
+      "VALUE": 60,
+      "GAME_ID": "0022101030"
+    },
+    {
+      "PLAYER_NAME": "LeBron James",
+      "TEAM": "LAL",
+      "MATCHUP": "LAL vs. GSW",
+      "GAME_DATE": "2022-03-05",
+      "VALUE": 56,
+      "GAME_ID": "0022100959"
+    },
+    {
+      "PLAYER_NAME": "Trae Young",
+      "TEAM": "ATL",
+      "MATCHUP": "ATL @ POR",
+      "GAME_DATE": "2022-01-03",
+      "VALUE": 56,
+      "GAME_ID": "0022100560"
+    },
+    {
+      "PLAYER_NAME": "Kevin Durant",
+      "TEAM": "BKN",
+      "MATCHUP": "BKN @ ATL",
+      "GAME_DATE": "2022-04-02",
       "VALUE": 55,
-      "GAME_ID": "0022500268"
+      "GAME_ID": "0022101163"
     }
   ],
   "top_assists": [
     {
-      "PLAYER_NAME": "Ryan Nembhard",
-      "TEAM": "DAL",
-      "MATCHUP": "DAL vs. CHI",
-      "GAME_DATE": "2026-04-12",
-      "VALUE": 23,
-      "GAME_ID": "0022501193"
-    },
-    {
-      "PLAYER_NAME": "Isaiah Collier",
-      "TEAM": "UTA",
-      "MATCHUP": "UTA @ IND",
-      "GAME_DATE": "2026-02-03",
-      "VALUE": 22,
-      "GAME_ID": "0022500717"
-    },
-    {
-      "PLAYER_NAME": "Josh Giddey",
-      "TEAM": "CHI",
-      "MATCHUP": "CHI vs. CLE",
-      "GAME_DATE": "2026-03-19",
+      "PLAYER_NAME": "Darius Garland",
+      "TEAM": "CLE",
+      "MATCHUP": "CLE @ PHI",
+      "GAME_DATE": "2022-03-04",
       "VALUE": 19,
-      "GAME_ID": "0022501011"
+      "GAME_ID": "0022100947"
     },
     {
-      "PLAYER_NAME": "Andrew Nembhard",
-      "TEAM": "IND",
-      "MATCHUP": "IND vs. LAL",
-      "GAME_DATE": "2026-03-25",
+      "PLAYER_NAME": "Chris Paul",
+      "TEAM": "PHX",
+      "MATCHUP": "PHX vs. MIL",
+      "GAME_DATE": "2022-02-10",
       "VALUE": 19,
-      "GAME_ID": "0022501052"
+      "GAME_ID": "0022100836"
     },
     {
-      "PLAYER_NAME": "Nikola Joki\u0107",
-      "TEAM": "DEN",
-      "MATCHUP": "DEN vs. DAL",
-      "GAME_DATE": "2026-03-25",
+      "PLAYER_NAME": "Chris Paul",
+      "TEAM": "PHX",
+      "MATCHUP": "PHX vs. SAS",
+      "GAME_DATE": "2022-01-30",
       "VALUE": 19,
-      "GAME_ID": "0022501059"
+      "GAME_ID": "0022100758"
+    },
+    {
+      "PLAYER_NAME": "Darius Garland",
+      "TEAM": "CLE",
+      "MATCHUP": "CLE @ OKC",
+      "GAME_DATE": "2022-01-15",
+      "VALUE": 18,
+      "GAME_ID": "0022100646"
+    },
+    {
+      "PLAYER_NAME": "Chris Paul",
+      "TEAM": "PHX",
+      "MATCHUP": "PHX vs. NOP",
+      "GAME_DATE": "2021-11-02",
+      "VALUE": 18,
+      "GAME_ID": "0022100106"
     }
   ],
   "top_rebounds": [
     {
-      "PLAYER_NAME": "Scottie Barnes",
-      "TEAM": "TOR",
-      "MATCHUP": "TOR vs. GSW",
-      "GAME_DATE": "2025-12-28",
+      "PLAYER_NAME": "Jonas Valan\u010di\u016bnas",
+      "TEAM": "NOP",
+      "MATCHUP": "NOP @ PHX",
+      "GAME_DATE": "2022-04-17",
       "VALUE": 25,
-      "GAME_ID": "0022500441"
+      "GAME_ID": "0042100141"
     },
     {
-      "PLAYER_NAME": "Victor Wembanyama",
-      "TEAM": "SAS",
-      "MATCHUP": "SAS @ OKC",
-      "GAME_DATE": "2026-05-18",
-      "VALUE": 24,
-      "GAME_ID": "0042500311"
+      "PLAYER_NAME": "Domantas Sabonis",
+      "TEAM": "IND",
+      "MATCHUP": "IND @ MIN",
+      "GAME_DATE": "2021-11-29",
+      "VALUE": 25,
+      "GAME_ID": "0022100309"
     },
     {
       "PLAYER_NAME": "Andre Drummond",
       "TEAM": "PHI",
-      "MATCHUP": "PHI vs. MIA",
-      "GAME_DATE": "2025-11-23",
-      "VALUE": 24,
-      "GAME_ID": "0022500275"
+      "MATCHUP": "PHI vs. NYK",
+      "GAME_DATE": "2021-11-08",
+      "VALUE": 25,
+      "GAME_ID": "0022100147"
     },
     {
-      "PLAYER_NAME": "Mitchell Robinson",
-      "TEAM": "NYK",
-      "MATCHUP": "NYK @ IND",
-      "GAME_DATE": "2026-03-13",
-      "VALUE": 22,
-      "GAME_ID": "0022500962"
-    },
-    {
-      "PLAYER_NAME": "Derik Queen",
+      "PLAYER_NAME": "Jonas Valan\u010di\u016bnas",
       "TEAM": "NOP",
       "MATCHUP": "NOP @ MIN",
-      "GAME_DATE": "2026-04-12",
-      "VALUE": 22,
-      "GAME_ID": "0022501195"
+      "GAME_DATE": "2021-10-25",
+      "VALUE": 23,
+      "GAME_ID": "0022100047"
+    },
+    {
+      "PLAYER_NAME": "Andre Drummond",
+      "TEAM": "PHI",
+      "MATCHUP": "PHI vs. MEM",
+      "GAME_DATE": "2022-01-31",
+      "VALUE": 23,
+      "GAME_ID": "0022100761"
     }
   ]
 }
