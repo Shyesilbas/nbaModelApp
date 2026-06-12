@@ -85,6 +85,12 @@ def compute_averages(games: list) -> dict:
             result[col] = round(avg, 2)
         else:
             result[col] = None
+    actual_teams = []
+    for g in games:
+        t = g.get("TEAM_ABBREVIATION")
+        if t and t not in actual_teams:
+            actual_teams.append(t)
+    result["teams"] = actual_teams
     return result
 
 
@@ -177,6 +183,37 @@ def main():
             # Games the player appears in (boxscore rows), keyed by GAME_ID_STR
             player_bs_rows = bs[bs["PLAYER_ID"] == pid].set_index("GAME_ID_STR")
 
+            # List of (date, team) for games the player actually appeared in
+            actual_games_list = []
+            for gid_val, row_val in player_bs_rows.iterrows():
+                gdate = game_lookup.get(gid_val, {}).get("GAME_DATE") or nan_safe(row_val.get("GAME_DATE"))
+                t_abbr = nan_safe(row_val.get("TEAM_ABBREVIATION"))
+                if gdate and t_abbr:
+                    actual_games_list.append((gdate, t_abbr))
+            actual_games_list.sort(key=lambda x: x[0])
+
+            import datetime
+            def get_active_team(target_date):
+                if not actual_games_list:
+                    return teams[0] if teams else None
+                if target_date <= actual_games_list[0][0]:
+                    return actual_games_list[0][1]
+                if target_date >= actual_games_list[-1][0]:
+                    return actual_games_list[-1][1]
+                try:
+                    target_dt = datetime.datetime.strptime(target_date, "%Y-%m-%d")
+                    best_team = None
+                    min_diff = datetime.timedelta(days=9999)
+                    for gdate, t_abbr in actual_games_list:
+                        dt = datetime.datetime.strptime(gdate, "%Y-%m-%d")
+                        diff = abs(target_dt - dt)
+                        if diff < min_diff:
+                            min_diff = diff
+                            best_team = t_abbr
+                    return best_team
+                except:
+                    return teams[0] if teams else None
+
             # All team game IDs across all teams this player was on
             all_team_game_ids: set = set()
             for team in teams:
@@ -242,17 +279,17 @@ def main():
                 else:
                     # Player's team played this game but player has NO boxscore row
                     # -> True DNP (injured, inactive, traded away before game)
-                    # Determine which team the player was on for this game
-                    # Use whichever team from their list is home or away in this game
                     home = game_info.get("HOME_TEAM_ABBREVIATION")
                     away = game_info.get("AWAY_TEAM_ABBREVIATION")
-                    player_team_in_game = None
-                    for t in teams:
-                        if t == home or t == away:
-                            player_team_in_game = t
-                            break
-                    if player_team_in_game is None:
-                        continue  # Can't determine which team, skip
+                    game_date = game_info.get("GAME_DATE")
+                    if not game_date:
+                        continue
+
+                    active_team = get_active_team(game_date)
+                    if active_team != home and active_team != away:
+                        continue  # Player was on a different team at this date, skip
+
+                    player_team_in_game = active_team
 
                     if player_team_in_game == home:
                         opp = away
@@ -269,7 +306,7 @@ def main():
 
                     g = {
                         "GAME_ID": gid_str,
-                        "GAME_DATE": game_info.get("GAME_DATE"),
+                        "GAME_DATE": game_date,
                         "SEASON": season_key,
                         "TEAM_ABBREVIATION": player_team_in_game,
                         "MATCHUP": matchup,
