@@ -1,16 +1,33 @@
 import pandas as pd
 import numpy as np
 import os
+import sys
+import argparse
 from datetime import datetime
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.data_paths import get_data_paths
+from scripts.season_utils import get_default_season, normalize_season, season_to_file_token
 
 def main() -> None:
     """
-    Build transaction-like affiliation events from observed player game logs for the 2024-25 season.
-    Creates data/experimental/observed_affiliation_events_2024_25.csv.
+    Build transaction-like affiliation events from observed player game logs.
     """
-    player_games_path = "data/raw/player_games/nba_player_games_2024_25_regular_and_playoffs.csv"
-    team_games_path = "data/raw/team_games/nba_team_games_2024_25_regular_and_playoffs.csv"
-    output_path = "data/experimental/observed_affiliation_events_2024_25.csv"
+    parser = argparse.ArgumentParser(description="Build observed player-team stints/affiliation events.")
+    parser.add_argument("--season", type=str, default=None, help="Season string (e.g. 2024-25)")
+    args = parser.parse_args()
+
+    season = normalize_season(args.season or get_default_season())
+    token = season_to_file_token(season)
+
+    paths = get_data_paths(season)
+    player_games_path = paths.player_games_raw
+    team_games_path = paths.team_games_raw
+    output_path = f"data/experimental/observed_affiliation_events_{token}.csv"
 
     if not os.path.exists(player_games_path):
         raise FileNotFoundError(f"Missing raw player games at {player_games_path}")
