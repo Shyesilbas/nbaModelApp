@@ -200,14 +200,14 @@ def build_v4_dataset(seasons=None):
     df_player["ELO_DIFF"] = df_player["TEAM_ELO"] - df_player["OPP_ELO"]
     df_player["BLOWOUT_RISK_PROXY"] = df_player["ELO_DIFF"].abs()
     
-    # 7. Merge Position Registry
-    print("Merging player position registry...")
-    reg_path = ROOT / "data/experimental/player_position_registry_2024_25_2025_26.csv"
-    if not reg_path.exists():
-        raise FileNotFoundError(f"Player position registry not found at {reg_path}")
-    df_reg = pd.read_csv(reg_path)
+    # 7. Merge Player Metadata Registry
+    print("Merging player metadata registry...")
+    meta_path = ROOT / "data/canonical/player_metadata.csv"
+    if not meta_path.exists():
+        raise FileNotFoundError(f"Player metadata not found at {meta_path}")
+    df_meta = pd.read_csv(meta_path)
     
-    df_player = df_player.merge(df_reg[["PLAYER_ID", "POSITION_GROUP"]], left_on=player_col, right_on="PLAYER_ID", how="left")
+    df_player = df_player.merge(df_meta[["PLAYER_ID", "POSITION_GROUP"]], left_on=player_col, right_on="PLAYER_ID", how="left")
     df_player = df_player.rename(columns={"POSITION_GROUP": "PLAYER_POSITION_GROUP"})
     
     # 8. Load Raw Player Games for calculating Team-level position allowed stats
@@ -227,7 +227,7 @@ def build_v4_dataset(seasons=None):
     df_raw["OPP_TEAM"] = df_raw["MATCHUP"].str[-3:]
     df_raw['GAME_DATE'] = pd.to_datetime(df_raw['GAME_DATE'], format='mixed')
     
-    df_raw = df_raw.merge(df_reg[["PLAYER_ID", "POSITION_GROUP"]], left_on="Player_ID", right_on="PLAYER_ID", how="left")
+    df_raw = df_raw.merge(df_meta[["PLAYER_ID", "POSITION_GROUP"]], left_on="Player_ID", right_on="PLAYER_ID", how="left")
     df_raw["POSITION_GROUP"] = df_raw["POSITION_GROUP"].fillna("UNKNOWN")
     
     print("Aggregating position stats per game...")
