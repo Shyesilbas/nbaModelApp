@@ -92,3 +92,30 @@ Once the steps are complete, confirm the presence and sanity of the following fi
   - `data/experimental/observed_affiliation_events_2020_21.csv` (inferred stints/trades)
 - **Manifest**:
   - `data/manifests/season_2020_21_manifest.json` (summarizes all outputs)
+
+Sürecin Özet Akışı ve Çalıştırılacak Komutlar
+Schedules & Raw Boxscores (Bulk Ingest): 2020-21 sezonuna ait hiçbir yerel ham dosya olmadığı için, aşağıdaki komut eksikliği tespit edip otomatik olarak NBA API'den toplu çekim (bulk ingest) yapar ve raw CSV/Parquet dosyalarını yazar:
+
+bash
+PYTHONPATH=. python3 main.py --season 2020-21 --update-data
+Core Roster Discovery (Çekirdek Kadro): Oyuncu oyun loglarını analiz ederek takımların önem sıralamasını (top-3, top-5) çıkarır ve 
+
+core_players.csv
+ dosyasına kaydeder:
+
+bash
+PYTHONPATH=. python3 main.py --season 2020-21 --run-roster-analysis
+Observed Affiliations (Takas & Stint Çıkarımı): Takas logları resmi endpoint stub olduğu için, oyuncu loglarından kronolojik stint pencerelerini (takas tarihlerini) hesaplar:
+
+bash
+PYTHONPATH=. python3 scripts/ingest/build_observed_affiliation_events.py --season 2020-21
+Roster Snapshots & Validation: Günlük kadro matrisini oluşturur ve veri doğruluğunu denetler:
+
+bash
+PYTHONPATH=. python3 scripts/ingest/roster_snapshot_generator.py
+PYTHONPATH=. python3 scripts/audit/validate_project_structure.py
+PYTHONPATH=. python3 scripts/audit/validate_season_path_refactor.py
+Season Bootstrapping: Tüm özellikleri birleştirip rakip-uyumlu eğitim matrisini (team_model_ready_v2_2020_21.csv) ve manifest dosyasını üretir:
+
+bash
+PYTHONPATH=. python3 main.py --season 2020-21 --bootstrap-season
