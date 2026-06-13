@@ -90,6 +90,9 @@ ALLOWED_COLUMNS_V2 = ALLOWED_COLUMNS + [
     "AWAY_WINRATE_LAST_5",
     "AWAY_PTS_LAST_5",
     "AWAY_PTS_ALLOWED_LAST_5",
+    "CURRENT_VENUE_WINRATE_LAST_5",
+    "CURRENT_VENUE_PTS_LAST_5",
+    "CURRENT_VENUE_PTS_ALLOWED_LAST_5",
     
     "OPP_HOME_WINRATE_LAST_5",
     "OPP_HOME_PTS_LAST_5",
@@ -97,6 +100,9 @@ ALLOWED_COLUMNS_V2 = ALLOWED_COLUMNS + [
     "OPP_AWAY_WINRATE_LAST_5",
     "OPP_AWAY_PTS_LAST_5",
     "OPP_AWAY_PTS_ALLOWED_LAST_5",
+    "OPP_CURRENT_VENUE_WINRATE_LAST_5",
+    "OPP_CURRENT_VENUE_PTS_LAST_5",
+    "OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5",
     
     # Head-to-Head features
     "H2H_GAMES_LAST_5",
@@ -128,6 +134,9 @@ ROLLING_FEATURE_COLUMNS_V2 = ROLLING_FEATURE_COLUMNS + [
     "AWAY_WINRATE_LAST_5",
     "AWAY_PTS_LAST_5",
     "AWAY_PTS_ALLOWED_LAST_5",
+    "CURRENT_VENUE_WINRATE_LAST_5",
+    "CURRENT_VENUE_PTS_LAST_5",
+    "CURRENT_VENUE_PTS_ALLOWED_LAST_5",
     
     "OPP_HOME_WINRATE_LAST_5",
     "OPP_HOME_PTS_LAST_5",
@@ -135,6 +144,9 @@ ROLLING_FEATURE_COLUMNS_V2 = ROLLING_FEATURE_COLUMNS + [
     "OPP_AWAY_WINRATE_LAST_5",
     "OPP_AWAY_PTS_LAST_5",
     "OPP_AWAY_PTS_ALLOWED_LAST_5",
+    "OPP_CURRENT_VENUE_WINRATE_LAST_5",
+    "OPP_CURRENT_VENUE_PTS_LAST_5",
+    "OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5",
     
     # Drop NaNs if H2H stats are NaN (we only require H2H winrate to be valid, 
     # since early season H2H may not have occurred yet, we drop games where H2H is not established)
@@ -283,4 +295,3 @@ def build_team_model_dataset_v3(team_features_with_core_df: pd.DataFrame) -> Tup
     print("=" * 60 + "\n")
     
     return df_model_ready, dropped_count
-

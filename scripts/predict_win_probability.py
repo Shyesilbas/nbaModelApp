@@ -1,7 +1,7 @@
 """
 Predict win probabilities for a single matchup row.
 Usage: python scripts/predict_win_probability.py --input-json path/to/row.json
-The JSON should be a mapping of feature_name: value for all required features (feature_columns.json).
+The JSON should be a mapping of feature_name: value for all required active win-model features.
 """
 import argparse
 import json
@@ -14,8 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.artifact_paths import resolve_artifact_path
 
-MODEL_PATH = resolve_artifact_path("win_model", "model_path", "models/win_probability_model.pkl")
-FEATURES_PATH = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns.json")
+MODEL_PATH = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v8.pkl")
+FEATURES_PATH = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v8.json")
 
 CONFIDENCE_BUCKETS = [
     (0.5, 0.55, "Toss-up"),

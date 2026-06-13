@@ -122,6 +122,17 @@ def export_data(season: str = None):
                 df_upcoming["GAME_DATE"] = pd.to_datetime(df_upcoming["GAME_DATE"], errors="coerce").dt.strftime("%Y-%m-%d")
             ctx_cols = [c for c in df_upcoming.columns if c != "GAME_DATE"]
             df_games = df_games.merge(df_upcoming[ctx_cols], on="GAME_ID", how="left", suffixes=("", "_CTX"))
+            # Backfill original columns with _CTX values (upcoming_context overrides blank schedule cols)
+            for col in ctx_cols:
+                if col == "GAME_ID":
+                    continue
+                ctx_col = col + "_CTX"
+                if ctx_col in df_games.columns:
+                    if col in df_games.columns:
+                        df_games[col] = df_games[col].where(df_games[col].notna(), df_games[ctx_col])
+                    else:
+                        df_games[col] = df_games[ctx_col]
+                    df_games.drop(columns=[ctx_col], inplace=True)
 
         df_games = df_games.sort_values(["GAME_DATE", "GAME_ID"]).reset_index(drop=True)
         detail_lookup = {}

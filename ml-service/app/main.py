@@ -14,6 +14,7 @@ from .schemas import (
 )
 from .service import init_model, predict, predict_score, get_model_status, predict_players, predict_game_full
 import uvicorn
+import traceback
 
 app = FastAPI(title="NBA Win Probability ML Service")
 
@@ -45,6 +46,7 @@ def predict_endpoint(req: WinProbRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -57,6 +59,7 @@ def predict_score_endpoint(req: ScorePredictionRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -74,6 +77,7 @@ def predict_players_endpoint(req: ScorePredictionRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -82,6 +86,7 @@ def model_status():
     try:
         return get_model_status()
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -94,9 +99,9 @@ def predict_game_full_endpoint(req: GameFullRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == '__main__':
     uvicorn.run("app.main:app", host="0.0.0.0", port=8001, reload=False)
-

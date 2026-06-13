@@ -51,6 +51,9 @@ def build_opponent_features(team_features_df: pd.DataFrame) -> pd.DataFrame:
         "AWAY_WINRATE_LAST_5_opp": "OPP_AWAY_WINRATE_LAST_5",
         "AWAY_PTS_LAST_5_opp": "OPP_AWAY_PTS_LAST_5",
         "AWAY_PTS_ALLOWED_LAST_5_opp": "OPP_AWAY_PTS_ALLOWED_LAST_5",
+        "CURRENT_VENUE_WINRATE_LAST_5_opp": "OPP_CURRENT_VENUE_WINRATE_LAST_5",
+        "CURRENT_VENUE_PTS_LAST_5_opp": "OPP_CURRENT_VENUE_PTS_LAST_5",
+        "CURRENT_VENUE_PTS_ALLOWED_LAST_5_opp": "OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5",
         
         "H2H_GAMES_LAST_5_opp": "OPP_H2H_GAMES_LAST_5",
         "H2H_WINRATE_LAST_5_opp": "OPP_H2H_WINRATE_LAST_5",

@@ -3,12 +3,12 @@ Build matchup features for the deployed win-probability model.
 Usage (CLI):
   python scripts/build_matchup_features.py --home TEAM_ABBR --away TEAM_ABBR --prediction-date YYYY-MM-DD
 
-Outputs a JSON mapping of feature_name -> value in the exact order defined by models/feature_columns.json
+Outputs a JSON mapping of feature_name -> value in the exact order defined by the active feature_columns file.
 
 Requirements met:
  - Uses only games with GAME_DATE < prediction_date
  - Performs validation checks to prevent leakage
- - Returns all features in the order from feature_columns.json
+ - Returns all features in the order from the active feature_columns file
 """
 import argparse
 import json
@@ -26,7 +26,7 @@ from scripts.artifact_paths import resolve_artifact_path
 from functools import lru_cache
 import math
 
-MODEL_FEATURE_COLS = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns.json")
+MODEL_FEATURE_COLS = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v8.json")
 
 NBA_TEAMS_LOCATIONS = {
     "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
@@ -140,25 +140,52 @@ def _load_v4_matchups():
 
 
 
+@lru_cache(maxsize=4)
+def _load_combined_schedule(season: str = None):
+    paths = get_data_paths(season)
+    p_parq = Path(paths.schedule_combined.replace(".csv", ".parquet"))
+    p_csv = Path(paths.schedule_combined)
+    for p in [p_parq, p_csv]:
+        if p.exists():
+            return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+    return pd.DataFrame()
+
+
 def _ensure_datetime(df, col):
     if not pd.api.types.is_datetime64_any_dtype(df[col]):
         df[col] = pd.to_datetime(df[col], errors="coerce")
 
 
 def build_features(home_team: str, away_team: str, prediction_date: str, season: str = None):
-    """Return Ordered dict (feature_name -> value) matching models/feature_columns.json.
+    """Return Ordered dict (feature_name -> value) matching the active win model feature list.
     home_team and away_team should be team abbreviations (e.g., "LAL"). prediction_date is YYYY-MM-DD.
     """
+    if not season:
+        pred_dt_temp = pd.to_datetime(prediction_date)
+        year = pred_dt_temp.year
+        month = pred_dt_temp.month
+        if month < 10:
+            start_year = year - 1
+        else:
+            start_year = year
+        season = f"{start_year}-{str(start_year+1)[-2:]}"
+
     pred_dt = pd.to_datetime(prediction_date)
 
     feat_cols = json.loads(MODEL_FEATURE_COLS.read_text())
 
     team_df = _load_team_features(season)
     games_df = _load_game_results(season)
+    schedule_df = _load_combined_schedule(season)
 
     # Normalize datetimes
     _ensure_datetime(team_df, "GAME_DATE")
     _ensure_datetime(games_df, "GAME_DATE")
+    if not schedule_df.empty:
+        _ensure_datetime(schedule_df, "GAME_DATE")
+
+    # Keep a full, unfiltered copy of games_df to lookup the scheduled game details
+    full_games_df = games_df.copy()
 
     # Filtering to games strictly before prediction date to prevent leakage
     team_df = team_df[team_df["GAME_DATE"] < pred_dt].copy()
@@ -210,20 +237,96 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     # IS_HOME: 1 for home team row
     out["IS_HOME"] = 1
 
-    # IS_PLAYOFF: use home_row if exists else False
-    out["IS_PLAYOFF"] = int(bool(safe_get(home_row, "IS_PLAYOFF", False)))
+    # IS_PLAYOFF: look up scheduled game or fallback to month-based playoff windows (April-June)
+    scheduled_game = full_games_df[
+        (full_games_df["GAME_DATE"].dt.date == pred_dt.date()) &
+        (full_games_df["HOME_TEAM_ABBREVIATION"] == home_team) &
+        (full_games_df["AWAY_TEAM_ABBREVIATION"] == away_team)
+    ]
+    scheduled_game_row = scheduled_game.iloc[0] if not scheduled_game.empty else None
 
-    # DAYS_REST / IS_B2B: compute from last game date for each team
-    def compute_rest_and_b2b(row):
-        last_game_date = pd.to_datetime(row["GAME_DATE"]) if row is not None else None
-        if last_game_date is None:
+    if scheduled_game_row is not None:
+        is_playoff_val = bool(scheduled_game_row.get("IS_PLAYOFF", False)) or (scheduled_game_row.get("SEASON_TYPE") in ["Playoffs", "PlayIn", "NBA Finals"])
+    else:
+        is_playoff_val = pred_dt.month in [4, 5, 6]
+
+    out["IS_PLAYOFF"] = int(is_playoff_val)
+
+    # IS_ELIMINATION_GAME and CAN_CLINCH_SERIES
+    if is_playoff_val:
+        playoffs = full_games_df[
+            (full_games_df["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])) |
+            (full_games_df["IS_PLAYOFF"] == True)
+        ].copy()
+        
+        h2h_playoffs = playoffs[
+            ((playoffs["HOME_TEAM_ABBREVIATION"] == home_team) & (playoffs["AWAY_TEAM_ABBREVIATION"] == away_team)) |
+            ((playoffs["HOME_TEAM_ABBREVIATION"] == away_team) & (playoffs["AWAY_TEAM_ABBREVIATION"] == home_team))
+        ]
+        
+        prior_h2h = h2h_playoffs[h2h_playoffs["GAME_DATE"] < pred_dt].sort_values("GAME_DATE")
+        
+        wins = {home_team: 0, away_team: 0}
+        for _, row in prior_h2h.iterrows():
+            g_home = row["HOME_TEAM_ABBREVIATION"]
+            g_away = row["AWAY_TEAM_ABBREVIATION"]
+            winner = row.get("WINNER_TEAM_ABBREVIATION")
+            home_score = row.get("HOME_SCORE")
+            away_score = row.get("AWAY_SCORE")
+            
+            if pd.notna(winner) and winner in wins:
+                wins[winner] += 1
+            elif pd.notna(home_score) and pd.notna(away_score):
+                if home_score > away_score:
+                    wins[g_home] += 1
+                elif away_score > home_score:
+                    wins[g_away] += 1
+                    
+        current_season_type = scheduled_game_row.get("SEASON_TYPE", "Playoffs") if scheduled_game_row is not None else "Playoffs"
+        
+        is_elim = 0
+        can_clinch = 0
+        if current_season_type != "PlayIn":
+            if wins[home_team] == 3 or wins[away_team] == 3:
+                is_elim = 1
+                can_clinch = 1
+        out["IS_ELIMINATION_GAME"] = is_elim
+        out["CAN_CLINCH_SERIES"] = can_clinch
+        out["HOME_SERIES_WINS"] = wins[home_team]
+        out["AWAY_SERIES_WINS"] = wins[away_team]
+    else:
+        out["IS_ELIMINATION_GAME"] = 0
+        out["CAN_CLINCH_SERIES"] = 0
+        out["HOME_SERIES_WINS"] = 0
+        out["AWAY_SERIES_WINS"] = 0
+
+    # DAYS_REST / IS_B2B: compute from last game date in the schedule (which includes all scheduled postseason matches)
+    # to prevent incorrect rest calculations for future scheduled playoff games.
+    def get_last_scheduled_date(team_abbr):
+        if not schedule_df.empty:
+            team_games = schedule_df[
+                ((schedule_df["HOME_TEAM_ABBREVIATION"] == team_abbr) |
+                 (schedule_df["AWAY_TEAM_ABBREVIATION"] == team_abbr)) &
+                (schedule_df["GAME_DATE"] < pred_dt)
+            ]
+            if not team_games.empty:
+                return team_games["GAME_DATE"].max()
+        return None
+
+    def compute_rest_and_b2b_for_team(team_abbr, fallback_row):
+        last_date = get_last_scheduled_date(team_abbr)
+        if last_date is None:
+            last_date = pd.to_datetime(fallback_row["GAME_DATE"]) if fallback_row is not None else None
+            
+        if last_date is None:
             return (np.nan, 0)
-        days = (pred_dt - last_game_date).days
+            
+        days = (pred_dt - last_date).days
         is_b2b = 1 if days == 1 else 0
         return (float(days), is_b2b)
 
-    days_rest_home, is_b2b_home = compute_rest_and_b2b(home_row)
-    days_rest_away, is_b2b_away = compute_rest_and_b2b(away_row)
+    days_rest_home, is_b2b_home = compute_rest_and_b2b_for_team(home_team, home_row)
+    days_rest_away, is_b2b_away = compute_rest_and_b2b_for_team(away_team, away_row)
 
     out["DAYS_REST"] = days_rest_home if not pd.isna(days_rest_home) else np.nan
     out["IS_B2B"] = is_b2b_home
@@ -263,7 +366,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     out["OPP_PTS_ALLOWED_LAST_5"] = float(safe_get(away_row, "PTS_ALLOWED_LAST_5", np.nan))
     out["OPP_PTS_ALLOWED_LAST_10"] = float(safe_get(away_row, "PTS_ALLOWED_LAST_10", np.nan))
 
-    # Home/Away splits and opponent splits
+    # Home/Away splits and venue-aware aliases
     out["HOME_WINRATE_LAST_5"] = float(safe_get(home_row, "HOME_WINRATE_LAST_5", np.nan))
     out["HOME_PTS_LAST_5"] = float(safe_get(home_row, "HOME_PTS_LAST_5", np.nan))
     out["HOME_PTS_ALLOWED_LAST_5"] = float(safe_get(home_row, "HOME_PTS_ALLOWED_LAST_5", np.nan))
@@ -280,6 +383,25 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     out["OPP_AWAY_WINRATE_LAST_5"] = float(safe_get(away_row, "AWAY_WINRATE_LAST_5", np.nan))
     out["OPP_AWAY_PTS_LAST_5"] = float(safe_get(away_row, "AWAY_PTS_LAST_5", np.nan))
     out["OPP_AWAY_PTS_ALLOWED_LAST_5"] = float(safe_get(away_row, "AWAY_PTS_ALLOWED_LAST_5", np.nan))
+
+    out["CURRENT_VENUE_WINRATE_LAST_5"] = float(
+        safe_get(home_row, "HOME_WINRATE_LAST_5", np.nan)
+    )
+    out["CURRENT_VENUE_PTS_LAST_5"] = float(
+        safe_get(home_row, "HOME_PTS_LAST_5", np.nan)
+    )
+    out["CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = float(
+        safe_get(home_row, "HOME_PTS_ALLOWED_LAST_5", np.nan)
+    )
+    out["OPP_CURRENT_VENUE_WINRATE_LAST_5"] = float(
+        safe_get(away_row, "AWAY_WINRATE_LAST_5", np.nan)
+    )
+    out["OPP_CURRENT_VENUE_PTS_LAST_5"] = float(
+        safe_get(away_row, "AWAY_PTS_LAST_5", np.nan)
+    )
+    out["OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = float(
+        safe_get(away_row, "AWAY_PTS_ALLOWED_LAST_5", np.nan)
+    )
 
     # H2H (from precomputed home_row H2H columns when available) -- fallback to aggregation above
     out["H2H_GAMES_LAST_5"] = float(safe_get(home_row, "H2H_GAMES_LAST_5", np.nan)) if not pd.isna(safe_get(home_row, "H2H_GAMES_LAST_5", np.nan)) else float(len(h2h_games))
@@ -410,12 +532,17 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
     import joblib
     import os
     
-    # Use V5 player features and models for leakage-free predictions with fallback to V4
-    features_path = ROOT / "models/production/player_v5_features.pkl"
-    model_prefix = "player_v5_lgb_"
-    if not features_path.exists():
-        features_path = ROOT / "models/production/player_v4_features.pkl"
-        model_prefix = "player_v4_lgb_"
+    # Use the newest leakage-free player model available for win-model projection features.
+    candidates = [
+        (ROOT / "models/production/player_v8_features.pkl", "player_v8_lgb_"),
+        (ROOT / "models/production/player_v7_features.pkl", "player_v7_lgb_"),
+        (ROOT / "models/production/player_v6_features.pkl", "player_v6_lgb_"),
+        (ROOT / "models/production/player_v5_features.pkl", "player_v5_lgb_"),
+        (ROOT / "models/production/player_v4_features.pkl", "player_v4_lgb_"),
+    ]
+    features_path, model_prefix = next(((p, prefix) for p, prefix in candidates if p.exists()), (None, None))
+    if features_path is None or model_prefix is None:
+        return {}
         
     try:
         player_features = joblib.load(features_path)
@@ -718,10 +845,10 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
             else:
                 missing_count += 1
 
-            # 2. Expected Stats (10-game rolling averages)
+            # 2. Expected Stats (5-game rolling averages to match training)
             p_games = df_player_hist[df_player_hist["Player_ID"] == pid]
             if not p_games.empty:
-                p_recent = p_games.sort_values("GAME_DATE", ascending=True).tail(10)
+                p_recent = p_games.sort_values("GAME_DATE", ascending=True).tail(5)
                 exp_min = float(p_recent["MIN"].mean())
                 exp_pts = float(p_recent["PTS"].mean())
                 exp_ast = float(p_recent["AST"].mean())

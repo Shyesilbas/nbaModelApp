@@ -120,6 +120,7 @@ class ScorePredictionSub(BaseModel):
 class WinProbabilitySub(BaseModel):
     home_win_prob: float
     away_win_prob: float
+    model_version: Optional[str] = None
 
 
 class GameFullPlayer(BaseModel):
@@ -138,6 +139,32 @@ class ScaleFactorsSub(BaseModel):
     away: float
 
 
+class ExplanationFeature(BaseModel):
+    feature_name: str
+    display_name: str
+    category: str
+    value: float
+    contribution: float
+    influence: str  # "FAVORS_HOME", "FAVORS_AWAY", "NEUTRAL"
+
+
+class WinProbabilityExplanation(BaseModel):
+    intercept: float
+    features: List[ExplanationFeature]
+
+
+class ScoreModelExplanation(BaseModel):
+    home_rtg_features: List[ExplanationFeature]
+    away_rtg_features: List[ExplanationFeature]
+    pace_features: List[ExplanationFeature]
+    margin_features: List[ExplanationFeature]
+
+
+class GameExplanationSub(BaseModel):
+    win_probability: WinProbabilityExplanation
+    score_prediction: ScoreModelExplanation
+
+
 class GameFullResponse(BaseModel):
     game_id: str
     score_prediction: ScorePredictionSub
@@ -145,3 +172,5 @@ class GameFullResponse(BaseModel):
     home_players: List[GameFullPlayer]
     away_players: List[GameFullPlayer]
     scale_factors: ScaleFactorsSub
+    explanation: Optional[GameExplanationSub] = None
+

@@ -14,11 +14,27 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
                              roc_auc_score, brier_score_loss)
+from src.training.validation_utils import chronological_train_test_split
 
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import get_default_season
 
 warnings.filterwarnings("ignore")
+
+STATIC_VENUE_SPLIT_FEATURES = {
+    "HOME_WINRATE_LAST_5",
+    "HOME_PTS_LAST_5",
+    "HOME_PTS_ALLOWED_LAST_5",
+    "AWAY_WINRATE_LAST_5",
+    "AWAY_PTS_LAST_5",
+    "AWAY_PTS_ALLOWED_LAST_5",
+    "OPP_HOME_WINRATE_LAST_5",
+    "OPP_HOME_PTS_LAST_5",
+    "OPP_HOME_PTS_ALLOWED_LAST_5",
+    "OPP_AWAY_WINRATE_LAST_5",
+    "OPP_AWAY_PTS_LAST_5",
+    "OPP_AWAY_PTS_ALLOWED_LAST_5",
+}
 
 class WinModelTrainer:
     def __init__(self, data_path=None, output_dir=None, player_data_path=None, player_models_dir=None):
@@ -94,34 +110,27 @@ class WinModelTrainer:
         if self.player_data_path.exists() and self.player_models_dir.exists():
             try:
                 player_df = pd.read_csv(self.player_data_path)
-                
+
                 root_models_prod = Path(__file__).resolve().parents[2] / "models/production"
-                features_path = self.player_models_dir / "player_v6_features.pkl"
-                models_dir = self.player_models_dir
-                model_prefix = "player_v6_lgb_"
-                
-                if not features_path.exists():
-                    if (root_models_prod / "player_v6_features.pkl").exists():
-                        features_path = root_models_prod / "player_v6_features.pkl"
-                        models_dir = root_models_prod
-                        model_prefix = "player_v6_lgb_"
-                    elif (self.player_models_dir / "player_v5_features.pkl").exists():
-                        features_path = self.player_models_dir / "player_v5_features.pkl"
-                        models_dir = self.player_models_dir
-                        model_prefix = "player_v5_lgb_"
-                    elif (root_models_prod / "player_v5_features.pkl").exists():
-                        features_path = root_models_prod / "player_v5_features.pkl"
-                        models_dir = root_models_prod
-                        model_prefix = "player_v5_lgb_"
-                    elif (self.player_models_dir / "player_v4_features.pkl").exists():
-                        features_path = self.player_models_dir / "player_v4_features.pkl"
-                        models_dir = self.player_models_dir
-                        model_prefix = "player_v4_lgb_"
-                    else:
-                        features_path = root_models_prod / "player_v4_features.pkl"
-                        models_dir = root_models_prod
-                        model_prefix = "player_v4_lgb_"
-                        
+                candidates = [
+                    (self.player_models_dir / "player_v8_features.pkl", self.player_models_dir, "player_v8_lgb_"),
+                    (root_models_prod / "player_v8_features.pkl", root_models_prod, "player_v8_lgb_"),
+                    (self.player_models_dir / "player_v7_features.pkl", self.player_models_dir, "player_v7_lgb_"),
+                    (root_models_prod / "player_v7_features.pkl", root_models_prod, "player_v7_lgb_"),
+                    (self.player_models_dir / "player_v6_features.pkl", self.player_models_dir, "player_v6_lgb_"),
+                    (root_models_prod / "player_v6_features.pkl", root_models_prod, "player_v6_lgb_"),
+                    (self.player_models_dir / "player_v5_features.pkl", self.player_models_dir, "player_v5_lgb_"),
+                    (root_models_prod / "player_v5_features.pkl", root_models_prod, "player_v5_lgb_"),
+                    (self.player_models_dir / "player_v4_features.pkl", self.player_models_dir, "player_v4_lgb_"),
+                    (root_models_prod / "player_v4_features.pkl", root_models_prod, "player_v4_lgb_"),
+                ]
+                features_path, models_dir, model_prefix = next(
+                    ((p, d, prefix) for p, d, prefix in candidates if p.exists()),
+                    (None, None, None),
+                )
+                if features_path is None or models_dir is None or model_prefix is None:
+                    raise FileNotFoundError("No compatible player model feature file found for win-model projection features.")
+
                 if features_path.exists():
                     player_features = joblib.load(features_path)
                     player_df = player_df.dropna(subset=player_features)
@@ -136,8 +145,7 @@ class WinModelTrainer:
                             player_df[f"PROJ_{t.upper()}"] = pred
                             predictions[t] = pred
                         else:
-                            player_df[f"PROJ_{t.upper()}"] = 0.0
-                            predictions[t] = 0.0
+                            raise FileNotFoundError(f"Required player projection model missing: {model_path}")
                             
                     player_df["PROJ_PRA"] = predictions["pts"] + predictions["reb"] + predictions["ast"]
                     
@@ -179,12 +187,30 @@ class WinModelTrainer:
                         "OPP_V3_PROJ_PTS_AVG", "OPP_V3_PROJ_REB_AVG", "OPP_V3_PROJ_AST_AVG", "OPP_V3_PROJ_PRA_AVG"
                     ]
                     df = df.dropna(subset=new_cols)
-            except Exception:
-                pass
+            except Exception as exc:
+                raise RuntimeError("Failed to build player projection features for win model training") from exc
 
         df_features, df_meta = self.separate_metadata(df)
         if self.target_col not in df_features.columns:
             raise ValueError(f"Target {self.target_col} not found in dataset columns")
+
+        if "IS_HOME" in df_features.columns:
+            venue_aliases = {
+                "CURRENT_VENUE_WINRATE_LAST_5": ("HOME_WINRATE_LAST_5", "AWAY_WINRATE_LAST_5"),
+                "CURRENT_VENUE_PTS_LAST_5": ("HOME_PTS_LAST_5", "AWAY_PTS_LAST_5"),
+                "CURRENT_VENUE_PTS_ALLOWED_LAST_5": ("HOME_PTS_ALLOWED_LAST_5", "AWAY_PTS_ALLOWED_LAST_5"),
+                "OPP_CURRENT_VENUE_WINRATE_LAST_5": ("OPP_AWAY_WINRATE_LAST_5", "OPP_HOME_WINRATE_LAST_5"),
+                "OPP_CURRENT_VENUE_PTS_LAST_5": ("OPP_AWAY_PTS_LAST_5", "OPP_HOME_PTS_LAST_5"),
+                "OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5": ("OPP_AWAY_PTS_ALLOWED_LAST_5", "OPP_HOME_PTS_ALLOWED_LAST_5"),
+            }
+            is_home = df_features["IS_HOME"].astype(bool)
+            for alias, (when_home_col, when_away_col) in venue_aliases.items():
+                if alias not in df_features.columns and when_home_col in df_features.columns and when_away_col in df_features.columns:
+                    df_features[alias] = np.where(is_home, df_features[when_home_col], df_features[when_away_col])
+
+        drop_static = [c for c in STATIC_VENUE_SPLIT_FEATURES if c in df_features.columns]
+        if drop_static:
+            df_features = df_features.drop(columns=drop_static)
             
         suspects = self.leakage_check(df_features, thresh=0.95)
         if suspects:
@@ -195,22 +221,13 @@ class WinModelTrainer:
         y = df_features[self.target_col].astype(int)
         X = df_features.drop(columns=[self.target_col])
         
-        if "GAME_DATE" in df_meta.columns:
-            df_meta["GAME_DATE"] = pd.to_datetime(df_meta["GAME_DATE"])
-            split_date = df_meta["GAME_DATE"].quantile(0.8)
-            train_idx = df_meta.index[df_meta["GAME_DATE"] <= split_date].tolist()
-            test_idx = df_meta.index[df_meta["GAME_DATE"] > split_date].tolist()
-            if len(train_idx) == 0 or len(test_idx) == 0:
-                X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-            else:
-                X_train_full = X.loc[train_idx]
-                X_test = X.loc[test_idx]
-                y_train_full = y.loc[train_idx]
-                y_test = y.loc[test_idx]
-        else:
-            X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-            
-        X_train, X_cal, y_train, y_cal = train_test_split(X_train_full, y_train_full, test_size=0.2, random_state=42, stratify=y_train_full)
+        X_train_full, X_test, y_train_full, y_test, split_meta = chronological_train_test_split(
+            X,
+            y,
+            df_meta,
+            test_size=0.2,
+            stratify_random=True,
+        )
         
         lr_pipeline = Pipeline([
             ("imputer", SimpleImputer(strategy="mean")),
@@ -218,7 +235,7 @@ class WinModelTrainer:
             ("clf", LogisticRegression(max_iter=1000, random_state=42))
         ])
         
-        lr_pipeline.fit(X_train, y_train)
+        lr_pipeline.fit(X_train_full, y_train_full)
         
         try:
             y_proba_uncal = lr_pipeline.predict_proba(X_test)[:, 1]
@@ -226,14 +243,14 @@ class WinModelTrainer:
             y_proba_uncal = lr_pipeline.decision_function(X_test)
         metrics_uncal = self.eval_metrics(y_test, y_proba_uncal)
         
-        calibrator_sig = CalibratedClassifierCV(estimator=lr_pipeline, method="sigmoid", cv='prefit')
-        calibrator_sig.fit(X_cal, y_cal)
+        calibrator_sig = CalibratedClassifierCV(estimator=lr_pipeline, method="sigmoid", cv=3)
+        calibrator_sig.fit(X_train_full, y_train_full)
         y_proba_sig = calibrator_sig.predict_proba(X_test)[:, 1]
         metrics_sig = self.eval_metrics(y_test, y_proba_sig)
         
         try:
-            calibrator_iso = CalibratedClassifierCV(estimator=lr_pipeline, method="isotonic", cv='prefit')
-            calibrator_iso.fit(X_cal, y_cal)
+            calibrator_iso = CalibratedClassifierCV(estimator=lr_pipeline, method="isotonic", cv=3)
+            calibrator_iso.fit(X_train_full, y_train_full)
             y_proba_iso = calibrator_iso.predict_proba(X_test)[:, 1]
             metrics_iso = self.eval_metrics(y_test, y_proba_iso)
         except Exception:
@@ -251,20 +268,34 @@ class WinModelTrainer:
         best_name, best_model, best_metrics = candidates_sorted[0]
         
         os.makedirs(self.output_dir, exist_ok=True)
-        model_path = self.output_dir / "win_probability_model.pkl"
-        joblib.dump(best_model, model_path)
+        final_pipeline = Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(max_iter=1000, random_state=42))
+        ])
+        if best_name == "uncalibrated":
+            final_model = final_pipeline.fit(X, y)
+        else:
+            final_model = CalibratedClassifierCV(estimator=final_pipeline, method=best_name, cv=3)
+            final_model.fit(X, y)
+
+        model_path = self.output_dir / "win_probability_model_v8.pkl"
+        joblib.dump(final_model, model_path)
         
         feature_cols = X.columns.tolist()
-        feat_path = self.output_dir / "feature_columns.json"
+        feat_path = self.output_dir / "feature_columns_v8.json"
         with open(feat_path, "w") as f:
             json.dump(feature_cols, f, indent=2)
             
         metadata = {
             "model_name": "logistic_regression",
-            "version": "6.0",
+            "version": "8.0",
             "training_date": datetime.utcnow().isoformat() + "Z",
             "number_of_rows": int(df.shape[0]),
             "number_of_features": int(X.shape[1]),
+            "evaluation": "chronological_holdout",
+            "split": split_meta.__dict__,
+            "dropped_static_venue_split_features": sorted(drop_static),
             "metrics": {
                 "uncalibrated": metrics_uncal,
                 "sigmoid": metrics_sig,

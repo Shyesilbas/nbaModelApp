@@ -1,5 +1,7 @@
 # Project Rules
 
+These rules apply to all future work in this workspace unless the user explicitly overrides them.
+
 ## Production Safety
 - Production artifacts under `models/production/`, `data/production/`, and `config/production_artifacts.yaml` must never be overwritten unless the user explicitly approves.
 

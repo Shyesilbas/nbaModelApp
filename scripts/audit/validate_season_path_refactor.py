@@ -1,11 +1,11 @@
 import os
 import sys
 from pathlib import Path
-from scripts.season_utils import get_default_season, season_to_file_token
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+from scripts.season_utils import get_default_season, season_to_file_token
 from scripts.data_paths import get_data_paths
 from scripts.artifact_paths import load_production_manifest, resolve_artifact_path
 
@@ -52,7 +52,7 @@ def test_production_manifest():
     assert "win_model" in manifest
     assert "score_model" in manifest
     
-    win_model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model.pkl")
+    win_model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v8.pkl")
     assert win_model_path.exists()
     
     score_model_path = resolve_artifact_path("score_model", "home_model_path", "models/home_score_model_v2.pkl")

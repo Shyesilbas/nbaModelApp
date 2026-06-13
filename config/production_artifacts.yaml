@@ -1,18 +1,18 @@
 win_model:
-  model_path: models/production/win_probability_model.pkl
-  feature_columns_path: models/production/feature_columns.json
+  model_path: models/production/win_probability_model_v8.pkl
+  feature_columns_path: models/production/feature_columns_v8.json
   metadata_path: models/production/model_metadata.json
   status: production
-  notes: "Current production win probability model. V1 Logistic Regression remains production."
+  notes: "Current production win probability model. V8 Logistic Regression with venue-only split features and chronological holdout evaluation."
 
 score_model:
-  home_model_path: models/production/score_model_v6_home_rtg.pkl
-  away_model_path: models/production/score_model_v6_away_rtg.pkl
-  total_model_path: models/production/score_model_v6_pace.pkl
-  margin_model_path: models/production/score_model_v6_margin.pkl
-  metadata_path: models/production/score_model_v6_metadata.json
+  home_model_path: models/production/score_model_v8_home_rtg.pkl
+  away_model_path: models/production/score_model_v8_away_rtg.pkl
+  total_model_path: models/production/score_model_v8_pace.pkl
+  margin_model_path: models/production/score_model_v8_margin.pkl
+  metadata_path: models/production/score_model_v8_metadata.json
   status: production
-  notes: "Current production score model V6 (XGBoost Pace & Offensive Rating with playoff features)."
+  notes: "Current production score model V8 (XGBoost Pace & Offensive Rating with chronological holdout evaluation)."
 
 core_players:
   path: data/production/core_players.csv
