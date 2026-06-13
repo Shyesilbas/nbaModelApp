@@ -13,6 +13,8 @@
   "feature_columns": [
     "IS_HOME",
     "IS_PLAYOFF",
+    "IS_ELIMINATION_GAME",
+    "CAN_CLINCH_SERIES",
     "DAYS_REST",
     "IS_B2B",
     "PTS_LAST_5",
@@ -50,7 +52,7 @@
     "OPP_H2H_PTS_LAST_5",
     "OPP_H2H_PTS_ALLOWED_LAST_5"
   ],
-  "feature_count": 38,
+  "feature_count": 40,
   "target_distribution": {
     "1": 881,
     "0": 881

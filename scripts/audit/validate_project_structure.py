@@ -33,14 +33,18 @@ def main() -> int:
                     _check(candidate, errors)
 
     required = [
-        ROOT / "models/production/win_probability_model.pkl",
-        ROOT / "models/production/feature_columns.json",
+        ROOT / "models/production/win_probability_model_v8.pkl",
+        ROOT / "models/production/feature_columns_v8.json",
         ROOT / "models/production/model_metadata.json",
-        ROOT / "models/production/score_model_v4_home_rtg.pkl",
-        ROOT / "models/production/score_model_v4_away_rtg.pkl",
-        ROOT / "models/production/score_model_v4_pace.pkl",
-        ROOT / "models/production/score_model_v4_margin.pkl",
-        ROOT / "models/production/score_model_v4_metadata.json",
+        ROOT / "models/production/score_model_v8_home_rtg.pkl",
+        ROOT / "models/production/score_model_v8_away_rtg.pkl",
+        ROOT / "models/production/score_model_v8_pace.pkl",
+        ROOT / "models/production/score_model_v8_margin.pkl",
+        ROOT / "models/production/score_model_v8_metadata.json",
+        ROOT / "models/production/player_v8_lgb_pts.pkl",
+        ROOT / "models/production/player_v8_lgb_reb.pkl",
+        ROOT / "models/production/player_v8_lgb_ast.pkl",
+        ROOT / "models/production/player_v8_features.pkl",
         ROOT / "data/production/core_players.csv",
     ]
     for path in required:

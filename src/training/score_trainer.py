@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.metrics import mean_absolute_error, r2_score
+from src.training.validation_utils import chronological_train_test_split
 
 NBA_TEAMS_LOCATIONS = {
     "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
@@ -109,10 +110,24 @@ class ScoreModelTrainer:
             scoring='neg_mean_absolute_error', 
             cv=3, 
             random_state=random_state, 
-            n_jobs=-1
+            n_jobs=1
         )
         search.fit(X_train, y_train)
         return search.best_estimator_
+
+    def _train_eval_final(self, df, features, target_col):
+        X = df[features]
+        y = df[target_col]
+        X_train, X_test, y_train, y_test, split_meta = chronological_train_test_split(
+            X,
+            y,
+            df,
+            test_size=0.2,
+        )
+        eval_model = self.tune_and_train(X_train, y_train)
+        mae = mean_absolute_error(y_test, eval_model.predict(X_test))
+        final_model = self.tune_and_train(X, y)
+        return final_model, float(mae), split_meta, X_test.index.tolist()
 
     def train_and_export(self):
         files = glob.glob(self.data_pattern)
@@ -135,40 +150,23 @@ class ScoreModelTrainer:
         df_away["TARGET_AWAY_OFF_RTG"] = df_away["OFF_RTG"]
         df_home["TARGET_MARGIN"] = df_home["PACE"] * df_home["NET_RTG"] / 100.0
         
-        X_pace = df_home[self.pace_features]
-        y_pace = df_home["TARGET_PACE"]
-        X_train, X_test, y_train, y_test = train_test_split(X_pace, y_pace, test_size=0.2, random_state=42)
-        pace_model = self.tune_and_train(X_train, y_train)
-        pace_mae = mean_absolute_error(y_test, pace_model.predict(X_test))
-        
-        X_home = df_home[self.home_off_rtg_features]
-        y_home = df_home["TARGET_HOME_OFF_RTG"]
-        X_train, X_test, y_train, y_test = train_test_split(X_home, y_home, test_size=0.2, random_state=42)
-        home_model = self.tune_and_train(X_train, y_train)
-        home_mae = mean_absolute_error(y_test, home_model.predict(X_test))
-        
-        X_away = df_away[self.away_off_rtg_features]
-        y_away = df_away["TARGET_AWAY_OFF_RTG"]
-        X_train, X_test, y_train, y_test = train_test_split(X_away, y_away, test_size=0.2, random_state=42)
-        away_model = self.tune_and_train(X_train, y_train)
-        away_mae = mean_absolute_error(y_test, away_model.predict(X_test))
-        
-        X_margin = df_home[self.margin_features]
-        y_margin = df_home["TARGET_MARGIN"]
-        X_train, X_test, y_train, y_test = train_test_split(X_margin, y_margin, test_size=0.2, random_state=42)
-        margin_model = self.tune_and_train(X_train, y_train)
-        margin_mae = mean_absolute_error(y_test, margin_model.predict(X_test))
-        
-        pred_pace = pace_model.predict(df_home[self.pace_features])
-        pred_home_rtg = home_model.predict(df_home[self.home_off_rtg_features])
-        
-        df_home_eval = df_home.copy()
+        pace_model, pace_mae, pace_split, pace_test_idx = self._train_eval_final(df_home, self.pace_features, "TARGET_PACE")
+        home_model, home_mae, home_split, home_test_idx = self._train_eval_final(df_home, self.home_off_rtg_features, "TARGET_HOME_OFF_RTG")
+        away_model, away_mae, away_split, away_test_idx = self._train_eval_final(df_away, self.away_off_rtg_features, "TARGET_AWAY_OFF_RTG")
+        margin_model, margin_mae, margin_split, margin_test_idx = self._train_eval_final(df_home, self.margin_features, "TARGET_MARGIN")
+
+        eval_home_idx = sorted(set(pace_test_idx).intersection(home_test_idx))
+        eval_away_games = set(df_away.loc[away_test_idx, "GAME_ID"].astype(str))
+
+        df_home_eval = df_home.loc[eval_home_idx].copy()
+        pred_pace = pace_model.predict(df_home_eval[self.pace_features])
+        pred_home_rtg = home_model.predict(df_home_eval[self.home_off_rtg_features])
         df_home_eval["PRED_PACE"] = pred_pace
         df_home_eval["PRED_HOME_RTG"] = pred_home_rtg
         df_home_eval["ACTUAL_HOME_PTS"] = df_home_eval["PACE"] * df_home_eval["OFF_RTG"] / 100.0
         df_home_eval["ACTUAL_AWAY_PTS"] = df_home_eval["PACE"] * df_home_eval["DEF_RTG"] / 100.0
         
-        df_away_eval = df_away[["GAME_ID"] + self.away_off_rtg_features].copy()
+        df_away_eval = df_away[df_away["GAME_ID"].astype(str).isin(eval_away_games)][["GAME_ID"] + self.away_off_rtg_features].copy()
         df_away_eval["PRED_AWAY_RTG"] = away_model.predict(df_away_eval[self.away_off_rtg_features])
         df_away_eval = df_away_eval[["GAME_ID", "PRED_AWAY_RTG"]]
         
@@ -180,27 +178,35 @@ class ScoreModelTrainer:
         away_score_mae = mean_absolute_error(df_eval["ACTUAL_AWAY_PTS"], df_eval["EXPECTED_AWAY_SCORE"])
         
         os.makedirs(self.output_dir, exist_ok=True)
-        joblib.dump(pace_model, self.output_dir / "score_model_v6_pace.pkl")
-        joblib.dump(home_model, self.output_dir / "score_model_v6_home_rtg.pkl")
-        joblib.dump(away_model, self.output_dir / "score_model_v6_away_rtg.pkl")
-        joblib.dump(margin_model, self.output_dir / "score_model_v6_margin.pkl")
+        joblib.dump(pace_model, self.output_dir / "score_model_v8_pace.pkl")
+        joblib.dump(home_model, self.output_dir / "score_model_v8_home_rtg.pkl")
+        joblib.dump(away_model, self.output_dir / "score_model_v8_away_rtg.pkl")
+        joblib.dump(margin_model, self.output_dir / "score_model_v8_margin.pkl")
         
         metadata = {
-            "version": "6.0_XGBoost",
+            "version": "8.0_XGBoost",
             "updated_at": datetime.utcnow().isoformat() + "Z",
+            "evaluation": "chronological_holdout",
             "pace_mae": float(pace_mae),
             "home_rtg_mae": float(home_mae),
             "away_rtg_mae": float(away_mae),
             "margin_mae": float(margin_mae),
             "derived_home_score_mae": float(home_score_mae),
             "derived_away_score_mae": float(away_score_mae),
+            "splits": {
+                "pace": pace_split.__dict__,
+                "home_rtg": home_split.__dict__,
+                "away_rtg": away_split.__dict__,
+                "margin": margin_split.__dict__,
+                "derived_score_eval_games": int(len(df_eval)),
+            },
             "pace_features": self.pace_features,
             "home_off_rtg_features": self.home_off_rtg_features,
             "away_off_rtg_features": self.away_off_rtg_features,
             "margin_features": self.margin_features
         }
         
-        metadata_path = self.output_dir / "score_model_v6_metadata.json"
+        metadata_path = self.output_dir / "score_model_v8_metadata.json"
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=4)
             

@@ -54,7 +54,7 @@ def build_team_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # 4. IS_PLAYOFF: derived from SEASON_TYPE
     if "SEASON_TYPE" in df.columns:
-        df["IS_PLAYOFF"] = df["SEASON_TYPE"].str.contains("Playoff", case=False, na=False)
+        df["IS_PLAYOFF"] = df["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
     else:
         df["IS_PLAYOFF"] = False
 
@@ -183,6 +183,39 @@ def build_team_features(df: pd.DataFrame) -> pd.DataFrame:
         "AWAY_WINRATE_LAST_5", "AWAY_PTS_LAST_5", "AWAY_PTS_ALLOWED_LAST_5"
     ]
     df[cols_to_ffill] = df.groupby(team_col)[cols_to_ffill].ffill()
+
+    # 12b. Venue-aware aliases used by training and inference.
+    # These resolve to the split that is actually relevant for the row's venue.
+    if "IS_HOME" in df.columns:
+        df["CURRENT_VENUE_WINRATE_LAST_5"] = np.where(
+            df["IS_HOME"] == True, df["HOME_WINRATE_LAST_5"], df["AWAY_WINRATE_LAST_5"]
+        )
+        df["CURRENT_VENUE_PTS_LAST_5"] = np.where(
+            df["IS_HOME"] == True, df["HOME_PTS_LAST_5"], df["AWAY_PTS_LAST_5"]
+        )
+        df["CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = np.where(
+            df["IS_HOME"] == True, df["HOME_PTS_ALLOWED_LAST_5"], df["AWAY_PTS_ALLOWED_LAST_5"]
+        )
+    else:
+        df["CURRENT_VENUE_WINRATE_LAST_5"] = np.nan
+        df["CURRENT_VENUE_PTS_LAST_5"] = np.nan
+        df["CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = np.nan
+
+    if "IS_HOME" in df.columns:
+        opp_is_home = df["IS_HOME"] == False
+        df["OPP_CURRENT_VENUE_WINRATE_LAST_5"] = np.where(
+            opp_is_home, df["OPP_HOME_WINRATE_LAST_5"], df["OPP_AWAY_WINRATE_LAST_5"]
+        )
+        df["OPP_CURRENT_VENUE_PTS_LAST_5"] = np.where(
+            opp_is_home, df["OPP_HOME_PTS_LAST_5"], df["OPP_AWAY_PTS_LAST_5"]
+        )
+        df["OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = np.where(
+            opp_is_home, df["OPP_HOME_PTS_ALLOWED_LAST_5"], df["OPP_AWAY_PTS_ALLOWED_LAST_5"]
+        )
+    else:
+        df["OPP_CURRENT_VENUE_WINRATE_LAST_5"] = np.nan
+        df["OPP_CURRENT_VENUE_PTS_LAST_5"] = np.nan
+        df["OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = np.nan
 
     # 13. Head-to-Head (H2H) history features (rolling 5, shifted by 1)
     if "TEAM_ABBREVIATION" in df.columns and "OPPONENT_ABBREVIATION" in df.columns:

@@ -10,6 +10,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import lightgbm as lgb
+from src.training.validation_utils import chronological_train_test_split
 
 warnings.filterwarnings("ignore")
 
@@ -40,7 +41,7 @@ class PlayerModelTrainer:
         X = df[features]
         os.makedirs(self.output_dir, exist_ok=True)
         
-        feature_path = self.output_dir / "player_v6_features.pkl"
+        feature_path = self.output_dir / "player_v8_features.pkl"
         joblib.dump(features, feature_path)
         
         metadata_metrics = {}
@@ -60,31 +61,44 @@ class PlayerModelTrainer:
                 ))
             ])
             
+            X_train, X_test, y_train, y_test, split_meta = chronological_train_test_split(
+                X,
+                y,
+                df,
+                test_size=0.2,
+            )
+
+            pipeline.fit(X_train, y_train)
+
+            preds = pipeline.predict(X_test)
+            mae = mean_absolute_error(y_test, preds)
+            rmse = np.sqrt(mean_squared_error(y_test, preds))
+            r2 = r2_score(y_test, preds)
+
+            # Export a final model trained on all available historical rows after holdout evaluation.
             pipeline.fit(X, y)
-            
-            model_name = f"player_v6_lgb_{short_name}.pkl"
+
+            model_name = f"player_v8_lgb_{short_name}.pkl"
             model_path = self.output_dir / model_name
             joblib.dump(pipeline, model_path)
-            
-            preds = pipeline.predict(X)
-            mae = mean_absolute_error(y, preds)
-            rmse = np.sqrt(mean_squared_error(y, preds))
-            r2 = r2_score(y, preds)
+
             metadata_metrics[short_name] = {
                 "mae": float(mae),
                 "rmse": float(rmse),
-                "r2": float(r2)
+                "r2": float(r2),
+                "split": split_meta.__dict__,
             }
             
         metadata = {
-            "version": "6.0_LightGBM",
+            "version": "8.0_LightGBM",
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "features_count": len(features),
             "targets": list(self.targets_map.keys()),
+            "evaluation": "chronological_holdout",
             "evaluation_metrics": metadata_metrics
         }
         
-        metadata_path = self.output_dir / "player_v6_metadata.json"
+        metadata_path = self.output_dir / "player_v8_metadata.json"
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=4)
             

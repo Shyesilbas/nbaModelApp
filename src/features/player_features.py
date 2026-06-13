@@ -61,7 +61,7 @@ def build_player_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # 4. IS_PLAYOFF: derived from SEASON_TYPE
     if "SEASON_TYPE" in df.columns:
-        df["IS_PLAYOFF"] = df["SEASON_TYPE"].str.contains("Playoff", case=False, na=False)
+        df["IS_PLAYOFF"] = df["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
     else:
         df["IS_PLAYOFF"] = False
 

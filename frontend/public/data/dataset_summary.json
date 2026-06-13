@@ -12,11 +12,11 @@
   "total_teams": 30,
   "total_players": 518,
   "v1_rows": 2610,
-  "v1_features": 9,
+  "v1_features": 11,
   "v2_rows": 1762,
-  "v2_features": 39,
+  "v2_features": 41,
   "v3_rows": 1762,
-  "v3_features": 98,
+  "v3_features": 100,
   "files_status": [
     {
       "name": "Raw Team Game Logs",
@@ -79,24 +79,24 @@
       "path": "data/processed/team_model_ready_2025_26.csv",
       "exists": true,
       "rows": 2610,
-      "columns": 16,
-      "size_kb": 283.92
+      "columns": 18,
+      "size_kb": 294.15
     },
     {
       "name": "V2 Model-Ready Dataset",
       "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/team_model_ready_v2.csv",
       "exists": true,
       "rows": 1762,
-      "columns": 46,
-      "size_kb": 472.98
+      "columns": 48,
+      "size_kb": 479.9
     },
     {
       "name": "V3 Model-Ready Dataset",
       "path": "data/processed/team_model_ready_v3_2025_26.csv",
       "exists": true,
       "rows": 1762,
-      "columns": 105,
-      "size_kb": 1464.52
+      "columns": 107,
+      "size_kb": 1471.5
     },
     {
       "name": "Combined Schedule",
@@ -112,7 +112,7 @@
       "exists": true,
       "rows": 3,
       "columns": 33,
-      "size_kb": 0.94
+      "size_kb": 0.96
     }
   ]
 }

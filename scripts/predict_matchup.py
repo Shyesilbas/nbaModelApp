@@ -13,7 +13,7 @@ Outputs JSON with:
   "confidence_bucket": "Moderate confidence"
 }
 
-This script builds features (using only past games), loads models/win_probability_model.pkl and models/feature_columns.json, makes prediction, and validates inputs.
+This script builds features (using only past games), loads the active win model artifacts, makes prediction, and validates inputs.
 """
 import argparse
 import json
@@ -45,8 +45,8 @@ def bucket_confidence(p):
 
 
 def load_model_and_features():
-    model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model.pkl")
-    features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns.json")
+    model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v8.pkl")
+    features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v8.json")
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found at {model_path}. Run training first.")
     if not features_path.exists():

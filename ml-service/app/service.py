@@ -4,13 +4,15 @@ from .schemas import (
     ScorePredictionRequest, ScorePredictionResponse,
     ModelStatusResponse, ModelMetrics, WinModelInfo, ScoreModelInfo,
     PlayerPredictionResponse, PlayerPrediction,
-    GameFullRequest, GameFullResponse, ScorePredictionSub, WinProbabilitySub, GameFullPlayer, ScaleFactorsSub
+    GameFullRequest, GameFullResponse, ScorePredictionSub, WinProbabilitySub, GameFullPlayer, ScaleFactorsSub,
+    ExplanationFeature, WinProbabilityExplanation, ScoreModelExplanation, GameExplanationSub
 )
 from .player_service import get_player_predictions
 from scripts.build_matchup_features import build_features
 from scripts.artifact_paths import resolve_artifact_path
 from scripts.inference.top_down_scaling import apply_top_down_scaling
 from datetime import date
+from typing import List
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -237,6 +239,246 @@ def predict_players(request: ScorePredictionRequest) -> PlayerPredictionResponse
     )
 
 
+FEATURE_METADATA = {
+    "IS_HOME": {"display": "Home Court Advantage", "category": "Venue & Schedule"},
+    "DAYS_REST": {"display": "Days of Rest", "category": "Venue & Schedule"},
+    "IS_B2B": {"display": "Back-to-Back Game", "category": "Venue & Schedule"},
+    "OPP_DAYS_REST": {"display": "Opponent Days of Rest", "category": "Venue & Schedule"},
+    "OPP_IS_B2B": {"display": "Opponent Back-to-Back", "category": "Venue & Schedule"},
+    "TRAVEL_DISTANCE": {"display": "Travel Distance", "category": "Venue & Schedule"},
+    "TIMEZONE_DIFF": {"display": "Timezone Difference", "category": "Venue & Schedule"},
+    
+    "IS_PLAYOFF": {"display": "Playoff Matchup", "category": "Playoff Context"},
+    "IS_ELIMINATION_GAME": {"display": "Elimination Game", "category": "Playoff Context"},
+    "CAN_CLINCH_SERIES": {"display": "Series Clinching Opportunity", "category": "Playoff Context"},
+    
+    "WINRATE_LAST_5": {"display": "Win Rate (Last 5 Games)", "category": "Recent Team Form"},
+    "WINRATE_LAST_10": {"display": "Win Rate (Last 10 Games)", "category": "Recent Team Form"},
+    "PTS_LAST_5": {"display": "Points Scored (Last 5 Games)", "category": "Recent Team Form"},
+    "PTS_LAST_10": {"display": "Points Scored (Last 10 Games)", "category": "Recent Team Form"},
+    "PTS_ALLOWED_LAST_5": {"display": "Points Allowed (Last 5 Games)", "category": "Recent Team Form"},
+    "PTS_ALLOWED_LAST_10": {"display": "Points Allowed (Last 10 Games)", "category": "Recent Team Form"},
+    
+    "OPP_WINRATE_LAST_5": {"display": "Opponent Win Rate (Last 5)", "category": "Recent Opponent Form"},
+    "OPP_WINRATE_LAST_10": {"display": "Opponent Win Rate (Last 10)", "category": "Recent Opponent Form"},
+    "OPP_PTS_LAST_5": {"display": "Opponent Points Scored (Last 5)", "category": "Recent Opponent Form"},
+    "OPP_PTS_LAST_10": {"display": "Opponent Points Scored (Last 10)", "category": "Recent Opponent Form"},
+    "OPP_PTS_ALLOWED_LAST_5": {"display": "Opponent Points Allowed (Last 5)", "category": "Recent Opponent Form"},
+    "OPP_PTS_ALLOWED_LAST_10": {"display": "Opponent Points Allowed (Last 10)", "category": "Recent Opponent Form"},
+
+    "HOME_WINRATE_LAST_5": {"display": "Home Win Rate (Last 5 Splits)", "category": "Recent Team Form"},
+    "HOME_PTS_LAST_5": {"display": "Home Points Scored (Last 5 Splits)", "category": "Recent Team Form"},
+    "HOME_PTS_ALLOWED_LAST_5": {"display": "Home Points Allowed (Last 5 Splits)", "category": "Recent Team Form"},
+    "AWAY_WINRATE_LAST_5": {"display": "Away Win Rate (Last 5 Splits)", "category": "Recent Team Form"},
+    "AWAY_PTS_LAST_5": {"display": "Away Points Scored (Last 5 Splits)", "category": "Recent Team Form"},
+    "AWAY_PTS_ALLOWED_LAST_5": {"display": "Away Points Allowed (Last 5 Splits)", "category": "Recent Team Form"},
+    
+    "OPP_HOME_WINRATE_LAST_5": {"display": "Opponent Home Win Rate (Last 5 Splits)", "category": "Recent Opponent Form"},
+    "OPP_HOME_PTS_LAST_5": {"display": "Opponent Home PTS Scored (Last 5 Splits)", "category": "Recent Opponent Form"},
+    "OPP_HOME_PTS_ALLOWED_LAST_5": {"display": "Opponent Home PTS Allowed (Last 5 Splits)", "category": "Recent Opponent Form"},
+    "OPP_AWAY_WINRATE_LAST_5": {"display": "Opponent Away Win Rate (Last 5 Splits)", "category": "Recent Opponent Form"},
+    "OPP_AWAY_PTS_LAST_5": {"display": "Opponent Away PTS Scored (Last 5 Splits)", "category": "Recent Opponent Form"},
+    "OPP_AWAY_PTS_ALLOWED_LAST_5": {"display": "Opponent Away PTS Allowed (Last 5 Splits)", "category": "Recent Opponent Form"},
+
+    "H2H_GAMES_LAST_5": {"display": "Head-to-Head Games Count", "category": "Head-to-Head History"},
+    "H2H_WINRATE_LAST_5": {"display": "Head-to-Head Win Rate (Last 5)", "category": "Head-to-Head History"},
+    "H2H_PTS_LAST_5": {"display": "Head-to-Head PTS Scored (Last 5)", "category": "Head-to-Head History"},
+    "H2H_PTS_ALLOWED_LAST_5": {"display": "Head-to-Head PTS Allowed (Last 5)", "category": "Head-to-Head History"},
+    "OPP_H2H_GAMES_LAST_5": {"display": "Opponent Head-to-Head Games Count", "category": "Head-to-Head History"},
+    "OPP_H2H_WINRATE_LAST_5": {"display": "Opponent Head-to-Head Win Rate", "category": "Head-to-Head History"},
+    "OPP_H2H_PTS_LAST_5": {"display": "Opponent Head-to-Head PTS Scored", "category": "Head-to-Head History"},
+    "OPP_H2H_PTS_ALLOWED_LAST_5": {"display": "Opponent Head-to-Head PTS Allowed", "category": "Head-to-Head History"},
+
+    "TEAM_V3_PROJ_PTS_SUM": {"display": "Roster Projected Points", "category": "Rosters & Projections"},
+    "TEAM_V3_PROJ_REB_SUM": {"display": "Roster Projected Rebounds", "category": "Rosters & Projections"},
+    "TEAM_V3_PROJ_AST_SUM": {"display": "Roster Projected Assists", "category": "Rosters & Projections"},
+    "TEAM_V3_PROJ_PRA_SUM": {"display": "Roster Projected Points+Rebounds+Assists", "category": "Rosters & Projections"},
+    "TEAM_V3_PROJ_PTS_AVG": {"display": "Roster Average Projected Points", "category": "Rosters & Projections"},
+    "TEAM_V3_PROJ_REB_AVG": {"display": "Roster Average Projected Rebounds", "category": "Rosters & Projections"},
+    "TEAM_V3_PROJ_AST_AVG": {"display": "Roster Average Projected Assists", "category": "Rosters & Projections"},
+    "TEAM_V3_PROJ_PRA_AVG": {"display": "Roster Average Projected PRA", "category": "Rosters & Projections"},
+    
+    "OPP_V3_PROJ_PTS_SUM": {"display": "Opponent Projected Points", "category": "Rosters & Projections"},
+    "OPP_V3_PROJ_REB_SUM": {"display": "Opponent Projected Rebounds", "category": "Rosters & Projections"},
+    "OPP_V3_PROJ_AST_SUM": {"display": "Opponent Projected Assists", "category": "Rosters & Projections"},
+    "OPP_V3_PROJ_PRA_SUM": {"display": "Opponent Projected Points+Rebounds+Assists", "category": "Rosters & Projections"},
+    "OPP_V3_PROJ_PTS_AVG": {"display": "Opponent Average Projected Points", "category": "Rosters & Projections"},
+    "OPP_V3_PROJ_REB_AVG": {"display": "Opponent Average Projected Rebounds", "category": "Rosters & Projections"},
+    "OPP_V3_PROJ_AST_AVG": {"display": "Opponent Average Projected Assists", "category": "Rosters & Projections"},
+    "OPP_V3_PROJ_PRA_AVG": {"display": "Opponent Average Projected PRA", "category": "Rosters & Projections"},
+
+    "PACE_LAST_5": {"display": "Pace (Last 5 Games)", "category": "Venue & Schedule"},
+    "PACE_LAST_10": {"display": "Pace (Last 10 Games)", "category": "Venue & Schedule"},
+    "OPP_PACE_LAST_5": {"display": "Opponent Pace (Last 5 Games)", "category": "Venue & Schedule"},
+    "OPP_PACE_LAST_10": {"display": "Opponent Pace (Last 10 Games)", "category": "Venue & Schedule"},
+    "OFF_RTG_LAST_5": {"display": "Offensive Rating (Last 5 Games)", "category": "Recent Team Form"},
+    "OFF_RTG_LAST_10": {"display": "Offensive Rating (Last 10 Games)", "category": "Recent Team Form"},
+    "DEF_RTG_LAST_5": {"display": "Defensive Rating (Last 5 Games)", "category": "Recent Team Form"},
+    "DEF_RTG_LAST_10": {"display": "Defensive Rating (Last 10 Games)", "category": "Recent Team Form"},
+    "OPP_OFF_RTG_LAST_5": {"display": "Opponent Offensive Rating (Last 5)", "category": "Recent Opponent Form"},
+    "OPP_DEF_RTG_LAST_5": {"display": "Opponent Defensive Rating (Last 5)", "category": "Recent Opponent Form"},
+    "OPP_DEF_RTG_LAST_10": {"display": "Opponent Defensive Rating (Last 10)", "category": "Recent Opponent Form"},
+    
+    "TEAM_CORE_TOP3_PLAYED_COUNT": {"display": "Top 3 Core Players Games Played", "category": "Rosters & Projections"},
+    "TEAM_CORE_TOP3_AVAILABLE_RATE": {"display": "Top 3 Core Availability Rate", "category": "Rosters & Projections"},
+    "TEAM_CORE_TOP3_PTS_LAST_5_SUM": {"display": "Top 3 Core Points (Last 5 Games)", "category": "Rosters & Projections"},
+    "OPP_CORE_TOP3_PLAYED_COUNT": {"display": "Opponent Top 3 Core Games Played", "category": "Rosters & Projections"},
+}
+
+
+def explain_win_probability(feats: dict) -> WinProbabilityExplanation:
+    if loader.model is None or loader.feature_cols is None:
+        return WinProbabilityExplanation(intercept=0.0, features=[])
+    
+    model = loader.model
+    if hasattr(model, "calibrated_classifiers_"):
+        pipeline = model.calibrated_classifiers_[0].estimator
+    else:
+        pipeline = model
+        
+    imputer = pipeline.named_steps.get("imputer")
+    scaler = pipeline.named_steps.get("scaler")
+    clf = pipeline.named_steps.get("clf")
+    
+    row = [feats.get(c, float("nan")) for c in loader.feature_cols]
+    df = pd.DataFrame([row], columns=loader.feature_cols)
+    
+    if imputer:
+        X_imp = imputer.transform(df)
+    else:
+        X_imp = df.fillna(0.0)
+        
+    if scaler:
+        X_scaled = scaler.transform(X_imp)
+    else:
+        X_scaled = X_imp.values
+        
+    coefs = clf.coef_[0]
+    intercept = float(clf.intercept_[0])
+    
+    explanations = []
+    for i, col in enumerate(loader.feature_cols):
+        raw_val = float(df.iloc[0, i])
+        if np.isnan(raw_val):
+            raw_val = 0.0
+        scaled_val = float(X_scaled[0, i])
+        contrib = float(coefs[i] * scaled_val)
+        
+        meta = FEATURE_METADATA.get(col, {"display": col.replace("_", " ").title(), "category": "General"})
+        
+        if col in ["IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES"]:
+            home_wins = feats.get("HOME_SERIES_WINS", 0)
+            away_wins = feats.get("AWAY_SERIES_WINS", 0)
+            if home_wins is None or (isinstance(home_wins, float) and np.isnan(home_wins)):
+                home_wins = 0
+            if away_wins is None or (isinstance(away_wins, float) and np.isnan(away_wins)):
+                away_wins = 0
+            
+            if raw_val == 1.0:
+                if home_wins == 3 and away_wins < 3:
+                    influence = "FAVORS_HOME"
+                elif away_wins == 3 and home_wins < 3:
+                    influence = "FAVORS_AWAY"
+                else:
+                    influence = "NEUTRAL"
+            else:
+                influence = "NEUTRAL"
+        else:
+            if contrib > 0.01:
+                influence = "FAVORS_HOME"
+            elif contrib < -0.01:
+                influence = "FAVORS_AWAY"
+            else:
+                influence = "NEUTRAL"
+            
+        explanations.append(ExplanationFeature(
+            feature_name=col,
+            display_name=meta["display"],
+            category=meta["category"],
+            value=round(raw_val, 2),
+            contribution=round(contrib, 4),
+            influence=influence
+        ))
+        
+    explanations.sort(key=lambda x: abs(x.contribution), reverse=True)
+    
+    return WinProbabilityExplanation(
+        intercept=round(intercept, 4),
+        features=explanations
+    )
+
+
+def explain_xgboost_model(model, features_list, feats_dict, perspective: str = "home") -> List[ExplanationFeature]:
+    if model is None or not features_list:
+        return []
+    
+    import xgboost as xgb
+    row = [feats_dict.get(c, 0.0) for c in features_list]
+    X = pd.DataFrame([row], columns=features_list)
+    
+    try:
+        booster = model.get_booster()
+        dmat = xgb.DMatrix(X)
+        contribs = booster.predict(dmat, pred_contribs=True)[0]
+        
+        explanations = []
+        for i, col in enumerate(features_list):
+            raw_val = float(feats_dict.get(col, 0.0))
+            contrib = float(contribs[i])
+            
+            meta = FEATURE_METADATA.get(col, {"display": col.replace("_", " ").title(), "category": "General"})
+            
+            if col in ["IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES"]:
+                home_wins = feats_dict.get("HOME_SERIES_WINS", 0)
+                away_wins = feats_dict.get("AWAY_SERIES_WINS", 0)
+                if home_wins is None or (isinstance(home_wins, float) and np.isnan(home_wins)):
+                    home_wins = 0
+                if away_wins is None or (isinstance(away_wins, float) and np.isnan(away_wins)):
+                    away_wins = 0
+                
+                if raw_val == 1.0:
+                    if home_wins == 3 and away_wins < 3:
+                        influence = "FAVORS_HOME"
+                    elif away_wins == 3 and home_wins < 3:
+                        influence = "FAVORS_AWAY"
+                    else:
+                        influence = "NEUTRAL"
+                else:
+                    influence = "NEUTRAL"
+            else:
+                if perspective == "home":
+                    if contrib > 0.01:
+                        influence = "FAVORS_HOME"
+                    elif contrib < -0.01:
+                        influence = "FAVORS_AWAY"
+                    else:
+                        influence = "NEUTRAL"
+                elif perspective == "away":
+                    if contrib > 0.01:
+                        influence = "FAVORS_AWAY"
+                    elif contrib < -0.01:
+                        influence = "FAVORS_HOME"
+                    else:
+                        influence = "NEUTRAL"
+                else:
+                    influence = "NEUTRAL"
+                
+            explanations.append(ExplanationFeature(
+                feature_name=col,
+                display_name=meta["display"],
+                category=meta["category"],
+                value=round(raw_val, 2),
+                contribution=round(contrib, 4),
+                influence=influence
+            ))
+            
+        explanations.sort(key=lambda x: abs(x.contribution), reverse=True)
+        return explanations
+    except Exception as e:
+        print("XGBoost explanation failed:", e)
+        return []
+
+
 def get_model_status() -> ModelStatusResponse:
     """Get the current model status and metadata."""
     
@@ -252,7 +494,7 @@ def get_model_status() -> ModelStatusResponse:
         return metrics
 
     # Get win model info
-    win_model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model.pkl")
+    win_model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v8.pkl")
     win_metadata = loader.metadata
 
     win_info = WinModelInfo(
@@ -381,51 +623,90 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
         total_range = score_resp.total_points_range
         model_version = score_resp.model_version
 
-    players_df = get_player_predictions(home_team, away_team, pred_date_str, player_loader, score_loader)
-    
-    home_players_df = players_df[players_df["IS_HOME"] == 1]
-    away_players_df = players_df[players_df["IS_HOME"] == 0]
+    home_list: list[GameFullPlayer] = []
+    away_list: list[GameFullPlayer] = []
+    home_scale = 1.0
+    away_scale = 1.0
+    try:
+        players_df = get_player_predictions(home_team, away_team, pred_date_str, player_loader, score_loader)
+        home_players_df = players_df[players_df["IS_HOME"] == 1]
+        away_players_df = players_df[players_df["IS_HOME"] == 0]
 
-    raw_home_pts = home_players_df["RAW_PROJ_PTS"].tolist()
-    raw_home_reb = home_players_df["RAW_PROJ_REB"].tolist()
-    raw_home_ast = home_players_df["RAW_PROJ_AST"].tolist()
+        raw_home_pts = home_players_df["RAW_PROJ_PTS"].tolist()
+        raw_home_reb = home_players_df["RAW_PROJ_REB"].tolist()
+        raw_home_ast = home_players_df["RAW_PROJ_AST"].tolist()
 
-    raw_away_pts = away_players_df["RAW_PROJ_PTS"].tolist()
-    raw_away_reb = away_players_df["RAW_PROJ_REB"].tolist()
-    raw_away_ast = away_players_df["RAW_PROJ_AST"].tolist()
+        raw_away_pts = away_players_df["RAW_PROJ_PTS"].tolist()
+        raw_away_reb = away_players_df["RAW_PROJ_REB"].tolist()
+        raw_away_ast = away_players_df["RAW_PROJ_AST"].tolist()
 
-    scaled_home_pts, home_scale = apply_top_down_scaling(home_score, raw_home_pts)
-    scaled_away_pts, away_scale = apply_top_down_scaling(away_score, raw_away_pts)
-    
-    scaled_home_reb = [max(0.0, r * home_scale) for r in raw_home_reb]
-    scaled_home_ast = [max(0.0, a * home_scale) for a in raw_home_ast]
-    
-    scaled_away_reb = [max(0.0, r * away_scale) for r in raw_away_reb]
-    scaled_away_ast = [max(0.0, a * away_scale) for a in raw_away_ast]
-    
-    def build_player_list(df, scaled_pts, scaled_reb, scaled_ast, scale):
-        res = []
-        for i, (_, r) in enumerate(df.iterrows()):
-            res.append(GameFullPlayer(
-                player_name=str(r.get("PLAYER_NAME", f"Player {r['PLAYER_ID']}")),
-                position_group=str(r.get("PLAYER_POSITION_GROUP", "UNKNOWN")),
-                proj_pts=round(scaled_pts[i], 1),
-                proj_reb=round(scaled_reb[i], 1),
-                proj_ast=round(scaled_ast[i], 1),
-                proj_pra=round(scaled_pts[i] + scaled_reb[i] + scaled_ast[i], 1),
-                raw_pts=round(r["RAW_PROJ_PTS"], 1),
-                scale_factor=round(scale, 3)
-            ))
-        return res
+        scaled_home_pts, home_scale = apply_top_down_scaling(home_score, raw_home_pts)
+        scaled_away_pts, away_scale = apply_top_down_scaling(away_score, raw_away_pts)
+        
+        scaled_home_reb = [max(0.0, r * home_scale) for r in raw_home_reb]
+        scaled_home_ast = [max(0.0, a * home_scale) for a in raw_home_ast]
+        
+        scaled_away_reb = [max(0.0, r * away_scale) for r in raw_away_reb]
+        scaled_away_ast = [max(0.0, a * away_scale) for a in raw_away_ast]
 
-    home_list = build_player_list(home_players_df, scaled_home_pts, scaled_home_reb, scaled_home_ast, home_scale)
-    away_list = build_player_list(away_players_df, scaled_away_pts, scaled_away_reb, scaled_away_ast, away_scale)
+        def build_player_list(df, scaled_pts, scaled_reb, scaled_ast, scale):
+            res = []
+            for i, (_, r) in enumerate(df.iterrows()):
+                res.append(GameFullPlayer(
+                    player_name=str(r.get("PLAYER_NAME", f"Player {r['PLAYER_ID']}")),
+                    position_group=str(r.get("PLAYER_POSITION_GROUP", "UNKNOWN")),
+                    proj_pts=round(scaled_pts[i], 1),
+                    proj_reb=round(scaled_reb[i], 1),
+                    proj_ast=round(scaled_ast[i], 1),
+                    proj_pra=round(scaled_pts[i] + scaled_reb[i] + scaled_ast[i], 1),
+                    raw_pts=round(r["RAW_PROJ_PTS"], 1),
+                    scale_factor=round(scale, 3)
+                ))
+            return res
+
+        home_list = build_player_list(home_players_df, scaled_home_pts, scaled_home_reb, scaled_home_ast, home_scale)
+        away_list = build_player_list(away_players_df, scaled_away_pts, scaled_away_reb, scaled_away_ast, away_scale)
+    except Exception as e:
+        print("Player inference failed in /predict/game_full:", e)
     
     win_req = WinProbRequest(home_team=home_team, away_team=away_team, prediction_date=pred_date_str)
     win_resp = predict(win_req)
     
+    # Generate Explainable AI (XAI) payload
+    explanation = None
+    try:
+        feats_home = build_features(home_team, away_team, pred_date_str)
+        feats_away = build_features(away_team, home_team, pred_date_str)
+        
+        win_expl = explain_win_probability(feats_home)
+        
+        metadata = score_loader.metadata or {}
+        pace_features = metadata.get("pace_features", [])
+        home_off_rtg_features = metadata.get("home_off_rtg_features", metadata.get("off_rtg_features", []))
+        away_off_rtg_features = metadata.get("away_off_rtg_features", metadata.get("off_rtg_features", []))
+        margin_features = metadata.get("margin_features", [])
+        
+        pace_factors = explain_xgboost_model(score_loader.pace_model, pace_features, feats_home, perspective="home")
+        home_rtg_factors = explain_xgboost_model(score_loader.home_rtg_model, home_off_rtg_features, feats_home, perspective="home")
+        away_rtg_factors = explain_xgboost_model(score_loader.away_rtg_model, away_off_rtg_features, feats_away, perspective="away")
+        margin_factors = explain_xgboost_model(score_loader.margin_model, margin_features, feats_home, perspective="home")
+        
+        score_expl = ScoreModelExplanation(
+            home_rtg_features=home_rtg_factors,
+            away_rtg_features=away_rtg_factors,
+            pace_features=pace_factors,
+            margin_features=margin_factors
+        )
+        
+        explanation = GameExplanationSub(
+            win_probability=win_expl,
+            score_prediction=score_expl
+        )
+    except Exception as e:
+        print("XAI generation failed:", e)
+
     return GameFullResponse(
-        game_id=request.game_id,
+        game_id=request.game_id or "unknown",
         score_prediction=ScorePredictionSub(
             home=round(home_score, 1),
             home_range=home_range,
@@ -439,12 +720,14 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
         ),
         win_probability=WinProbabilitySub(
             home_win_prob=round(win_resp.home_win_probability, 4),
-            away_win_prob=round(win_resp.away_win_probability, 4)
+            away_win_prob=round(win_resp.away_win_probability, 4),
+            model_version=win_resp.model_version
         ),
         home_players=home_list,
         away_players=away_list,
         scale_factors=ScaleFactorsSub(
             home=round(home_scale, 3),
             away=round(away_scale, 3)
-        )
+        ),
+        explanation=explanation
     )

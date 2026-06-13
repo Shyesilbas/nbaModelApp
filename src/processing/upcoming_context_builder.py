@@ -17,6 +17,7 @@ No model training.  No predictions.  No betting language.
 
 import os
 from datetime import date
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -88,6 +89,7 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
     paths = get_data_paths(season)
     combined_schedule_path = paths.schedule_combined
     v2_model_path = paths.team_model_ready_v2
+    game_results_path = paths.game_results
     core_players_path = "data/analysis/core_players.csv"
     out_csv = paths.upcoming_context
     out_parq = paths.upcoming_context.replace(".csv", ".parquet")
@@ -171,15 +173,79 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
         ctx = ctx.merge(away_core, on="AWAY_TEAM_ABBREVIATION", how="left")
         print(f"  🏀 Core player strings added for {len(core_str)} teams")
 
-    # ── 5. Sort and reset index ────────────────────────────────────────────
+    # ── 5. Playoff series context ──────────────────────────────────────────
+    # For each upcoming playoff/Finals game, count wins from completed h2h games
+    # in the same season before the game date.
+    ctx["HOME_SERIES_WINS"] = None
+    ctx["AWAY_SERIES_WINS"] = None
+    ctx["IS_ELIMINATION_GAME"] = None
+    ctx["CAN_CLINCH_SERIES"] = None
+
+    playoff_season_types = {"Playoffs", "PlayIn", "NBA Finals"}
+
+    if Path(game_results_path).exists():
+        results_df = pd.read_csv(game_results_path, dtype={"GAME_ID": str}, low_memory=False)
+        results_df["GAME_DATE"] = pd.to_datetime(results_df["GAME_DATE"], errors="coerce")
+        completed_playoffs = results_df[
+            results_df["SEASON_TYPE"].isin(playoff_season_types)
+        ].copy()
+
+        for idx, row in ctx.iterrows():
+            if row.get("SEASON_TYPE") not in playoff_season_types:
+                continue
+
+            home = row["HOME_TEAM_ABBREVIATION"]
+            away = row["AWAY_TEAM_ABBREVIATION"]
+            game_dt = row["GAME_DATE"]
+
+            h2h_prior = completed_playoffs[
+                (
+                    ((completed_playoffs["HOME_TEAM_ABBREVIATION"] == home) & (completed_playoffs["AWAY_TEAM_ABBREVIATION"] == away)) |
+                    ((completed_playoffs["HOME_TEAM_ABBREVIATION"] == away) & (completed_playoffs["AWAY_TEAM_ABBREVIATION"] == home))
+                ) &
+                (completed_playoffs["GAME_DATE"] < game_dt)
+            ]
+
+            wins = {home: 0, away: 0}
+            for _, gr in h2h_prior.iterrows():
+                g_home = gr["HOME_TEAM_ABBREVIATION"]
+                g_away = gr["AWAY_TEAM_ABBREVIATION"]
+                winner = gr.get("WINNER_TEAM_ABBREVIATION")
+                h_score = gr.get("HOME_SCORE")
+                a_score = gr.get("AWAY_SCORE")
+                if pd.notna(winner) and winner in wins:
+                    wins[winner] += 1
+                elif pd.notna(h_score) and pd.notna(a_score):
+                    if h_score > a_score:
+                        wins[g_home] += 1
+                    elif a_score > h_score:
+                        wins[g_away] += 1
+
+            home_wins = wins[home]
+            away_wins = wins[away]
+            # In a Best-of-7: 3 wins == clinch/elimination threshold
+            can_clinch_val = int(home_wins == 3 or away_wins == 3)
+            is_elim_val = can_clinch_val
+
+            ctx.at[idx, "HOME_SERIES_WINS"] = int(home_wins)
+            ctx.at[idx, "AWAY_SERIES_WINS"] = int(away_wins)
+            ctx.at[idx, "IS_ELIMINATION_GAME"] = is_elim_val
+            ctx.at[idx, "CAN_CLINCH_SERIES"] = can_clinch_val
+
+        print(f"  Playoff series context computed for {ctx['IS_ELIMINATION_GAME'].notna().sum()} playoff games")
+    else:
+        print(f"  Warning: game_results not found at {game_results_path}, skipping series context")
+
+    # ── 6. Sort and reset index ────────────────────────────────────────────
     ctx = ctx.sort_values("GAME_DATE").reset_index(drop=True)
 
-    # ── 6. Save ────────────────────────────────────────────────────────────
+    # ── 7. Save ────────────────────────────────────────────────────────────
     if save:
-        os.makedirs("data/processed", exist_ok=True)
+        season_dir = Path(out_csv).parent
+        season_dir.mkdir(parents=True, exist_ok=True)
         ctx.to_csv(out_csv, index=False)
         ctx.to_parquet(out_parq, index=False, engine="pyarrow")
-        print(f"  💾 Saved: {out_csv}")
-        print(f"  💾 Saved: {out_parq}")
+        print(f"  Saved: {out_csv}")
+        print(f"  Saved: {out_parq}")
 
     return ctx
