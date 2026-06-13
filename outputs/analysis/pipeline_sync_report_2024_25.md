@@ -1,20 +1,16 @@
-# NBA ML Project — Feature Pipeline Sync Report (2024-25)
+# NBA ML Project - Feature Pipeline Sync Report (2024-25)
 
-> Generated: 2026-06-07
-> Sync Status: **SUCCESS**
+> Generated: 2026-06-13
+> Sync Status: **MISMATCH**
 
 ## 1. Row Count Verification
 
 | Dataset Type | Raw Row Count | Feature Row Count | Sync Status |
 | :--- | :---: | :---: | :---: |
-| Team Games | 2,636 | 2,636 | ✅ MATCH |
-| Player Games | 27,902 | 27,902 | ✅ MATCH |
+| Team Games | 2,640 | 2,640 | MATCH |
+| Player Games | 28,240 | 0 | MISMATCH |
 
-## 2. Inclusions & Corrections
+## 2. Storage Paths
 
-✅ **Play-In Tournament Games Synchronized**: The features dataset now successfully includes all Play-In tournament games.
-
-## 3. Storage Paths
-
-- Team Features CSV: `data/experimental/team_games_features_2024_25.csv`
-- Player Features CSV: `data/experimental/player_games_features_2024_25.csv`
+- Team Features CSV: `/Users/serhat/agProjects/nbaModelApp/data/season=2024-25/features/team_features.csv`
+- Player Features CSV: `/Users/serhat/agProjects/nbaModelApp/data/season=2024-25/features/player_features.csv`

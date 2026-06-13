@@ -96,12 +96,20 @@ class WinModelTrainer:
                 player_df = pd.read_csv(self.player_data_path)
                 
                 root_models_prod = Path(__file__).resolve().parents[2] / "models/production"
-                features_path = self.player_models_dir / "player_v5_features.pkl"
+                features_path = self.player_models_dir / "player_v6_features.pkl"
                 models_dir = self.player_models_dir
-                model_prefix = "player_v5_lgb_"
+                model_prefix = "player_v6_lgb_"
                 
                 if not features_path.exists():
-                    if (root_models_prod / "player_v5_features.pkl").exists():
+                    if (root_models_prod / "player_v6_features.pkl").exists():
+                        features_path = root_models_prod / "player_v6_features.pkl"
+                        models_dir = root_models_prod
+                        model_prefix = "player_v6_lgb_"
+                    elif (self.player_models_dir / "player_v5_features.pkl").exists():
+                        features_path = self.player_models_dir / "player_v5_features.pkl"
+                        models_dir = self.player_models_dir
+                        model_prefix = "player_v5_lgb_"
+                    elif (root_models_prod / "player_v5_features.pkl").exists():
                         features_path = root_models_prod / "player_v5_features.pkl"
                         models_dir = root_models_prod
                         model_prefix = "player_v5_lgb_"
@@ -253,7 +261,7 @@ class WinModelTrainer:
             
         metadata = {
             "model_name": "logistic_regression",
-            "version": "5.0",
+            "version": "6.0",
             "training_date": datetime.utcnow().isoformat() + "Z",
             "number_of_rows": int(df.shape[0]),
             "number_of_features": int(X.shape[1]),
