@@ -40,7 +40,7 @@ class PlayerModelTrainer:
         X = df[features]
         os.makedirs(self.output_dir, exist_ok=True)
         
-        feature_path = self.output_dir / "player_v5_features.pkl"
+        feature_path = self.output_dir / "player_v6_features.pkl"
         joblib.dump(features, feature_path)
         
         metadata_metrics = {}
@@ -62,7 +62,7 @@ class PlayerModelTrainer:
             
             pipeline.fit(X, y)
             
-            model_name = f"player_v5_lgb_{short_name}.pkl"
+            model_name = f"player_v6_lgb_{short_name}.pkl"
             model_path = self.output_dir / model_name
             joblib.dump(pipeline, model_path)
             
@@ -77,14 +77,14 @@ class PlayerModelTrainer:
             }
             
         metadata = {
-            "version": "5.0_LightGBM",
+            "version": "6.0_LightGBM",
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "features_count": len(features),
             "targets": list(self.targets_map.keys()),
             "evaluation_metrics": metadata_metrics
         }
         
-        metadata_path = self.output_dir / "player_v5_metadata.json"
+        metadata_path = self.output_dir / "player_v6_metadata.json"
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=4)
             

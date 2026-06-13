@@ -6,13 +6,13 @@ win_model:
   notes: "Current production win probability model. V1 Logistic Regression remains production."
 
 score_model:
-  home_model_path: models/production/score_model_v5_home_rtg.pkl
-  away_model_path: models/production/score_model_v5_away_rtg.pkl
-  total_model_path: models/production/score_model_v5_pace.pkl
-  margin_model_path: models/production/score_model_v5_margin.pkl
-  metadata_path: models/production/score_model_v5_metadata.json
+  home_model_path: models/production/score_model_v6_home_rtg.pkl
+  away_model_path: models/production/score_model_v6_away_rtg.pkl
+  total_model_path: models/production/score_model_v6_pace.pkl
+  margin_model_path: models/production/score_model_v6_margin.pkl
+  metadata_path: models/production/score_model_v6_metadata.json
   status: production
-  notes: "Current production score model V5 (XGBoost Pace & Offensive Rating)."
+  notes: "Current production score model V6 (XGBoost Pace & Offensive Rating with playoff features)."
 
 core_players:
   path: data/production/core_players.csv

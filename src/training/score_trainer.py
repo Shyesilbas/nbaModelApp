@@ -79,14 +79,14 @@ class ScoreModelTrainer:
         self.pace_features = [
             "PACE_LAST_5", "PACE_LAST_10", "OPP_PACE_LAST_5", "OPP_PACE_LAST_10",
             "OFF_RTG_LAST_5", "DEF_RTG_LAST_5", "OPP_OFF_RTG_LAST_5", "OPP_DEF_RTG_LAST_5",
-            "DAYS_REST", "OPP_DAYS_REST"
+            "DAYS_REST", "OPP_DAYS_REST", "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES"
         ]
         
         self.base_off_rtg_features = [
             "OFF_RTG_LAST_5", "OFF_RTG_LAST_10", "PACE_LAST_5", "WINRATE_LAST_5", 
             "OPP_DEF_RTG_LAST_5", "OPP_DEF_RTG_LAST_10", "OPP_PACE_LAST_5",
             "TEAM_CORE_TOP3_PLAYED_COUNT", "TEAM_CORE_TOP3_AVAILABLE_RATE", "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
-            "OPP_CORE_TOP3_PLAYED_COUNT", "DAYS_REST", "OPP_DAYS_REST"
+            "OPP_CORE_TOP3_PLAYED_COUNT", "DAYS_REST", "OPP_DAYS_REST", "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES"
         ]
         
         self.home_off_rtg_features = self.base_off_rtg_features.copy()
@@ -180,13 +180,13 @@ class ScoreModelTrainer:
         away_score_mae = mean_absolute_error(df_eval["ACTUAL_AWAY_PTS"], df_eval["EXPECTED_AWAY_SCORE"])
         
         os.makedirs(self.output_dir, exist_ok=True)
-        joblib.dump(pace_model, self.output_dir / "score_model_v5_pace.pkl")
-        joblib.dump(home_model, self.output_dir / "score_model_v5_home_rtg.pkl")
-        joblib.dump(away_model, self.output_dir / "score_model_v5_away_rtg.pkl")
-        joblib.dump(margin_model, self.output_dir / "score_model_v5_margin.pkl")
+        joblib.dump(pace_model, self.output_dir / "score_model_v6_pace.pkl")
+        joblib.dump(home_model, self.output_dir / "score_model_v6_home_rtg.pkl")
+        joblib.dump(away_model, self.output_dir / "score_model_v6_away_rtg.pkl")
+        joblib.dump(margin_model, self.output_dir / "score_model_v6_margin.pkl")
         
         metadata = {
-            "version": "5.0_XGBoost",
+            "version": "6.0_XGBoost",
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "pace_mae": float(pace_mae),
             "home_rtg_mae": float(home_mae),
@@ -200,7 +200,7 @@ class ScoreModelTrainer:
             "margin_features": self.margin_features
         }
         
-        metadata_path = self.output_dir / "score_model_v5_metadata.json"
+        metadata_path = self.output_dir / "score_model_v6_metadata.json"
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=4)
             

@@ -1,0 +1,16 @@
+{
+  "season": "2022-23",
+  "season_token": "2022_23",
+  "command": "python3 main.py --season 2022-23 --bootstrap-season",
+  "generated_at": "2026-06-13T08:21:44.109425+00:00",
+  "artifacts": {
+    "team_features": "/Users/serhat/agProjects/nbaModelApp/data/season=2022-23/features/team_features.csv",
+    "player_features": "/Users/serhat/agProjects/nbaModelApp/data/season=2022-23/features/player_features.csv",
+    "game_results": "/Users/serhat/agProjects/nbaModelApp/data/season=2022-23/processed/game_results.csv",
+    "schedule_combined": "/Users/serhat/agProjects/nbaModelApp/data/season=2022-23/processed/schedule_combined.csv",
+    "upcoming_games_context": "/Users/serhat/agProjects/nbaModelApp/data/season=2022-23/processed/upcoming_games_context.csv",
+    "team_model_ready_v2": "/Users/serhat/agProjects/nbaModelApp/data/season=2022-23/processed/team_model_ready_v2.csv",
+    "frontend_export_dir": "frontend/public/data",
+    "sync_passed": false
+  }
+}

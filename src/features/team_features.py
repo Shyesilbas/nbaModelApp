@@ -222,5 +222,64 @@ def build_team_features(df: pd.DataFrame) -> pd.DataFrame:
                     lambda x: x.shift(1).rolling(window=10, min_periods=1).mean()
                 )
 
+    # Map playoff urgency features
+    playoff_map = load_playoff_context_map()
+    df["IS_ELIMINATION_GAME"] = df["GAME_ID"].map(lambda x: playoff_map.get(str(x).split(".")[0].zfill(10), {}).get("IS_ELIMINATION_GAME", 0)).fillna(0).astype(int)
+    df["CAN_CLINCH_SERIES"] = df["GAME_ID"].map(lambda x: playoff_map.get(str(x).split(".")[0].zfill(10), {}).get("CAN_CLINCH_SERIES", 0)).fillna(0).astype(int)
+
     return df
 
+def load_playoff_context_map():
+    import glob
+    import pandas as pd
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[2]
+    
+    mapping = {}
+    files = sorted(glob.glob(str(root / "data/season=*/processed/game_results.csv")))
+    
+    for f in files:
+        try:
+            df = pd.read_csv(f, dtype={"GAME_ID": str})
+            playoffs = df[df["IS_PLAYOFF"] == True].copy()
+            if playoffs.empty:
+                continue
+                
+            playoffs["GAME_DATE"] = pd.to_datetime(playoffs["GAME_DATE"])
+            playoffs = playoffs.sort_values("GAME_DATE")
+            
+            series_wins = {}
+            for _, row in playoffs.iterrows():
+                home = row["HOME_TEAM_ABBREVIATION"]
+                away = row["AWAY_TEAM_ABBREVIATION"]
+                gid = row["GAME_ID"]
+                stype = row["SEASON_TYPE"]
+                
+                skey = frozenset([home, away])
+                if skey not in series_wins:
+                    series_wins[skey] = {home: 0, away: 0}
+                    
+                wins = series_wins[skey]
+                is_elim = 0
+                can_clinch = 0
+                
+                if stype != "PlayIn":
+                    if wins[home] == 3 or wins[away] == 3:
+                        is_elim = 1
+                        can_clinch = 1
+                        
+                gid_str = str(gid).split(".")[0].zfill(10)
+                mapping[gid_str] = {
+                    "IS_ELIMINATION_GAME": is_elim,
+                    "CAN_CLINCH_SERIES": can_clinch
+                }
+                
+                home_score = row["HOME_SCORE"]
+                away_score = row["AWAY_SCORE"]
+                if home_score > away_score:
+                    wins[home] += 1
+                else:
+                    wins[away] += 1
+        except Exception:
+            pass
+    return mapping
