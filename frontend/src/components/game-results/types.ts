@@ -43,3 +43,33 @@ export interface PlayerBoxScore {
   TOV: number | null;
   PLUS_MINUS: number | null;
 }
+
+export interface ScheduleGameSummary {
+  game_id: string;
+  game_date?: string | null;
+  season?: string | null;
+  season_type?: string | null;
+  home_team?: string | null;
+  away_team?: string | null;
+  home_score?: number | null;
+  away_score?: number | null;
+  quarter_scores?: {
+    quarter: string;
+    home: number;
+    away: number;
+    home_total?: number;
+    away_total?: number;
+  }[];
+  top_scorers?: {
+    player_id?: number | null;
+    player_name: string;
+    team?: string | null;
+    pts: number;
+    reb?: number;
+    ast?: number;
+  }[];
+  event_count?: number;
+  scoring_event_count?: number;
+  highlight_event_count?: number;
+  has_play_by_play?: boolean;
+}

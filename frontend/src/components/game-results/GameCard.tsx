@@ -1,14 +1,17 @@
 import { Cpu, Users2 } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
+import type { ScheduleGameSummary } from "./types";
 import { fmtDate, teamFull } from "./utils";
 
 export function GameCard({
   game,
+  summary,
   onOpen,
   onPredict,
 }: {
   game: GameFeedRow;
+  summary?: ScheduleGameSummary | null;
   onOpen: () => void;
   onPredict: () => void;
 }) {
@@ -19,6 +22,8 @@ export function GameCard({
   const homeFull = teamFull(game.HOME_TEAM_ABBREVIATION, game.HOME_TEAM_NAME);
   const winnerFull = homeWon ? homeFull : awayFull;
   const seasonLabel = game.SEASON_TYPE === "Regular Season" ? "Regular" : (game.SEASON_TYPE ?? "Regular");
+  const quarterScores = summary?.quarter_scores ?? [];
+  const topScorer = summary?.top_scorers?.[0];
 
   return (
     <button
@@ -99,6 +104,31 @@ export function GameCard({
             <Users2 size={10} /> Details
           </span>
         </div>
+
+        {(quarterScores.length > 0 || topScorer) && (
+          <div className="mt-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-2.5">
+            {quarterScores.length > 0 && (
+              <div className="grid grid-cols-4 gap-1.5">
+                {quarterScores.slice(0, 4).map((qs) => (
+                  <div key={qs.quarter} className="rounded-xl bg-white px-2 py-1.5 text-center shadow-sm shadow-slate-200/40">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">{qs.quarter}</p>
+                    <p className="mt-0.5 text-[11px] font-black tabular-nums text-slate-800">{qs.away}-{qs.home}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {topScorer && (
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-200/70 pt-2">
+                <p className="truncate text-[10px] font-bold text-slate-500">
+                  Top scorer <span className="font-black text-slate-900">{topScorer.player_name}</span>
+                </p>
+                <span className="rounded-full bg-[#1d428a]/10 px-2 py-0.5 text-[9px] font-black text-[#1d428a]">
+                  {topScorer.pts} PTS
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </button>
   );

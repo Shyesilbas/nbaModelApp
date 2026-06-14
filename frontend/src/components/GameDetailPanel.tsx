@@ -16,6 +16,7 @@ import {
   Users2,
   BarChart3,
   Star,
+  Clock,
 } from "lucide-react";
 import PlayerPhoto from "./PlayerPhoto";
 import { loadPrivateApi } from "../lib/dataCache";
@@ -260,7 +261,7 @@ export default function GameDetailPanel({
   highlightPlayerId,
   onBack,
 }: GameDetailPanelProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "home" | "away">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "home" | "away" | "pbp">("overview");
   const [homeBS, setHomeBS] = useState<TBS | null>(null);
   const [awayBS, setAwayBS] = useState<TBS | null>(null);
   const [homePlayers, setHomePlayers] = useState<PBS[]>([]);
@@ -421,6 +422,13 @@ export default function GameDetailPanel({
               <Users2 size={9} className="inline mr-1 mb-0.5" />
               {game.AWAY_TEAM_ABBREVIATION} · Away
             </button>
+            <button
+              onClick={() => setActiveTab("pbp")}
+              className={`${tabBase} ${activeTab === "pbp" ? tabActive : tabInactive}`}
+            >
+              <Clock size={9} className="inline mr-1 mb-0.5" />
+              Play-by-Play
+            </button>
           </div>
         </div>
       </div>
@@ -490,6 +498,206 @@ export default function GameDetailPanel({
           )}
         </div>
       )}
+      {/* Play by Play tab */}
+      {!loading && activeTab === "pbp" && (
+        <PlayByPlayTab
+          gameId={game.GAME_ID}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Play By Play Tab Component ── */
+interface PbpEvent {
+  period: number;
+  clock: string;
+  action_type: string;
+  sub_type: string;
+  team: string | null;
+  player_name: string | null;
+  description: string;
+  score_home: number;
+  score_away: number;
+  points_scored: number;
+}
+
+interface PbpData {
+  game_id: string;
+  home_team: string;
+  away_team: string;
+  quarter_scores: {
+    quarter: string;
+    home: number;
+    away: number;
+    home_total: number;
+    away_total: number;
+  }[];
+  events: PbpEvent[];
+}
+
+function PlayByPlayTab({
+  gameId,
+}: {
+  gameId: string;
+}) {
+  const [data, setData] = useState<PbpData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "q1" | "q2" | "q3" | "q4" | "scoring">("all");
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    const normGameId = String(parseInt(gameId, 10)).padStart(10, "0");
+    fetch(`/data/play_by_play/${normGameId}.json`)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Play-by-play logs not cached yet.");
+        }
+        return res.json();
+      })
+      .then((pbp: PbpData) => {
+        setData(pbp);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message || "Failed to load play-by-play.");
+        setLoading(false);
+      });
+  }, [gameId]);
+
+  if (loading) {
+    return (
+      <div className="flex h-32 items-center justify-center gap-2">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#1d428a] border-t-transparent" />
+        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+          Loading game events...
+        </span>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center bg-slate-50/50">
+        <p className="text-xs font-semibold text-slate-400">
+          Play-by-play logs are not available for this game. Run the play-by-play ingestion command to cache detailed events.
+        </p>
+      </div>
+    );
+  }
+
+  const filteredEvents = data.events.filter((e) => {
+    if (filter === "scoring") return e.points_scored > 0;
+    if (filter === "q1") return e.period === 1;
+    if (filter === "q2") return e.period === 2;
+    if (filter === "q3") return e.period === 3;
+    if (filter === "q4") return e.period === 4;
+    return true;
+  });
+
+  return (
+    <div className="space-y-4 animate-fade-in">
+      {/* Quarter scores table */}
+      <div className="rounded-[1.25rem] border border-slate-100 bg-white p-4 shadow-sm">
+        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3">
+          Quarter Breakdown
+        </p>
+        <div className="grid grid-cols-5 gap-2 text-center text-xs font-bold">
+          <div className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 self-center">
+            Team
+          </div>
+          {data.quarter_scores.map((qs) => (
+            <div
+              key={qs.quarter}
+              className="bg-slate-50 rounded-xl py-2 border border-slate-100/50"
+            >
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                {qs.quarter}
+              </p>
+              <p className="text-slate-800 tabular-nums">
+                {qs.away} - {qs.home}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Control panel / Filters */}
+      <div className="flex flex-wrap gap-1.5">
+        {(["all", "q1", "q2", "q3", "q4", "scoring"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={[
+              "rounded-full px-3.5 py-1 text-[9px] font-black uppercase tracking-widest transition-all",
+              filter === f
+                ? "bg-slate-800 text-white shadow-sm"
+                : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50",
+            ].join(" ")}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {/* Events Log */}
+      <div className="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm space-y-3">
+        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+          Game Events Feed
+        </p>
+        <div className="max-h-[500px] overflow-y-auto space-y-2 pr-2 scrollbar-thin">
+          {filteredEvents.map((e, idx) => {
+            return (
+              <div
+                key={idx}
+                className={[
+                  "grid grid-cols-[75px_1fr_120px] items-center gap-3 py-2 px-3 rounded-xl border transition-colors text-xs",
+                  e.points_scored > 0
+                    ? "bg-emerald-50/30 border-emerald-100/60"
+                    : "bg-slate-50/20 border-slate-100/50 hover:bg-slate-50/40",
+                ].join(" ")}
+              >
+                {/* Time */}
+                <div className="font-bold text-slate-400 tabular-nums">
+                  Q{e.period} {e.clock}
+                </div>
+
+                {/* Description */}
+                <div
+                  className={[
+                    "text-slate-700 leading-snug",
+                    e.points_scored > 0 ? "font-bold text-slate-900" : "",
+                  ].join(" ")}
+                >
+                  {e.team && (
+                    <span className="font-black text-slate-900 mr-2 uppercase">
+                      {e.team}:
+                    </span>
+                  )}
+                  {e.description}
+                </div>
+
+                {/* Score */}
+                <div className="text-right font-black text-slate-900 tabular-nums">
+                  {e.score_away} - {e.score_home}
+                  {e.points_scored > 0 && (
+                    <span className="ml-1 text-[9px] text-emerald-600 font-black">
+                      (+{e.points_scored})
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {filteredEvents.length === 0 && (
+            <p className="py-8 text-center text-[11px] text-slate-400">
+              No events match the selected filter.
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

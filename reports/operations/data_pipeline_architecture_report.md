@@ -25,6 +25,37 @@ Sistemin veri toplama katmanı [src/ingestion/](file:///Users/serhat/agProjects/
    - Tüm API çağrıları [src/ingestion/nba_api_client.py](file:///Users/serhat/agProjects/nbaModelApp/src/ingestion/nba_api_client.py) üzerinden yapılır.
    - Akamai CDN bloklarını aşmak amacıyla her istek arasına **0.6 - 1.2 saniye rastgele gecikme (jittered sleep)** eklenir. İsteklerin başarısız olması durumunda **üstel geri çekilme (exponential backoff)** algoritmasıyla 5 kez yeniden deneme yapılır.
 
+5. **Play-by-Play Cache Üretimi**:
+   - [scripts/build_play_by_play.py](file:///Users/serhat/agProjects/nbaModelApp/scripts/build_play_by_play.py) CLI aracı, NBA API `PlayByPlayV3` endpoint'inden maç olaylarını çeker ve React frontend için yapılandırılmış JSON cache üretir.
+   - Varsayılan çıktı dizini [frontend/public/data/play_by_play/](file:///Users/serhat/agProjects/nbaModelApp/frontend/public/data/play_by_play) olup her maç `frontend/public/data/play_by_play/{GAME_ID}.json` formatında saklanır.
+   - Ayrıca sezon bazında küçük bir özet dosyası üretir: `frontend/public/data/schedule_details_YYYY_YY.json`. Bu dosya game-card ekranlarında quarter skorları, top scorer listesi, event sayısı ve `has_play_by_play` durumunu göstermek için kullanılır; full event loglarını içermez.
+   - CLI iki ana modda çalışır:
+     ```bash
+     PYTHONPATH=. python3 scripts/build_play_by_play.py --game-id 0042500405
+     PYTHONPATH=. python3 scripts/build_play_by_play.py --season 2025-26
+     ```
+   - Sezon modu varsayılan olarak [frontend/public/data/all_seasons_games.json](file:///Users/serhat/agProjects/nbaModelApp/frontend/public/data/all_seasons_games.json) dosyasını metadata kaynağı olarak kullanır. Bu dosyadaki `GAME_ID`, `HOME_TEAM_ABBREVIATION`, `AWAY_TEAM_ABBREVIATION`, `GAME_DATE`, `SEASON`, `SEASON_TYPE`, `GAME_STATUS` alanları maç seçimi ve çıktı metadata'sı için yeterlidir.
+   - Güvenli batch kullanımı için önce dry-run önerilir:
+     ```bash
+     PYTHONPATH=. python3 scripts/build_play_by_play.py --season 2025-26 --season-type "NBA Finals" --dry-run
+     ```
+   - Mevcut cache dosyaları varsayılan olarak atlanır. Yeniden üretmek için `--force`, API çağrıları arasındaki bekleme için `--sleep`, küçük smoke testleri için `--limit` kullanılabilir:
+     ```bash
+     PYTHONPATH=. python3 scripts/build_play_by_play.py --season 2025-26 --limit 5 --sleep 0.8
+     PYTHONPATH=. python3 scripts/build_play_by_play.py --game-id 0042500405 --force
+     ```
+   - Sadece küçük sezon özet dosyasını mevcut PBP cache'lerinden yeniden üretmek için:
+     ```bash
+     PYTHONPATH=. python3 scripts/build_play_by_play.py --season 2025-26 --summary-only
+     ```
+   - Üretilen JSON kontratı şu alanları içerir:
+     - `game_id`, `home_team`, `away_team`
+     - `quarter_scores`: quarter bazında ev/deplasman sayı ve kümülatif toplamlar
+     - `events`: her olay için period, clock, action type, oyuncu kimliği, skor, gerçek event puanı, running player totals, assist metadata, quarter katkısı ve milestone badge'leri
+   - Frontend entegrasyonu iki katmanlıdır:
+     - [frontend/src/components/GameResults.tsx](file:///Users/serhat/agProjects/nbaModelApp/frontend/src/components/GameResults.tsx), liste ekranında sadece `schedule_details_YYYY_YY.json` dosyasını yükler. Bu küçük dosya maç kartlarında quarter skorları ve top scorer bilgisini gösterir.
+     - [frontend/src/components/game-results/GameCardDetail.tsx](file:///Users/serhat/agProjects/nbaModelApp/frontend/src/components/game-results/GameCardDetail.tsx), kullanıcı Play-by-Play tabını açtığında yalnızca ilgili `play_by_play/{GAME_ID}.json` dosyasını on-demand çeker. UI quarter accordion, oyuncu fotoğrafı, running stat line, assist chip ve özel highlight badge'leri gösterir.
+
 ---
 
 ## 2. Sezon Yönetimi ve Yapılandırma
@@ -104,6 +135,7 @@ Sistem bu sorunu şu şekilde çözer:
 | [src/analysis/roster_analysis.py](file:///Users/serhat/agProjects/nbaModelApp/src/analysis/roster_analysis.py) | Oyuncu istatistiklerini derleyerek her takım için Core oyuncuları ve Importance skorlarını hesaplar. |
 | [scripts/ingest/build_observed_affiliation_events.py](file:///Users/serhat/agProjects/nbaModelApp/scripts/ingest/build_observed_affiliation_events.py) | Oyuncu maç günlüklerinden takas tarihleri ve stints çıkarımını yapan veri üretim betiği. |
 | [scripts/ingest/roster_snapshot_generator.py](file:///Users/serhat/agProjects/nbaModelApp/scripts/ingest/roster_snapshot_generator.py) | Oyuncu dönemlerini (stints) kullanarak günlük kadro snapshots matrisini üreten sızıntısız roster oluşturucu. |
+| [scripts/build_play_by_play.py](file:///Users/serhat/agProjects/nbaModelApp/scripts/build_play_by_play.py) | Game ID veya sezon bazında NBA `PlayByPlayV3` verisini çekerek frontend için `play_by_play/{GAME_ID}.json` cache dosyalarını üreten CLI. |
 | [src/features/core_player_availability_features.py](file:///Users/serhat/agProjects/nbaModelApp/src/features/core_player_availability_features.py) | Belirlenen core oyuncuların maçlardaki oynama/süre istatistiklerini takım ve rakip bazlı olarak birleştiren özellik üretici. |
 | [src/processing/upcoming_context_builder.py](file:///Users/serhat/agProjects/nbaModelApp/src/processing/upcoming_context_builder.py) | Gelecek maçları, takımların en güncel V2 rolling istatistikleri ve core oyuncu listeleriyle birleştirerek arayüze hazır hale getiren servis. |
 | [ml-service/app/player_service.py](file:///Users/serhat/agProjects/nbaModelApp/ml-service/app/player_service.py) | Canlı tahmin sırasında gelecek maçlar için oyuncuların geçmiş sürelerini (EMA) kullanarak aktif oyuncuları belirleyen mikroservis kodu. |
