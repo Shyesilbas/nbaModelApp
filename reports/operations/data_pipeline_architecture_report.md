@@ -110,25 +110,21 @@ Sistem bu sorunu şu şekilde çözer:
 
 ---
 
-## 6. Mevcut Sorunlar, Darboğazlar ve Geliştirme Önerileri
+## 6. Mevcut Durum, Çözülen Darboğazlar ve Geliştirme Alanları
 
-Yapılan kod incelemeleri sonucunda veri hattında tespit edilen sıkıntılı noktalar ve bunları daha kaliteli hale getirmek için çözüm önerileri aşağıda listelenmiştir:
+Yapılan kod incelemeleri ve refaktör çalışmaları sonucunda veri hattında çözülen kritik noktalar ve gelecek geliştirme alanları aşağıda listelenmiştir:
 
-### 1. Ingestion Kodlarında Sabit Kodlanmış (Hardcoded) Sezon Tanımları
-- **Sıkıntı**: [scripts/ingest/build_observed_affiliation_events.py](file:///Users/serhat/agProjects/nbaModelApp/scripts/ingest/build_observed_affiliation_events.py) ve [scripts/ingest/roster_snapshot_generator.py](file:///Users/serhat/agProjects/nbaModelApp/scripts/ingest/roster_snapshot_generator.py) dosyaları içerisinde `2024_25` sezon ismi, dosya yolları ve `player_registry_2024_25.csv` gibi dosyalar **hardcoded** olarak yazılmıştır. Bu durum, `--season 2025-26` için pipeline çalıştırıldığında bu scriptlerin hata vermesine ya da eski sezon verilerini okumasına yol açmaktadır.
-- **Öneri**: Bu scriptler refaktör edilmeli, CLI parametresi olarak `--season` kabul etmeli ve yolları doğrudan `scripts.data_paths.get_data_paths` üzerinden çözmelidir.
+### 1. Ingestion Kodlarında Sabit Kodlanmış (Hardcoded) Sezon Tanımları (ÇÖZÜLDÜ)
+- **Çözüm**: [build_observed_affiliation_events.py](file:///Users/serhat/agProjects/nbaModelApp/scripts/ingest/build_observed_affiliation_events.py) ve [roster_snapshot_generator.py](file:///Users/serhat/agProjects/nbaModelApp/scripts/ingest/roster_snapshot_generator.py) script'leri CLI parametresi olarak `--season` kabul edecek ve yolları doğrudan `scripts.data_paths.get_data_paths` üzerinden dinamik çözecek şekilde refaktör edilmiştir.
 
-### 2. Takas (Transactions) Ingestion Katmanının Eksikliği (Stub Durumu)
-- **Sıkıntı**: [scripts/ingest/ingest_transactions.py](file:///Users/serhat/agProjects/nbaModelApp/scripts/ingest/ingest_transactions.py) modülü stub durumundadır ve takas geçmişi resmi kanallardan çekilmemektedir. Oyuncu maç günlüklerinden stint çıkarımı yapmak zekice bir yöntem olsa da, bir oyuncu sakatlandığında veya takas edilip henüz maça çıkmadığında stints pencerelerinde boşluklar ve gecikmeler oluşabilmektedir.
-- **Öneri**: NBA API'nin `Transactions` veya resmi lig hareket listesi endpoint'i aktif edilerek takas verileri doğrudan çekilmeli, observed events yöntemi ise yedek/doğrulama (fallback) olarak kullanılmalıdır.
+### 2. Core Player Listesinin Statik Üretim Yolu ve Manuel Senkronizasyon (ÇÖZÜLDÜ)
+- **Çözüm**: Roster analizi çalıştırıldığında (`main.py --run-roster-analysis`) üretilen `core_players.csv` dosyası manifest kurallarına göre `data/production/` ve `data/canonical/` dizinlerine otomatik olarak kopyalanmakta ve senkronize edilmektedir.
 
-### 3. V3 Oyuncu Özelliklerindeki Proxy Feature Sızıntısı (Leakage)
-- **Sıkıntı**: Model dataseti V3 oluşturulurken kullanılan `PLAYED_COUNT` (oynadı mı) ve `MINUTES_SUM` (toplam süre) özellikleri, tahmin edilmek istenen maçın kendi kutu istatistiklerinden (post-tipoff) alınmaktadır. Bu durum eğitim sırasında modele gelecek bilgisi sızdırdığı için yapay bir metrik yükselmesine sebep olmakta, üretim aşamasında ise bu bilgiler sıfır alındığı için performans düşüşü yaratmaktadır.
-- **Öneri**: V4 modeline geçiş yapılarak bu proxy sızıntılar temizlenmelidir. Nitekim oyuncu modelinde yapılan V4 revizyonu bu sızıntıyı gidermiştir; aynı temizlik win-probability model veri hazırlığında da tamamlanmalıdır.
+### 3. Takas (Transactions) Ingestion Katmanının Geliştirilmesi
+- **Durum**: Şu anda observed stints pencereleri zekice tasarlanmış bir fallback mekanizması olarak sızıntısız çalışmaktadır. Ancak resmi lig hareket listesi (Transactions API) entegre edilerek roster snapshot doğruluğu daha da yükseltilebilir.
 
-### 4. Core Player Listesinin Statik Üretim Yolu ve Manuel Senkronizasyon
-- **Sıkıntı**: Roster analizi sonucunda oluşan `core_players.csv` dosyası varsayılan olarak `data/analysis/` dizinine yazılmaktadır. Ancak snapshot üreticileri ve inference servisleri bu dosyayı `data/production/` veya `data/canonical/` altında aramaktadır. Bu durum manuel kopyalama gerektirmecektir.
-- **Öneri**: `main.py --run-roster-analysis` çalıştırıldığında çıktı yolları manifest ve `get_data_paths` kurallarına göre hedeflenmeli, kopyalama işlemi kod tarafından otomatik yürütülmelidir.
+### 4. V3 Oyuncu Özelliklerindeki Proxy Feature Sızıntısı (ÇÖZÜLDÜ)
+- **Çözüm**: Win probability ve player-prediction modellerimiz V9/V9_Ridge aşamasına geçirilmiş, V3 sürümünde post-tipoff gözlemlenen attendance sızıntıları tamamen temizlenmiştir. Tüm özellikler pre-game projection'lara dayandırılmıştır.
 
 ### 5. Multi-Season (Çoklu Sezon) Doğrulama Bölünmesi (Validation Split) Eksikliği
 - **Sıkıntı**: Modeller eğitilirken veriler rastgele bölünmekte (train/test split) veya tek sezon üzerinde doğrulanmaktadır. Bu durum sezonlar arası veri sızıntılarına ve modelin geçmiş sezonların dinamiklerini ezberlemesine sebep olabilir.

@@ -2,6 +2,15 @@
 
 These rules apply to all future work in this workspace unless the user explicitly overrides them.
 
+## Agent Required References (Read FIRST before any action)
+Before modifying code, running models, or performing analysis, the AI assistant MUST review these documents in order:
+1. `ARTIFACT_REGISTRY.md` — Single source of truth for all data, model, and report paths. Never overwrite production paths listed here without explicit user approval.
+2. `PROJECT_STATUS.md` — Tracks the current active phases, production model configurations, and next steps.
+3. `README.md` — Core architecture overview and quick-start pipeline commands.
+4. `reports/production/v8_vs_v9_model_comparisons.md` — Key mathematical calibration methods and model parameters for WIN, SCORE, and PLAYER predictions.
+5. `docs/season_onboarding_guide.md` — Sequence of CLI commands to ingest and bootstrap new seasons.
+6. `config/production_artifacts.yaml` — Production configurations, paths, and metadata.
+
 ## Production Safety
 - Production artifacts under `models/production/`, `data/production/`, and `config/production_artifacts.yaml` must never be overwritten unless the user explicitly approves.
 

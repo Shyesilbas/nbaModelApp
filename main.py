@@ -376,7 +376,7 @@ def main():
         from src.analysis.roster_analysis import run_roster_analysis
         player_csv = paths.player_games_raw
         season_data_dir = os.path.join("data", f"season={season}", "analysis")
-        season_output_dir = os.path.join("outputs", "analysis", f"season={season}")
+        season_output_dir = os.path.join("reports", "operations", f"season={season}")
         roster_df, core_players_df, star_candidates_df, multi_team_players_df, player_name_lookup_df = run_roster_analysis(
             player_csv,
             data_dir=season_data_dir,
@@ -590,7 +590,7 @@ def main():
         df_team_model_v2.to_parquet(model_v2_parquet_path, index=False, engine="pyarrow")
         
         # Generate Opponent Feature Report
-        report_path = "outputs/archive/deprecated_outputs/opponent_feature_report.md"
+        report_path = "reports/audits/opponent_feature_report.md"
         print(f"Generating Opponent Join validation report: {report_path}")
         
         # Compute distributions for report
@@ -683,8 +683,8 @@ def main():
             print(f"Saving model-ready team features (V3) to Parquet: {model_v3_parquet_path}")
             df_team_model_v3.to_parquet(model_v3_parquet_path, index=False, engine="pyarrow")
             
-            # Programmatically generate outputs/analysis/team_model_ready_v3_report.md
-            v3_report_path = "outputs/analysis/team_model_ready_v3_report.md"
+            # Programmatically generate reports/operations/team_model_ready_v3_report.md
+            v3_report_path = "reports/operations/team_model_ready_v3_report.md"
             print(f"Generating V3 core player availability report: {v3_report_path}")
             
             # We want to show core rosters for LAL, BOS, NYK, SAS, GSW, HOU, POR, TOR
