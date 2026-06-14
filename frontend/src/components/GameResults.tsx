@@ -9,6 +9,7 @@ import {
   normGid,
   playerTeamFilter,
   type PlayerBoxScore,
+  type ScheduleGameSummary,
   type TeamBoxScore,
 } from "./game-results";
 
@@ -22,6 +23,8 @@ const SEASON_TYPE_FILTERS: { id: SeasonTypeFilter; label: string; values: string
   { id: "finals", label: "NBA Finals", values: ["NBA Finals"] },
 ];
 
+const seasonToken = (season: string) => season.replace("-", "_");
+
 
 /* ── Main exported component ── */
 export default function GameResults() {
@@ -33,6 +36,7 @@ export default function GameResults() {
     team_boxscores: TeamBoxScore[];
     player_boxscores: PlayerBoxScore[];
   }>>({});
+  const [scheduleDetails, setScheduleDetails] = useState<Record<string, ScheduleGameSummary>>({});
   const [detailLoading, setDetailLoading] = useState(false);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState<string | null>(null);
@@ -76,6 +80,15 @@ export default function GameResults() {
       setAllResults((prev) => [...prev, ...rows.map((g) => ({ ...g, SEASON: selectedSeason }))]);
     });
   }, [selectedSeason, allResults]);
+
+  useEffect(() => {
+    loadJson<Record<string, ScheduleGameSummary>>(
+      `/data/schedule_details_${seasonToken(selectedSeason)}.json`,
+      {}
+    )
+      .then(setScheduleDetails)
+      .catch(() => setScheduleDetails({}));
+  }, [selectedSeason]);
 
   const sortedResults = useMemo(() => {
     const q = search.trim().toUpperCase();
@@ -309,6 +322,7 @@ export default function GameResults() {
             <GameCard
               key={game.GAME_ID}
               game={game}
+              summary={scheduleDetails[normGid(game.GAME_ID)]}
               onOpen={() => handleOpenGame(game.GAME_ID, "game")}
               onPredict={() => handleOpenGame(game.GAME_ID, "prediction")}
             />
