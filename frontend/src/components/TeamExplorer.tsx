@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Search, 
   TrendingUp, 
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
+import { loadJson, loadPrivateApi } from "../lib/dataCache";
 import { TEAM_NAME_BY_ABBR, TEAM_THEME_BY_ABBR } from "../lib/nbaTeams";
 
 interface PlayerRoster {
@@ -68,15 +69,65 @@ const ROLE_BY_RANK = [
 ] as const;
 
 const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
+  const [seasonsList, setSeasonsList] = useState<string[]>(["2025-26", "2024-25", "2023-24", "2022-23"]);
+  const [selectedSeason, setSelectedSeason] = useState<string>("2025-26");
+  const [seasonRosters, setSeasonRosters] = useState<Record<string, PlayerRoster[]>>({ "2025-26": rosters });
+  const [loadingSeason, setLoadingSeason] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string>("BOS");
   const [sortBy, setSortBy] = useState<string>("AVG_MIN");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
+  useEffect(() => {
+    setSeasonRosters((prev) => ({ ...prev, "2025-26": rosters }));
+  }, [rosters]);
+
+  useEffect(() => {
+    loadJson<string[]>("/data/seasons.json", [])
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setSeasonsList(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (seasonRosters[selectedSeason]) return;
+    setLoadingSeason(true);
+    setLoadError(null);
+    let active = true;
+    loadPrivateApi<PlayerRoster[]>(`/frontend-data-api/team-rosters?season=${encodeURIComponent(selectedSeason)}`)
+      .then((rows) => {
+        if (active) {
+          setSeasonRosters((prev) => ({ ...prev, [selectedSeason]: rows }));
+        }
+      })
+      .catch((e) => {
+        if (active) setLoadError(e.message);
+      })
+      .finally(() => {
+        if (active) setLoadingSeason(false);
+      });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSeason]);
+
+  const activeRosters = seasonRosters[selectedSeason] ?? [];
+
   // Get unique list of team abbreviations
   const teamsList = useMemo(() => {
-    const teams = new Set(rosters.map(r => r.TEAM_ABBREVIATION));
+    const teams = new Set(activeRosters.map(r => r.TEAM_ABBREVIATION));
     return Array.from(teams).sort();
-  }, [rosters]);
+  }, [activeRosters]);
+
+  useEffect(() => {
+    if (teamsList.length > 0 && !teamsList.includes(selectedTeam)) {
+      setSelectedTeam(teamsList[0]);
+    }
+  }, [teamsList, selectedTeam]);
 
   const activeTeamTheme = useMemo(() => {
     return getTeamTheme(selectedTeam);
@@ -94,8 +145,8 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
 
   // Filter roster for the selected team
   const rawTeamRoster = useMemo(() => {
-    return rosters.filter(r => r.TEAM_ABBREVIATION === selectedTeam);
-  }, [rosters, selectedTeam]);
+    return activeRosters.filter(r => r.TEAM_ABBREVIATION === selectedTeam);
+  }, [activeRosters, selectedTeam]);
 
   // Get Top 5 players based on Importance Score (sorted)
   const corePlayers = useMemo(() => {
@@ -175,7 +226,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
               Team Explorer
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-500">
-              Explore discovered player listings and dynamic core rosters. Team identity now comes from the ESPN logo asset instead of plain initials.
+              Explore discovered player listings and dynamic core rosters across every loaded season.
             </p>
           </div>
 
@@ -218,6 +269,32 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="relative z-10 mt-6 border-t border-slate-200/60 pt-5">
+          <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mb-2">Select Season</p>
+          <div className="flex flex-wrap gap-1.5">
+            {seasonsList.map((season) => (
+              <button
+                key={season}
+                onClick={() => setSelectedSeason(season)}
+                className={[
+                  "rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] transition-all duration-200",
+                  selectedSeason === season
+                    ? "bg-slate-900 text-white shadow-md shadow-slate-900/15"
+                    : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800",
+                ].join(" ")}
+              >
+                {season}
+              </button>
+            ))}
+          </div>
+          {loadingSeason && (
+            <p className="mt-3 text-xs font-semibold text-slate-400">Loading {selectedSeason} roster data...</p>
+          )}
+          {loadError && (
+            <p className="mt-3 text-xs font-semibold text-rose-500">{loadError}</p>
+          )}
         </div>
 
         {/* Horizontal Scrollable Team Selector */}

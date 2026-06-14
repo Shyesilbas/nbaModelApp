@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import TeamLogo from "./TeamLogo";
 import { getModelStatus, normalizeGameFullPrediction, predictGameFull } from "../api/predictions";
+import { loadJson, loadPrivateApi } from "../lib/dataCache";
 import { NBA_TEAMS } from "../lib/nbaTeams";
 import { exportPredictionAsPDF } from "../lib/predictionReport";
 import {
@@ -53,8 +54,7 @@ export default function NbaPrediction() {
   const [allResults, setAllResults] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("/data/seasons.json")
-      .then((r) => r.json())
+    loadJson<string[]>("/data/seasons.json", [])
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setSeasonsList(data);
@@ -62,21 +62,11 @@ export default function NbaPrediction() {
       })
       .catch(() => {});
 
-    const fetchAllData = async () => {
+    const fetchInitialData = async () => {
       try {
         setLoadingData(true);
-        const [allGamesRes, gamesRes] = await Promise.all([
-          fetch("/data/all_seasons_games.json").then((r) => r.json()).catch(() => []),
-          fetch("/data/games.json").then((r) => r.json()).catch(() => []),
-        ]);
-
-        const currentIds = new Set(gamesRes.map((g: any) => g.GAME_ID));
-        const taggedCurrent = gamesRes.map((g: any) => ({ ...g, SEASON: "2025-26" }));
-        const historical = allGamesRes.filter(
-          (g: any) => !currentIds.has(g.GAME_ID) && g.SEASON !== "2025-26"
-        );
-        const combined = [...taggedCurrent, ...historical];
-        setAllResults(combined);
+        const gamesRes = await loadPrivateApi<any[]>("/frontend-data-api/games?season=2025-26").catch(() => []);
+        setAllResults(gamesRes.map((g: any) => ({ ...g, SEASON: "2025-26" })));
       } catch (err: any) {
         console.error("Error loading schedule data for predictions:", err);
         setDataError("Could not load game schedules. Manual inputs are still active.");
@@ -84,8 +74,23 @@ export default function NbaPrediction() {
         setLoadingData(false);
       }
     };
-    fetchAllData();
+    fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    if (selectedSeason === "2025-26") return;
+    if (allResults.some((g) => g.SEASON === selectedSeason)) return;
+    setLoadingData(true);
+    loadPrivateApi<any[]>(`/frontend-data-api/games?season=${encodeURIComponent(selectedSeason)}`)
+      .then((rows) => {
+        setAllResults((prev) => [...prev, ...rows.map((g: any) => ({ ...g, SEASON: selectedSeason }))]);
+      })
+      .catch((err) => {
+        console.error("Error loading selected season:", err);
+        setDataError("Could not load selected season. Manual inputs are still active.");
+      })
+      .finally(() => setLoadingData(false));
+  }, [selectedSeason, allResults]);
 
   useEffect(() => {
     if (allResults.length === 0) return;

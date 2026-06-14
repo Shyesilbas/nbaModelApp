@@ -11,6 +11,7 @@ import {
   Star,
 } from "lucide-react";
 import { predictWinProbability } from "../api/predictions";
+import { loadPrivateApi } from "../lib/dataCache";
 
 // ─────────────────────────────────────────────
 // Types
@@ -386,11 +387,7 @@ export default function UpcomingGames() {
   const [predictionError, setPredictionError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/data/games.json")
-      .then((r) => {
-        if (!r.ok) throw new Error("Failed to load games data.");
-        return r.json();
-      })
+    loadPrivateApi<UpcomingGame[]>("/frontend-data-api/games?season=2025-26")
       .then((data) => {
         setGames(data.filter((g: UpcomingGame) => !(g.GAME_STATUS === "Final" || g.HOME_SCORE != null || g.AWAY_SCORE != null)));
         setLoading(false);

@@ -15,11 +15,13 @@ Output: frontend/public/data/all_seasons_games.json
 import json
 import math
 import os
+import hashlib
+from datetime import datetime, timezone
 
 import pandas as pd
 from scripts.season_utils import discover_seasons
 
-OUT_DIR = "frontend/public/data"
+OUT_DIR = os.environ.get("FRONTEND_DATA_DIR", "data/frontend")
 
 
 def nan_safe(val):
@@ -30,6 +32,34 @@ def nan_safe(val):
     if isinstance(val, (int, float)) and not math.isfinite(val):
         return None
     return val
+
+
+def write_manifest(out_dir: str):
+    files = {}
+    for filename in sorted(os.listdir(out_dir)):
+        if not filename.endswith(".json") or filename == "manifest.json":
+            continue
+        path = os.path.join(out_dir, filename)
+        with open(path, "rb") as f:
+            digest = hashlib.sha256(f.read()).hexdigest()
+        files[filename] = {
+            "path": f"/data/{filename}",
+            "size_bytes": os.path.getsize(path),
+            "sha256": digest,
+        }
+
+    manifest = {
+        "season": "multi",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "version": hashlib.sha256(
+            json.dumps(files, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()[:16],
+        "files": files,
+    }
+    out_path = os.path.join(out_dir, "manifest.json")
+    with open(out_path, "w") as f:
+        json.dump(manifest, f, indent=2)
+    print(f"Wrote manifest -> {out_path}")
 
 
 def load_game_results(season_key: str, season_path: str) -> list[dict]:
@@ -90,6 +120,8 @@ def main():
     with open(seasons_path, "w") as f:
         json.dump(seasons_list, f, separators=(",", ":"))
     print(f"Wrote seasons list -> {seasons_path}")
+
+    write_manifest(OUT_DIR)
 
 
 if __name__ == "__main__":

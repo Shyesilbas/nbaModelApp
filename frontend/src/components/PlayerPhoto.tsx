@@ -8,9 +8,13 @@ type Props = {
   className?: string;
 };
 
-export default function PlayerPhoto({ playerId, name, size = 44, className = "" }: Props) {
+function PlayerPhotoComponent({ playerId, name, size = 44, className = "" }: Props) {
   const [failed, setFailed] = React.useState(false);
   const src = getPlayerHeadshotUrl(playerId);
+
+  React.useEffect(() => {
+    setFailed(false);
+  }, [playerId]);
 
   if (!playerId || failed) {
     return (
@@ -38,3 +42,5 @@ export default function PlayerPhoto({ playerId, name, size = 44, className = "" 
     />
   );
 }
+
+export default React.memo(PlayerPhotoComponent);

@@ -1,6 +1,8 @@
 import os
 import json
 import math
+import hashlib
+from datetime import datetime, timezone
 import pandas as pd
 
 from scripts.data_paths import get_data_paths
@@ -26,6 +28,43 @@ def _json_safe(value):
     if isinstance(value, list):
         return [_json_safe(v) for v in value]
     return value
+
+
+def _file_manifest_entry(out_dir: str, filename: str):
+    path = os.path.join(out_dir, filename)
+    if not os.path.exists(path):
+        return None
+    with open(path, "rb") as f:
+        digest = hashlib.sha256(f.read()).hexdigest()
+    return {
+        "path": f"/data/{filename}",
+        "size_bytes": os.path.getsize(path),
+        "sha256": digest,
+    }
+
+
+def _write_frontend_manifest(out_dir: str, season: str):
+    files = {}
+    for filename in sorted(os.listdir(out_dir)):
+        if not filename.endswith(".json") or filename == "manifest.json":
+            continue
+        entry = _file_manifest_entry(out_dir, filename)
+        if entry:
+            files[filename] = entry
+
+    manifest = {
+        "season": season,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "version": hashlib.sha256(
+            json.dumps(files, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()[:16],
+        "files": files,
+    }
+
+    out_path = os.path.join(out_dir, "manifest.json")
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
+    print(f"✅ Exported frontend data manifest -> {out_path}")
 
 def export_data(season: str = None):
     from scripts.season_utils import get_default_season
@@ -54,7 +93,7 @@ def export_data(season: str = None):
     model_v2_path = paths.team_model_ready_v2
     model_v3_path = f"data/processed/team_model_ready_v3_{token}.csv"
     
-    out_dir = "frontend/public/data"
+    out_dir = os.environ.get("FRONTEND_DATA_DIR", "data/frontend")
     os.makedirs(out_dir, exist_ok=True)
     games_feed_path = os.path.join(out_dir, "games.json")
     
@@ -314,6 +353,8 @@ def export_data(season: str = None):
     with open(out_v2_summary_path, "w") as f:
         json.dump(v2_summary, f, indent=2)
     print(f"✅ Exported Model V2 summary -> {out_v2_summary_path}")
+
+    _write_frontend_manifest(out_dir, normalized_s)
 
     print("\n============================================================")
     print("🎉 FRONTEND DATASETS EXPORT COMPLETED SUCCESSFULLY! 🎉")

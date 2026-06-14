@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
+import { loadJson, loadPrivateApi } from "../lib/dataCache";
 import {
   GameCard,
   GameCardDetail,
@@ -11,25 +12,35 @@ import {
   type TeamBoxScore,
 } from "./game-results";
 
+type SeasonTypeFilter = "all" | "regular" | "playin" | "playoffs" | "finals";
+
+const SEASON_TYPE_FILTERS: { id: SeasonTypeFilter; label: string; values: string[] }[] = [
+  { id: "all", label: "All", values: [] },
+  { id: "regular", label: "Regular Season", values: ["Regular Season"] },
+  { id: "playin", label: "Play In", values: ["PlayIn"] },
+  { id: "playoffs", label: "Play Off", values: ["Playoffs"] },
+  { id: "finals", label: "NBA Finals", values: ["NBA Finals"] },
+];
+
 
 /* ── Main exported component ── */
 export default function GameResults() {
   const [seasonsList, setSeasonsList] = useState<string[]>(["2025-26", "2024-25", "2023-24", "2022-23"]);
   const [allResults,  setAllResults]  = useState<(GameFeedRow & { SEASON?: string })[]>([]);
   const [results,     setResults]     = useState<GameFeedRow[]>([]);
-  const [teamBS,      setTeamBS]      = useState<TeamBoxScore[]>([]);
-  const [playerBS,    setPlayerBS]    = useState<PlayerBoxScore[]>([]);
-  // Per-season lazy-loaded boxscores cache
-  const [seasonTeamBS,   setSeasonTeamBS]   = useState<Record<string, TeamBoxScore[]>>({ "2025-26": [] });
-  const [seasonPlayerBS, setSeasonPlayerBS] = useState<Record<string, PlayerBoxScore[]>>({ "2025-26": [] });
-  const [bsLoading,   setBsLoading]   = useState<Record<string, boolean>>({});
+  const [gameDetailCache, setGameDetailCache] = useState<Record<string, {
+    game_detail: GameDetail | null;
+    team_boxscores: TeamBoxScore[];
+    player_boxscores: PlayerBoxScore[];
+  }>>({});
+  const [detailLoading, setDetailLoading] = useState(false);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState<string | null>(null);
   const [search,      setSearch]      = useState("");
+  const [seasonTypeFilter, setSeasonTypeFilter] = useState<SeasonTypeFilter>("all");
   const [selectedDate,setSelectedDate]= useState<string>("");
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [initialDetailTab, setInitialDetailTab] = useState<"game" | "home" | "away" | "prediction">("game");
-  const [gameDetails, setGameDetails] = useState<GameDetail[]>([]);
 
   const handleOpenGame = (gameId: string, startTab: "game" | "home" | "away" | "prediction" = "game") => {
     setInitialDetailTab(startTab);
@@ -39,8 +50,7 @@ export default function GameResults() {
 
   // Initial load: games index + current season boxscores
   useEffect(() => {
-    fetch("/data/seasons.json")
-      .then((r) => r.json())
+    loadJson<string[]>("/data/seasons.json", [])
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setSeasonsList(data);
@@ -48,54 +58,34 @@ export default function GameResults() {
       })
       .catch(() => {});
 
-    Promise.all([
-      fetch("/data/all_seasons_games.json").then((r) => r.json()).catch(() => []),
-      fetch("/data/games.json").then((r) => r.json()),
-      fetch("/data/team_boxscores.json").then((r) => r.json()),
-      fetch("/data/player_boxscores.json").then((r) => r.json()),
-      fetch("/data/game_details.json").then((r) => r.json()).catch(() => []),
-    ])
-      .then(([allGames, r, t, p, d]) => {
-        const currentIds = new Set((r as GameFeedRow[]).map((g) => g.GAME_ID));
+    loadPrivateApi<GameFeedRow[]>("/frontend-data-api/games?season=2025-26")
+      .then((r) => {
         const taggedCurrent = (r as any[]).map((g) => ({ ...g, SEASON: "2025-26" }));
-        const historical = (allGames as any[]).filter(
-          (g: any) => !currentIds.has(g.GAME_ID) && g.SEASON !== "2025-26"
-        );
-        setAllResults([...taggedCurrent, ...historical]);
+        setAllResults(taggedCurrent);
         setResults(r);
-        setTeamBS(t);
-        setPlayerBS(p);
-        setGameDetails(d);
-        // Seed 2025-26 into per-season cache
-        setSeasonTeamBS({ "2025-26": t });
-        setSeasonPlayerBS({ "2025-26": p });
         setLoading(false);
       })
       .catch((e) => { setError(e.message); setLoading(false); });
   }, []);
 
-  // Lazy-load boxscores when switching to a historical season
+  // Lazy-load compact game index when switching seasons.
   useEffect(() => {
     if (selectedSeason === "2025-26") return;
-    if (seasonTeamBS[selectedSeason] || bsLoading[selectedSeason]) return;
-    setBsLoading((prev) => ({ ...prev, [selectedSeason]: true }));
-    Promise.all([
-      fetch(`/data/team_boxscores_${selectedSeason}.json`).then((r) => r.json()).catch(() => []),
-      fetch(`/data/player_boxscores_${selectedSeason}.json`).then((r) => r.json()).catch(() => []),
-    ]).then(([t, p]) => {
-      setSeasonTeamBS((prev) => ({ ...prev, [selectedSeason]: t }));
-      setSeasonPlayerBS((prev) => ({ ...prev, [selectedSeason]: p }));
-      setBsLoading((prev) => ({ ...prev, [selectedSeason]: false }));
+    if (allResults.some((g) => g.SEASON === selectedSeason)) return;
+    loadPrivateApi<(GameFeedRow & { SEASON?: string })[]>(`/frontend-data-api/games?season=${encodeURIComponent(selectedSeason)}`).then((rows) => {
+      setAllResults((prev) => [...prev, ...rows.map((g) => ({ ...g, SEASON: selectedSeason }))]);
     });
-  }, [selectedSeason]);
+  }, [selectedSeason, allResults]);
 
   const sortedResults = useMemo(() => {
     const q = search.trim().toUpperCase();
     const seasonPool = selectedSeason === "2025-26" ? results : allResults.filter((g: any) => g.SEASON === selectedSeason);
+    const typeFilter = SEASON_TYPE_FILTERS.find((f) => f.id === seasonTypeFilter);
     return [...seasonPool]
+      .filter((x) => !typeFilter || typeFilter.id === "all" || typeFilter.values.includes(x.SEASON_TYPE))
       .filter((x) => !q || (x.HOME_TEAM_ABBREVIATION ?? "").includes(q) || (x.AWAY_TEAM_ABBREVIATION ?? "").includes(q) || x.GAME_ID.includes(q))
       .sort((a, b) => (b.GAME_DATE ?? "").localeCompare(a.GAME_DATE ?? ""));
-  }, [results, allResults, selectedSeason, search]);
+  }, [results, allResults, selectedSeason, seasonTypeFilter, search]);
 
   const uniqueDates = useMemo(
     () => Array.from(new Set(sortedResults.map((g) => g.GAME_DATE ?? "").filter(Boolean))).sort((a, b) => b.localeCompare(a)),
@@ -105,7 +95,17 @@ export default function GameResults() {
   useEffect(() => {
     // Reset date when season changes
     setSelectedDate(uniqueDates[0] ?? "");
-  }, [selectedSeason, uniqueDates.length]);
+  }, [selectedSeason, seasonTypeFilter, uniqueDates.length]);
+
+  const seasonTypeCounts = useMemo(() => {
+    const seasonPool = selectedSeason === "2025-26" ? results : allResults.filter((g: any) => g.SEASON === selectedSeason);
+    return SEASON_TYPE_FILTERS.reduce<Record<SeasonTypeFilter, number>>((acc, filter) => {
+      acc[filter.id] = filter.id === "all"
+        ? seasonPool.length
+        : seasonPool.filter((g) => filter.values.includes(g.SEASON_TYPE)).length;
+      return acc;
+    }, { all: 0, regular: 0, playin: 0, playoffs: 0, finals: 0 });
+  }, [results, allResults, selectedSeason]);
 
   const selectedDateIndex = uniqueDates.indexOf(selectedDate);
   const selectedDateGames = useMemo(
@@ -113,7 +113,22 @@ export default function GameResults() {
     [sortedResults, selectedDate],
   );
   const selectedGame       = useMemo(() => results.find((g) => g.GAME_ID === selectedGameId) ?? (allResults.find((g) => g.GAME_ID === selectedGameId) as GameFeedRow | undefined) ?? null, [results, allResults, selectedGameId]);
-  const selectedGameDetail = useMemo(() => gameDetails.find((d) => d.game_id === selectedGameId) ?? null, [gameDetails, selectedGameId]);
+  const selectedDetail = selectedGameId ? gameDetailCache[selectedGameId] : null;
+
+  useEffect(() => {
+    if (!selectedGame || !selectedGameId || gameDetailCache[selectedGameId]) return;
+    setDetailLoading(true);
+    loadPrivateApi<{
+      game_detail: GameDetail | null;
+      team_boxscores: TeamBoxScore[];
+      player_boxscores: PlayerBoxScore[];
+    }>(`/frontend-data-api/games/${encodeURIComponent(selectedGame.GAME_ID)}?season=${encodeURIComponent(selectedSeason)}`)
+      .then((detail) => {
+        setGameDetailCache((prev) => ({ ...prev, [selectedGameId]: detail }));
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setDetailLoading(false));
+  }, [selectedGame, selectedGameId, selectedSeason, gameDetailCache]);
 
   if (loading) {
     return (
@@ -136,16 +151,12 @@ export default function GameResults() {
     );
   }
 
-  // Resolve active boxscore arrays for selected season
-  const activeTeamBS   = seasonTeamBS[selectedSeason]   ?? teamBS;
-  const activePlayerBS = seasonPlayerBS[selectedSeason] ?? playerBS;
-  const isSeasonBsLoading = !!bsLoading[selectedSeason];
-
   if (selectedGame) {
     const gid = normGid(selectedGame.GAME_ID);
-    const homeBS      = activeTeamBS.find((t) => normGid(t.GAME_ID) === gid && t.TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION) ?? null;
-    const awayBS      = activeTeamBS.find((t) => normGid(t.GAME_ID) === gid && t.TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION) ?? null;
-    const gamePlayers = activePlayerBS.filter((p) => normGid(p.GAME_ID) === gid);
+    const teamRows = selectedDetail?.team_boxscores ?? [];
+    const gamePlayers = selectedDetail?.player_boxscores ?? [];
+    const homeBS      = teamRows.find((t) => normGid(t.GAME_ID) === gid && t.TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION) ?? null;
+    const awayBS      = teamRows.find((t) => normGid(t.GAME_ID) === gid && t.TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION) ?? null;
 
     return (
       <div className="space-y-4">
@@ -156,7 +167,7 @@ export default function GameResults() {
           <ArrowLeft size={11} />
           Back to games
         </button>
-        {isSeasonBsLoading ? (
+        {detailLoading || !selectedDetail ? (
           <div className="flex h-32 items-center justify-center gap-2">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#1d428a] border-t-transparent" />
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading box scores...</span>
@@ -165,7 +176,7 @@ export default function GameResults() {
           <GameCardDetail
             key={selectedGame.GAME_ID}
             game={selectedGame}
-            gameDetail={selectedGameDetail}
+            gameDetail={selectedDetail.game_detail}
             homeBS={homeBS}
             awayBS={awayBS}
             homePlayers={playerTeamFilter(gamePlayers, selectedGame.HOME_TEAM_ABBREVIATION)}
@@ -211,12 +222,39 @@ export default function GameResults() {
             ))}
           </div>
         </div>
-        {isSeasonBsLoading && (
-          <p className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] font-semibold text-slate-500">
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#1d428a] border-t-transparent" />
-            Loading {selectedSeason} box scores...
-          </p>
-        )}
+      </section>
+
+      {/* ── Season type filter ── */}
+      <section className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-400">Season type</p>
+            <p className="mt-0.5 text-xs font-medium text-slate-500">{sortedResults.length} matching games</p>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {SEASON_TYPE_FILTERS.map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => {
+                  setSeasonTypeFilter(filter.id);
+                  setSelectedGameId(null);
+                }}
+                disabled={seasonTypeCounts[filter.id] === 0}
+                className={[
+                  "rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-35",
+                  seasonTypeFilter === filter.id
+                    ? "bg-slate-900 text-white shadow-md shadow-slate-900/15"
+                    : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800",
+                ].join(" ")}
+              >
+                {filter.label}
+                <span className={seasonTypeFilter === filter.id ? "ml-1.5 text-white/70" : "ml-1.5 text-slate-400"}>
+                  {seasonTypeCounts[filter.id]}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* ── Date navigation ── */}

@@ -16,6 +16,7 @@ import {
   ArrowRightLeft,
   Users2,
 } from "lucide-react";
+import { loadJson, loadPrivateApi } from "../lib/dataCache";
 import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
 import GameDetailPanel from "./GameDetailPanel";
@@ -686,7 +687,7 @@ function DiscoveryGrid({
       {renderSection("Top Scorers", "2025–26 · PPG leaders", topScorers)}
       {renderSection("Playmakers", "2025–26 · APG leaders", topPlaymakers)}
       {renderSection("Glass Eaters", "2025–26 · RPG leaders", topRebounders)}
-      {renderSection("In the Archives", "Players from 2022–25 seasons · no longer active", legacyPlayers)}
+      {renderSection("In the Archives", "Players from 2018–25 seasons · no longer active", legacyPlayers)}
     </div>
   );
 }
@@ -710,8 +711,7 @@ export default function PlayerPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        fetch("/data/seasons.json")
-          .then((r) => r.json())
+        loadJson<string[]>("/data/seasons.json", [])
           .then((data) => {
             if (Array.isArray(data) && data.length > 0) {
               const asc = [...data].sort((a, b) => a.localeCompare(b));
@@ -720,19 +720,11 @@ export default function PlayerPage() {
           })
           .catch(() => {});
 
-        const [profRes, gamesRes, avgsRes] = await Promise.all([
-          fetch("/data/player_profiles.json"),
-          fetch("/data/player_season_games.json"),
-          fetch("/data/player_season_averages.json"),
-        ]);
-        if (!profRes.ok) throw new Error("player_profiles.json not found");
-        const [prof, games, avgs] = await Promise.all([
-          profRes.json(),
-          gamesRes.json(),
-          avgsRes.json(),
+        const [prof, avgs] = await Promise.all([
+          loadJson<PlayerProfile[]>("/data/player_profiles.json"),
+          loadJson<Record<string, Record<string, SeasonAverages>>>("/data/player_season_averages.json"),
         ]);
         setProfiles(prof);
-        setGamesData(games);
         setAveragesData(avgs);
       } catch (e: any) {
         setError(e.message);
@@ -773,6 +765,16 @@ export default function PlayerPage() {
     setSelectedPlayer(p);
     setSearch(p.PLAYER_NAME ?? "");
     setShowDropdown(false);
+    loadPrivateApi<{
+      player_id: string;
+      games: Record<string, GameRow[]>;
+      averages: Record<string, SeasonAverages>;
+    }>(`/frontend-data-api/players/${encodeURIComponent(String(p.PLAYER_ID))}`)
+      .then((payload) => {
+        setGamesData((prev) => ({ ...prev, [payload.player_id]: payload.games }));
+        setAveragesData((prev) => ({ ...prev, [payload.player_id]: payload.averages }));
+      })
+      .catch((e) => setError(e.message));
   };
 
   const pid = selectedPlayer ? String(selectedPlayer.PLAYER_ID) : null;
@@ -852,14 +854,14 @@ export default function PlayerPage() {
       <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.07)]">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Player Search</p>
-          <p className="text-[10px] text-slate-400">{profiles.length} players · 2022–26</p>
+          <p className="text-[10px] text-slate-400">{profiles.length} players · 2018–26</p>
         </div>
         <div className="relative">
           <div className="relative">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search any player from 2022–23 onwards (inc. retired)..."
+              placeholder="Search any player from 2018–19 onwards (inc. retired)..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setShowDropdown(true); }}
               onFocus={() => setShowDropdown(true)}
@@ -1096,10 +1098,10 @@ export default function PlayerPage() {
           <div className="mb-6">
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Player Discovery</p>
             <h2 className="mt-1 text-xl font-black text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Browse Players · 2022–26
+              Browse Players · 2018–26
             </h2>
             <p className="mt-0.5 text-[11px] text-slate-400">
-              {profiles.length} players across 4 seasons — including retired &amp; traded players. Click any card or search above.
+              {profiles.length} players across 8 seasons — including retired &amp; traded players. Click any card or search above.
             </p>
           </div>
           <DiscoveryGrid

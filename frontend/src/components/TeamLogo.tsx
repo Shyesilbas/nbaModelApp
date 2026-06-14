@@ -9,10 +9,14 @@ type Props = {
   fallbackClassName?: string;
 };
 
-export default function TeamLogo({ abbr, name, size = 36, className = "", fallbackClassName = "" }: Props) {
+function TeamLogoComponent({ abbr, name, size = 36, className = "", fallbackClassName = "" }: Props) {
   const [failed, setFailed] = React.useState(false);
   const label = name ?? abbr;
   const src = isKnownTeamAbbr(abbr) ? getTeamLogoUrl(abbr) : "";
+
+  React.useEffect(() => {
+    setFailed(false);
+  }, [abbr]);
 
   if (!src || failed) {
     return (
@@ -41,4 +45,6 @@ export default function TeamLogo({ abbr, name, size = 36, className = "", fallba
     />
   );
 }
+
+export default React.memo(TeamLogoComponent);
 
