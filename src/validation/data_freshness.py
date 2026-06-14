@@ -336,7 +336,7 @@ def generate_data_freshness_report(
     df_player: pd.DataFrame,
     df_schedule: pd.DataFrame,
     today: Optional[date] = None,
-    output_dir: str = "outputs/analysis"
+    output_dir: str = "reports/operations"
 ) -> Dict[str, Any]:
     """
     Generates validation reports (JSON + Markdown) and writes them to disk.

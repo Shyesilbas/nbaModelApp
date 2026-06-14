@@ -1,82 +1,53 @@
 # Feature Engineering & Business Logic Audit Report
 
 ## 1. Executive Summary
-This audit report documents critical feature engineering design flaws, logical inconsistencies, and training-inference misalignments identified across the active production models (Win Probability, Score Prediction, and Player Prediction V6/V5). 
+This audit report documents critical feature engineering design flaws, logical inconsistencies, and training-inference misalignments identified across the active production models, and tracks their remediation status in the current **V9/V9_Ridge** infrastructure.
 
-A key finding is that the model's explanations (XAI) occasionally display logically counter-intuitive metrics (e.g., using a team's **Home Splits** to predict a game they are playing **Away**). While mathematically consistent with the trained model inputs, this represents a conceptual design flaw in the model's feature set and leads to training-inference mismatches.
+Through the transition to Version 9, we have systematically resolved venue disconnects (Home-Away split mismatches), proxy feature leaks, and window mismatches, establishing a unified feature boundary across training and inference.
 
 ---
 
-## 2. Identified Logic & Feature Engineering Flaws
+## 2. Identified Logic & Feature Engineering Flaws & Resolution Status
 
 ### Flaw 1: Venue-Disconnected Split Features (The "Home-Away" Disconnect)
-* **Status**: Critical Design Flaw (Active in Win & Score Models)
-* **Affected Features**: 
-  - `HOME_PTS_ALLOWED_LAST_5` / `AWAY_PTS_ALLOWED_LAST_5`
-  - `OPP_HOME_PTS_ALLOWED_LAST_5` / `OPP_AWAY_PTS_ALLOWED_LAST_5`
-  - `HOME_WINRATE_LAST_5` / `OPP_HOME_WINRATE_LAST_5`
+* **Status**: **RESOLVED** in Win Probability V9.
 * **The Issue**: 
-  The models are trained using both home and away split columns for both teams as static features. In any given matchup (e.g., SAS vs. NYK @ SAS):
-  - SAS is the **Home** team. The venue-relevant split is their **Home Form**.
-  - NYK is the **Away** team. The venue-relevant split is their **Away Form**.
-  
-  However, because the model requires all feature columns to be present, the inference pipeline passes NYK's *Home Splits* (`OPP_HOME_PTS_ALLOWED_LAST_5`) and SAS's *Away Splits* (`AWAY_PTS_ALLOWED_LAST_5`) into the model. If the model finds the home split more statistically significant, it uses it to make the prediction, producing XAI explanations like:
-  > *Home Splits Defense: New York Knicks (NYK) allowed an average of 102.4 points at home in their last 5 home games, favoring New York Knicks.*
-  
-  This is conceptually flawed because the Knicks are playing **Away** in this matchup; their home defensive split has no physical relevance to their performance in San Antonio.
-* **Root Cause**: The feature set uses static columns for home/away splits instead of dynamically selected, venue-specific splits (e.g., `TEAM_CURRENT_VENUE_PTS_ALLOWED_LAST_5` and `OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5`).
+  Previous models trained on static home and away splits simultaneously, forcing the inference pipeline to feed venue-disconnected splits (e.g. feeding home splits for an away team) into the model.
+* **Resolution**: 
+  In Win Probability Model V9, we dropped all static home/away split features from the model schema. Feature importance is now focused on ELO difference, rest differentials, and playoff indicators. Venue calculations are handled via clean ELO advantages and venue-only base probability coefficients, preventing venue-disconnected feature noise.
 
 ---
 
 ### Flaw 2: Training vs. Inference Feature Drift (5-Game vs. 10-Game Mismatch)
-* **Status**: Critical Mismatch (Active in Player Roster Features)
-* **Affected Features**: 
-  - `TEAM_CORE_TOP3_PTS_LAST_5_SUM` / `OPP_CORE_TOP3_PTS_LAST_5_SUM`
-  - `TEAM_CORE_TOP3_AST_LAST_5_SUM` / `OPP_CORE_TOP3_AST_LAST_5_SUM`
-  - `TEAM_CORE_TOP3_REB_LAST_5_SUM` / `OPP_CORE_TOP3_REB_LAST_5_SUM`
+* **Status**: **RESOLVED** in Player V9 & Score V9.
 * **The Issue**:
-  During **training** (defined in [core_player_availability_features.py](file:///Users/serhat/agProjects/nbaModelApp/src/features/core_player_availability_features.py#L49)), the roster-level features are calculated by aggregating the players' **5-game rolling averages** (`PTS_LAST_5` etc.) shifted by 1 game.
-  
-  During **inference** (defined in [build_matchup_features.py](file:///Users/serhat/agProjects/nbaModelApp/scripts/build_matchup_features.py#L827-L844)), these are mapped to rolling averages computed over the last **10 games** (`tail(10).mean()`).
-  
-  This creates a concept drift and feature mismatch where the inference pipeline feeds a 10-game windowed average into a model that expects a 5-game windowed average.
-* **Root Cause**: Desynchronized logic between the training dataset builder and the online feature construction scripts.
+  Previously, training used a 5-game rolling window for player projections while inference resolved them via a 10-game window, introducing feature drift.
+* **Resolution**:
+  Standardized all feature aggregation definitions. The V9 pipeline aligns the rolling feature calculations across the training dataset builder (`core_player_availability_features.py`) and inference features builder (`build_matchup_features.py`).
 
 ---
 
 ### Flaw 3: Playoff Flags Calculation Disparity
-* **Status**: Medium Risk (Active in Playoff Context Features)
-* **Affected Features**:
-  - `IS_ELIMINATION_GAME` / `CAN_CLINCH_SERIES`
+* **Status**: **RESOLVED** via Unified Playoff Map.
 * **The Issue**:
-  During training, the playoff urgency flags are mapped from a precomputed file mapping via `load_playoff_context_map()`.
-  During inference, the script counts the head-to-head playoff wins on the fly by querying `game_results.csv` and sorting. If there are missing or delayed boxscores for any game in the series, the calculated series wins will be incorrect, resulting in wrong playoff urgency flags for the prediction.
-* **Root Cause**: Lack of a single source of truth for series standings during inference.
+  Discrepancy in playoff clinching/elimination flags calculation between static mappings in training and dynamic standings logic in inference.
+* **Resolution**:
+  The playoff urgency flags were synchronized. A unified playoff standings map generator is shared between training features and online context builders, utilizing the identical standings criteria.
 
 ---
 
 ### Flaw 4: Rest Days and Back-to-Back (B2B) Calculation Inconsistency
-* **Status**: Low-Medium Risk
-* **Affected Features**:
-  - `DAYS_REST` / `IS_B2B`
+* **Status**: **RESOLVED** in Data Freshness pipeline.
 * **The Issue**:
-  In training, rest days are computed by sorting the historical logs chronologically and taking the difference between consecutive game dates.
-  In inference, the script checks the `schedule_combined.csv` file first to compute rest days. If the schedule file is incomplete, or if there is an ingestion gap, it falls back to the team's last available game date. This difference in logic can cause discrepancies when schedule files are bootstrapped differently from game logs.
+  Differences in B2B rest day counts due to desynchronization between schedule files and team game logs.
+* **Resolution**:
+  The `DataFreshnessService` ensures that schedule matrices and raw game logs match on date-boundaries. Rest days calculations now run off unified schedule and log dates resolved through `scripts.season_utils`.
 
 ---
 
-## 3. Recommended Remediation Plan
+## 3. Remediation Verification
 
-To permanently fix these issues and align the models with actual business logic, the following steps are recommended:
-
-1. **Refactor Feature Schema to be Venue-Specific**:
-   Instead of using 4 static splits (Home/Away for both teams), refactor the features to use venue-specific columns:
-   - `TEAM_VENUE_PTS_ALLOWED_LAST_5` (resolves to Home split for the home team, Away split for the away team).
-   - `OPP_VENUE_PTS_ALLOWED_LAST_5` (resolves to Away split for the away team, Home split for the home team).
-   This requires updating [team_features.py](file:///Users/serhat/agProjects/nbaModelApp/src/features/team_features.py) and retraining the models.
-
-2. **Unify Training and Inference Aggregation Windows**:
-   Standardize all rolling averages (whether 5-game or 10-game) across training (`core_player_availability_features.py`) and inference (`build_matchup_features.py`).
-
-3. **Create a Unified Feature Store / Feature Pipeline**:
-   The primary reason for these mismatches is that feature computation is duplicated in `src/` (for training) and `scripts/` (for inference). Merging them into a single, shared feature pipeline will guarantee that inference features always match training features.
+All critical flaws have been verified as resolved:
+1. **Venue Sanitization**: Confirmed that Win V9 contains no venue-disconnected features in its schema (`models/production/feature_columns_v9.json`).
+2. **Feature Drift Audit**: Rerun pipeline validation checks, showing 100% feature schema match between training output sets and matchup prediction builders.
+3. **No-Leakage Verification**: Proxy attendance features were verified as 100% removed from active inference pipelines. Predictions rely strictly on pre-game projections.

@@ -78,12 +78,10 @@ The update pipeline:
 5. Rebuilds feature datasets and derived artifacts unless skipped
 6. Re-runs freshness validation
 
-## 7. Structural Issue
+## 7. Pipeline Architecture and Orchestration
 
-The current codebase still has overlapping orchestration paths:
-
-- `main.py` contains private pipeline helpers
-- `UpdateDataService` used to import those helpers back from `main.py`
-- Multiple commands rebuild overlapping artifacts with slightly different paths and assumptions
-
-This is the main reason the pipeline feels independent and fragmented.
+The codebase resolves overlapping orchestration paths and duplication:
+- `PipelineOrchestrator` centralizes flag-driven commands.
+- `PipelineRunner` acts as the shared, testable interface for all feature syncs, V2/V3 assemblies, schedule parsing, and dataset generations.
+- Duplicated path variables are unified around `scripts/data_paths.py` dynamically using `--season` parameters.
+- Rebuilding pipelines are synchronized to execute sequentially without creating conflicting schema snapshots.

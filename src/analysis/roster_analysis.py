@@ -34,7 +34,7 @@ def _df_to_markdown_simple(df: pd.DataFrame) -> str:
 
 def run_roster_analysis(
     player_games_path: str = None,
-    output_dir: str = "outputs/analysis",
+    output_dir: str = "reports/operations",
     data_dir: str = "data/analysis"
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """

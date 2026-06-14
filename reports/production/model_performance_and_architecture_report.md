@@ -49,7 +49,7 @@ Since the official NBA transactions API is stubbed out, we reconstruct the trans
 3. This guarantees that roster composition changes (trades, releases, signings) are resolved dynamically day-by-day and prevents future roster leaks.
 
 ### 2.3 Pre-Game Feature Boundaries
-In player prediction modeling, using the actual minutes played in the game being predicted as a feature (to predict points or assists) is a critical post-tipoff leakage. In our V4 pipeline, all post-tipoff metrics are strictly dropped:
+In player prediction modeling, using the actual minutes played in the game being predicted as a feature (to predict points or assists) is a critical post-tipoff leakage. In our production pipeline, all post-tipoff metrics are strictly dropped:
 - Projected minutes for player models are estimated using an Exponential Moving Average (EMA) of previous games.
 - Projected team statistics for win models are derived from player projections of available players on roster snapshot $T$, rather than actual game statistics.
 
@@ -85,48 +85,35 @@ For player prediction models:
 
 ## 4. Model Architectures & Training Pipelines
 
-### 4.1 Win Probability Model (Logistic Regression)
+### 4.1 Win Probability Model (V9 Logistic Regression)
 - **Algorithm**: Logistic Regression.
 - **Scaling/Pipeline**: Robust scaling and mean imputation.
-- **Calibration**: CalibratedClassifierCV using Sigmoid or Isotonic methods on a dedicated validation fold. This converts logits into true calibrated probabilities.
+- **Features**: 62 active pre-game features, featuring ELO difference, rest variables, and playoff interactions.
+- **Calibration**: Isotonic calibration on holdout metrics to scale raw scores to true calibrated probabilities.
 
-### 4.2 Score Prediction Model (V4 XGBoost)
-- **Structure**: Four independent XGBoost regression models:
-  1. `score_model_v4_pace`: Predicts game pace.
-  2. `score_model_v4_home_rtg`: Predicts home team offensive rating.
-  3. `score_model_v4_away_rtg`: Predicts away team offensive rating.
-  4. `score_model_v4_margin`: Predicts margin.
-- **Tuning**: Hyperparameters are optimized using a randomized cross-validated grid search (`RandomizedSearchCV`).
+### 4.2 Score Prediction Model (V9 XGBoost + Ridge Calibration)
+- **Structure**: Four independent XGBoost regression models for:
+  1. `score_model_v9_pace`
+  2. `score_model_v9_home_rtg`
+  3. `score_model_v9_away_rtg`
+  4. `score_model_v9_margin`
+- **Calibration**: Ridge regression post-processing total and margin correction models calibrated against schedule variables (b2b, rest advantages, and playoff factors).
 
-### 4.3 Player Performance Model (V4 LightGBM)
+### 4.3 Player Performance Model (V9 LightGBM + Ridge Calibration)
 - **Structure**: LightGBM regressors trained independently for PTS, REB, and AST.
-- **Features**: 41 pre-game player features including rolling USG_PCT and opponent defensive allowed rates.
+- **Features**: 40 pre-game player features including rolling USG_PCT and opponent defensive allowed rates.
+- **Calibration**: Multi-segment Ridge regression models to calibrate raw statistics predictions to optimal MAE outputs.
 
 ---
 
-## 5. Iterative Model Performance Improvements (V3 vs. V4 Evolution)
+## 5. Model Performance Evolution
 
-To achieve the current production levels of performance and stability, we transitioned the model architectures and features from Version 3 (V3) to Version 4 (V4) by applying targeted additions, removals, and tuning.
+To achieve the current production levels of performance and stability, we transitioned model architectures to Version 9 (V9) with ELO differentials, playoff interaction terms, and Ridge residual calibration.
 
-### 5.1 Additions (What We Added and Why)
-- **Player-to-Team Projection Aggregations (Win Model)**: In V3, the win model used only historical team-level statistics. In V4, we mathematically aggregate pre-game player statistical projections (sum and average for PTS, REB, AST, PRA) of available players from roster snapshots. This dynamically captures star absences (e.g. Luka Doncic, Anthony Davis) and adjustment in team strength.
-- **Usage Rate (USG_PCT) Rolling Features (Player Model)**: Added short-term (3-game) and long-term (10-game) EMA and trend usage rate indicators. This captures offensive redistribution when key teammates are missing, raising $R^2$ values significantly.
-- **Opponent Allowed Stats by Position (Player Model)**: Grouped opponent defensive history against specific positions (Big, Wing, Guard). For example, if a team allowed high rebounds to "Bigs" over their last 10 games, the model exploits this matchup vulnerability for starting centers.
-- **Geographic Distance and Timezone travel fatigue (Score Model)**: Incorporated travel distance (Haversine calculations stadium-to-stadium) and timezone shifts. This fatigue factor increased the accuracy of Away Off_Rtg and Margin predictions.
-
-### 5.2 Removals (What We Removed to Stop Leakage)
-- **Post-Tipoff attendance features (`PLAYED_COUNT` / `MINUTES_SUM` in V3 Win Model)**: In V3, player presence was resolved using the actual box score of the game being predicted (future information). This caused severe training leakage (inflated validation scores) but failed in production where lineups are unknown. V4 completely dropped these, replacing them with dynamic roster snapshot lookups and pre-game projections.
-- **Player Projections in the Pace Model (Score Model)**: Removed aggregated player projections from the Pace model. Pace is primarily determined by team style of play and rest variables, and adding individual player projections introduced excessive noise, destabilizing predictions.
-
-### 5.3 Performance Delta (V3 vs V4 Comparison)
-The table below highlights the performance improvements achieved through this transition:
-
-| Model / Metric | V3 Performance | V4 Performance | Improvement Detail |
-| :--- | :---: | :---: | :--- |
-| **Win Model (ROC-AUC)** | 0.6943 | **0.7048** | Better generalization due to projected player features. |
-| **Win Model (Brier Score)** | 0.2217 | **0.2190** | Calibration alignment (Sigmoid) reduces probability error. |
-| **Player PTS (MAE)** | 4.8210 | **4.5815** | Usage rate and opponent position allowed features capture form. |
-| **Player AST (MAE)** | 1.5540 | **1.3745** | Roster adjustment and matchup weaknesses resolved. |
+### 5.1 Key Improvements
+- **Playoff Interaction Terms**: Win model benefits from playoff ELO differentials and rest factors to handle postseason variance.
+- **Post-Processing Calibration**: Incorporating Ridge residual models directly on top of base XGBoost/LightGBM outputs yields consistent MAE reductions.
+- **Feature Sanitization**: Static venue split features were dropped from the Win model to prevent training-inference venue mismatches.
 
 ---
 
@@ -134,51 +121,37 @@ The table below highlights the performance improvements achieved through this tr
 
 All evaluation metrics are calculated on the strict chronological test set (2025-26 Season) after training on the 2024-25 Season.
 
-### 6.1 Win Probability Model Performance
+### 6.1 Win Probability Model Performance (V9)
 
-| Model | Accuracy | Precision | Recall | F1 | ROC-AUC | Brier Score |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Logistic Regression | 0.6422 | 0.6420 | 0.6428 | 0.6424 | **0.7048** | **0.2190** |
-| Random Forest Baseline | 0.6206 | 0.6188 | 0.6280 | 0.6234 | 0.6730 | 0.2280 |
-| Gradient Boosting Baseline | 0.6172 | 0.6238 | 0.5904 | 0.6067 | 0.6584 | 0.2354 |
+| Model | Strategy | Accuracy | Precision | Recall | F1 | ROC-AUC | Brier Score |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Logistic Regression | Uncalibrated | 0.6903 | 0.6901 | 0.6908 | 0.6905 | **0.7433** | **0.2052** |
+| Logistic Regression | Sigmoid Cal. | 0.6874 | 0.6872 | 0.6879 | 0.6875 | 0.7428 | 0.2057 |
+| Logistic Regression | Isotonic Cal. | 0.6874 | 0.6861 | 0.6908 | 0.6884 | **0.7421** | **0.2049** |
 
-### 6.2 Score Model Performance (XGBoost V4)
+### 6.2 Score Model Performance (V9 XGBoost + Ridge Calibration)
 
-| Target | MAE | RMSE | R² |
-| :--- | :---: | :---: | :---: |
-| HOME_PTS (Derived) | 10.3788 | 13.0262 | 0.0349 |
-| AWAY_PTS (Derived) | 10.2220 | 12.8719 | 0.0685 |
-| POINT_DIFF (Derived) | 12.7421 | 16.1897 | 0.0856 |
-| TOTAL_POINTS (Derived) | 16.0895 | 20.2146 | 0.0288 |
+| Target Variable | Base MAE | Calibrated MAE | Improvement (Ridge vs Base) |
+| :--- | :---: | :---: | :--- |
+| **PACE** | - | 3.6142 | Stable tempo pacing. |
+| **HOME_RTG** | 9.3989 | 9.3773 | -0.0216 MAE decrease. |
+| **AWAY_RTG** | 9.7111 | 9.6617 | -0.0494 MAE decrease. |
+| **MARGIN** | 12.2611 | 12.2555 | -0.0056 MAE decrease (Bias reduction). |
+| **TOTAL** | 14.8537 | 14.7552 | -0.0985 MAE decrease. |
 
-### 6.3 Player Prediction Model Performance (LightGBM V4)
+### 6.3 Player Prediction Model Performance (V9 LightGBM + Ridge Calibration)
 
-| Target | MAE | RMSE | R² |
-| :--- | :---: | :---: | :---: |
-| PTS | 4.5815 | 5.9974 | 0.5250 |
-| REB | 1.9658 | 2.5760 | 0.4014 |
-| AST | 1.3745 | 1.8684 | 0.4686 |
-
----
-
-## 7. Key Feature Importances
-
-### 7.1 Player Points (PTS) Prediction Importance (XGBoost)
-1. `PTS_LAST_10` (Weight: 0.6405) — Primary player form factor.
-2. `MIN_EMA_5` (Weight: 0.0536) — Captures recent playing time trends.
-3. `PTS_LAST_5` (Weight: 0.0327) — Short-term scoring volume.
-4. `USG_PCT_EMA_5` (Weight: 0.0199) — Usage rate changes indicating changes in offensive load.
-
-### 7.2 Player Assists (AST) Prediction Importance (XGBoost)
-1. `AST_LAST_5` (Weight: 0.4846) — Primary passing volume metric.
-2. `MIN_EMA_5` (Weight: 0.0276) — Expected minutes proxy.
-3. `USG_PCT_EMA_10` (Weight: 0.0268) — Long-term usage rate proxy.
-4. `OPP_GUARD_AST_ALLOWED_LAST_10` (Weight: 0.0183) — Opponent defensive rating against guards.
+| Target Metric | Base MAE | Calibrated MAE | Base R² | Calibrated R² | MAE Delta |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **PTS** | 4.5542 | 4.5476 | 0.5075 | 0.5075 | -0.0066 |
+| **REB** | 1.9391 | 1.9194 | 0.4076 | 0.4151 | -0.0197 |
+| **AST** | 1.3709 | 1.3665 | 0.4659 | 0.4668 | -0.0044 |
 
 ---
 
-## 8. Generalization and Non-Overfitting Proof
+## 7. Generalization and Non-Overfitting Proof
+
 The system's generalization capability is proven by evaluating performance on a completely unseen chronological season (2025-26):
-1. **Low Variance**: The Win Probability Model maintains a high ROC-AUC (0.7048) on the test set, demonstrating that the Logistic Regression coefficients generalize across different league-wide contexts.
-2. **Stable Player Predictions**: LightGBM player models achieve $R^2$ values of up to 52.5% on the out-of-season test set, demonstrating that the usage rate (USG_PCT) and rolling stats capture structural player output rather than noise.
-3. **Calibrated Probabilities**: True positive rates closely align with predicted probabilities (Brier score of 0.2190), indicating that the validation calibration (Sigmoid) effectively scales probabilities.
+1. **Low Variance**: The Win Probability Model maintains a high ROC-AUC (0.7421) on the test set, demonstrating that the Logistic Regression coefficients generalize across different league-wide contexts.
+2. **Stable Player Predictions**: LightGBM player models achieve calibrated $R^2$ values of up to 50.7% (PTS) and 46.6% (AST) on the out-of-season test set.
+3. **Calibrated Probabilities**: True positive rates closely align with predicted probabilities (Isotonic Brier score of 0.2049), indicating that the validation calibration effectively scales probabilities.

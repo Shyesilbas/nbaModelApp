@@ -19,7 +19,7 @@ def generate_sync_report(
     team_csv: str,
     player_csv: str,
 ) -> str:
-    report_path = f"outputs/analysis/pipeline_sync_report_{token}.md"
+    report_path = f"reports/operations/pipeline_sync_report_{token}.md"
     os.makedirs(os.path.dirname(report_path), exist_ok=True)
     sync_status = "SUCCESS" if team_match and player_match else "MISMATCH"
     with open(report_path, "w") as f:
@@ -52,15 +52,15 @@ def generate_update_reports(
     failed_calls,
     rebuilds_ran: bool,
 ) -> Dict[str, str]:
-    os.makedirs("outputs/analysis", exist_ok=True)
-    ingestion_path = "outputs/analysis/local_ingestion_report.md"
+    os.makedirs("reports/operations", exist_ok=True)
+    ingestion_path = "reports/operations/local_ingestion_report.md"
     with open(ingestion_path, "w") as f:
         f.write("# NBA ML Project - Local Data Ingestion Report\n\n")
         f.write(f"> Generated: {today.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
         f.write("## 1. Overview of Ingestion Architecture\n\n")
         f.write("This report describes the local ingestion stack and its schedule / boxscore fetchers.\n")
 
-    update_path = "outputs/analysis/data_update_report.md"
+    update_path = "reports/operations/data_update_report.md"
     with open(update_path, "w") as f:
         f.write("# NBA ML Project - Data Update Report\n\n")
         f.write(f"> Generated: {today.strftime('%Y-%m-%d %H:%M:%S')}\n")
