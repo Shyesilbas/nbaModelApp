@@ -15,6 +15,7 @@ import MultiTeamPlayers from "./components/MultiTeamPlayers";
 import NbaPrediction from "./components/NbaPrediction";
 import PlayerPage from "./components/PlayerPage";
 import TeamLogo from "./components/TeamLogo";
+import { loadJson, prefetchManifestFiles } from "./lib/dataCache";
 import { TEAM_NAME_BY_ABBR } from "./lib/nbaTeams";
 
 const MENU = [
@@ -40,19 +41,20 @@ export default function App() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [sumRes, rostRes, coreRes, starRes, multiRes] = await Promise.all([
-          fetch("/data/dataset_summary.json"),
-          fetch("/data/team_rosters.json"),
-          fetch("/data/core_players.json"),
-          fetch("/data/star_candidates.json"),
-          fetch("/data/multi_team_players.json"),
+        await loadJson("/data/dataset_summary.json");
+        const [rostersData, coreData, starData, multiData] = await Promise.all([
+          loadJson<any[]>("/data/team_rosters.json"),
+          loadJson<any[]>("/data/core_players.json"),
+          loadJson<any[]>("/data/star_candidates.json"),
+          loadJson<any[]>("/data/multi_team_players.json"),
         ]);
-        if (!sumRes.ok) throw new Error("Failed to load dataset_summary.json");
-        setRosters(await rostRes.json());
-        setCorePlayers(await coreRes.json());
-        setStarCandidates(await starRes.json());
-        setMultiTeamPlayers(await multiRes.json());
+        setRosters(rostersData);
+        setCorePlayers(coreData);
+        setStarCandidates(starData);
+        setMultiTeamPlayers(multiData);
         setLoading(false);
+        // Start background prefetching of all files in the manifest
+        prefetchManifestFiles().catch((err) => console.error("Prefetch error:", err));
       } catch (e: any) {
         setError(e.message);
         setLoading(false);

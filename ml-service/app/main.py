@@ -16,7 +16,12 @@ app = FastAPI(title="NBA Win Probability ML Service")
 # Allow local frontend connections during development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,6 +37,12 @@ def startup_event():
         # Log but keep service up; predict will return 503 if model missing
         print("Model load failed on startup:", e)
 
+    try:
+        from .services.frontend_data import warm_up_cache
+        warm_up_cache()
+    except Exception as e:
+        print("Frontend cache warmup failed on startup:", e)
+
 
 if __name__ == '__main__':
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8001, reload=False)
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8001, reload=False)

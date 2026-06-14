@@ -18,6 +18,7 @@ import {
   Star,
 } from "lucide-react";
 import PlayerPhoto from "./PlayerPhoto";
+import { loadPrivateApi } from "../lib/dataCache";
 import TeamLogo from "./TeamLogo";
 
 /* ── Types ── */
@@ -269,15 +270,10 @@ export default function GameDetailPanel({
   const normGameId = normId(game.GAME_ID);
 
   useEffect(() => {
-    const teamFile =
-      season === "2025-26" ? "/data/team_boxscores.json" : `/data/team_boxscores_${season}.json`;
-    const playerFile =
-      season === "2025-26" ? "/data/player_boxscores.json" : `/data/player_boxscores_${season}.json`;
-
-    Promise.all([
-      fetch(teamFile).then((r) => r.json()).catch(() => []),
-      fetch(playerFile).then((r) => r.json()).catch(() => []),
-    ]).then(([teamData, playerData]) => {
+    loadPrivateApi<{
+      team_boxscores: TBS[];
+      player_boxscores: PBS[];
+    }>(`/frontend-data-api/games/${encodeURIComponent(game.GAME_ID)}?season=${encodeURIComponent(season)}`).then(({ team_boxscores: teamData, player_boxscores: playerData }) => {
       const gameTeams: TBS[] = (teamData as TBS[]).filter(
         (t) => normId(t.GAME_ID) === normGameId
       );

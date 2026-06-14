@@ -19,11 +19,13 @@ import json
 import math
 import os
 import sys
+import hashlib
+from datetime import datetime, timezone
 
 import pandas as pd
 from scripts.season_utils import discover_seasons
 
-OUT_DIR = "frontend/public/data"
+OUT_DIR = os.environ.get("FRONTEND_DATA_DIR", "data/frontend")
 
 
 def nan_safe(val):
@@ -36,12 +38,52 @@ def nan_safe(val):
     return val
 
 
+def write_manifest(out_dir: str):
+    files = {}
+    for filename in sorted(os.listdir(out_dir)):
+        if not filename.endswith(".json") or filename == "manifest.json":
+            continue
+        path = os.path.join(out_dir, filename)
+        with open(path, "rb") as f:
+            digest = hashlib.sha256(f.read()).hexdigest()
+        files[filename] = {
+            "path": f"/data/{filename}",
+            "size_bytes": os.path.getsize(path),
+            "sha256": digest,
+        }
+
+    manifest = {
+        "season": "multi",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "version": hashlib.sha256(
+            json.dumps(files, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()[:16],
+        "files": files,
+    }
+    out_path = os.path.join(out_dir, "manifest.json")
+    with open(out_path, "w") as f:
+        json.dump(manifest, f, indent=2)
+    print(f"Wrote manifest -> {out_path}")
+
+
 def load_boxscores(season_key, season_path):
     path = os.path.join(season_path, "raw", "boxscores", "player_boxscores.csv")
+    fallback_path = os.path.join(season_path, "raw", "player_games.csv")
     if not os.path.exists(path):
-        print(f"  [WARN] missing: {path}", file=sys.stderr)
-        return pd.DataFrame()
+        if not os.path.exists(fallback_path):
+            print(f"  [WARN] missing: {path}", file=sys.stderr)
+            return pd.DataFrame()
+        path = fallback_path
     df = pd.read_csv(path)
+    rename_map = {}
+    if "Player_ID" in df.columns and "PLAYER_ID" not in df.columns:
+        rename_map["Player_ID"] = "PLAYER_ID"
+    if "Game_ID" in df.columns and "GAME_ID" not in df.columns:
+        rename_map["Game_ID"] = "GAME_ID"
+    if rename_map:
+        df = df.rename(columns=rename_map)
+    if "TEAM_ABBREVIATION" not in df.columns and "MATCHUP" in df.columns:
+        df["TEAM_ABBREVIATION"] = df["MATCHUP"].astype(str).str.split(" ").str[0]
     df["SEASON"] = season_key
     # Normalize GAME_ID to string for consistent joining
     df["GAME_ID_STR"] = df["GAME_ID"].astype(str).str.strip()
@@ -378,6 +420,8 @@ def main():
         played = sum(1 for g in embiid_games if not g["DID_NOT_PLAY"])
         dnp = sum(1 for g in embiid_games if g["DID_NOT_PLAY"])
         print(f"\nEmbiid 2025-26: {played} played + {dnp} DNP = {len(embiid_games)} total")
+
+    write_manifest(OUT_DIR)
 
     print("\nDone.")
 

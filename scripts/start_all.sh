@@ -33,7 +33,7 @@ if command -v python3 >/dev/null 2>&1; then
     pip install -r requirements.txt >/dev/null
 
     # start uvicorn using the venv's python
-    python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 &
+    python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 &
     ML_PID=$!
     echo "ML service started (PID $ML_PID) on port 8001"
     deactivate || true

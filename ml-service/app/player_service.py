@@ -5,7 +5,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 
-_v3_df_cache = None
+_player_df_cache = {}
 
 def date_to_season(dt) -> str:
     year = dt.year
@@ -25,21 +25,40 @@ def is_playoff_date(dt) -> int:
     return 0
 
 
-def _load_player_dataset():
-    global _v3_df_cache
+def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
 
+    rename_map = {}
+    if "Player_ID" in df.columns and "PLAYER_ID" not in df.columns:
+        rename_map["Player_ID"] = "PLAYER_ID"
+    if "Game_ID" in df.columns and "GAME_ID" not in df.columns:
+        rename_map["Game_ID"] = "GAME_ID"
+    if rename_map:
+        df = df.rename(columns=rename_map)
+
+    if "TEAM_ABBREVIATION" not in df.columns and "MATCHUP" in df.columns:
+        df["TEAM_ABBREVIATION"] = df["MATCHUP"].astype(str).str.split(" ").str[0]
+
+    df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
+    return df
+
+
+def _load_player_dataset(season: str = None):
+    global _player_df_cache
+
+    season_path = ROOT / f"data/season={season}/features/player_features.csv" if season else None
     v4_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
     v3_path = ROOT / "data/experimental/player_model_ready_v3_matchups.csv"
-    selected_path = v4_path if v4_path.exists() else v3_path
+    selected_path = season_path if season_path and season_path.exists() else (v4_path if v4_path.exists() else v3_path)
 
     if not selected_path.exists():
         raise FileNotFoundError("Player dataset (V3 or V4) missing for player inference.")
 
-    if _v3_df_cache is None:
-        _v3_df_cache = pd.read_csv(selected_path)
-        _v3_df_cache["GAME_DATE"] = pd.to_datetime(_v3_df_cache["GAME_DATE"])
+    cache_key = str(selected_path)
+    if cache_key not in _player_df_cache:
+        _player_df_cache[cache_key] = _normalize_player_dataset(pd.read_csv(selected_path))
 
-    return _v3_df_cache
+    return _player_df_cache[cache_key]
 
 
 def _active_roster_ids(team: str, season: str):
@@ -111,8 +130,9 @@ def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, predictio
     home_candidates = _filter_recent_active(home_candidates, past_df, home_team)
     away_candidates = _filter_recent_active(away_candidates, past_df, away_team)
 
-    home_roster = home_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
-    away_roster = away_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
+    minutes_col = "MIN_EMA_10" if "MIN_EMA_10" in df.columns else ("MIN_LAST_5" if "MIN_LAST_5" in df.columns else "MIN")
+    home_roster = home_candidates.sort_values(minutes_col, ascending=False).head(11)
+    away_roster = away_candidates.sort_values(minutes_col, ascending=False).head(11)
 
     if len(home_roster) == 0 or len(away_roster) == 0:
         raise ValueError(f"No active players found for {home_team} or {away_team} before {prediction_date}")
@@ -154,8 +174,9 @@ def get_player_predictions(home_team: str, away_team: str, prediction_date: str,
     Generate player predictions for home and away teams using the V3 Ridge models.
     Respects prediction_date to prevent future data leakage and use accurate historical rosters.
     """
-    df = _load_player_dataset()
     pred_dt = pd.to_datetime(prediction_date)
+    season = date_to_season(pred_dt)
+    df = _load_player_dataset(season)
     
     historical_home = df[(df['TEAM_ABBREVIATION'] == home_team) & (df['GAME_DATE'] == pred_dt)].copy()
     historical_away = df[(df['TEAM_ABBREVIATION'] == away_team) & (df['GAME_DATE'] == pred_dt)].copy()
