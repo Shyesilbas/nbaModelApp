@@ -13,7 +13,74 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.evaluation.evaluate_v8_segments import add_location_features, load_team_model_ready
+import math
+
+def load_team_model_ready() -> pd.DataFrame:
+    return pd.read_csv(ROOT / "data" / "processed" / "team_model_ready_v3_2025_26.csv")
+
+
+NBA_TEAMS_LOCATIONS = {
+    "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
+    "BKN": {"lat": 40.6826, "lon": -73.9754, "tz_offset": -5},
+    "NYK": {"lat": 40.7505, "lon": -73.9934, "tz_offset": -5},
+    "PHI": {"lat": 39.9012, "lon": -75.1719, "tz_offset": -5},
+    "TOR": {"lat": 43.6435, "lon": -79.3791, "tz_offset": -5},
+    "CHI": {"lat": 41.8806, "lon": -87.6742, "tz_offset": -6},
+    "CLE": {"lat": 41.4965, "lon": -81.6881, "tz_offset": -5},
+    "DET": {"lat": 42.3411, "lon": -83.0550, "tz_offset": -5},
+    "IND": {"lat": 39.7641, "lon": -86.1555, "tz_offset": -5},
+    "MIL": {"lat": 43.0451, "lon": -87.9172, "tz_offset": -6},
+    "ATL": {"lat": 33.7573, "lon": -84.3963, "tz_offset": -5},
+    "CHA": {"lat": 35.2251, "lon": -80.8392, "tz_offset": -5},
+    "MIA": {"lat": 25.7814, "lon": -80.1870, "tz_offset": -5},
+    "ORL": {"lat": 28.5392, "lon": -81.3839, "tz_offset": -5},
+    "WAS": {"lat": 38.8981, "lon": -77.0209, "tz_offset": -5},
+    "DEN": {"lat": 39.7486, "lon": -105.0075, "tz_offset": -7},
+    "MIN": {"lat": 44.9795, "lon": -93.2761, "tz_offset": -6},
+    "OKC": {"lat": 35.4634, "lon": -97.5151, "tz_offset": -6},
+    "POR": {"lat": 45.5316, "lon": -122.6668, "tz_offset": -8},
+    "UTA": {"lat": 40.7683, "lon": -111.9011, "tz_offset": -7},
+    "GSW": {"lat": 37.7680, "lon": -122.3877, "tz_offset": -8},
+    "LAC": {"lat": 34.0430, "lon": -118.2673, "tz_offset": -8},
+    "LAL": {"lat": 34.0430, "lon": -118.2673, "tz_offset": -8},
+    "PHX": {"lat": 33.4457, "lon": -112.0712, "tz_offset": -7},
+    "SAC": {"lat": 38.5802, "lon": -121.4997, "tz_offset": -8},
+    "DAL": {"lat": 32.7905, "lon": -96.8103, "tz_offset": -6},
+    "HOU": {"lat": 29.7508, "lon": -95.3621, "tz_offset": -6},
+    "MEM": {"lat": 35.1381, "lon": -90.0506, "tz_offset": -6},
+    "NOP": {"lat": 29.9490, "lon": -90.0821, "tz_offset": -6},
+    "SAS": {"lat": 29.4270, "lon": -98.4375, "tz_offset": -6},
+}
+
+
+def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    radius_km = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    return radius_km * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def add_location_features(df: pd.DataFrame) -> pd.DataFrame:
+    if {"TRAVEL_DISTANCE", "TIMEZONE_DIFF", "OPP_TRAVEL_DISTANCE", "OPP_TIMEZONE_DIFF"}.issubset(df.columns):
+        return df
+
+    def row_features(row: pd.Series) -> pd.Series:
+        home_team = row["TEAM_ABBREVIATION"] if bool(row["IS_HOME"]) else row["OPPONENT_ABBREVIATION"]
+        away_team = row["OPPONENT_ABBREVIATION"] if bool(row["IS_HOME"]) else row["TEAM_ABBREVIATION"]
+        home_loc = NBA_TEAMS_LOCATIONS.get(home_team)
+        away_loc = NBA_TEAMS_LOCATIONS.get(away_team)
+        dist = 0.0
+        tz_diff = 0.0
+        if home_loc and away_loc:
+            dist = haversine(home_loc["lat"], home_loc["lon"], away_loc["lat"], away_loc["lon"])
+            tz_diff = abs(home_loc["tz_offset"] - away_loc["tz_offset"])
+        if bool(row["IS_HOME"]):
+            return pd.Series({"TRAVEL_DISTANCE": 0.0, "TIMEZONE_DIFF": 0.0, "OPP_TRAVEL_DISTANCE": dist, "OPP_TIMEZONE_DIFF": tz_diff})
+        return pd.Series({"TRAVEL_DISTANCE": dist, "TIMEZONE_DIFF": tz_diff, "OPP_TRAVEL_DISTANCE": 0.0, "OPP_TIMEZONE_DIFF": 0.0})
+
+    feats = df.apply(row_features, axis=1)
+    return pd.concat([df, feats], axis=1)
 
 
 def signed_metrics(actual: pd.Series, pred: pd.Series) -> dict:
@@ -151,6 +218,7 @@ def run_evaluation() -> None:
 
     # Write a quick report markdown file
     report_path = ROOT / "reports" / "evaluation" / "score_2026_playoffs_validation.md"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
     report_lines = [
         "# 2025-26 NBA Playoffs Generalization Validation",
         "",

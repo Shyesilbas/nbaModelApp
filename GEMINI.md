@@ -9,7 +9,8 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 3. `README.md` — Core architecture overview and quick-start pipeline commands.
 4. `reports/production/v8_vs_v9_model_comparisons.md` — Key mathematical calibration methods and model parameters for WIN, SCORE, and PLAYER predictions.
 5. `docs/season_onboarding_guide.md` — Sequence of CLI commands to ingest and bootstrap new seasons.
-6. `config/production_artifacts.yaml` — Production configurations, paths, and metadata.
+6. `docs/reporting_and_validation_guide.md` — How to run season freshness audits, model evaluations, and comparisons.
+7. `config/production_artifacts.yaml` — Production configurations, paths, and metadata.
 
 ## Production Safety
 - Production artifacts under `models/production/`, `data/production/`, and `config/production_artifacts.yaml` must never be overwritten unless the user explicitly approves.
@@ -46,6 +47,8 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 ### Quality Control & Audits
 - Verify Project Structure: `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py`
 - Verify Path Refactoring: `PYTHONPATH=. python3 scripts/audit/validate_season_path_refactor.py`
+- Season & Model Report Audit: `PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY --model {v8, v9}`
+- Model Side-by-Side Comparison: `PYTHONPATH=. python3 scripts/generate_report.py --compare-models v8 v9 --season YYYY-YY`
 
 ### New Season Onboarding Workflow
 To fully ingest and bootstrap a new NBA season (e.g., `2020-21`), run the following commands sequentially:
