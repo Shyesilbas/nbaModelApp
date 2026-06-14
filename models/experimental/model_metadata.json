@@ -1,0 +1,70 @@
+{
+  "model_name": "logistic_regression",
+  "version": "9.0",
+  "training_date": "2026-06-14T16:38:34.209740Z",
+  "number_of_rows": 1772,
+  "number_of_features": 62,
+  "evaluation": "chronological_holdout",
+  "split": {
+    "strategy": "chronological_quantile",
+    "split_date": "2026-04-02",
+    "train_rows": 1428,
+    "test_rows": 344
+  },
+  "dropped_static_venue_split_features": [
+    "AWAY_PTS_ALLOWED_LAST_5",
+    "AWAY_PTS_LAST_5",
+    "AWAY_WINRATE_LAST_5",
+    "HOME_PTS_ALLOWED_LAST_5",
+    "HOME_PTS_LAST_5",
+    "HOME_WINRATE_LAST_5",
+    "OPP_AWAY_PTS_ALLOWED_LAST_5",
+    "OPP_AWAY_PTS_LAST_5",
+    "OPP_AWAY_WINRATE_LAST_5",
+    "OPP_HOME_PTS_ALLOWED_LAST_5",
+    "OPP_HOME_PTS_LAST_5",
+    "OPP_HOME_WINRATE_LAST_5"
+  ],
+  "strength_features": [
+    "PRE_GAME_ELO",
+    "OPP_PRE_GAME_ELO",
+    "ELO_DIFF",
+    "ABS_ELO_DIFF",
+    "WINRATE_DIFF_LAST_10",
+    "ABS_WINRATE_DIFF_LAST_10",
+    "REST_DIFF",
+    "IS_CLOSE_STRENGTH",
+    "PLAYOFF_ELO_DIFF",
+    "PLAYOFF_ABS_ELO_DIFF",
+    "PLAYOFF_REST_DIFF",
+    "CLOSE_STRENGTH_REST_DIFF"
+  ],
+  "metrics": {
+    "uncalibrated": {
+      "accuracy": 0.7296511627906976,
+      "precision": 0.7283236994219653,
+      "recall": 0.7325581395348837,
+      "f1": 0.7304347826086957,
+      "roc_auc": 0.7986411573823687,
+      "brier_score": 0.183452298391937
+    },
+    "sigmoid": {
+      "accuracy": 0.7267441860465116,
+      "precision": 0.7267441860465116,
+      "recall": 0.7267441860465116,
+      "f1": 0.7267441860465116,
+      "roc_auc": 0.7905286641427799,
+      "brier_score": 0.1896213626737531
+    },
+    "isotonic": {
+      "accuracy": 0.7296511627906976,
+      "precision": 0.7337278106508875,
+      "recall": 0.7209302325581395,
+      "f1": 0.7272727272727273,
+      "roc_auc": 0.7829063007030828,
+      "brier_score": 0.18963182271464502
+    }
+  },
+  "selected_calibration": "uncalibrated",
+  "target_column": "WIN"
+}

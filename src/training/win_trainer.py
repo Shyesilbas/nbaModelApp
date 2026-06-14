@@ -129,6 +129,8 @@ class WinModelTrainer:
 
                 root_models_prod = Path(__file__).resolve().parents[2] / "models/production"
                 candidates = [
+                    (self.player_models_dir / "player_v9_features.pkl", self.player_models_dir, "player_v9_lgb_"),
+                    (root_models_prod / "player_v9_features.pkl", root_models_prod, "player_v9_lgb_"),
                     (self.player_models_dir / "player_v8_features.pkl", self.player_models_dir, "player_v8_lgb_"),
                     (root_models_prod / "player_v8_features.pkl", root_models_prod, "player_v8_lgb_"),
                     (self.player_models_dir / "player_v7_features.pkl", self.player_models_dir, "player_v7_lgb_"),

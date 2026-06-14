@@ -1,0 +1,115 @@
+{
+    "version": "v9_LightGBM_Ridge",
+    "updated_at": "2026-06-14T16:37:27.524216Z",
+    "features_count": 40,
+    "targets": [
+        "TARGET_PTS",
+        "TARGET_REB",
+        "TARGET_AST"
+    ],
+    "evaluation": "chronological_holdout",
+    "evaluation_metrics": {
+        "pts": {
+            "mae": 4.619391994809329,
+            "rmse": 6.058332708408466,
+            "r2": 0.5035388339864211,
+            "split": {
+                "strategy": "chronological_quantile",
+                "split_date": "2026-03-21",
+                "train_rows": 22973,
+                "test_rows": 5725
+            },
+            "ridge_coefs": [
+                0.1787963819604758,
+                -0.09766974694669513,
+                0.04231468486822537,
+                0.0339534917311031,
+                -0.07626817659929634,
+                -0.024715034173942333,
+                0.007475784884277994,
+                -0.08218239806394306,
+                0.003221175980969664
+            ],
+            "ridge_intercept": 0.038589988964989386,
+            "ridge_features": [
+                "is_playoff",
+                "is_home",
+                "pos_guard",
+                "pos_wing",
+                "pos_big",
+                "high_usage",
+                "low_usage",
+                "heavy_minutes",
+                "light_minutes"
+            ]
+        },
+        "reb": {
+            "mae": 1.949256369575057,
+            "rmse": 2.578147806642391,
+            "r2": 0.41440784953321963,
+            "split": {
+                "strategy": "chronological_quantile",
+                "split_date": "2026-03-21",
+                "train_rows": 22973,
+                "test_rows": 5725
+            },
+            "ridge_coefs": [
+                0.017346323713526974,
+                0.010957426861895027,
+                0.34111493343362403,
+                0.06617265264273474,
+                -0.40728758607665416,
+                -0.0404538592353835,
+                0.01910490596907747,
+                -0.002847144354957874,
+                0.03666243286107275
+            ],
+            "ridge_intercept": -0.12941083892228128,
+            "ridge_features": [
+                "is_playoff",
+                "is_home",
+                "pos_guard",
+                "pos_wing",
+                "pos_big",
+                "high_usage",
+                "low_usage",
+                "heavy_minutes",
+                "light_minutes"
+            ]
+        },
+        "ast": {
+            "mae": 1.3738960457990286,
+            "rmse": 1.8964010604794843,
+            "r2": 0.45967383764528935,
+            "split": {
+                "strategy": "chronological_quantile",
+                "split_date": "2026-03-21",
+                "train_rows": 22973,
+                "test_rows": 5725
+            },
+            "ridge_coefs": [
+                0.0647409847963468,
+                -0.031827137681141524,
+                -0.14501881120849835,
+                0.07542991891882396,
+                0.06958889229000689,
+                0.029114946962173174,
+                0.003950437036092173,
+                -0.019048502845812044,
+                0.012911835742521553
+            ],
+            "ridge_intercept": 0.04602662724568518,
+            "ridge_features": [
+                "is_playoff",
+                "is_home",
+                "pos_guard",
+                "pos_wing",
+                "pos_big",
+                "high_usage",
+                "low_usage",
+                "heavy_minutes",
+                "light_minutes"
+            ]
+        }
+    }
+}

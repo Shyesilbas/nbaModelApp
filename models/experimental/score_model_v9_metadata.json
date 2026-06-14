@@ -1,0 +1,133 @@
+{
+    "version": "v9_Ridge",
+    "updated_at": "2026-06-14T16:38:31.030177Z",
+    "evaluation": "chronological_holdout",
+    "pace_mae": 3.583620025047145,
+    "home_rtg_mae": 8.997284947959386,
+    "away_rtg_mae": 9.50524747815545,
+    "margin_mae": 12.629289082966638,
+    "derived_home_score_mae": 9.426149449494117,
+    "derived_away_score_mae": 9.577266571381909,
+    "splits": {
+        "pace": {
+            "strategy": "chronological_quantile",
+            "split_date": "2025-04-06",
+            "train_rows": 4104,
+            "test_rows": 1025
+        },
+        "home_rtg": {
+            "strategy": "chronological_quantile",
+            "split_date": "2025-04-06",
+            "train_rows": 4104,
+            "test_rows": 1025
+        },
+        "away_rtg": {
+            "strategy": "chronological_quantile",
+            "split_date": "2025-04-07",
+            "train_rows": 4112,
+            "test_rows": 1027
+        },
+        "margin": {
+            "strategy": "chronological_quantile",
+            "split_date": "2025-04-06",
+            "train_rows": 4104,
+            "test_rows": 1025
+        },
+        "derived_score_eval_games": 1023
+    },
+    "ridge_coefs": {
+        "total": [
+            5.746005496813652,
+            0.016612625594812507,
+            0.8279892062610276,
+            -0.5961490081890258,
+            -0.8797781798977875
+        ],
+        "total_intercept": -0.3608069237335637,
+        "margin": [
+            -1.122320889379571,
+            1.6216228676292843,
+            -2.0772344836857193,
+            0.13488304852818372,
+            0.3898730166306315
+        ],
+        "margin_intercept": 0.111549044440385,
+        "features": [
+            "is_playoff",
+            "home_b2b",
+            "away_b2b",
+            "home_rest_advantage",
+            "away_rest_advantage"
+        ]
+    },
+    "pace_features": [
+        "PACE_LAST_5",
+        "PACE_LAST_10",
+        "OPP_PACE_LAST_5",
+        "OPP_PACE_LAST_10",
+        "OFF_RTG_LAST_5",
+        "DEF_RTG_LAST_5",
+        "OPP_OFF_RTG_LAST_5",
+        "OPP_DEF_RTG_LAST_5",
+        "DAYS_REST",
+        "OPP_DAYS_REST",
+        "IS_ELIMINATION_GAME",
+        "CAN_CLINCH_SERIES"
+    ],
+    "home_off_rtg_features": [
+        "OFF_RTG_LAST_5",
+        "OFF_RTG_LAST_10",
+        "PACE_LAST_5",
+        "WINRATE_LAST_5",
+        "OPP_DEF_RTG_LAST_5",
+        "OPP_DEF_RTG_LAST_10",
+        "OPP_PACE_LAST_5",
+        "TEAM_CORE_TOP3_PLAYED_COUNT",
+        "TEAM_CORE_TOP3_AVAILABLE_RATE",
+        "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
+        "OPP_CORE_TOP3_PLAYED_COUNT",
+        "DAYS_REST",
+        "OPP_DAYS_REST",
+        "IS_ELIMINATION_GAME",
+        "CAN_CLINCH_SERIES"
+    ],
+    "away_off_rtg_features": [
+        "OFF_RTG_LAST_5",
+        "OFF_RTG_LAST_10",
+        "PACE_LAST_5",
+        "WINRATE_LAST_5",
+        "OPP_DEF_RTG_LAST_5",
+        "OPP_DEF_RTG_LAST_10",
+        "OPP_PACE_LAST_5",
+        "TEAM_CORE_TOP3_PLAYED_COUNT",
+        "TEAM_CORE_TOP3_AVAILABLE_RATE",
+        "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
+        "OPP_CORE_TOP3_PLAYED_COUNT",
+        "DAYS_REST",
+        "OPP_DAYS_REST",
+        "IS_ELIMINATION_GAME",
+        "CAN_CLINCH_SERIES",
+        "TRAVEL_DISTANCE",
+        "TIMEZONE_DIFF"
+    ],
+    "margin_features": [
+        "OFF_RTG_LAST_5",
+        "OFF_RTG_LAST_10",
+        "PACE_LAST_5",
+        "WINRATE_LAST_5",
+        "OPP_DEF_RTG_LAST_5",
+        "OPP_DEF_RTG_LAST_10",
+        "OPP_PACE_LAST_5",
+        "TEAM_CORE_TOP3_PLAYED_COUNT",
+        "TEAM_CORE_TOP3_AVAILABLE_RATE",
+        "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
+        "OPP_CORE_TOP3_PLAYED_COUNT",
+        "DAYS_REST",
+        "OPP_DAYS_REST",
+        "IS_ELIMINATION_GAME",
+        "CAN_CLINCH_SERIES",
+        "DEF_RTG_LAST_5",
+        "DEF_RTG_LAST_10",
+        "OPP_OFF_RTG_LAST_5"
+    ]
+}
