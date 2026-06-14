@@ -71,3 +71,50 @@ PYTHONPATH=. python3 scripts/generate_report.py --compare-models v8 v9 --season 
 
 ### Output:
 Generates a side-by-side performance breakdown table comparing Accuracy, ROC-AUC, Brier Score, and MAE/Bias metrics for both models, along with the delta difference. Saves the report to `reports/evaluation/compare_{model1}_vs_{model2}_season_{season}.md`.
+
+---
+
+## 5. Daily Schedule Matchups Predictor
+
+To predict win probabilities and scores for all games scheduled on a given date in a season, run:
+
+```bash
+PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY --model {v8, v9}
+```
+
+### Key Features:
+- Filters games for the target date from `schedule_combined.csv`.
+- Dynamically constructs rolling feature states for both teams.
+- Runs the active Win model and SCORE component models (with Ridge regression corrections if V9).
+- Outputs a cleanly formatted ASCII table to the console.
+- Automatically saves a detailed markdown forecast to `reports/predictions/schedule_{date}_model_{model}.md`.
+
+---
+
+## 6. Safe Model Retraining and Promotion Pipeline
+
+To retrain all predictive models (Player, Score, and Win Probability) in sequence and compare their performance against the current production models, run:
+
+```bash
+PYTHONPATH=. python3 scripts/retrain_pipeline.py --season YYYY-YY [--dry-run]
+```
+
+### Key Workflow:
+1. **Retraining**: Automatically invokes the trainer classes (`PlayerModelTrainer`, `ScoreModelTrainer`, and `WinModelTrainer`) and saves outputs to `models/experimental/`.
+2. **Evaluation**: Evaluates the candidate challenger models vs active production models on the specified validation season.
+3. **Secure Promotion**: If not running with `--dry-run`, prompts for interactive confirmation `[y/N]` to promote models by copying files from `models/experimental/` to `models/production/`.
+
+---
+
+## 7. Data Drift and Feature Leakage Detector
+
+To analyze feature distribution shifts across seasons and check for data leakage in model-ready datasets, run:
+
+```bash
+PYTHONPATH=. python3 scripts/detect_drift_and_leakage.py --reference-season YYYY-YY --target-season YYYY-YY [--threshold 0.95]
+```
+
+### Key Analysis:
+- **Feature Leakage Check**: Flags zero-variance columns, high missingness rate, or pre-game features showing a correlation greater than the specified threshold (default `0.95`) with `WIN`.
+- **Distribution Drift Scan**: Runs a Kolmogorov-Smirnov (KS) test to evaluate whether feature values have shifted significantly between the reference and target seasons.
+- **Audit Logging**: Prints a summary to the console and outputs a markdown audit log to `reports/audits/drift_and_leakage_{reference}_vs_{target}.md`.

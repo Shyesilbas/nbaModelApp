@@ -38,17 +38,20 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 - Train Player Models: `PYTHONPATH=. python3 main.py --train-player-models`
 - Train Score Models: `PYTHONPATH=. python3 main.py --train-score-models`
 - Train Win Model: `PYTHONPATH=. python3 main.py --train-win-model`
+- Safe Retraining & Promotion Pipeline: `PYTHONPATH=. python3 scripts/retrain_pipeline.py --season YYYY-YY [--dry-run]`
 
 ### Daily Operations & Data Freshness
 - Daily Data Update (fetches latest completed game logs): `PYTHONPATH=. python3 main.py --update-data`
 - Package Frontend Schedule Context: `PYTHONPATH=. python3 main.py --build-schedule-context`
 - Roster & Core Player Analysis: `PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis`
+- Daily Schedule Matchups Predictor: `PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY --model {v8, v9}`
 
 ### Quality Control & Audits
 - Verify Project Structure: `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py`
 - Verify Path Refactoring: `PYTHONPATH=. python3 scripts/audit/validate_season_path_refactor.py`
 - Season & Model Report Audit: `PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY --model {v8, v9}`
 - Model Side-by-Side Comparison: `PYTHONPATH=. python3 scripts/generate_report.py --compare-models v8 v9 --season YYYY-YY`
+- Data Drift & Feature Leakage Detector: `PYTHONPATH=. python3 scripts/detect_drift_and_leakage.py --reference-season YYYY-YY --target-season YYYY-YY`
 
 ### New Season Onboarding Workflow
 To fully ingest and bootstrap a new NBA season (e.g., `2020-21`), run the following commands sequentially:
