@@ -20,7 +20,7 @@ from src.ingestion.nba_api_client import call_nba_api
 
 STAT_KEYS = ("pts", "fgm", "fga", "fg3m", "fg3a", "ftm", "fta", "reb", "ast", "stl", "blk", "pf", "tov")
 DEFAULT_SOURCE = ROOT / "frontend" / "public" / "data" / "all_seasons_games.json"
-DEFAULT_OUT_DIR = ROOT / "frontend" / "public" / "data" / "play_by_play"
+DEFAULT_FRONTEND_PBP_DIR = ROOT / "frontend" / "public" / "data" / "play_by_play"
 DEFAULT_SUMMARY_DIR = ROOT / "frontend" / "public" / "data"
 
 
@@ -78,6 +78,25 @@ def norm_game_id(value: Any) -> str:
 
 def season_token(season: str) -> str:
     return season.replace("-", "_")
+
+
+def season_from_game_id(game_id: str) -> str | None:
+    gid = norm_game_id(game_id)
+    if len(gid) < 5 or not gid.startswith("00"):
+        return None
+    try:
+        start_year = 2000 + int(gid[3:5])
+    except ValueError:
+        return None
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
+
+def raw_pbp_dir_for_season(season: str) -> Path:
+    return ROOT / "data" / f"season={season}" / "raw" / "play_by_play"
+
+
+def resolve_game_season(row: dict[str, Any], explicit_season: str | None = None) -> str | None:
+    return explicit_season or row.get("SEASON") or season_from_game_id(str(row.get("GAME_ID") or ""))
 
 
 def finals_prefix_for_season(season: str | None) -> str | None:
@@ -382,6 +401,10 @@ def write_payload(payload: dict[str, Any], out_dir: Path) -> Path:
     return out_path
 
 
+def sync_payload_to_frontend(payload: dict[str, Any], frontend_dir: Path) -> Path:
+    return write_payload(payload, frontend_dir)
+
+
 def summarize_payload(payload: dict[str, Any], row: dict[str, Any] | None = None) -> dict[str, Any]:
     row = row or {}
     player_totals: dict[tuple[str | None, str | None], dict[str, Any]] = {}
@@ -444,7 +467,7 @@ def load_payload(path: Path) -> dict[str, Any] | None:
 
 def write_schedule_summary(
     games: list[dict[str, Any]],
-    out_dir: Path,
+    out_dir: Path | None,
     summary_dir: Path,
     explicit_season: str | None = None,
 ) -> list[Path]:
@@ -459,7 +482,8 @@ def write_schedule_summary(
         summary: dict[str, Any] = {}
         for row in rows:
             gid = norm_game_id(row.get("GAME_ID"))
-            payload = load_payload(out_dir / f"{gid}.json")
+            payload_dir = out_dir or raw_pbp_dir_for_season(season)
+            payload = load_payload(payload_dir / f"{gid}.json")
             if not payload:
                 continue
             summary[gid] = summarize_payload(payload, row)
@@ -476,7 +500,7 @@ def write_schedule_summary(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Fetch NBA play-by-play data and cache structured JSON for the frontend.",
+        description="Fetch NBA play-by-play data and cache structured JSON under data/season=*/raw/play_by_play.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     target = parser.add_mutually_exclusive_group(required=True)
@@ -486,8 +510,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--home-team", help="Fallback home abbreviation for --game-id not found in source.")
     parser.add_argument("--away-team", help="Fallback away abbreviation for --game-id not found in source.")
     parser.add_argument("--source", default=str(DEFAULT_SOURCE), help="Game index JSON used for season metadata.")
-    parser.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR), help="Output directory for PBP JSON cache.")
+    parser.add_argument("--out-dir", help="Override output directory for PBP JSON cache. Defaults to data/season=<season>/raw/play_by_play.")
     parser.add_argument("--summary-dir", default=str(DEFAULT_SUMMARY_DIR), help="Output directory for schedule_details_{season}.json.")
+    parser.add_argument("--frontend-pbp-dir", default=str(DEFAULT_FRONTEND_PBP_DIR), help="Frontend export directory for PBP JSON cache.")
+    parser.add_argument("--frontend-sync", action=argparse.BooleanOptionalAction, default=True, help="Also copy PBP JSON files to the frontend public data cache.")
     parser.add_argument("--start-period", type=int, default=1)
     parser.add_argument("--end-period", type=int, default=4)
     parser.add_argument("--limit", type=int, help="Limit number of selected games, useful for smoke tests.")
@@ -503,18 +529,22 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     games = select_games(args)
-    out_dir = Path(args.out_dir)
+    out_dir = Path(args.out_dir) if args.out_dir else None
     summary_dir = Path(args.summary_dir)
+    frontend_pbp_dir = Path(args.frontend_pbp_dir)
 
     if not games:
         print("No games selected.")
         return 0
 
-    print(f"Selected {len(games)} game(s). Output: {out_dir}")
+    output_label = out_dir if out_dir else "data/season=<season>/raw/play_by_play"
+    print(f"Selected {len(games)} game(s). Output: {output_label}")
     if args.dry_run:
         for idx, row in enumerate(games, start=1):
             gid = norm_game_id(row["GAME_ID"])
-            out_path = out_dir / f"{gid}.json"
+            season = resolve_game_season(row, args.season)
+            target_dir = out_dir or raw_pbp_dir_for_season(season or "unknown")
+            out_path = target_dir / f"{gid}.json"
             status = "exists" if out_path.exists() else "missing"
             print(
                 f"[{idx}/{len(games)}] {gid} "
@@ -533,9 +563,20 @@ def main() -> int:
 
     for idx, row in enumerate(games, start=1):
         gid = norm_game_id(row["GAME_ID"])
-        out_path = out_dir / f"{gid}.json"
+        season = resolve_game_season(row, args.season)
+        if not season and not out_dir:
+            print(f"  failed {gid}: unable to resolve season for default output path", file=sys.stderr)
+            failed += 1
+            continue
+        target_dir = out_dir or raw_pbp_dir_for_season(str(season))
+        out_path = target_dir / f"{gid}.json"
         if out_path.exists() and not args.force:
             print(f"[{idx}/{len(games)}] skip existing {gid}")
+            if args.frontend_sync:
+                existing_payload = load_payload(out_path)
+                if existing_payload:
+                    sync_path = sync_payload_to_frontend(existing_payload, frontend_pbp_dir)
+                    print(f"  synced frontend cache {sync_path}")
             skipped += 1
             continue
 
@@ -550,8 +591,11 @@ def main() -> int:
                 start_period=args.start_period,
                 end_period=args.end_period,
             )
-            path = write_payload(payload, out_dir)
+            path = write_payload(payload, target_dir)
             print(f"  wrote {path} ({len(payload['events'])} events)")
+            if args.frontend_sync:
+                sync_path = sync_payload_to_frontend(payload, frontend_pbp_dir)
+                print(f"  synced frontend cache {sync_path}")
             written += 1
         except Exception as exc:
             print(f"  failed {gid}: {exc}", file=sys.stderr)
