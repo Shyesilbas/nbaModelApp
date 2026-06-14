@@ -1,20 +1,34 @@
 win_model:
-  model_path: models/production/win_probability_model_v8.pkl
-  feature_columns_path: models/production/feature_columns_v8.json
+  model_path: models/production/win_probability_model_v9.pkl
+  feature_columns_path: models/production/feature_columns_v9.json
   metadata_path: models/production/model_metadata.json
   status: production
-  notes: "Current production win probability model. V8 Logistic Regression with venue-only split features and chronological holdout evaluation."
+  notes: "Current production win probability model. V9 Logistic Regression with venue-only, Elo, close-strength, and playoff interaction features."
 
 score_model:
-  home_model_path: models/production/score_model_v8_home_rtg.pkl
-  away_model_path: models/production/score_model_v8_away_rtg.pkl
-  total_model_path: models/production/score_model_v8_pace.pkl
-  margin_model_path: models/production/score_model_v8_margin.pkl
-  metadata_path: models/production/score_model_v8_metadata.json
+  home_model_path: models/production/score_model_v9_home_rtg.pkl
+  away_model_path: models/production/score_model_v9_away_rtg.pkl
+  total_model_path: models/production/score_model_v9_pace.pkl
+  margin_model_path: models/production/score_model_v9_margin.pkl
+  ridge_total_path: models/production/score_model_v9_ridge_total.pkl
+  ridge_margin_path: models/production/score_model_v9_ridge_margin.pkl
+  metadata_path: models/production/score_model_v9_metadata.json
   status: production
-  notes: "Current production score model V8 (XGBoost Pace & Offensive Rating with chronological holdout evaluation)."
+  notes: "Current production score model V9 (XGBoost models with Ridge segment-level post-processing calibration)."
 
 core_players:
   path: data/production/core_players.csv
   status: production
   notes: "Source of truth for core players."
+
+player_model:
+  pts_model_path: models/production/player_v9_lgb_pts.pkl
+  reb_model_path: models/production/player_v9_lgb_reb.pkl
+  ast_model_path: models/production/player_v9_lgb_ast.pkl
+  ridge_pts_path: models/production/player_v9_ridge_pts.pkl
+  ridge_reb_path: models/production/player_v9_ridge_reb.pkl
+  ridge_ast_path: models/production/player_v9_ridge_ast.pkl
+  feature_columns_path: models/production/player_v9_features.pkl
+  metadata_path: models/production/player_v9_metadata.json
+  status: production
+  notes: "Current production player prediction model V9 (LightGBM models with Ridge segment-level post-processing calibration)."

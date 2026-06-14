@@ -171,6 +171,37 @@ def get_inferred_finals_games(df_schedule: pd.DataFrame) -> List[Dict[str, Any]]
     return inferred_games
 
 
+def _filter_completed_schedule_games(df_schedule: pd.DataFrame, today: date) -> pd.DataFrame:
+    """
+    Return schedule rows that should have final box scores.
+
+    NBA schedule feeds can contain future or placeholder games whose dates are
+    already behind the local clock in test/future-season workflows. When the
+    feed includes GAME_STATUS, trust explicit Final status instead of probing
+    every dated row with BoxScoreTraditionalV2.
+    """
+    if df_schedule is None or df_schedule.empty:
+        return df_schedule
+
+    df_copy = df_schedule.copy()
+    if "GAME_DATE_DT" not in df_copy.columns:
+        df_copy["GAME_DATE_DT"] = pd.to_datetime(df_copy["GAME_DATE"], errors="coerce")
+
+    if _schedule_has_meaningful_status(df_copy):
+        status = df_copy["GAME_STATUS"].fillna("").astype(str).str.strip().str.lower()
+        return df_copy[(status == "final") & df_copy["GAME_DATE_DT"].notna()]
+
+    today_ts = pd.Timestamp(today)
+    return df_copy[(df_copy["GAME_DATE_DT"] <= today_ts) & df_copy["GAME_DATE_DT"].notna()]
+
+
+def _schedule_has_meaningful_status(df_schedule: pd.DataFrame) -> bool:
+    if df_schedule is None or df_schedule.empty or "GAME_STATUS" not in df_schedule.columns:
+        return False
+    status = df_schedule["GAME_STATUS"].fillna("").astype(str).str.strip()
+    return status.ne("").any()
+
+
 def detect_missing_completed_games(
     df_team: pd.DataFrame,
     df_schedule: pd.DataFrame,
@@ -202,12 +233,12 @@ def detect_missing_completed_games(
         df_inferred = pd.DataFrame(inferred)
         df_sched_copy = pd.concat([df_sched_copy, df_inferred], ignore_index=True)
 
-    # Filter completed schedule games (date <= today)
-    today_ts = pd.Timestamp(today)
-    completed_sched = df_sched_copy[
-        (df_sched_copy["GAME_DATE_DT"] <= today_ts) &
-        (df_sched_copy["GAME_DATE_DT"].notna())
-    ]
+    completed_sched = _filter_completed_schedule_games(df_sched_copy, today)
+    if not _schedule_has_meaningful_status(df_sched_copy) and df_team is not None and not df_team.empty:
+        latest_team_date = get_latest_team_game_date(df_team)
+        if latest_team_date:
+            incremental_floor = pd.to_datetime(latest_team_date) - pd.Timedelta(days=3)
+            completed_sched = completed_sched[completed_sched["GAME_DATE_DT"] >= incremental_floor]
 
     # Normalize team game IDs
     team_counts = {}
@@ -343,7 +374,7 @@ def generate_data_freshness_report(
         if not upcoming_games.empty:
             latest_upcoming_date = upcoming_games["GAME_DATE_DT"].max().strftime("%Y-%m-%d")
 
-        completed_games = df_sched_copy[df_sched_copy["GAME_DATE_DT"] <= today_ts]
+        completed_games = _filter_completed_schedule_games(df_sched_copy, today)
         if not completed_games.empty:
             max_completed_sched_date = completed_games["GAME_DATE_DT"].max()
             max_completed_sched_str = max_completed_sched_date.strftime("%Y-%m-%d")
@@ -399,8 +430,7 @@ def generate_data_freshness_report(
         finals_mask = (df_sched_copy["SEASON_TYPE"] == "NBA Finals") | (df_sched_copy["GAME_ID_NORM"].str.startswith("00425004"))
         finals_sched = df_sched_copy[finals_mask]
 
-        today_ts = pd.Timestamp(today)
-        completed_finals = finals_sched[finals_sched["GAME_DATE_DT"] <= today_ts]
+        completed_finals = _filter_completed_schedule_games(finals_sched, today)
 
         team_ids = set(df_team["GAME_ID"].astype(str).str.zfill(10)) if df_team is not None and not df_team.empty else set()
         player_ids = set(df_player["Game_ID"].astype(str).str.zfill(10)) if df_player is not None and not df_player.empty else set()

@@ -4,7 +4,7 @@ This file tracks the overall status of the project.
 
 ## Current Phase
 
-**Phase 5: Cross-Season Model Training & Validation** (v8 production artifacts active; chronological WIN/SCORE/PLAYER validation now aligned)
+**Phase 5: Cross-Season Model Training & Validation** (WIN v9, SCORE v9, and PLAYER v9 production artifacts active; chronological validation aligned)
 
 **Phase 7: Efficiency / Strength Features** — parked/blocked (production WIN promotion complete; no further Phase 7 promotion yet)
 
@@ -12,9 +12,9 @@ This file tracks the overall status of the project.
 
 | Model | Artifact | Status |
 |-------|----------|--------|
-| WIN | `models/production/win_probability_model_v8.pkl` | **ACTIVE** — v8 logistic regression, venue-only split features, version 8.0 |
-| SCORE home/away/total/margin | `models/production/score_model_v8_*.pkl` | **ACTIVE** — v8 XGBoost, chronological holdout metrics, version 8.0_XGBoost |
-| PLAYER PTS/REB/AST | `models/production/player_v8_lgb_*.pkl` | **ACTIVE** — v8 LightGBM, chronological holdout metrics, version 8.0_LightGBM |
+| WIN | `models/production/win_probability_model_v9.pkl` | **ACTIVE** — v9 logistic regression, venue-only + Elo/strength/playoff features, version 9.0 |
+| SCORE home/away/total/margin | `models/production/score_model_v9_*.pkl` | **ACTIVE** — v9 XGBoost + Ridge calibration, chronological holdout metrics, version 9.0_Ridge |
+| PLAYER PTS/REB/AST | `models/production/player_v9_lgb_*.pkl` and `player_v9_ridge_*.pkl` | **ACTIVE** — v9 LightGBM + Ridge calibration, chronological holdout metrics, version v9_LightGBM_Ridge |
 
 ## Phase Status
 
@@ -37,8 +37,9 @@ This file tracks the overall status of the project.
 - [X] Retrain WIN/SCORE/PLAYER v8 production artifacts
 - [X] Remove service-side sklearn warning for WIN artifact load
 - [X] Remove static home/away split features from WIN model schema
+- [X] Promote WIN v9 strength-aware candidate after segment evaluation
 
 ## Next Steps
 
-1. Monitor live WIN/SCORE/PLAYER predictions after v8 promotion and validation cleanup.
+1. Monitor live WIN v9 and SCORE/PLAYER v9 predictions after promotion and validation cleanup.
 2. Phase 7 efficiency/strength feature work remains parked until explicitly resumed.

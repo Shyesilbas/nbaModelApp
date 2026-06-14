@@ -172,7 +172,9 @@ def normalize_game_matchups(df: pd.DataFrame) -> pd.DataFrame:
                     grp.loc[idx1, "NORMALIZED_MATCHUP"] = f"{t2} {opposite_sep} {t1}"
         return grp
 
-    df = df.groupby("GAME_ID", group_keys=False).apply(correct_group)
+    df = pd.concat(
+        [correct_group(grp.copy()) for _, grp in df.groupby("GAME_ID", sort=False)],
+        ignore_index=True,
+    )
     df["MATCHUP"] = df["NORMALIZED_MATCHUP"]
     return df
-

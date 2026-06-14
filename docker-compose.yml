@@ -9,17 +9,3 @@ services:
     volumes:
       - ./models:/app/models:ro
       - ./scripts:/app/scripts:ro
-
-  # Optional services (uncomment and fill as needed):
-  # backend:
-  #   build: ./backend/spring-boot-app
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     - ml-service
-  # frontend:
-  #   build: ./frontend
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - backend

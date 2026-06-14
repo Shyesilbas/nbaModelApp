@@ -17,120 +17,156 @@ def date_to_season(dt) -> str:
     return f"{start_year}-{str(start_year + 1)[-2:]}"
 
 
+def is_playoff_date(dt) -> int:
+    if dt.month in {5, 6}:
+        return 1
+    if dt.month == 4 and dt.day >= 12:
+        return 1
+    return 0
+
+
+def _load_player_dataset():
+    global _v3_df_cache
+
+    v4_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
+    v3_path = ROOT / "data/experimental/player_model_ready_v3_matchups.csv"
+    selected_path = v4_path if v4_path.exists() else v3_path
+
+    if not selected_path.exists():
+        raise FileNotFoundError("Player dataset (V3 or V4) missing for player inference.")
+
+    if _v3_df_cache is None:
+        _v3_df_cache = pd.read_csv(selected_path)
+        _v3_df_cache["GAME_DATE"] = pd.to_datetime(_v3_df_cache["GAME_DATE"])
+
+    return _v3_df_cache
+
+
+def _active_roster_ids(team: str, season: str):
+    roster_path = ROOT / f"data/season={season}/analysis/team_rosters.csv"
+    if not roster_path.exists():
+        return None
+
+    try:
+        roster_df = pd.read_csv(roster_path)
+        return set(roster_df[roster_df["TEAM_ABBREVIATION"] == team]["PLAYER_ID"].unique())
+    except Exception:
+        return None
+
+
+def _roster_candidates(last_games, team: str, active_ids):
+    if active_ids:
+        candidates = last_games[last_games["PLAYER_ID"].isin(active_ids)].copy()
+        candidates["TEAM_ABBREVIATION"] = team
+        if len(candidates) > 0:
+            return candidates
+
+    return last_games[last_games["TEAM_ABBREVIATION"] == team]
+
+
+def _filter_recent_active(candidates, past_df, team: str):
+    team_dates = sorted(past_df[past_df["TEAM_ABBREVIATION"] == team]["GAME_DATE"].unique())
+    if len(team_dates) < 5:
+        return candidates
+
+    recent_dates = team_dates[-15:]
+    recent_active = set(
+        past_df[
+            (past_df["TEAM_ABBREVIATION"] == team)
+            & (past_df["GAME_DATE"].isin(recent_dates))
+        ]["PLAYER_ID"].unique()
+    )
+    filtered = candidates[candidates["PLAYER_ID"].isin(recent_active)]
+    return filtered if len(filtered) > 0 else candidates
+
+
+def _defense_context(past_df, opponent_team: str):
+    defense_rows = past_df[past_df["OPPONENT_ABBREVIATION"] == opponent_team].sort_values("GAME_DATE").tail(1)
+    if len(defense_rows) == 0:
+        defense_rows = past_df.tail(1)
+
+    opp_cols = [c for c in past_df.columns if c.startswith("OPP_") and "ALLOWED" in c]
+    return {c: defense_rows[c].values[0] for c in opp_cols}
+
+
+def _build_inference_df(roster_df, is_home: bool, defense_values):
+    roster_df = roster_df.copy()
+    for key, value in defense_values.items():
+        roster_df[key] = value
+    roster_df["IS_HOME"] = 1 if is_home else 0
+    return roster_df
+
+
+def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, prediction_date: str):
+    past_df = df[df["GAME_DATE"] < pred_dt]
+    if len(past_df) == 0:
+        past_df = df
+
+    last_games = past_df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
+    season = date_to_season(pred_dt)
+
+    home_candidates = _roster_candidates(last_games, home_team, _active_roster_ids(home_team, season))
+    away_candidates = _roster_candidates(last_games, away_team, _active_roster_ids(away_team, season))
+
+    home_candidates = _filter_recent_active(home_candidates, past_df, home_team)
+    away_candidates = _filter_recent_active(away_candidates, past_df, away_team)
+
+    home_roster = home_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
+    away_roster = away_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
+
+    if len(home_roster) == 0 or len(away_roster) == 0:
+        raise ValueError(f"No active players found for {home_team} or {away_team} before {prediction_date}")
+
+    home_X = _build_inference_df(home_roster, True, _defense_context(past_df, away_team))
+    away_X = _build_inference_df(away_roster, False, _defense_context(past_df, home_team))
+
+    is_playoff = is_playoff_date(pred_dt)
+    home_X["IS_PLAYOFF"] = is_playoff
+    away_X["IS_PLAYOFF"] = is_playoff
+
+    return home_X, away_X
+
+
+def _ridge_calibration_frame(full_X):
+    X_ind = pd.DataFrame(index=full_X.index)
+    X_ind["is_playoff"] = (full_X["IS_PLAYOFF"].fillna(0).astype(int) == 1).astype(float)
+    X_ind["is_home"] = (full_X["IS_HOME"].fillna(0).astype(int) == 1).astype(float)
+
+    pos_col = "PLAYER_POSITION_GROUP" if "PLAYER_POSITION_GROUP" in full_X.columns else "POSITION_GROUP"
+    pos_vals = full_X[pos_col].fillna("WING") if pos_col in full_X.columns else pd.Series("WING", index=full_X.index)
+    X_ind["pos_guard"] = (pos_vals == "GUARD").astype(float)
+    X_ind["pos_wing"] = (pos_vals == "WING").astype(float)
+    X_ind["pos_big"] = (pos_vals == "BIG").astype(float)
+
+    usg_vals = full_X["USG_PCT_LAST_10"].fillna(18.0) if "USG_PCT_LAST_10" in full_X.columns else pd.Series(18.0, index=full_X.index)
+    X_ind["high_usage"] = (usg_vals >= 25.0).astype(float)
+    X_ind["low_usage"] = (usg_vals < 15.0).astype(float)
+
+    min_vals = full_X["MIN_EMA_10"].fillna(20.0) if "MIN_EMA_10" in full_X.columns else pd.Series(20.0, index=full_X.index)
+    X_ind["heavy_minutes"] = (min_vals >= 30.0).astype(float)
+    X_ind["light_minutes"] = (min_vals < 15.0).astype(float)
+
+    return X_ind
+
+
 def get_player_predictions(home_team: str, away_team: str, prediction_date: str, player_loader, score_loader):
     """
     Generate player predictions for home and away teams using the V3 Ridge models.
     Respects prediction_date to prevent future data leakage and use accurate historical rosters.
     """
-    global _v3_df_cache
-    
-    v4_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
-    v3_path = ROOT / "data/experimental/player_model_ready_v3_matchups.csv"
-    selected_path = v4_path if v4_path.exists() else v3_path
-    
-    if not selected_path.exists():
-        raise FileNotFoundError("Player dataset (V3 or V4) missing for player inference.")
-        
-    if _v3_df_cache is None:
-        _v3_df_cache = pd.read_csv(selected_path)
-        _v3_df_cache['GAME_DATE'] = pd.to_datetime(_v3_df_cache['GAME_DATE'])
-        
-    df = _v3_df_cache
+    df = _load_player_dataset()
     pred_dt = pd.to_datetime(prediction_date)
     
     historical_home = df[(df['TEAM_ABBREVIATION'] == home_team) & (df['GAME_DATE'] == pred_dt)].copy()
     historical_away = df[(df['TEAM_ABBREVIATION'] == away_team) & (df['GAME_DATE'] == pred_dt)].copy()
     
     if len(historical_home) > 0 and len(historical_away) > 0:
-        # Historical game: Use exact roster that played
         home_X = historical_home
         away_X = historical_away
         home_X["IS_HOME"] = 1
         away_X["IS_HOME"] = 0
     else:
-        # Future game or not in dataset: Use past games to build active roster
-        past_df = df[df['GAME_DATE'] < pred_dt]
-        if len(past_df) == 0:
-            # Fallback to entire dataset if date is very early (shouldn't happen in normal use)
-            past_df = df
-            
-        last_games = past_df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
-        
-        # Season-aware filtering using the team_rosters.csv dataset
-        season_str = date_to_season(pred_dt)
-        roster_path = ROOT / f"data/season={season_str}/analysis/team_rosters.csv"
-        
-        home_active = None
-        away_active = None
-        
-        if roster_path.exists():
-            try:
-                roster_df = pd.read_csv(roster_path)
-                home_active = set(roster_df[roster_df["TEAM_ABBREVIATION"] == home_team]["PLAYER_ID"].unique())
-                away_active = set(roster_df[roster_df["TEAM_ABBREVIATION"] == away_team]["PLAYER_ID"].unique())
-            except Exception:
-                pass
-                
-        if home_active:
-            home_roster_candidates = last_games[last_games["PLAYER_ID"].isin(home_active)].copy()
-            home_roster_candidates["TEAM_ABBREVIATION"] = home_team
-            if len(home_roster_candidates) == 0:
-                home_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == home_team]
-        else:
-            home_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == home_team]
-            
-        if away_active:
-            away_roster_candidates = last_games[last_games["PLAYER_ID"].isin(away_active)].copy()
-            away_roster_candidates["TEAM_ABBREVIATION"] = away_team
-            if len(away_roster_candidates) == 0:
-                away_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == away_team]
-        else:
-            away_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == away_team]
-            
-        # Filter to only players who have played at least one of the team's last 15 games
-        home_dates = sorted(past_df[past_df["TEAM_ABBREVIATION"] == home_team]["GAME_DATE"].unique())
-        if len(home_dates) >= 5:
-            home_last_15 = home_dates[-15:]
-            home_recent_active = set(past_df[(past_df["TEAM_ABBREVIATION"] == home_team) & (past_df["GAME_DATE"].isin(home_last_15))]["PLAYER_ID"].unique())
-            filtered = home_roster_candidates[home_roster_candidates["PLAYER_ID"].isin(home_recent_active)]
-            if len(filtered) > 0:
-                home_roster_candidates = filtered
-                
-        away_dates = sorted(past_df[past_df["TEAM_ABBREVIATION"] == away_team]["GAME_DATE"].unique())
-        if len(away_dates) >= 5:
-            away_last_15 = away_dates[-15:]
-            away_recent_active = set(past_df[(past_df["TEAM_ABBREVIATION"] == away_team) & (past_df["GAME_DATE"].isin(away_last_15))]["PLAYER_ID"].unique())
-            filtered = away_roster_candidates[away_roster_candidates["PLAYER_ID"].isin(away_recent_active)]
-            if len(filtered) > 0:
-                away_roster_candidates = filtered
-            
-        home_roster = home_roster_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
-        away_roster = away_roster_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
-        
-        if len(home_roster) == 0 or len(away_roster) == 0:
-            raise ValueError(f"No active players found for {home_team} or {away_team} before {prediction_date}")
-            
-        home_def = past_df[past_df["OPPONENT_ABBREVIATION"] == home_team].sort_values("GAME_DATE").tail(1)
-        if len(home_def) == 0:
-            home_def = past_df.tail(1)
-            
-        away_def = past_df[past_df["OPPONENT_ABBREVIATION"] == away_team].sort_values("GAME_DATE").tail(1)
-        if len(away_def) == 0:
-            away_def = past_df.tail(1)
-            
-        opp_cols = [c for c in past_df.columns if c.startswith("OPP_") and "ALLOWED" in c]
-        
-        home_def_dict = {c: home_def[c].values[0] for c in opp_cols}
-        away_def_dict = {c: away_def[c].values[0] for c in opp_cols}
-        
-        def build_inference_df(roster_df, is_home, def_dict):
-            for k, v in def_dict.items():
-                roster_df[k] = v
-            roster_df["IS_HOME"] = 1 if is_home else 0
-            return roster_df
-            
-        home_X = build_inference_df(home_roster.copy(), True, away_def_dict)
-        away_X = build_inference_df(away_roster.copy(), False, home_def_dict)
+        home_X, away_X = _build_future_rosters(df, home_team, away_team, pred_dt, prediction_date)
     
     full_X = pd.concat([home_X, away_X], ignore_index=True)
     features = player_loader.feature_cols
@@ -147,7 +183,22 @@ def get_player_predictions(home_team: str, away_team: str, prediction_date: str,
     raw_reb = player_loader.reb_model.predict(X_matrix)
     raw_ast = player_loader.ast_model.predict(X_matrix)
     
-    full_X["RAW_PROJ_PTS"] = raw_pts
+    # Apply Ridge calibration if available
+    if (getattr(player_loader, "ridge_pts_model", None) is not None and 
+        getattr(player_loader, "ridge_reb_model", None) is not None and 
+        getattr(player_loader, "ridge_ast_model", None) is not None):
+        
+        X_ind = _ridge_calibration_frame(full_X)
+        
+        res_pts = player_loader.ridge_pts_model.predict(X_ind)
+        res_reb = player_loader.ridge_reb_model.predict(X_ind)
+        res_ast = player_loader.ridge_ast_model.predict(X_ind)
+        
+        raw_pts = raw_pts - res_pts
+        raw_reb = raw_reb - res_reb
+        raw_ast = raw_ast - res_ast
+        
+    full_X["RAW_PROJ_PTS"] = np.maximum(0, raw_pts)
     full_X["RAW_PROJ_REB"] = np.maximum(0, raw_reb)
     full_X["RAW_PROJ_AST"] = np.maximum(0, raw_ast)
     

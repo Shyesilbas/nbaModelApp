@@ -22,11 +22,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.data_paths import get_data_paths
 from scripts.artifact_paths import resolve_artifact_path
+from src.features.win_strength_features import build_matchup_strength_features, compute_current_elo_state
 
 from functools import lru_cache
 import math
 
-MODEL_FEATURE_COLS = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v8.json")
+MODEL_FEATURE_COLS = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v9.json")
 
 NBA_TEAMS_LOCATIONS = {
     "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
@@ -343,6 +344,18 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
 
     out["TRAVEL_DISTANCE"] = 0.0
     out["TIMEZONE_DIFF"] = 0.0
+
+    elo_state = compute_current_elo_state(team_df)
+    out.update(build_matchup_strength_features(
+        home_team=home_team,
+        away_team=away_team,
+        home_row=home_row,
+        away_row=away_row,
+        is_playoff=out["IS_PLAYOFF"],
+        days_rest_home=days_rest_home,
+        days_rest_away=days_rest_away,
+        elo_state=elo_state,
+    ))
 
     # PTS_LAST_5, PTS_LAST_10, WINRATE_LAST_5, WINRATE_LAST_10 for home
     out["PTS_LAST_5"] = float(safe_get(home_row, "PTS_LAST_5", np.nan))

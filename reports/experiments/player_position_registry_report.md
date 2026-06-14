@@ -1,39 +1,28 @@
-# Player Position Registry Report (Stat-Derived Archetype)
+# Player Position Metadata Validation Report (Canonical Groups)
 
-## Extraction Summary
-The registry was successfully generated using **Stat-Derived Archetypes** based on total per-36 minute production. This logic completely bypasses the NBA API block.
-
-**Thresholds:**
-- `< 200 Total Minutes` -> `UNKNOWN`
-- `REB_PER_36 >= 8.5` -> `BIG`
-- `AST_PER_36 >= 4.5` -> `GUARD`
-- `Else` -> `WING`
+## Summary
+The player position mapping has transitioned from **Stat-Derived Archetypes** to official **Canonical Positions** loaded from `data/canonical/player_metadata.csv`.
 
 ## Position Coverage
-- **Total Players in Dataset**: 649
-- **Successfully Mapped**: 539 (83.1%)
-- **UNKNOWN Count (< 200 mins)**: 110 (16.9%)
+- **Total Unique Active Players**: 1068
+- **Successfully Mapped to Canonical Metadata**: 1068 (100.0%)
+- **Unmapped Players**: 0 (0.0%)
 
-## Top Player Coverage
-- **Active Rotation Players (>= 200 Mins)**: 100.0% mapped
-- **Top 100 Players**: 100.0% mapped
-
-## Position Distribution
-- **WING**: 289 (44.5%)
-- **GUARD**: 133 (20.5%)
-- **BIG**: 117 (18.0%)
-- **UNKNOWN**: 110 (16.9%)
+## Row Distribution by Position Group
+- **GUARD**: 85998 rows (52.0%)
+- **WING**: 46690 rows (28.3%)
+- **BIG**: 32545 rows (19.7%)
 
 ## Star Player Check
 ```text
-     PLAYER_NAME  REB_PER_36  AST_PER_36 POSITION_GROUP
-    LeBron James        7.33        7.95          GUARD
-   Stephen Curry        4.70        6.14          GUARD
-   Anthony Davis       12.43        3.60            BIG
-Domantas Sabonis       14.27        6.01            BIG
+     PLAYER_NAME OFFICIAL_POSITION POSITION_GROUP
+   Stephen Curry                 G          GUARD
+   Anthony Davis               F-C            BIG
+    LeBron James                 F           WING
+Domantas Sabonis               F-C            BIG
 ```
 
 ## Final Verdict
-**Is this registry good enough for position-based opponent defense features?** YES
+**Are position mappings canonical and correct?** YES
 
-The static Archetypes capture exactly what we need for opponent-to-position modeling: a functional description of a player's role on the court.
+All players are mapped to their official position groups (GUARD, WING, BIG) using their biographical profiles.

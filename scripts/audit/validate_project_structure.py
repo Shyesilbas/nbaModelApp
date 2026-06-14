@@ -33,14 +33,16 @@ def main() -> int:
                     _check(candidate, errors)
 
     required = [
-        ROOT / "models/production/win_probability_model_v8.pkl",
-        ROOT / "models/production/feature_columns_v8.json",
+        ROOT / "models/production/win_probability_model_v9.pkl",
+        ROOT / "models/production/feature_columns_v9.json",
         ROOT / "models/production/model_metadata.json",
-        ROOT / "models/production/score_model_v8_home_rtg.pkl",
-        ROOT / "models/production/score_model_v8_away_rtg.pkl",
-        ROOT / "models/production/score_model_v8_pace.pkl",
-        ROOT / "models/production/score_model_v8_margin.pkl",
-        ROOT / "models/production/score_model_v8_metadata.json",
+        ROOT / "models/production/score_model_v9_home_rtg.pkl",
+        ROOT / "models/production/score_model_v9_away_rtg.pkl",
+        ROOT / "models/production/score_model_v9_pace.pkl",
+        ROOT / "models/production/score_model_v9_margin.pkl",
+        ROOT / "models/production/score_model_v9_ridge_total.pkl",
+        ROOT / "models/production/score_model_v9_ridge_margin.pkl",
+        ROOT / "models/production/score_model_v9_metadata.json",
         ROOT / "models/production/player_v8_lgb_pts.pkl",
         ROOT / "models/production/player_v8_lgb_reb.pkl",
         ROOT / "models/production/player_v8_lgb_ast.pkl",

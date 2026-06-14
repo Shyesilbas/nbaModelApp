@@ -14,8 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.artifact_paths import resolve_artifact_path
 
-MODEL_PATH = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v8.pkl")
-FEATURES_PATH = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v8.json")
+MODEL_PATH = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v9.pkl")
+FEATURES_PATH = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v9.json")
 
 CONFIDENCE_BUCKETS = [
     (0.5, 0.55, "Toss-up"),

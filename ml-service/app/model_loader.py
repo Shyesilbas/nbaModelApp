@@ -17,6 +17,36 @@ sys.path.insert(0, str(ROOT))
 from scripts.artifact_paths import resolve_artifact_path
 
 
+def _all_exist(paths):
+    return all(p.exists() for p in paths)
+
+
+def _score_paths(version: int):
+    base = ROOT / "models" / "production"
+    return {
+        "pace": base / f"score_model_v{version}_pace.pkl",
+        "home_rtg": base / f"score_model_v{version}_home_rtg.pkl",
+        "away_rtg": base / f"score_model_v{version}_away_rtg.pkl",
+        "margin": base / f"score_model_v{version}_margin.pkl",
+        "metadata": base / f"score_model_v{version}_metadata.json",
+        "ridge_total": base / f"score_model_v{version}_ridge_total.pkl",
+        "ridge_margin": base / f"score_model_v{version}_ridge_margin.pkl",
+    }
+
+
+def _player_paths(version: int, kind: str):
+    base = ROOT / "models" / "production"
+    return {
+        "pts": base / f"player_v{version}_{kind}_pts.pkl",
+        "reb": base / f"player_v{version}_{kind}_reb.pkl",
+        "ast": base / f"player_v{version}_{kind}_ast.pkl",
+        "features": base / f"player_v{version}_features.pkl",
+        "ridge_pts": base / f"player_v{version}_ridge_pts.pkl",
+        "ridge_reb": base / f"player_v{version}_ridge_reb.pkl",
+        "ridge_ast": base / f"player_v{version}_ridge_ast.pkl",
+    }
+
+
 def _patch_logistic_regression_compat(model):
     """Backfill attrs expected by older sklearn runtimes when loading newer pickles."""
     candidates = []
@@ -43,8 +73,8 @@ class ModelLoader:
         self.metadata = None
 
     def load(self):
-        model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v8.pkl")
-        features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v8.json")
+        model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v9.pkl")
+        features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v9.json")
         metadata_path = resolve_artifact_path("win_model", "metadata_path", "models/model_metadata.json")
         if not model_path.exists():
             raise FileNotFoundError(f"Model file not found at {model_path}")
@@ -77,6 +107,8 @@ class ScoreModelLoader:
         self.home_rtg_model = None
         self.away_rtg_model = None
         self.margin_model = None
+        self.ridge_total_model = None
+        self.ridge_margin_model = None
         self.metadata = None
         self.pace_path = None
         self.home_rtg_path = None
@@ -84,44 +116,33 @@ class ScoreModelLoader:
         self.margin_path = None
 
     def load(self):
-        pace_path = resolve_artifact_path("score_model", "total_model_path", "models/production/score_model_v8_pace.pkl")
-        home_rtg_path = resolve_artifact_path("score_model", "home_model_path", "models/production/score_model_v8_home_rtg.pkl")
-        away_rtg_path = resolve_artifact_path("score_model", "away_model_path", "models/production/score_model_v8_away_rtg.pkl")
-        margin_path = resolve_artifact_path("score_model", "margin_model_path", "models/production/score_model_v8_margin.pkl")
-        metadata_path = resolve_artifact_path("score_model", "metadata_path", "models/production/score_model_v8_metadata.json")
-        
-        v8_exists = all(p.exists() for p in [pace_path, home_rtg_path, away_rtg_path, margin_path, metadata_path])
-        if not v8_exists:
-            pace_path = ROOT / "models/production/score_model_v7_pace.pkl"
-            home_rtg_path = ROOT / "models/production/score_model_v7_home_rtg.pkl"
-            away_rtg_path = ROOT / "models/production/score_model_v7_away_rtg.pkl"
-            margin_path = ROOT / "models/production/score_model_v7_margin.pkl"
-            metadata_path = ROOT / "models/production/score_model_v7_metadata.json"
+        manifest_paths = {
+            "pace": resolve_artifact_path("score_model", "total_model_path", "models/production/score_model_v9_pace.pkl"),
+            "home_rtg": resolve_artifact_path("score_model", "home_model_path", "models/production/score_model_v9_home_rtg.pkl"),
+            "away_rtg": resolve_artifact_path("score_model", "away_model_path", "models/production/score_model_v9_away_rtg.pkl"),
+            "margin": resolve_artifact_path("score_model", "margin_model_path", "models/production/score_model_v9_margin.pkl"),
+            "metadata": resolve_artifact_path("score_model", "metadata_path", "models/production/score_model_v9_metadata.json"),
+            "ridge_total": resolve_artifact_path("score_model", "ridge_total_path", "models/production/score_model_v9_ridge_total.pkl"),
+            "ridge_margin": resolve_artifact_path("score_model", "ridge_margin_path", "models/production/score_model_v9_ridge_margin.pkl"),
+        }
 
-        v7_exists = all(p.exists() for p in [pace_path, home_rtg_path, away_rtg_path, margin_path, metadata_path])
-        if not v7_exists:
-            pace_path = ROOT / "models/production/score_model_v6_pace.pkl"
-            home_rtg_path = ROOT / "models/production/score_model_v6_home_rtg.pkl"
-            away_rtg_path = ROOT / "models/production/score_model_v6_away_rtg.pkl"
-            margin_path = ROOT / "models/production/score_model_v6_margin.pkl"
-            metadata_path = ROOT / "models/production/score_model_v6_metadata.json"
-            
-            v6_exists = all(p.exists() for p in [pace_path, home_rtg_path, away_rtg_path, margin_path, metadata_path])
-            if not v6_exists:
-                pace_path = ROOT / "models/production/score_model_v5_pace.pkl"
-                home_rtg_path = ROOT / "models/production/score_model_v5_home_rtg.pkl"
-                away_rtg_path = ROOT / "models/production/score_model_v5_away_rtg.pkl"
-                margin_path = ROOT / "models/production/score_model_v5_margin.pkl"
-                metadata_path = ROOT / "models/production/score_model_v5_metadata.json"
-                
-                v5_exists = all(p.exists() for p in [pace_path, home_rtg_path, away_rtg_path, margin_path, metadata_path])
-                if not v5_exists:
-                    pace_path = ROOT / "models/production/score_model_v4_pace.pkl"
-                    home_rtg_path = ROOT / "models/production/score_model_v4_home_rtg.pkl"
-                    away_rtg_path = ROOT / "models/production/score_model_v4_away_rtg.pkl"
-                    margin_path = ROOT / "models/production/score_model_v4_margin.pkl"
-                    metadata_path = ROOT / "models/production/score_model_v4_metadata.json"
-                
+        required_keys = ["pace", "home_rtg", "away_rtg", "margin", "metadata"]
+        paths = manifest_paths
+        if not _all_exist(paths[k] for k in required_keys):
+            paths = next(
+                (candidate for candidate in (_score_paths(v) for v in [8, 7, 6, 5, 4])
+                 if _all_exist(candidate[k] for k in required_keys)),
+                paths,
+            )
+
+        pace_path = paths["pace"]
+        home_rtg_path = paths["home_rtg"]
+        away_rtg_path = paths["away_rtg"]
+        margin_path = paths["margin"]
+        metadata_path = paths["metadata"]
+        ridge_total_path = paths["ridge_total"]
+        ridge_margin_path = paths["ridge_margin"]
+
         for p in [pace_path, home_rtg_path, away_rtg_path, margin_path, metadata_path]:
             if not p.exists():
                 raise FileNotFoundError(f"Score model file not found at {p}")
@@ -139,6 +160,13 @@ class ScoreModelLoader:
         with open(metadata_path, "r") as f:
             self.metadata = json.load(f)
 
+        if ridge_total_path.exists() and ridge_margin_path.exists():
+            self.ridge_total_model = joblib.load(ridge_total_path)
+            self.ridge_margin_model = joblib.load(ridge_margin_path)
+        else:
+            self.ridge_total_model = None
+            self.ridge_margin_model = None
+
     def get_version(self) -> Optional[str]:
         if self.metadata:
             return self.metadata.get("version", "score_v4")
@@ -150,92 +178,78 @@ class PlayerModelLoader:
         self.pts_model = None
         self.reb_model = None
         self.ast_model = None
+        self.ridge_pts_model = None
+        self.ridge_reb_model = None
+        self.ridge_ast_model = None
         self.feature_cols = None
         self.version = "player_v3_ridge"
 
+    def _load_bundle(self, paths, version: str, message: str):
+        self.pts_model = joblib.load(paths["pts"])
+        self.reb_model = joblib.load(paths["reb"])
+        self.ast_model = joblib.load(paths["ast"])
+        self.feature_cols = joblib.load(paths["features"])
+        self.version = version
+        print(message)
+
     def load(self):
-        pts_path_v6 = ROOT / "models/production/player_v8_lgb_pts.pkl"
-        reb_path_v6 = ROOT / "models/production/player_v8_lgb_reb.pkl"
-        ast_path_v6 = ROOT / "models/production/player_v8_lgb_ast.pkl"
-        features_path_v6 = ROOT / "models/production/player_v8_features.pkl"
+        pts_path = resolve_artifact_path("player_model", "pts_model_path", "models/production/player_v9_lgb_pts.pkl")
+        reb_path = resolve_artifact_path("player_model", "reb_model_path", "models/production/player_v9_lgb_reb.pkl")
+        ast_path = resolve_artifact_path("player_model", "ast_model_path", "models/production/player_v9_lgb_ast.pkl")
+        features_path = resolve_artifact_path("player_model", "feature_columns_path", "models/production/player_v9_features.pkl")
         
-        if pts_path_v6.exists() and reb_path_v6.exists() and ast_path_v6.exists() and features_path_v6.exists():
-            self.pts_model = joblib.load(pts_path_v6)
-            self.reb_model = joblib.load(reb_path_v6)
-            self.ast_model = joblib.load(ast_path_v6)
-            self.feature_cols = joblib.load(features_path_v6)
-            self.version = "player_v8_lgb"
-            print("Loaded V8 LightGBM Player Models successfully.")
-        else:
-            pts_path_v6 = ROOT / "models/production/player_v7_lgb_pts.pkl"
-            reb_path_v6 = ROOT / "models/production/player_v7_lgb_reb.pkl"
-            ast_path_v6 = ROOT / "models/production/player_v7_lgb_ast.pkl"
-            features_path_v6 = ROOT / "models/production/player_v7_features.pkl"
+        ridge_pts_path = resolve_artifact_path("player_model", "ridge_pts_path", "models/production/player_v9_ridge_pts.pkl")
+        ridge_reb_path = resolve_artifact_path("player_model", "ridge_reb_path", "models/production/player_v9_ridge_reb.pkl")
+        ridge_ast_path = resolve_artifact_path("player_model", "ridge_ast_path", "models/production/player_v9_ridge_ast.pkl")
 
-            if pts_path_v6.exists() and reb_path_v6.exists() and ast_path_v6.exists() and features_path_v6.exists():
-                self.pts_model = joblib.load(pts_path_v6)
-                self.reb_model = joblib.load(reb_path_v6)
-                self.ast_model = joblib.load(ast_path_v6)
-                self.feature_cols = joblib.load(features_path_v6)
-                self.version = "player_v7_lgb"
-                print("Loaded V7 LightGBM Player Models successfully.")
+        v9_exists = all(p.exists() for p in [pts_path, reb_path, ast_path, features_path])
+        if not v9_exists:
+            pts_path = ROOT / "models/production/player_v9_lgb_pts.pkl"
+            reb_path = ROOT / "models/production/player_v9_lgb_reb.pkl"
+            ast_path = ROOT / "models/production/player_v9_lgb_ast.pkl"
+            features_path = ROOT / "models/production/player_v9_features.pkl"
+            ridge_pts_path = ROOT / "models/production/player_v9_ridge_pts.pkl"
+            ridge_reb_path = ROOT / "models/production/player_v9_ridge_reb.pkl"
+            ridge_ast_path = ROOT / "models/production/player_v9_ridge_ast.pkl"
+
+        v9_actual_exists = all(p.exists() for p in [pts_path, reb_path, ast_path, features_path])
+        if v9_actual_exists:
+            self._load_bundle(
+                {"pts": pts_path, "reb": reb_path, "ast": ast_path, "features": features_path},
+                "player_v9_lgb",
+                "Loaded V9 LightGBM Player Models successfully."
+            )
+            self.version = "player_v9_lgb"
+            
+            if ridge_pts_path.exists() and ridge_reb_path.exists() and ridge_ast_path.exists():
+                self.ridge_pts_model = joblib.load(ridge_pts_path)
+                self.ridge_reb_model = joblib.load(ridge_reb_path)
+                self.ridge_ast_model = joblib.load(ridge_ast_path)
+                self.version = "player_v9_lgb_calibrated"
+                print("Loaded V9 LightGBM Player Models with Ridge calibration successfully.")
+            else:
+                self.ridge_pts_model = None
+                self.ridge_reb_model = None
+                self.ridge_ast_model = None
+                print("Loaded V9 LightGBM Player Models successfully (uncalibrated).")
+            return
+
+        # Fallbacks:
+        # V8
+        for version, kind, label in [
+            (8, "lgb", "Loaded V8 LightGBM Player Models successfully."),
+            (7, "lgb", "Loaded V7 LightGBM Player Models successfully."),
+            (6, "lgb", "Loaded V6 LightGBM Player Models successfully."),
+            (5, "lgb", "Loaded V5 LightGBM Player Models as fallback."),
+            (4, "lgb", "Loaded V4 LightGBM Player Models as fallback."),
+            (3, "ridge", "Loaded V3 Ridge Player Models as fallback."),
+        ]:
+            paths = _player_paths(version, kind)
+            if _all_exist(paths[k] for k in ["pts", "reb", "ast", "features"]):
+                self._load_bundle(paths, f"player_v{version}_{kind}", label)
                 return
 
-            pts_path_v6 = ROOT / "models/production/player_v6_lgb_pts.pkl"
-            reb_path_v6 = ROOT / "models/production/player_v6_lgb_reb.pkl"
-            ast_path_v6 = ROOT / "models/production/player_v6_lgb_ast.pkl"
-            features_path_v6 = ROOT / "models/production/player_v6_features.pkl"
-
-            if pts_path_v6.exists() and reb_path_v6.exists() and ast_path_v6.exists() and features_path_v6.exists():
-                self.pts_model = joblib.load(pts_path_v6)
-                self.reb_model = joblib.load(reb_path_v6)
-                self.ast_model = joblib.load(ast_path_v6)
-                self.feature_cols = joblib.load(features_path_v6)
-                self.version = "player_v6_lgb"
-                print("Loaded V6 LightGBM Player Models successfully.")
-                return
-
-            pts_path_v5 = ROOT / "models/production/player_v5_lgb_pts.pkl"
-            reb_path_v5 = ROOT / "models/production/player_v5_lgb_reb.pkl"
-            ast_path_v5 = ROOT / "models/production/player_v5_lgb_ast.pkl"
-            features_path_v5 = ROOT / "models/production/player_v5_features.pkl"
-            
-            if pts_path_v5.exists() and reb_path_v5.exists() and ast_path_v5.exists() and features_path_v5.exists():
-                self.pts_model = joblib.load(pts_path_v5)
-                self.reb_model = joblib.load(reb_path_v5)
-                self.ast_model = joblib.load(ast_path_v5)
-                self.feature_cols = joblib.load(features_path_v5)
-                self.version = "player_v5_lgb"
-                print("Loaded V5 LightGBM Player Models as fallback.")
-            else:
-                pts_path_v4 = ROOT / "models/production/player_v4_lgb_pts.pkl"
-            reb_path_v4 = ROOT / "models/production/player_v4_lgb_reb.pkl"
-            ast_path_v4 = ROOT / "models/production/player_v4_lgb_ast.pkl"
-            features_path_v4 = ROOT / "models/production/player_v4_features.pkl"
-            
-            if pts_path_v4.exists() and reb_path_v4.exists() and ast_path_v4.exists() and features_path_v4.exists():
-                self.pts_model = joblib.load(pts_path_v4)
-                self.reb_model = joblib.load(reb_path_v4)
-                self.ast_model = joblib.load(ast_path_v4)
-                self.feature_cols = joblib.load(features_path_v4)
-                self.version = "player_v4_lgb"
-                print("Loaded V4 LightGBM Player Models as fallback.")
-            else:
-                pts_path_v3 = ROOT / "models/production/player_v3_ridge_pts.pkl"
-                reb_path_v3 = ROOT / "models/production/player_v3_ridge_reb.pkl"
-                ast_path_v3 = ROOT / "models/production/player_v3_ridge_ast.pkl"
-                features_path_v3 = ROOT / "models/production/player_v3_features.pkl"
-                
-                for p in [pts_path_v3, reb_path_v3, ast_path_v3, features_path_v3]:
-                    if not p.exists():
-                        raise FileNotFoundError(f"Player model file not found at {p}")
-                        
-                self.pts_model = joblib.load(pts_path_v3)
-                self.reb_model = joblib.load(reb_path_v3)
-                self.ast_model = joblib.load(ast_path_v3)
-                self.feature_cols = joblib.load(features_path_v3)
-                self.version = "player_v3_ridge"
-                print("Loaded V3 Ridge Player Models as fallback.")
+        raise FileNotFoundError("No player models could be loaded.")
 
     def get_version(self) -> str:
         return self.version

@@ -107,7 +107,7 @@ def load_player_features(seasons):
         
     return pd.concat(player_dfs, ignore_index=True)
 
-def build_player_dataset_v4(seasons=None, output_path=None):
+def build_player_dataset_v4(seasons=None, output_path=None, custom_metadata_df=None):
     if seasons is None:
         seasons = ["2024-25", "2025-26"]
         
@@ -171,10 +171,13 @@ def build_player_dataset_v4(seasons=None, output_path=None):
     df_player["ELO_DIFF"] = df_player["TEAM_ELO"] - df_player["OPP_ELO"]
     df_player["BLOWOUT_RISK_PROXY"] = df_player["ELO_DIFF"].abs()
     
-    meta_path = root_dir / "data/canonical/player_metadata.csv"
-    if not meta_path.exists():
-        raise FileNotFoundError(f"Player metadata not found at {meta_path}")
-    df_meta = pd.read_csv(meta_path)
+    if custom_metadata_df is not None:
+        df_meta = custom_metadata_df
+    else:
+        meta_path = root_dir / "data/canonical/player_metadata.csv"
+        if not meta_path.exists():
+            raise FileNotFoundError(f"Player metadata not found at {meta_path}")
+        df_meta = pd.read_csv(meta_path)
     
     df_player = df_player.merge(df_meta[["PLAYER_ID", "POSITION_GROUP"]], left_on=player_col, right_on="PLAYER_ID", how="left")
     df_player = df_player.rename(columns={"POSITION_GROUP": "PLAYER_POSITION_GROUP"})
