@@ -3,12 +3,12 @@
 ## 1. Dataset Dimensions & Paths
 - **V2 CSV Output File**: `/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/team_model_ready_v2.csv`
 - **V2 Parquet Output File**: `/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/team_model_ready_v2.parquet`
-- **Final V2 Shape**: **1762 rows, 48 columns**
-- **Total Features**: **41 features** (Target `WIN` and 6 Metadata columns excluded)
+- **Final V2 Shape**: **1772 rows, 54 columns**
+- **Total Features**: **47 features** (Target `WIN` and 6 Metadata columns excluded)
 
 ## 2. Opponent Join Validation Metrics
-- **Number of Rows Before Join**: 2640
-- **Number of Rows After Join**: 2640
+- **Number of Rows Before Join**: 2642
+- **Number of Rows After Join**: 2642
 - **Join Success Rate**: 100.00%
 - **Every GAME_ID has exactly 2 rows?**: Yes ✅
 - **Number of Invalid GAME_ID row counts**: 0
@@ -25,23 +25,23 @@
 | `OPP_WINRATE_LAST_10` | 30 | 1.14% |
 
 ## 3. Pre-Game Rolling Feature Row Drops
-- **Row count after join (raw features)**: 2640
-- **Row count after dropping NaNs (clean dataset)**: 1762
-- **Rows dropped due to NaNs**: 878
+- **Row count after join (raw features)**: 2642
+- **Row count after dropping NaNs (clean dataset)**: 1772
+- **Rows dropped due to NaNs**: 870
   *(Explanation: These drops represent early-season games where either the team itself or its opponent had not played enough previous games to calculate the 10-game/5-game rolling features or scheduling rest variables.)*
 
 ## 4. Feature and Target Distributions (Clean V2 Set)
 ### Target Variable: `WIN`
-- **1**: 881 (50.00%)
-- **0**: 881 (50.00%)
+- **1**: 886 (50.00%)
+- **0**: 886 (50.00%)
 
 ### Feature: `IS_HOME`
-- **True**: 881 (50.00%)
-- **False**: 881 (50.00%)
+- **False**: 888 (50.11%)
+- **True**: 884 (49.89%)
 
 ### Feature: `IS_PLAYOFF`
-- **False**: 1600 (90.81%)
-- **True**: 162 (9.19%)
+- **False**: 1590 (89.73%)
+- **True**: 182 (10.27%)
 
 ## 5. Sample Rows Side-by-Side (Team vs Opponent Features)
 | GAME_DATE | TEAM_ABBREVIATION | OPPONENT_ABBREVIATION | DAYS_REST | OPP_DAYS_REST | PTS_LAST_5 | OPP_PTS_LAST_5 | WINRATE_LAST_5 | OPP_WINRATE_LAST_5 | WIN |
