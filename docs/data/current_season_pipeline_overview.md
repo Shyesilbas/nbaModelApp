@@ -73,4 +73,4 @@ Inference loads the saved weights using configurations from [production_artifact
 *   **Win Probability:** Uses `LogisticRegression` pipeline predicting binary outcome `WIN`.
 *   **Score Model:** Uses separate `RandomForestRegressor` models for `HOME_PTS` and `AWAY_PTS`. Derived margin and total are used because they yield lower errors than direct model targets.
 *   **API:** A FastAPI service runs in `ml-service/` serving predictions on port `8001`.
-*   **Backend & Frontend:** The Spring Boot backend connects to port `8001`, serving the Vite frontend.
+*   **Frontend:** The Vite frontend calls the FastAPI service directly via `VITE_API_BASE_URL`, defaulting to `http://localhost:8001`.

@@ -1,20 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Start ML service (FastAPI), backend (Spring Boot JAR), then frontend (Vite)
-# Model and backend run in background; frontend runs in foreground.
+# Start FastAPI ML service, then frontend (Vite).
+# ML service runs in background; frontend runs in foreground.
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 ML_PID=""
-BACKEND_PID=""
 
 on_exit() {
   echo "\nShutting down services..."
-  if [ -n "$BACKEND_PID" ] && kill -0 "$BACKEND_PID" >/dev/null 2>&1; then
-    echo "Stopping backend (PID $BACKEND_PID)"; kill "$BACKEND_PID" || true
-  fi
   if [ -n "$ML_PID" ] && kill -0 "$ML_PID" >/dev/null 2>&1; then
     echo "Stopping ML service (PID $ML_PID)"; kill "$ML_PID" || true
   fi
@@ -22,7 +18,7 @@ on_exit() {
 }
 trap on_exit EXIT INT TERM
 
-# 1) Start ML service
+# 1) Start FastAPI ML service
 if command -v python3 >/dev/null 2>&1; then
   echo "Starting ML service..."
   if [ -f "ml-service/requirements.txt" ]; then
@@ -52,36 +48,7 @@ fi
 # Give ML service a moment to initialize
 sleep 1
 
-# 2) Start backend (Spring Boot JAR)
-BACKEND_DIR="backend/spring-boot-app"
-JAR_PATH="$BACKEND_DIR/target/nba-prediction-backend-0.1.0.jar"
-
-if ! command -v java >/dev/null 2>&1; then
-  echo "Java not found — skipping backend start"
-elif [ ! -f "$JAR_PATH" ]; then
-  echo "Backend JAR missing ($JAR_PATH) — building backend first..."
-  if command -v mvn >/dev/null 2>&1; then
-    (cd "$BACKEND_DIR" && mvn -q -DskipTests package)
-  elif [ -x "$BACKEND_DIR/mvnw" ]; then
-    (cd "$BACKEND_DIR" && ./mvnw -q -DskipTests package)
-  else
-    echo "Maven not found and no wrapper present — skipping backend start"
-  fi
-fi
-
-if command -v java >/dev/null 2>&1 && [ -f "$JAR_PATH" ]; then
-  echo "Starting backend from $JAR_PATH..."
-  java -jar "$JAR_PATH" &
-  BACKEND_PID=$!
-  echo "Backend started (PID $BACKEND_PID) on port 8080"
-else
-  echo "Java not found or JAR missing ($JAR_PATH) — skipping backend start"
-fi
-
-# Give backend a moment to initialize
-sleep 1
-
-# 3) Start frontend (Vite)
+# 2) Start frontend (Vite)
 if command -v npm >/dev/null 2>&1 && [ -f "frontend/package.json" ]; then
   echo "Starting frontend (Vite)..."
   cd frontend

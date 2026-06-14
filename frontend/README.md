@@ -3,7 +3,7 @@
 The **NBA Intelligence Lab** is a high-performance, polished, React-based dashboard designed to explore and visualize the current NBA datasets, team rosters, and feature engineering outputs before we train machine learning models.
 
 > [!NOTE]
-> This frontend is a **pure static-data application**. It fetches preprocessed JSON datasets exported directly from our Python data pipeline, removing the need for a live database or running backend server.
+> Most dashboard views are static-data driven. They fetch preprocessed JSON datasets exported from the Python data pipeline. Prediction views call the FastAPI ML service directly, using `VITE_API_BASE_URL` or `http://localhost:8001` by default.
 
 ---
 

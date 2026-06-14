@@ -72,7 +72,8 @@ def get_location_features(row):
         return pd.Series({"TRAVEL_DISTANCE": dist, "TIMEZONE_DIFF": tz_diff, "OPP_TRAVEL_DISTANCE": 0.0, "OPP_TIMEZONE_DIFF": 0.0})
 
 class ScoreModelTrainer:
-    def __init__(self, data_pattern=None, output_dir=None):
+    def __init__(self, data_pattern=None, output_dir=None, version="v9"):
+        self.version = version
         root = Path(__file__).resolve().parents[2]
         self.data_pattern = data_pattern or str(root / "data/processed/team_model_ready_v3_*.csv")
         self.output_dir = Path(output_dir or root / "models/experimental")
@@ -130,6 +131,8 @@ class ScoreModelTrainer:
         return final_model, float(mae), split_meta, X_test.index.tolist()
 
     def train_and_export(self):
+        from sklearn.linear_model import Ridge
+        
         files = glob.glob(self.data_pattern)
         if not files:
             raise FileNotFoundError(f"No V3 datasets found matching {self.data_pattern}")
@@ -177,14 +180,52 @@ class ScoreModelTrainer:
         home_score_mae = mean_absolute_error(df_eval["ACTUAL_HOME_PTS"], df_eval["EXPECTED_HOME_SCORE"])
         away_score_mae = mean_absolute_error(df_eval["ACTUAL_AWAY_PTS"], df_eval["EXPECTED_AWAY_SCORE"])
         
+        # Predict on the full dataset using final models to train the Ridge correction layer
+        df_home_full_eval = df_home.copy()
+        pred_pace_full = pace_model.predict(df_home_full_eval[self.pace_features])
+        pred_home_rtg_full = home_model.predict(df_home_full_eval[self.home_off_rtg_features])
+        df_home_full_eval["PRED_PACE"] = pred_pace_full
+        df_home_full_eval["PRED_HOME_RTG"] = pred_home_rtg_full
+        
+        df_away_full_eval = df_away[["GAME_ID"] + self.away_off_rtg_features].copy()
+        df_away_full_eval["PRED_AWAY_RTG"] = away_model.predict(df_away_full_eval[self.away_off_rtg_features])
+        
+        df_full_eval = df_home_full_eval.merge(df_away_full_eval[["GAME_ID", "PRED_AWAY_RTG"]], on="GAME_ID", how="inner")
+        df_full_eval["ACTUAL_HOME_PTS"] = df_full_eval["PACE"] * df_full_eval["OFF_RTG"] / 100.0
+        df_full_eval["ACTUAL_AWAY_PTS"] = df_full_eval["PACE"] * df_full_eval["DEF_RTG"] / 100.0
+        df_full_eval["ACTUAL_TOTAL"] = df_full_eval["ACTUAL_HOME_PTS"] + df_full_eval["ACTUAL_AWAY_PTS"]
+        df_full_eval["ACTUAL_MARGIN"] = df_full_eval["ACTUAL_HOME_PTS"] - df_full_eval["ACTUAL_AWAY_PTS"]
+        
+        df_full_eval["PRED_TOTAL_RAW"] = df_full_eval["PRED_PACE"] * (df_full_eval["PRED_HOME_RTG"] + df_full_eval["PRED_AWAY_RTG"]) / 100.0
+        df_full_eval["PRED_MARGIN_MODEL"] = margin_model.predict(df_full_eval[self.margin_features])
+        
+        df_full_eval["TOTAL_RESIDUAL"] = df_full_eval["PRED_TOTAL_RAW"] - df_full_eval["ACTUAL_TOTAL"]
+        df_full_eval["MARGIN_RESIDUAL"] = df_full_eval["PRED_MARGIN_MODEL"] - df_full_eval["ACTUAL_MARGIN"]
+        
+        # Build Ridge calibration features
+        X_ind = pd.DataFrame(index=df_full_eval.index)
+        X_ind["is_playoff"] = (df_full_eval["IS_PLAYOFF"].astype(int) == 1).astype(float)
+        X_ind["home_b2b"] = (df_full_eval["IS_B2B"].astype(int) == 1).astype(float)
+        X_ind["away_b2b"] = (df_full_eval["OPP_IS_B2B"].astype(int) == 1).astype(float)
+        X_ind["home_rest_advantage"] = (df_full_eval["DAYS_REST"] > df_full_eval["OPP_DAYS_REST"]).astype(float)
+        X_ind["away_rest_advantage"] = (df_full_eval["OPP_DAYS_REST"] > df_full_eval["DAYS_REST"]).astype(float)
+        
+        ridge_total = Ridge(alpha=1.0)
+        ridge_total.fit(X_ind, df_full_eval["TOTAL_RESIDUAL"])
+        
+        ridge_margin = Ridge(alpha=1.0)
+        ridge_margin.fit(X_ind, df_full_eval["MARGIN_RESIDUAL"])
+
         os.makedirs(self.output_dir, exist_ok=True)
-        joblib.dump(pace_model, self.output_dir / "score_model_v8_pace.pkl")
-        joblib.dump(home_model, self.output_dir / "score_model_v8_home_rtg.pkl")
-        joblib.dump(away_model, self.output_dir / "score_model_v8_away_rtg.pkl")
-        joblib.dump(margin_model, self.output_dir / "score_model_v8_margin.pkl")
+        joblib.dump(pace_model, self.output_dir / f"score_model_{self.version}_pace.pkl")
+        joblib.dump(home_model, self.output_dir / f"score_model_{self.version}_home_rtg.pkl")
+        joblib.dump(away_model, self.output_dir / f"score_model_{self.version}_away_rtg.pkl")
+        joblib.dump(margin_model, self.output_dir / f"score_model_{self.version}_margin.pkl")
+        joblib.dump(ridge_total, self.output_dir / f"score_model_{self.version}_ridge_total.pkl")
+        joblib.dump(ridge_margin, self.output_dir / f"score_model_{self.version}_ridge_margin.pkl")
         
         metadata = {
-            "version": "8.0_XGBoost",
+            "version": f"{self.version}_Ridge",
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "evaluation": "chronological_holdout",
             "pace_mae": float(pace_mae),
@@ -200,13 +241,20 @@ class ScoreModelTrainer:
                 "margin": margin_split.__dict__,
                 "derived_score_eval_games": int(len(df_eval)),
             },
+            "ridge_coefs": {
+                "total": ridge_total.coef_.tolist(),
+                "total_intercept": float(ridge_total.intercept_),
+                "margin": ridge_margin.coef_.tolist(),
+                "margin_intercept": float(ridge_margin.intercept_),
+                "features": X_ind.columns.tolist()
+            },
             "pace_features": self.pace_features,
             "home_off_rtg_features": self.home_off_rtg_features,
             "away_off_rtg_features": self.away_off_rtg_features,
             "margin_features": self.margin_features
         }
         
-        metadata_path = self.output_dir / "score_model_v8_metadata.json"
+        metadata_path = self.output_dir / f"score_model_{self.version}_metadata.json"
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=4)
             

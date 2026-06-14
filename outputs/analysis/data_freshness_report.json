@@ -1,16 +1,9 @@
 {
-  "status": "WARNING",
-  "latest_team_game_date": "2026-06-10",
-  "latest_player_game_date": "2026-06-10",
-  "latest_schedule_date": "2026-06-19",
-  "missing_completed_game_ids": [
-    "0042500405"
-  ],
+  "status": "OK",
+  "latest_team_game_date": "2026-06-13",
+  "latest_player_game_date": "2026-06-13",
+  "latest_schedule_date": "2026-06-13",
+  "missing_completed_game_ids": [],
   "team_player_mismatch_game_ids": [],
-  "warnings": [
-    "Team games dataset is behind completed schedule games. Latest team game: 2026-06-10, Latest completed schedule: 2026-06-13.",
-    "Player games dataset is behind completed schedule games. Latest player game: 2026-06-10, Latest completed schedule: 2026-06-13.",
-    "Missing completed game: 0042500405 | 2026-06-13 | NYK @ SAS (0 rows in team_games)",
-    "Potential completed Finals game missing from raw datasets."
-  ]
+  "warnings": []
 }

@@ -52,7 +52,7 @@ def test_production_manifest():
     assert "win_model" in manifest
     assert "score_model" in manifest
     
-    win_model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v8.pkl")
+    win_model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v9.pkl")
     assert win_model_path.exists()
     
     score_model_path = resolve_artifact_path("score_model", "home_model_path", "models/home_score_model_v2.pkl")

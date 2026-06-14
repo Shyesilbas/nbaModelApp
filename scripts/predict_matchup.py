@@ -45,8 +45,8 @@ def bucket_confidence(p):
 
 
 def load_model_and_features():
-    model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v8.pkl")
-    features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v8.json")
+    model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v9.pkl")
+    features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v9.json")
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found at {model_path}. Run training first.")
     if not features_path.exists():

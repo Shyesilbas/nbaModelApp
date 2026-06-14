@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
+import { predictWinProbability } from "../api/predictions";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 
 // ─────────────────────────────────────────────────────────────
@@ -618,16 +619,11 @@ export default function Schedule() {
     setPredicting(true);
 
     try {
-      const res = await fetch('/api/nba/predictions/win-probability', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ home_team: game.HOME_TEAM_ABBREVIATION, away_team: game.AWAY_TEAM_ABBREVIATION, prediction_date: game.GAME_DATE }),
+      const data = await predictWinProbability({
+        home_team: game.HOME_TEAM_ABBREVIATION,
+        away_team: game.AWAY_TEAM_ABBREVIATION,
+        prediction_date: game.GAME_DATE,
       });
-      if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
-        throw new Error(b.error || `ML service returned ${res.status}`);
-      }
-      const data = await res.json();
       setPredictionResult(data);
     } catch (e: any) {
       setPredictionError(e.message || 'Prediction failed');

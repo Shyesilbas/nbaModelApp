@@ -1,9 +1,9 @@
 {
   "model_name": "logistic_regression",
-  "version": "8.0",
-  "training_date": "2026-06-13T13:12:24.655254Z",
+  "version": "9.0",
+  "training_date": "2026-06-13T13:50:05.869843Z",
   "number_of_rows": 10258,
-  "number_of_features": 50,
+  "number_of_features": 62,
   "evaluation": "chronological_holdout",
   "split": {
     "strategy": "chronological_quantile",
@@ -25,32 +25,46 @@
     "OPP_HOME_PTS_LAST_5",
     "OPP_HOME_WINRATE_LAST_5"
   ],
+  "strength_features": [
+    "PRE_GAME_ELO",
+    "OPP_PRE_GAME_ELO",
+    "ELO_DIFF",
+    "ABS_ELO_DIFF",
+    "WINRATE_DIFF_LAST_10",
+    "ABS_WINRATE_DIFF_LAST_10",
+    "REST_DIFF",
+    "IS_CLOSE_STRENGTH",
+    "PLAYOFF_ELO_DIFF",
+    "PLAYOFF_ABS_ELO_DIFF",
+    "PLAYOFF_REST_DIFF",
+    "CLOSE_STRENGTH_REST_DIFF"
+  ],
   "metrics": {
     "uncalibrated": {
-      "accuracy": 0.6687866927592955,
-      "precision": 0.6689520078354554,
-      "recall": 0.6682974559686888,
-      "f1": 0.6686245717082722,
-      "roc_auc": 0.7318829201787677,
-      "brier_score": 0.2087493563674612
+      "accuracy": 0.6903131115459883,
+      "precision": 0.6901270772238515,
+      "recall": 0.6908023483365949,
+      "f1": 0.6904645476772616,
+      "roc_auc": 0.7433421670413334,
+      "brier_score": 0.2052720360978839
     },
     "sigmoid": {
-      "accuracy": 0.6692759295499021,
-      "precision": 0.6689453125,
-      "recall": 0.6702544031311155,
-      "f1": 0.6695992179863147,
-      "roc_auc": 0.7318407941146059,
-      "brier_score": 0.20893398552498527
+      "accuracy": 0.6873776908023483,
+      "precision": 0.6871945259042033,
+      "recall": 0.687866927592955,
+      "f1": 0.6875305623471882,
+      "roc_auc": 0.7427677207118539,
+      "brier_score": 0.20567040995248417
     },
     "isotonic": {
-      "accuracy": 0.6712328767123288,
-      "precision": 0.6732673267326733,
-      "recall": 0.6653620352250489,
-      "f1": 0.6692913385826772,
-      "roc_auc": 0.7310068895263115,
-      "brier_score": 0.20937274081144333
+      "accuracy": 0.6873776908023483,
+      "precision": 0.6861030126336248,
+      "recall": 0.6908023483365949,
+      "f1": 0.6884446611409069,
+      "roc_auc": 0.7421358297494265,
+      "brier_score": 0.20491755576349857
     }
   },
-  "selected_calibration": "uncalibrated",
+  "selected_calibration": "isotonic",
   "target_column": "WIN"
 }

@@ -18,6 +18,7 @@ from src.training.validation_utils import chronological_train_test_split
 
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import get_default_season
+from src.features.win_strength_features import add_win_strength_features
 
 warnings.filterwarnings("ignore")
 
@@ -36,10 +37,25 @@ STATIC_VENUE_SPLIT_FEATURES = {
     "OPP_AWAY_PTS_ALLOWED_LAST_5",
 }
 
+WIN_STRENGTH_FEATURES = [
+    "PRE_GAME_ELO",
+    "OPP_PRE_GAME_ELO",
+    "ELO_DIFF",
+    "ABS_ELO_DIFF",
+    "WINRATE_DIFF_LAST_10",
+    "ABS_WINRATE_DIFF_LAST_10",
+    "REST_DIFF",
+    "IS_CLOSE_STRENGTH",
+    "PLAYOFF_ELO_DIFF",
+    "PLAYOFF_ABS_ELO_DIFF",
+    "PLAYOFF_REST_DIFF",
+    "CLOSE_STRENGTH_REST_DIFF",
+]
+
 class WinModelTrainer:
     def __init__(self, data_path=None, output_dir=None, player_data_path=None, player_models_dir=None):
         root = Path(__file__).resolve().parents[2]
-        self.data_pattern = data_path or str(root / "data/season=*/processed/team_model_ready_v2.csv")
+        self.data_pattern = data_path or str(root / "data/processed/team_model_ready_v3_*.csv")
         self.output_dir = Path(output_dir or root / "models/experimental")
         self.player_data_path = Path(player_data_path or root / "data/experimental/player_model_ready_v4_usg.csv")
         self.player_models_dir = Path(player_models_dir or root / "models/experimental")
@@ -191,8 +207,17 @@ class WinModelTrainer:
                 raise RuntimeError("Failed to build player projection features for win model training") from exc
 
         df_features, df_meta = self.separate_metadata(df)
+        df_features = df_features.reset_index(drop=True)
+        df_meta = df_meta.reset_index(drop=True)
         if self.target_col not in df_features.columns:
             raise ValueError(f"Target {self.target_col} not found in dataset columns")
+
+        feature_cols_before_strength = df_features.columns.tolist()
+        meta_cols_before_strength = df_meta.columns.tolist()
+        strength_input = pd.concat([df_features, df_meta], axis=1)
+        strength_input = add_win_strength_features(strength_input)
+        df_features = strength_input[feature_cols_before_strength + WIN_STRENGTH_FEATURES].copy()
+        df_meta = strength_input[meta_cols_before_strength].copy()
 
         if "IS_HOME" in df_features.columns:
             venue_aliases = {
@@ -220,6 +245,16 @@ class WinModelTrainer:
                 
         y = df_features[self.target_col].astype(int)
         X = df_features.drop(columns=[self.target_col])
+
+        base_feature_path = Path(__file__).resolve().parents[2] / "models" / "production" / "feature_columns_v8.json"
+        if base_feature_path.exists():
+            with open(base_feature_path, "r") as f:
+                base_feature_cols = json.load(f)
+            allowed_cols = [c for c in base_feature_cols + WIN_STRENGTH_FEATURES if c in X.columns]
+            missing_allowed = [c for c in base_feature_cols + WIN_STRENGTH_FEATURES if c not in X.columns]
+            if missing_allowed:
+                raise ValueError(f"Missing required v9 feature columns: {missing_allowed}")
+            X = X[allowed_cols]
         
         X_train_full, X_test, y_train_full, y_test, split_meta = chronological_train_test_split(
             X,
@@ -279,23 +314,24 @@ class WinModelTrainer:
             final_model = CalibratedClassifierCV(estimator=final_pipeline, method=best_name, cv=3)
             final_model.fit(X, y)
 
-        model_path = self.output_dir / "win_probability_model_v8.pkl"
+        model_path = self.output_dir / "win_probability_model_v9.pkl"
         joblib.dump(final_model, model_path)
         
         feature_cols = X.columns.tolist()
-        feat_path = self.output_dir / "feature_columns_v8.json"
+        feat_path = self.output_dir / "feature_columns_v9.json"
         with open(feat_path, "w") as f:
             json.dump(feature_cols, f, indent=2)
             
         metadata = {
             "model_name": "logistic_regression",
-            "version": "8.0",
+            "version": "9.0",
             "training_date": datetime.utcnow().isoformat() + "Z",
             "number_of_rows": int(df.shape[0]),
             "number_of_features": int(X.shape[1]),
             "evaluation": "chronological_holdout",
             "split": split_meta.__dict__,
             "dropped_static_venue_split_features": sorted(drop_static),
+            "strength_features": WIN_STRENGTH_FEATURES,
             "metrics": {
                 "uncalibrated": metrics_uncal,
                 "sigmoid": metrics_sig,

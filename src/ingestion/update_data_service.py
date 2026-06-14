@@ -9,17 +9,21 @@ from src.ingestion.team_games_fetcher import fetch_missing_team_games_by_game_id
 from src.ingestion.player_games_fetcher import fetch_missing_player_games_by_game_ids, append_player_games_to_raw_dataset
 from src.orchestration import PipelineRunner
 from scripts.season_utils import get_default_season
+from scripts.data_paths import get_data_paths
 
 
 class UpdateDataService:
     """Service to perform the full update-data pipeline (refresh schedule, fetch missing games, append, and optionally rebuilds)."""
 
     def __init__(self, raw_team_dir: str = "data/raw/team_games", raw_player_dir: str = "data/raw/player_games", fetch_workers: int = 4, skip_post_update_rebuilds: bool = False, season: str = None):
-        self.raw_team_dir = raw_team_dir
-        self.raw_player_dir = raw_player_dir
+        self.season = season or get_default_season()
+        paths = get_data_paths(self.season)
+        default_team_dir = os.path.normpath("data/raw/team_games")
+        default_player_dir = os.path.normpath("data/raw/player_games")
+        self.raw_team_dir = os.path.dirname(paths.team_games_raw) if os.path.normpath(raw_team_dir) == default_team_dir else raw_team_dir
+        self.raw_player_dir = os.path.dirname(paths.player_games_raw) if os.path.normpath(raw_player_dir) == default_player_dir else raw_player_dir
         self.fetch_workers = fetch_workers
         self.skip_post_update_rebuilds = skip_post_update_rebuilds
-        self.season = season
 
     def run(self, args) -> None:
         print("============================================================")
@@ -28,7 +32,7 @@ class UpdateDataService:
 
         # Step 1: Refresh schedule
         print("Step 1: Refreshing league schedule from NBA API...")
-        season_str = self.season or get_default_season()
+        season_str = self.season
         s_count, f_count = update_schedule_files(season=season_str)
         print(f"Schedule refreshed: {s_count} games, {f_count} Finals games.\n")
 

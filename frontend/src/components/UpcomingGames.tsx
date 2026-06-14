@@ -10,6 +10,7 @@ import {
   Shield,
   Star,
 } from "lucide-react";
+import { predictWinProbability } from "../api/predictions";
 
 // ─────────────────────────────────────────────
 // Types
@@ -414,16 +415,11 @@ export default function UpcomingGames() {
         throw new Error('Invalid date format for prediction_date. Expected YYYY-MM-DD.');
       }
 
-      const res = await fetch('/api/nba/predictions/win-probability', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ home_team: game.HOME_TEAM_ABBREVIATION, away_team: game.AWAY_TEAM_ABBREVIATION, prediction_date: dateStr })
+      const data = await predictWinProbability({
+        home_team: game.HOME_TEAM_ABBREVIATION,
+        away_team: game.AWAY_TEAM_ABBREVIATION,
+        prediction_date: dateStr,
       });
-      if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
-        throw new Error(b.error || `ML service returned ${res.status}`);
-      }
-      const data = await res.json();
       setPredictionResult(data);
     } catch (e: any) {
       setPredictionError(e.message || 'Prediction failed');

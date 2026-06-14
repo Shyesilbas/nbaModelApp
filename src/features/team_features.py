@@ -201,22 +201,6 @@ def build_team_features(df: pd.DataFrame) -> pd.DataFrame:
         df["CURRENT_VENUE_PTS_LAST_5"] = np.nan
         df["CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = np.nan
 
-    if "IS_HOME" in df.columns:
-        opp_is_home = df["IS_HOME"] == False
-        df["OPP_CURRENT_VENUE_WINRATE_LAST_5"] = np.where(
-            opp_is_home, df["OPP_HOME_WINRATE_LAST_5"], df["OPP_AWAY_WINRATE_LAST_5"]
-        )
-        df["OPP_CURRENT_VENUE_PTS_LAST_5"] = np.where(
-            opp_is_home, df["OPP_HOME_PTS_LAST_5"], df["OPP_AWAY_PTS_LAST_5"]
-        )
-        df["OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = np.where(
-            opp_is_home, df["OPP_HOME_PTS_ALLOWED_LAST_5"], df["OPP_AWAY_PTS_ALLOWED_LAST_5"]
-        )
-    else:
-        df["OPP_CURRENT_VENUE_WINRATE_LAST_5"] = np.nan
-        df["OPP_CURRENT_VENUE_PTS_LAST_5"] = np.nan
-        df["OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = np.nan
-
     # 13. Head-to-Head (H2H) history features (rolling 5, shifted by 1)
     if "TEAM_ABBREVIATION" in df.columns and "OPPONENT_ABBREVIATION" in df.columns:
         h2h_groupby = ["TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION"]
