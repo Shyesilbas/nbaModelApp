@@ -14,6 +14,9 @@ class DataPaths:
     raw_finals_schedule: str
     raw_team_boxscores: str
     raw_player_boxscores: str
+    raw_play_by_play_dir: str
+    processed_pbp_events: str
+    processed_quarter_scores: str
     game_results: str
     schedule_combined: str
     upcoming_context: str
@@ -57,6 +60,9 @@ def get_data_paths(season: str = None) -> DataPaths:
         raw_finals_schedule=str(raw_root / "finals_schedule.csv"),
         raw_team_boxscores=str(raw_root / "boxscores" / "team_boxscores.csv"),
         raw_player_boxscores=str(raw_root / "boxscores" / "player_boxscores.csv"),
+        raw_play_by_play_dir=str(raw_root / "play_by_play"),
+        processed_pbp_events=str(processed_root / "pbp_events.parquet"),
+        processed_quarter_scores=str(processed_root / "quarter_scores.parquet"),
         game_results=str(processed_root / "game_results.csv"),
         schedule_combined=str(processed_root / "schedule_combined.csv"),
         upcoming_context=str(processed_root / "upcoming_games_context.csv"),

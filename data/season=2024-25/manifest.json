@@ -11,6 +11,12 @@
     "upcoming_games_context": "/Users/serhat/agProjects/nbaModelApp/data/season=2024-25/processed/upcoming_games_context.csv",
     "team_model_ready_v2": "/Users/serhat/agProjects/nbaModelApp/data/season=2024-25/processed/team_model_ready_v2.csv",
     "frontend_export_dir": "frontend/public/data",
-    "sync_passed": false
-  }
+    "sync_passed": false,
+    "raw_play_by_play_dir": "/Users/serhat/agProjects/nbaModelApp/data/season=2024-25/raw/play_by_play",
+    "play_by_play_coverage": "finals_only",
+    "play_by_play_game_count": 7,
+    "play_by_play_source_of_truth": "data/season=<season>/raw/play_by_play",
+    "frontend_play_by_play_export_dir": "frontend/public/data/play_by_play"
+  },
+  "updated_at": "2026-06-14T20:33:07.703855+00:00"
 }
