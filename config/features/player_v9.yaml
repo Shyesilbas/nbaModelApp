@@ -1,0 +1,26 @@
+schema_version: player_v9
+targets:
+  TARGET_PTS: pts
+  TARGET_REB: reb
+  TARGET_AST: ast
+exclude_columns:
+  - SEASON_ID
+  - Player_ID
+  - GAME_DATE
+  - MATCHUP
+  - VIDEO_AVAILABLE
+  - PLAYER_NAME
+  - SEASON_TYPE
+  - OPPONENT_ABBREVIATION
+  - GAME_ID
+  - Game_ID
+  - TEAM_ABBREVIATION
+  - PLAYER_POSITION_GROUP
+required_context_columns:
+  - SEASON_ID
+  - GAME_DATE
+  - IS_PLAYOFF
+  - IS_HOME
+  - PLAYER_POSITION_GROUP
+  - USG_PCT_LAST_10
+  - MIN_EMA_10

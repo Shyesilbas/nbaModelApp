@@ -10,7 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.metrics import mean_absolute_error, r2_score
-from src.training.validation_utils import chronological_train_test_split
+from src.training.feature_contract import load_feature_contract
+from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split
 
 NBA_TEAMS_LOCATIONS = {
     "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
@@ -72,28 +73,20 @@ def get_location_features(row):
         return pd.Series({"TRAVEL_DISTANCE": dist, "TIMEZONE_DIFF": tz_diff, "OPP_TRAVEL_DISTANCE": 0.0, "OPP_TIMEZONE_DIFF": 0.0})
 
 class ScoreModelTrainer:
-    def __init__(self, data_pattern=None, output_dir=None, version="v9"):
+    def __init__(self, data_pattern=None, output_dir=None, version="v9", data_files=None, manifest_metadata=None, holdout_config=None, feature_contract_path=None):
         self.version = version
         root = Path(__file__).resolve().parents[2]
         self.data_pattern = data_pattern or str(root / "data/processed/team_model_ready_v3_*.csv")
+        self.data_files = [Path(p) for p in data_files] if data_files else None
         self.output_dir = Path(output_dir or root / "models/experimental")
-        
-        self.pace_features = [
-            "PACE_LAST_5", "PACE_LAST_10", "OPP_PACE_LAST_5", "OPP_PACE_LAST_10",
-            "OFF_RTG_LAST_5", "DEF_RTG_LAST_5", "OPP_OFF_RTG_LAST_5", "OPP_DEF_RTG_LAST_5",
-            "DAYS_REST", "OPP_DAYS_REST", "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES"
-        ]
-        
-        self.base_off_rtg_features = [
-            "OFF_RTG_LAST_5", "OFF_RTG_LAST_10", "PACE_LAST_5", "WINRATE_LAST_5", 
-            "OPP_DEF_RTG_LAST_5", "OPP_DEF_RTG_LAST_10", "OPP_PACE_LAST_5",
-            "TEAM_CORE_TOP3_PLAYED_COUNT", "TEAM_CORE_TOP3_AVAILABLE_RATE", "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
-            "OPP_CORE_TOP3_PLAYED_COUNT", "DAYS_REST", "OPP_DAYS_REST", "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES"
-        ]
-        
+        self.manifest_metadata = manifest_metadata or {}
+        self.holdout_config = holdout_config or {}
+        self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/score_v9.yaml", root=root)
+        self.pace_features = self.feature_contract.list_value("pace_features")
+        self.base_off_rtg_features = self.feature_contract.list_value("base_off_rtg_features")
         self.home_off_rtg_features = self.base_off_rtg_features.copy()
-        self.away_off_rtg_features = self.base_off_rtg_features.copy() + ["TRAVEL_DISTANCE", "TIMEZONE_DIFF"]
-        self.margin_features = self.home_off_rtg_features + ["DEF_RTG_LAST_5", "DEF_RTG_LAST_10", "OPP_OFF_RTG_LAST_5"]
+        self.away_off_rtg_features = self.base_off_rtg_features.copy() + self.feature_contract.list_value("away_extra_features")
+        self.margin_features = self.home_off_rtg_features + self.feature_contract.list_value("margin_extra_features")
 
     def tune_and_train(self, X_train, y_train, random_state=42):
         base_model = xgb.XGBRegressor(random_state=random_state)
@@ -119,26 +112,56 @@ class ScoreModelTrainer:
     def _train_eval_final(self, df, features, target_col):
         X = df[features]
         y = df[target_col]
-        X_train, X_test, y_train, y_test, split_meta = chronological_train_test_split(
-            X,
-            y,
-            df,
-            test_size=0.2,
-        )
+        if self.holdout_config.get("strategy") == "season_holdout":
+            X_train, X_test, y_train, y_test, split_meta = season_holdout_train_test_split(
+                X,
+                y,
+                df,
+                calibration_season=self.holdout_config["calibration_season"],
+                date_col=self.holdout_config.get("date_col", "GAME_DATE"),
+            )
+        else:
+            X_train, X_test, y_train, y_test, split_meta = chronological_train_test_split(
+                X,
+                y,
+                df,
+                date_col=self.holdout_config.get("date_col", "GAME_DATE"),
+                test_size=float(self.holdout_config.get("test_size", 0.2)),
+            )
         eval_model = self.tune_and_train(X_train, y_train)
         mae = mean_absolute_error(y_test, eval_model.predict(X_test))
         final_model = self.tune_and_train(X, y)
         return final_model, float(mae), split_meta, X_test.index.tolist()
 
-    def train_and_export(self):
-        from sklearn.linear_model import Ridge
-        
-        files = glob.glob(self.data_pattern)
+    def resolve_dataset_files(self):
+        files = self.data_files if self.data_files is not None else [Path(p) for p in glob.glob(self.data_pattern)]
         if not files:
             raise FileNotFoundError(f"No V3 datasets found matching {self.data_pattern}")
+        return files
+
+    def load_training_dataset(self, files):
+        row_counts_by_file = {}
+        df_list = []
+        for f in files:
+            f_df = pd.read_csv(f)
+            row_counts_by_file[str(f)] = int(len(f_df))
+            df_list.append(f_df)
+        return pd.concat(df_list, ignore_index=True), row_counts_by_file
+
+    def validate_dataset_contract(self, df):
+        required = sorted(set(["PACE", "OFF_RTG", "DEF_RTG", "NET_RTG", "IS_HOME", "GAME_ID", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION"] + self.pace_features + self.home_off_rtg_features + self.away_off_rtg_features + self.margin_features))
+        missing = [c for c in required if c not in df.columns and c not in {"TRAVEL_DISTANCE", "TIMEZONE_DIFF"}]
+        if missing:
+            raise ValueError(f"Score dataset missing required contract columns: {missing}")
+        if df.empty:
+            raise ValueError("Score dataset is empty after load.")
+
+    def train_and_export(self):
+        from sklearn.linear_model import Ridge
             
-        df_list = [pd.read_csv(f) for f in files]
-        df = pd.concat(df_list, ignore_index=True)
+        files = self.resolve_dataset_files()
+        df, row_counts_by_file = self.load_training_dataset(files)
+        self.validate_dataset_contract(df)
         
         df = df.dropna(subset=["PACE", "OFF_RTG", "DEF_RTG", "PACE_LAST_5", "OFF_RTG_LAST_5", "DEF_RTG_LAST_5"])
         
@@ -227,6 +250,15 @@ class ScoreModelTrainer:
         metadata = {
             "version": f"{self.version}_Ridge",
             "updated_at": datetime.utcnow().isoformat() + "Z",
+            "training_manifest": self.manifest_metadata,
+            "feature_contract": self.feature_contract.snapshot,
+            "input_files": [str(p) for p in files],
+            "row_counts_by_file": row_counts_by_file,
+            "final_refit": {
+                "enabled": True,
+                "rows": int(len(df)),
+                "note": "Holdout metrics are computed before final submodels are refit on all eligible rows."
+            },
             "evaluation": "chronological_holdout",
             "pace_mae": float(pace_mae),
             "home_rtg_mae": float(home_mae),

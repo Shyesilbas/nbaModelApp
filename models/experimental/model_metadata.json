@@ -1,15 +1,130 @@
 {
   "model_name": "logistic_regression",
   "version": "9.0",
-  "training_date": "2026-06-14T16:38:34.209740Z",
-  "number_of_rows": 1772,
+  "training_date": "2026-06-15T13:35:19.278852Z",
+  "number_of_rows": 8496,
   "number_of_features": 62,
+  "training_manifest": {
+    "path": "/Users/serhat/agProjects/nbaModelApp/config/training_manifest.yaml",
+    "train_seasons": [
+      "2020-21",
+      "2021-22",
+      "2022-23",
+      "2023-24"
+    ],
+    "calibration_season": "2024-25",
+    "validation_season": "2025-26",
+    "holdout": {
+      "strategy": "season_holdout",
+      "test_size": 0.2,
+      "date_col": "GAME_DATE",
+      "calibration_season": "2024-25"
+    }
+  },
+  "feature_contract": {
+    "path": "/Users/serhat/agProjects/nbaModelApp/config/features/win_v9.yaml",
+    "schema_version": "win_v9",
+    "config": {
+      "schema_version": "win_v9",
+      "target": "WIN",
+      "base_feature_file": "models/production/feature_columns_v8.json",
+      "derived_features": [
+        "PRE_GAME_ELO",
+        "OPP_PRE_GAME_ELO",
+        "ELO_DIFF",
+        "ABS_ELO_DIFF",
+        "WINRATE_DIFF_LAST_10",
+        "ABS_WINRATE_DIFF_LAST_10",
+        "REST_DIFF",
+        "IS_CLOSE_STRENGTH",
+        "PLAYOFF_ELO_DIFF",
+        "PLAYOFF_ABS_ELO_DIFF",
+        "PLAYOFF_REST_DIFF",
+        "CLOSE_STRENGTH_REST_DIFF"
+      ],
+      "static_venue_split_features": [
+        "HOME_WINRATE_LAST_5",
+        "HOME_PTS_LAST_5",
+        "HOME_PTS_ALLOWED_LAST_5",
+        "AWAY_WINRATE_LAST_5",
+        "AWAY_PTS_LAST_5",
+        "AWAY_PTS_ALLOWED_LAST_5",
+        "OPP_HOME_WINRATE_LAST_5",
+        "OPP_HOME_PTS_LAST_5",
+        "OPP_HOME_PTS_ALLOWED_LAST_5",
+        "OPP_AWAY_WINRATE_LAST_5",
+        "OPP_AWAY_PTS_LAST_5",
+        "OPP_AWAY_PTS_ALLOWED_LAST_5"
+      ],
+      "defaultable_features": {
+        "IS_ELIMINATION_GAME": 0,
+        "CAN_CLINCH_SERIES": 0,
+        "H2H_GAMES_LAST_5": 0,
+        "OPP_H2H_GAMES_LAST_5": 0,
+        "IS_CLOSE_STRENGTH": 0,
+        "TEAM_V3_PROJ_PTS_SUM": 0.0,
+        "TEAM_V3_PROJ_PTS_AVG": 0.0,
+        "TEAM_V3_PROJ_REB_SUM": 0.0,
+        "TEAM_V3_PROJ_REB_AVG": 0.0,
+        "TEAM_V3_PROJ_AST_SUM": 0.0,
+        "TEAM_V3_PROJ_AST_AVG": 0.0,
+        "TEAM_V3_PROJ_PRA_SUM": 0.0,
+        "TEAM_V3_PROJ_PRA_AVG": 0.0,
+        "OPP_V3_PROJ_PTS_SUM": 0.0,
+        "OPP_V3_PROJ_PTS_AVG": 0.0,
+        "OPP_V3_PROJ_REB_SUM": 0.0,
+        "OPP_V3_PROJ_REB_AVG": 0.0,
+        "OPP_V3_PROJ_AST_SUM": 0.0,
+        "OPP_V3_PROJ_AST_AVG": 0.0,
+        "OPP_V3_PROJ_PRA_SUM": 0.0,
+        "OPP_V3_PROJ_PRA_AVG": 0.0
+      },
+      "projection_features": {
+        "policy": "fill_default_when_unavailable",
+        "note": "Train-season player projection coverage should be expanded before making these strict."
+      }
+    }
+  },
+  "input_files": [
+    "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv",
+    "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv",
+    "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv",
+    "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv",
+    "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv"
+  ],
+  "row_counts_by_file": {
+    "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv": 1456,
+    "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv": 1766,
+    "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv": 1760,
+    "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv": 1766,
+    "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv": 1748
+  },
+  "player_projection_enrichment": {
+    "attempted": true,
+    "applied": true,
+    "reason": null
+  },
+  "imputed_missing_required_features": [],
+  "final_refit": {
+    "enabled": true,
+    "rows": 8496,
+    "note": "Holdout metrics are computed before this final model is refit on all eligible rows."
+  },
   "evaluation": "chronological_holdout",
   "split": {
-    "strategy": "chronological_quantile",
-    "split_date": "2026-04-02",
-    "train_rows": 1428,
-    "test_rows": 344
+    "strategy": "season_holdout",
+    "split_date": null,
+    "train_rows": 6748,
+    "test_rows": 1748,
+    "train_seasons": [
+      "2020-21",
+      "2021-22",
+      "2022-23",
+      "2023-24"
+    ],
+    "test_seasons": [
+      "2024-25"
+    ]
   },
   "dropped_static_venue_split_features": [
     "AWAY_PTS_ALLOWED_LAST_5",
@@ -41,28 +156,28 @@
   ],
   "metrics": {
     "uncalibrated": {
-      "accuracy": 0.7296511627906976,
-      "precision": 0.7283236994219653,
-      "recall": 0.7325581395348837,
-      "f1": 0.7304347826086957,
-      "roc_auc": 0.7986411573823687,
-      "brier_score": 0.183452298391937
+      "accuracy": 0.6756292906178489,
+      "precision": 0.6762342135476463,
+      "recall": 0.6739130434782609,
+      "f1": 0.6750716332378224,
+      "roc_auc": 0.7408165723232567,
+      "brier_score": 0.2065238686891873
     },
     "sigmoid": {
-      "accuracy": 0.7267441860465116,
-      "precision": 0.7267441860465116,
-      "recall": 0.7267441860465116,
-      "f1": 0.7267441860465116,
-      "roc_auc": 0.7905286641427799,
-      "brier_score": 0.1896213626737531
+      "accuracy": 0.6733409610983981,
+      "precision": 0.6739380022962113,
+      "recall": 0.6716247139588101,
+      "f1": 0.6727793696275072,
+      "roc_auc": 0.7404932214128995,
+      "brier_score": 0.2067441642486677
     },
     "isotonic": {
-      "accuracy": 0.7296511627906976,
-      "precision": 0.7337278106508875,
-      "recall": 0.7209302325581395,
-      "f1": 0.7272727272727273,
-      "roc_auc": 0.7829063007030828,
-      "brier_score": 0.18963182271464502
+      "accuracy": 0.6767734553775744,
+      "precision": 0.6777905638665133,
+      "recall": 0.6739130434782609,
+      "f1": 0.6758462421113024,
+      "roc_auc": 0.7401325607821165,
+      "brier_score": 0.20669495550042324
     }
   },
   "selected_calibration": "uncalibrated",

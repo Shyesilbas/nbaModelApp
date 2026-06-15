@@ -14,7 +14,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
                              roc_auc_score, brier_score_loss)
-from src.training.validation_utils import chronological_train_test_split
+from src.training.feature_contract import load_feature_contract, resolve_feature_list
+from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split
 
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import get_default_season
@@ -52,14 +53,55 @@ WIN_STRENGTH_FEATURES = [
     "CLOSE_STRENGTH_REST_DIFF",
 ]
 
+DEFAULTABLE_REQUIRED_FEATURES = {
+    "IS_ELIMINATION_GAME": 0,
+    "CAN_CLINCH_SERIES": 0,
+    "H2H_GAMES_LAST_5": 0,
+    "OPP_H2H_GAMES_LAST_5": 0,
+    "IS_CLOSE_STRENGTH": 0,
+    "TEAM_V3_PROJ_PTS_SUM": 0.0,
+    "TEAM_V3_PROJ_PTS_AVG": 0.0,
+    "TEAM_V3_PROJ_REB_SUM": 0.0,
+    "TEAM_V3_PROJ_REB_AVG": 0.0,
+    "TEAM_V3_PROJ_AST_SUM": 0.0,
+    "TEAM_V3_PROJ_AST_AVG": 0.0,
+    "TEAM_V3_PROJ_PRA_SUM": 0.0,
+    "TEAM_V3_PROJ_PRA_AVG": 0.0,
+    "OPP_V3_PROJ_PTS_SUM": 0.0,
+    "OPP_V3_PROJ_PTS_AVG": 0.0,
+    "OPP_V3_PROJ_REB_SUM": 0.0,
+    "OPP_V3_PROJ_REB_AVG": 0.0,
+    "OPP_V3_PROJ_AST_SUM": 0.0,
+    "OPP_V3_PROJ_AST_AVG": 0.0,
+    "OPP_V3_PROJ_PRA_SUM": 0.0,
+    "OPP_V3_PROJ_PRA_AVG": 0.0,
+}
+
 class WinModelTrainer:
-    def __init__(self, data_path=None, output_dir=None, player_data_path=None, player_models_dir=None):
+    def __init__(
+        self,
+        data_path=None,
+        output_dir=None,
+        player_data_path=None,
+        player_models_dir=None,
+        data_files=None,
+        manifest_metadata=None,
+        holdout_config=None,
+        feature_contract_path=None,
+    ):
         root = Path(__file__).resolve().parents[2]
         self.data_pattern = data_path or str(root / "data/processed/team_model_ready_v3_*.csv")
+        self.data_files = [Path(p) for p in data_files] if data_files else None
         self.output_dir = Path(output_dir or root / "models/experimental")
         self.player_data_path = Path(player_data_path or root / "data/experimental/player_model_ready_v4_usg.csv")
         self.player_models_dir = Path(player_models_dir or root / "models/experimental")
-        self.target_col = "WIN"
+        self.manifest_metadata = manifest_metadata or {}
+        self.holdout_config = holdout_config or {}
+        self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/win_v9.yaml", root=root)
+        self.target_col = self.feature_contract.raw.get("target", "WIN")
+        self.strength_features = self.feature_contract.list_value("derived_features")
+        self.static_venue_split_features = set(self.feature_contract.list_value("static_venue_split_features"))
+        self.defaultable_required_features = self.feature_contract.dict_value("defaultable_features")
 
     def separate_metadata(self, df):
         meta_candidates = [
@@ -103,9 +145,11 @@ class WinModelTrainer:
         brier = brier_score_loss(y_true, y_proba)
         return dict(accuracy=acc, precision=prec, recall=rec, f1=f1, roc_auc=roc, brier_score=brier)
 
-    def train_and_export(self):
+    def resolve_dataset_files(self):
         import glob
-        if isinstance(self.data_pattern, Path):
+        if self.data_files is not None:
+            files = self.data_files
+        elif isinstance(self.data_pattern, Path):
             files = [self.data_pattern]
         elif os.path.exists(self.data_pattern) and os.path.isfile(self.data_pattern):
             files = [Path(self.data_pattern)]
@@ -114,17 +158,34 @@ class WinModelTrainer:
             
         if not files:
             raise FileNotFoundError(f"No V2 datasets found matching {self.data_pattern}")
-            
+        return files
+
+    def load_training_dataset(self, files):
         df_list = []
+        row_counts_by_file = {}
         for f in files:
             if os.path.exists(f):
-                df_list.append(pd.read_csv(f))
+                f_df = pd.read_csv(f)
+                row_counts_by_file[str(f)] = int(len(f_df))
+                df_list.append(f_df)
         if not df_list:
             raise FileNotFoundError(f"No V2 datasets could be read from pattern {self.data_pattern}")
-        df = pd.concat(df_list, ignore_index=True)
+        return pd.concat(df_list, ignore_index=True), row_counts_by_file
+
+    def validate_dataset_contract(self, df):
+        required = [self.target_col, "GAME_ID", "GAME_DATE", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION", "IS_HOME", "IS_PLAYOFF", "WINRATE_LAST_10", "OPP_WINRATE_LAST_10", "DAYS_REST", "OPP_DAYS_REST"]
+        missing = [c for c in required if c not in df.columns]
+        if missing:
+            raise ValueError(f"Win dataset missing required contract columns: {missing}")
+        if df.empty:
+            raise ValueError("Win dataset is empty after load.")
+
+    def apply_player_projection_enrichment(self, df):
+        projection_enrichment = {"attempted": False, "applied": False, "reason": None}
         
         if self.player_data_path.exists() and self.player_models_dir.exists():
             try:
+                projection_enrichment["attempted"] = True
                 player_df = pd.read_csv(self.player_data_path)
 
                 root_models_prod = Path(__file__).resolve().parents[2] / "models/production"
@@ -195,8 +256,12 @@ class WinModelTrainer:
                         "PROJ_PRA_mean": "OPP_V3_PROJ_PRA_AVG",
                     })
                     
-                    df = df.merge(team_features_df, on=["GAME_ID", "TEAM_ABBREVIATION"], how="inner")
-                    df = df.merge(opp_features_df, on=["GAME_ID", "OPPONENT_ABBREVIATION"], how="inner")
+                    enriched_df = df.merge(team_features_df, on=["GAME_ID", "TEAM_ABBREVIATION"], how="inner")
+                    enriched_df = enriched_df.merge(opp_features_df, on=["GAME_ID", "OPPONENT_ABBREVIATION"], how="inner")
+                    if enriched_df.empty:
+                        projection_enrichment["reason"] = "No overlapping GAME_ID rows between team training datasets and player projection dataset."
+                        raise StopIteration
+                    df = enriched_df
                     
                     new_cols = [
                         "TEAM_V3_PROJ_PTS_SUM", "TEAM_V3_PROJ_REB_SUM", "TEAM_V3_PROJ_AST_SUM", "TEAM_V3_PROJ_PRA_SUM",
@@ -205,8 +270,22 @@ class WinModelTrainer:
                         "OPP_V3_PROJ_PTS_AVG", "OPP_V3_PROJ_REB_AVG", "OPP_V3_PROJ_AST_AVG", "OPP_V3_PROJ_PRA_AVG"
                     ]
                     df = df.dropna(subset=new_cols)
+                    if df.empty:
+                        projection_enrichment["reason"] = "Player projection enrichment produced no complete rows after required projection columns."
+                        raise StopIteration
+                    projection_enrichment["applied"] = True
             except Exception as exc:
-                raise RuntimeError("Failed to build player projection features for win model training") from exc
+                if isinstance(exc, StopIteration):
+                    pass
+                else:
+                    raise RuntimeError("Failed to build player projection features for win model training") from exc
+        return df, projection_enrichment
+
+    def train_and_export(self):
+        files = self.resolve_dataset_files()
+        df, row_counts_by_file = self.load_training_dataset(files)
+        self.validate_dataset_contract(df)
+        df, projection_enrichment = self.apply_player_projection_enrichment(df)
 
         df_features, df_meta = self.separate_metadata(df)
         df_features = df_features.reset_index(drop=True)
@@ -218,7 +297,7 @@ class WinModelTrainer:
         meta_cols_before_strength = df_meta.columns.tolist()
         strength_input = pd.concat([df_features, df_meta], axis=1)
         strength_input = add_win_strength_features(strength_input)
-        df_features = strength_input[feature_cols_before_strength + WIN_STRENGTH_FEATURES].copy()
+        df_features = strength_input[feature_cols_before_strength + self.strength_features].copy()
         df_meta = strength_input[meta_cols_before_strength].copy()
 
         if "IS_HOME" in df_features.columns:
@@ -235,7 +314,7 @@ class WinModelTrainer:
                 if alias not in df_features.columns and when_home_col in df_features.columns and when_away_col in df_features.columns:
                     df_features[alias] = np.where(is_home, df_features[when_home_col], df_features[when_away_col])
 
-        drop_static = [c for c in STATIC_VENUE_SPLIT_FEATURES if c in df_features.columns]
+        drop_static = [c for c in self.static_venue_split_features if c in df_features.columns]
         if drop_static:
             df_features = df_features.drop(columns=drop_static)
             
@@ -248,23 +327,34 @@ class WinModelTrainer:
         y = df_features[self.target_col].astype(int)
         X = df_features.drop(columns=[self.target_col])
 
-        base_feature_path = Path(__file__).resolve().parents[2] / "models" / "production" / "feature_columns_v8.json"
-        if base_feature_path.exists():
-            with open(base_feature_path, "r") as f:
-                base_feature_cols = json.load(f)
-            allowed_cols = [c for c in base_feature_cols + WIN_STRENGTH_FEATURES if c in X.columns]
-            missing_allowed = [c for c in base_feature_cols + WIN_STRENGTH_FEATURES if c not in X.columns]
-            if missing_allowed:
-                raise ValueError(f"Missing required v9 feature columns: {missing_allowed}")
-            X = X[allowed_cols]
+        imputed_missing_required_features = []
+        required_feature_cols = resolve_feature_list(self.feature_contract)
+        missing_allowed = [c for c in required_feature_cols if c not in X.columns]
+        non_defaultable_missing = [c for c in missing_allowed if c not in self.defaultable_required_features]
+        if non_defaultable_missing:
+            raise ValueError(f"Missing required v9 feature columns: {non_defaultable_missing}")
+        for col in missing_allowed:
+            X[col] = self.defaultable_required_features[col]
+        imputed_missing_required_features = missing_allowed
+        X = X[required_feature_cols]
         
-        X_train_full, X_test, y_train_full, y_test, split_meta = chronological_train_test_split(
-            X,
-            y,
-            df_meta,
-            test_size=0.2,
-            stratify_random=True,
-        )
+        if self.holdout_config.get("strategy") == "season_holdout":
+            X_train_full, X_test, y_train_full, y_test, split_meta = season_holdout_train_test_split(
+                X,
+                y,
+                df_meta,
+                calibration_season=self.holdout_config["calibration_season"],
+                date_col=self.holdout_config.get("date_col", "GAME_DATE"),
+            )
+        else:
+            X_train_full, X_test, y_train_full, y_test, split_meta = chronological_train_test_split(
+                X,
+                y,
+                df_meta,
+                date_col=self.holdout_config.get("date_col", "GAME_DATE"),
+                test_size=float(self.holdout_config.get("test_size", 0.2)),
+                stratify_random=True,
+            )
         
         lr_pipeline = Pipeline([
             ("imputer", SimpleImputer(strategy="mean")),
@@ -330,10 +420,21 @@ class WinModelTrainer:
             "training_date": datetime.utcnow().isoformat() + "Z",
             "number_of_rows": int(df.shape[0]),
             "number_of_features": int(X.shape[1]),
+            "training_manifest": self.manifest_metadata,
+            "feature_contract": self.feature_contract.snapshot,
+            "input_files": [str(p) for p in files],
+            "row_counts_by_file": row_counts_by_file,
+            "player_projection_enrichment": projection_enrichment,
+            "imputed_missing_required_features": imputed_missing_required_features,
+            "final_refit": {
+                "enabled": True,
+                "rows": int(len(X)),
+                "note": "Holdout metrics are computed before this final model is refit on all eligible rows."
+            },
             "evaluation": "chronological_holdout",
             "split": split_meta.__dict__,
             "dropped_static_venue_split_features": sorted(drop_static),
-            "strength_features": WIN_STRENGTH_FEATURES,
+            "strength_features": self.strength_features,
             "metrics": {
                 "uncalibrated": metrics_uncal,
                 "sigmoid": metrics_sig,
