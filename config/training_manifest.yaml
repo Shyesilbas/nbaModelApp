@@ -1,0 +1,58 @@
+train_seasons:
+  - "2020-21"
+  - "2021-22"
+  - "2022-23"
+  - "2023-24"
+calibration_season: "2024-25"
+validation_season: "2025-26"
+
+holdout:
+  strategy: season_holdout
+  test_size: 0.2
+  date_col: GAME_DATE
+
+models:
+  win:
+    enabled: true
+    feature_contract: config/features/win_v9.yaml
+  score:
+    enabled: true
+    feature_contract: config/features/score_v9.yaml
+  player:
+    enabled: true
+    feature_contract: config/features/player_v9.yaml
+    required_seasons:
+      - "2020-21"
+      - "2021-22"
+      - "2022-23"
+      - "2023-24"
+      - "2024-25"
+      - "2025-26"
+
+promotion_thresholds:
+  win:
+    max_brier: 0.21
+    min_roc_auc: 0.70
+  score:
+    max_total_mae: 16.0
+    max_margin_mae: 13.0
+  player:
+    pts:
+      max_mae: 5.6
+      min_r2: 0.45
+    reb:
+      max_mae: 2.7
+      min_r2: 0.35
+    ast:
+      max_mae: 2.4
+      min_r2: 0.35
+
+required_segments:
+  - overall
+  - regular_season
+  - playoffs
+  - home
+  - away
+  - close_games
+  - favorites
+  - underdogs

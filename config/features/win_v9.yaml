@@ -1,0 +1,54 @@
+schema_version: win_v9
+target: WIN
+base_feature_file: models/production/feature_columns_v8.json
+derived_features:
+  - PRE_GAME_ELO
+  - OPP_PRE_GAME_ELO
+  - ELO_DIFF
+  - ABS_ELO_DIFF
+  - WINRATE_DIFF_LAST_10
+  - ABS_WINRATE_DIFF_LAST_10
+  - REST_DIFF
+  - IS_CLOSE_STRENGTH
+  - PLAYOFF_ELO_DIFF
+  - PLAYOFF_ABS_ELO_DIFF
+  - PLAYOFF_REST_DIFF
+  - CLOSE_STRENGTH_REST_DIFF
+static_venue_split_features:
+  - HOME_WINRATE_LAST_5
+  - HOME_PTS_LAST_5
+  - HOME_PTS_ALLOWED_LAST_5
+  - AWAY_WINRATE_LAST_5
+  - AWAY_PTS_LAST_5
+  - AWAY_PTS_ALLOWED_LAST_5
+  - OPP_HOME_WINRATE_LAST_5
+  - OPP_HOME_PTS_LAST_5
+  - OPP_HOME_PTS_ALLOWED_LAST_5
+  - OPP_AWAY_WINRATE_LAST_5
+  - OPP_AWAY_PTS_LAST_5
+  - OPP_AWAY_PTS_ALLOWED_LAST_5
+defaultable_features:
+  IS_ELIMINATION_GAME: 0
+  CAN_CLINCH_SERIES: 0
+  H2H_GAMES_LAST_5: 0
+  OPP_H2H_GAMES_LAST_5: 0
+  IS_CLOSE_STRENGTH: 0
+  TEAM_V3_PROJ_PTS_SUM: 0.0
+  TEAM_V3_PROJ_PTS_AVG: 0.0
+  TEAM_V3_PROJ_REB_SUM: 0.0
+  TEAM_V3_PROJ_REB_AVG: 0.0
+  TEAM_V3_PROJ_AST_SUM: 0.0
+  TEAM_V3_PROJ_AST_AVG: 0.0
+  TEAM_V3_PROJ_PRA_SUM: 0.0
+  TEAM_V3_PROJ_PRA_AVG: 0.0
+  OPP_V3_PROJ_PTS_SUM: 0.0
+  OPP_V3_PROJ_PTS_AVG: 0.0
+  OPP_V3_PROJ_REB_SUM: 0.0
+  OPP_V3_PROJ_REB_AVG: 0.0
+  OPP_V3_PROJ_AST_SUM: 0.0
+  OPP_V3_PROJ_AST_AVG: 0.0
+  OPP_V3_PROJ_PRA_SUM: 0.0
+  OPP_V3_PROJ_PRA_AVG: 0.0
+projection_features:
+  policy: fill_default_when_unavailable
+  note: Train-season player projection coverage should be expanded before making these strict.

@@ -28,36 +28,72 @@ See [PROJECT_STATUS.md](PROJECT_STATUS.md) and [ARTIFACT_REGISTRY.md](ARTIFACT_R
 Training is organized as a three-layer candidate pipeline: PLAYER models are trained first, SCORE models second, and WIN probability last. Candidate artifacts are written to `models/experimental/`, evaluated against the current production champion, and promoted to `models/production/` only after comparison.
 
 ```bash
-PYTHONPATH=. python3 scripts/retrain_pipeline.py --season YYYY-YY --dry-run
-PYTHONPATH=. python3 scripts/retrain_pipeline.py --season YYYY-YY
+PYTHONPATH=. python3 scripts/run_training_workflow.py --dry-run
+PYTHONPATH=. python3 scripts/run_training_workflow.py
+```
+
+To skip the PLAYER dataset rebuild and use the existing file:
+
+```bash
+PYTHONPATH=. python3 scripts/run_training_workflow.py --dry-run --skip-player-dataset-rebuild
 ```
 
 The `--dry-run` mode trains and evaluates challenger artifacts without promotion. Running without `--dry-run` opens the promotion flow after champion-vs-challenger metrics are printed.
 
+### Operational changes
+
+Use [reports/operations/training_governance_status.md](reports/operations/training_governance_status.md) as the live operating reference for training changes. The short version:
+
+| Goal | Edit |
+| --- | --- |
+| Add a new fit season | Add the season to `train_seasons` in `config/training_manifest.yaml`; ensure `data/processed/team_model_ready_v3_YYYY_YY.csv` and `data/season=YYYY-YY/features/player_features.csv` exist. |
+| Move the calibration season | Change `calibration_season` in `config/training_manifest.yaml`; keep it out of `train_seasons`. |
+| Move the external validation season | Change `validation_season` in `config/training_manifest.yaml`; include it in `models.player.required_seasons` if PLAYER evaluation/projection rows are needed. |
+| Change WIN features | Edit `config/features/win_v9.yaml`; change trainer code only for new derived feature logic. |
+| Change SCORE features | Edit `config/features/score_v9.yaml`; each SCORE submodel has its own feature list. |
+| Change PLAYER targets/exclusions | Edit `config/features/player_v9.yaml`; rebuild the PLAYER dataset afterward. |
+| Change promotion standards | Edit `promotion_thresholds` and `required_segments` in `config/training_manifest.yaml`. |
+
+Outputs:
+
+- Candidate artifacts are written to `models/experimental/`.
+- Run reports are written to `reports/evaluation/training_run_YYYYMMDD_HHMMSS.md`.
+- Promotion copies approved experimental artifacts into `models/production/`.
+- `--dry-run` never promotes artifacts.
+- Non-dry-run still requires both gates: manifest thresholds plus champion/challenger gate, then interactive `y/yes` confirmation.
+
 ### Season inclusion
 
-- WIN and SCORE training load every matching `data/processed/team_model_ready_v3_*.csv` file, so adding another processed season automatically expands the multi-season training pool.
-- PLAYER training uses `data/experimental/player_model_ready_v4_usg.csv`, which is the player-level model-ready dataset with usage and matchup features.
-- The `--season` argument in `scripts/retrain_pipeline.py` is used as the validation season for champion-vs-challenger comparison after candidate training.
-- Final promoted models are trained on all available eligible rows after holdout evaluation, while metrics are reported from chronological holdout splits.
+- Training scope is controlled by [config/training_manifest.yaml](config/training_manifest.yaml). `train_seasons` is the fit period, `calibration_season` is the internal holdout season, and `validation_season` is the external champion/challenger season.
+- Model feature contracts live under `config/features/`: WIN, SCORE, and PLAYER required/default/derived feature policy is versioned separately from trainer code.
+- WIN and SCORE resolve only the expected `data/processed/team_model_ready_v3_YYYY_YY.csv` files for train plus calibration seasons. Missing or empty season files fail the run.
+- PLAYER training uses `data/experimental/player_model_ready_v4_usg.csv`; the manifest validates required `SEASON_ID` coverage before training starts.
+- `validation_season` in the manifest is used for champion-vs-challenger comparison after candidate training. The legacy `--season` argument is ignored when it disagrees with the manifest.
+- Final promoted models are trained on all train plus calibration rows after holdout evaluation, while calibration metrics are reported from the named calibration season.
+- Every run writes a governance report under `reports/evaluation/training_run_YYYYMMDD_HHMMSS.md` with manifest snapshot, input datasets, holdout metadata, segment metrics, champion/challenger comparison, and promotion eligibility checks.
 
 ### Split strategy
 
-All model trainers use `chronological_train_test_split` from [src/training/validation_utils.py](src/training/validation_utils.py):
+All model trainers use split helpers from [src/training/validation_utils.py](src/training/validation_utils.py):
 
-- The preferred split is date-based, using `GAME_DATE`.
-- The latest 20 percent of rows by date are held out for evaluation.
+- The production training split is season-based.
+- `calibration_season` is held out for internal model selection and calibration.
+- Earlier `train_seasons` are used to fit holdout candidates.
 - If valid dates are unavailable, the helper falls back to a random split.
 - WIN uses stratified random fallback if it ever needs to fall back from date splitting.
 
-This avoids evaluating on randomly mixed future and past games when date metadata exists.
+This avoids evaluating on randomly mixed future and past games and makes the calibration period auditable by season.
+
+### Promotion eligibility
+
+Promotion thresholds and required segments are declared in [config/training_manifest.yaml](config/training_manifest.yaml). The retraining pipeline evaluates overall and configured segments such as regular season, playoffs, home, away, close games, favorites, and underdogs. Non-dry-run promotion is blocked unless challenger metrics satisfy the manifest thresholds.
 
 ### WIN model
 
 WIN v9 is a calibrated logistic-regression classifier trained from team model-ready v3 rows:
 
 - Target: `WIN`.
-- Base feature schema: production `feature_columns_v8.json` plus v9 strength features.
+- Base feature schema: [config/features/win_v9.yaml](config/features/win_v9.yaml), which references production `feature_columns_v8.json` plus v9 strength features.
 - Added strength features include `PRE_GAME_ELO`, `OPP_PRE_GAME_ELO`, `ELO_DIFF`, `ABS_ELO_DIFF`, `WINRATE_DIFF_LAST_10`, `REST_DIFF`, close-strength flags, and playoff interaction features.
 - Static home/away split aliases are removed in favor of current-venue feature aliases to reduce venue leakage and inference mismatch.
 - Player projection aggregates can be merged into WIN training when compatible PLAYER artifacts and `player_model_ready_v4_usg.csv` are available.
@@ -74,13 +110,14 @@ SCORE v9 is a group of XGBoost regressors plus Ridge residual correction:
 - Ridge correction models adjust total and margin residuals using indicators such as playoff flag, back-to-back flags, and rest advantage.
 
 Core SCORE feature families include recent pace, offensive rating, defensive rating, opponent pace/ratings, rest days, playoff/elimination context, core-player availability, travel distance, and timezone difference.
+The exact SCORE target and feature lists are declared in [config/features/score_v9.yaml](config/features/score_v9.yaml).
 
 ### PLAYER model
 
 PLAYER v9 trains separate LightGBM regressors for `TARGET_PTS`, `TARGET_REB`, and `TARGET_AST`:
 
 - Input dataset: `data/experimental/player_model_ready_v4_usg.csv`.
-- Excluded columns include IDs, dates, matchup text, team/player labels, and non-feature metadata.
+- Feature contract: [config/features/player_v9.yaml](config/features/player_v9.yaml), including targets, excluded metadata columns, and required context columns.
 - Feature families include recent player form, minutes trends, usage rate, home/away context, opponent context, position group, and engineered matchup signals present in the model-ready dataset.
 - Each target receives a Ridge residual calibration layer using playoff/home flags, position group, usage bucket, and minutes bucket indicators.
 
@@ -302,6 +339,7 @@ Reports are the fastest way to understand why the project is structured this way
 | [V8 vs V9 2025-26 comparison](reports/evaluation/compare_v8_vs_v9_season_2025-26.md) | Direct 2025-26 comparison between v8 and v9 model outputs. |
 | [2026 playoff score validation](reports/evaluation/score_2026_playoffs_validation.md) | Focused validation of SCORE model behavior on 2026 playoff games. |
 | [Data pipeline architecture](reports/operations/data_pipeline_architecture_report.md) | Operational map of ingestion, season bootstrapping, roster discovery, stint logic, and pipeline organization. |
+| [Training governance status](reports/operations/training_governance_status.md) | Current manifest-driven training contract, feature schemas, run behavior, feature counts, promotion gates, and known methodology gaps. |
 | [Team model-ready v3 report](reports/operations/team_model_ready_v3_report.md) | Documents the team model-ready v3 dataset and its feature/assembly behavior. |
 | [Final production truth audit](reports/audits/final_production_truth_report.md) | Production-readiness audit covering the final promoted artifacts and project truth state. |
 | [Win model promotion audit](reports/audits/win_model_promotion_report.md) | Promotion checklist and compatibility evidence for the WIN model. |

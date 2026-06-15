@@ -19,10 +19,16 @@ if str(ROOT) not in sys.path:
 from src.training.player_trainer import PlayerModelTrainer
 from src.training.score_trainer import ScoreModelTrainer
 from src.training.win_trainer import WinModelTrainer
+from src.training.segment_evaluation import evaluate_segments, player_metrics, score_metrics, win_metrics
+from src.training.training_manifest import load_training_manifest
 from scripts.data_paths import get_data_paths
 from scripts.generate_report import add_location_features, get_indicator_df
 
-def evaluate_model_files(model_dir, season):
+def _season_to_season_id(season):
+    return int("2" + season.split("-")[0])
+
+def evaluate_model_files(model_dir, season, segments=None):
+    segments = segments or ["overall"]
     model_dir = Path(model_dir)
     dp = get_data_paths(season)
     
@@ -118,12 +124,12 @@ def evaluate_model_files(model_dir, season):
             preds = win_model.predict(X)
             probs = win_model.predict_proba(X)[:, 1]
             
-            win_results = {
-                "accuracy": float(accuracy_score(y, preds)),
-                "roc_auc": float(roc_auc_score(y, probs)) if len(y.unique()) > 1 else 1.0,
-                "brier": float(brier_score_loss(y, probs)),
-                "samples": int(len(eval_df))
-            }
+            win_eval = eval_df.copy()
+            win_eval["actual"] = y
+            win_eval["pred_proba"] = probs
+            win_segments = evaluate_segments(win_eval, segments, win_metrics)
+            win_results = dict(win_segments.get("overall", {}))
+            win_results["segments"] = win_segments
             
     # 2. Evaluate Score Model
     score_results = {}
@@ -180,52 +186,165 @@ def evaluate_model_files(model_dir, season):
                 eval_df["PRED_HOME_PTS"] = (eval_df["PRED_TOTAL"] + eval_df["PRED_MARGIN"]) / 2.0
                 eval_df["PRED_AWAY_PTS"] = (eval_df["PRED_TOTAL"] - eval_df["PRED_MARGIN"]) / 2.0
                 
-                score_results = {
-                    "total_mae": float(mean_absolute_error(eval_df["ACTUAL_TOTAL"], eval_df["PRED_TOTAL"])),
-                    "total_bias": float((eval_df["PRED_TOTAL"] - eval_df["ACTUAL_TOTAL"]).mean()),
-                    "margin_mae": float(mean_absolute_error(eval_df["ACTUAL_MARGIN"], eval_df["PRED_MARGIN"])),
-                    "margin_bias": float((eval_df["PRED_MARGIN"] - eval_df["ACTUAL_MARGIN"]).mean()),
-                    "samples": int(len(eval_df))
-                }
+                score_segments = evaluate_segments(eval_df, segments, score_metrics)
+                score_results = dict(score_segments.get("overall", {}))
+                score_results["segments"] = score_segments
+    player_results = {}
+    player_data_path = ROOT / "data" / "experimental" / "player_model_ready_v4_usg.csv"
+    player_features_path = model_dir / "player_v9_features.pkl"
+    if player_data_path.exists() and player_features_path.exists():
+        player_df = pd.read_csv(player_data_path)
+        if "SEASON_ID" in player_df.columns:
+            player_df = player_df[pd.to_numeric(player_df["SEASON_ID"], errors="coerce") == _season_to_season_id(season)].copy()
+        if not player_df.empty:
+            features = joblib.load(player_features_path)
+            player_df = player_df.dropna(subset=[c for c in features if c in player_df.columns])
+            target_map = {"pts": "TARGET_PTS", "reb": "TARGET_REB", "ast": "TARGET_AST"}
+            for short_name, target_col in target_map.items():
+                model_path = model_dir / f"player_v9_lgb_{short_name}.pkl"
+                if model_path.exists() and target_col in player_df.columns:
+                    model = joblib.load(model_path)
+                    eval_df = player_df.copy()
+                    eval_df[f"actual_{short_name}"] = eval_df[target_col].fillna(0)
+                    eval_df[f"pred_{short_name}"] = model.predict(eval_df[features])
+                    target_segments = evaluate_segments(eval_df, segments, player_metrics(short_name))
+                    player_results[short_name] = dict(target_segments.get("overall", {}))
+                    player_results[short_name]["segments"] = target_segments
                 
     return {
         "win": win_results,
-        "score": score_results
+        "score": score_results,
+        "player": player_results
     }
+
+def _threshold_pass(metrics, thresholds):
+    checks = []
+    win = metrics.get("win", {})
+    if win and thresholds.get("win"):
+        checks.append(("win.max_brier", win.get("brier", float("inf")) <= thresholds["win"].get("max_brier", float("inf"))))
+        checks.append(("win.min_roc_auc", win.get("roc_auc", 0.0) >= thresholds["win"].get("min_roc_auc", 0.0)))
+    score = metrics.get("score", {})
+    if score and thresholds.get("score"):
+        checks.append(("score.max_total_mae", score.get("total_mae", float("inf")) <= thresholds["score"].get("max_total_mae", float("inf"))))
+        checks.append(("score.max_margin_mae", score.get("margin_mae", float("inf")) <= thresholds["score"].get("max_margin_mae", float("inf"))))
+    for target, target_thresholds in thresholds.get("player", {}).items():
+        target_metrics = metrics.get("player", {}).get(target, {})
+        if target_metrics:
+            checks.append((f"player.{target}.max_mae", target_metrics.get("mae", float("inf")) <= target_thresholds.get("max_mae", float("inf"))))
+            checks.append((f"player.{target}.min_r2", target_metrics.get("r2", -float("inf")) >= target_thresholds.get("min_r2", -float("inf"))))
+    return {"eligible": all(ok for _, ok in checks) if checks else False, "checks": [{"name": name, "passed": ok} for name, ok in checks]}
+
+def write_training_report(run_id, manifest, trainer_metadata, champ_metrics, chall_metrics, eligibility):
+    report_dir = ROOT / "reports" / "evaluation"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report_path = report_dir / f"training_run_{run_id}.md"
+    lines = [
+        f"# Training Run {run_id}",
+        "",
+        "## Manifest",
+        f"- Manifest: `{manifest.path}`",
+        f"- Train seasons: {', '.join(manifest.train_seasons)}",
+        f"- Calibration season: {manifest.calibration_season}",
+        f"- Validation season: {manifest.validation_season}",
+        f"- Team datasets: {', '.join(str(p) for p in manifest.team_dataset_files)}",
+        f"- Player dataset: `{manifest.player_dataset_path}`",
+        f"- Feature contracts: {', '.join(f'{k}={v}' for k, v in manifest.feature_contracts.items())}",
+        f"- Holdout: `{manifest.holdout}`",
+        "",
+        "## Trainer Holdout Metadata",
+    ]
+    for name, metadata in trainer_metadata.items():
+        if not metadata:
+            continue
+        lines.append(f"- {name}: evaluation `{metadata.get('evaluation')}`, final refit `{metadata.get('final_refit', {}).get('enabled')}`")
+    lines.extend(["", "## Champion Metrics", "```json", json.dumps(champ_metrics, indent=2), "```"])
+    lines.extend(["", "## Challenger Metrics", "```json", json.dumps(chall_metrics, indent=2), "```"])
+    lines.extend([
+        "",
+        "## Promotion Eligibility",
+        f"- Threshold eligibility: `{eligibility['eligible']}`",
+        f"- Champion/challenger gate passed: `{eligibility.get('champion_challenger_gate_passed')}`",
+        f"- Promotion allowed: `{eligibility.get('promotion_allowed')}`",
+        "```json",
+        json.dumps(eligibility["checks"], indent=2),
+        "```",
+    ])
+    report_path.write_text("\n".join(lines) + "\n")
+    return report_path
 
 def main():
     parser = argparse.ArgumentParser(description="Model Retraining, Calibration, and Promotion Pipeline")
-    parser.add_argument("--season", type=str, default="2025-26", help="Validation season for champion vs challenger comparison")
+    parser.add_argument("--season", type=str, default=None, help="Deprecated: validation season is read from config/training_manifest.yaml")
+    parser.add_argument("--manifest", type=str, default=str(ROOT / "config" / "training_manifest.yaml"), help="Training manifest path")
     parser.add_argument("--dry-run", action="store_true", help="Run training and evaluation but do not promote artifacts to production")
     args = parser.parse_args()
     
     print("==================================================")
     print("  🏀 NBA Prediction Model Retraining Pipeline     ")
     print("==================================================")
-    print(f"Validation Season: {args.season}")
+    manifest = load_training_manifest(args.manifest, root=ROOT)
+    validation_season = manifest.validation_season
+    if args.season and args.season != validation_season:
+        print(f"Warning: --season is deprecated and ignored; manifest validation_season is {validation_season}.")
+    print(f"Validation Season: {validation_season}")
     print(f"Dry-run Mode:      {args.dry_run}")
     print("--------------------------------------------------")
     
     experimental_dir = ROOT / "models" / "experimental"
     production_dir = ROOT / "models" / "production"
     
+    run_id = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    manifest_metadata = {
+        "path": str(manifest.path),
+        "train_seasons": manifest.train_seasons,
+        "calibration_season": manifest.calibration_season,
+        "validation_season": manifest.validation_season,
+        "holdout": manifest.holdout,
+    }
+    trainer_metadata = {}
+
     print("\n[1/3] Training Candidate Models...")
-    print("-> Training Player Models (LGBM + Ridge Calibration)...")
-    player_trainer = PlayerModelTrainer(output_dir=experimental_dir, version="v9")
-    player_trainer.train_and_export()
+    if manifest.model_enabled("player"):
+        print("-> Training Player Models (LGBM + Ridge Calibration)...")
+        player_trainer = PlayerModelTrainer(
+            data_path=manifest.player_dataset_path,
+            output_dir=experimental_dir,
+            version="v9",
+            manifest_metadata=manifest_metadata,
+            holdout_config=manifest.holdout,
+            feature_contract_path=manifest.feature_contracts.get("player"),
+        )
+        trainer_metadata["player"] = player_trainer.train_and_export()
     
-    print("-> Training Score Models (XGBoost + Ridge Calibration)...")
-    score_trainer = ScoreModelTrainer(output_dir=experimental_dir, version="v9")
-    score_trainer.train_and_export()
+    if manifest.model_enabled("score"):
+        print("-> Training Score Models (XGBoost + Ridge Calibration)...")
+        score_trainer = ScoreModelTrainer(
+            output_dir=experimental_dir,
+            version="v9",
+            data_files=manifest.team_dataset_files,
+            manifest_metadata=manifest_metadata,
+            holdout_config=manifest.holdout,
+            feature_contract_path=manifest.feature_contracts.get("score"),
+        )
+        trainer_metadata["score"] = score_trainer.train_and_export()
     
-    print("-> Training Win Probability Model (Calibrated Logistic Regression)...")
-    win_trainer = WinModelTrainer(output_dir=experimental_dir, player_models_dir=experimental_dir)
-    win_trainer.train_and_export()
+    if manifest.model_enabled("win"):
+        print("-> Training Win Probability Model (Calibrated Logistic Regression)...")
+        win_trainer = WinModelTrainer(
+            output_dir=experimental_dir,
+            player_data_path=manifest.player_dataset_path,
+            player_models_dir=experimental_dir,
+            data_files=manifest.team_dataset_files,
+            manifest_metadata=manifest_metadata,
+            holdout_config=manifest.holdout,
+            feature_contract_path=manifest.feature_contracts.get("win"),
+        )
+        trainer_metadata["win"] = win_trainer.train_and_export()
     
     print("\n[2/3] Evaluating Champion vs Challenger...")
     
-    champ_metrics = evaluate_model_files(production_dir, args.season)
-    chall_metrics = evaluate_model_files(experimental_dir, args.season)
+    champ_metrics = evaluate_model_files(production_dir, validation_season, manifest.required_segments)
+    chall_metrics = evaluate_model_files(experimental_dir, validation_season, manifest.required_segments)
     
     if "error" in champ_metrics or "error" in chall_metrics:
         print(f"Error evaluating models: {champ_metrics.get('error') or chall_metrics.get('error')}")
@@ -253,23 +372,34 @@ def main():
         print(f"{'Margin MAE':<25} | {s_champ['margin_mae']:<15.4f} | {s_chall['margin_mae']:<16.4f} | {margin_diff:<+10.4f}")
         
     print("--------------------------------------------------")
-    
     # Check if challenger is better (lower Brier/MAE, higher Accuracy)
     is_better = False
     if w_champ and w_chall:
         if w_chall["accuracy"] >= w_champ["accuracy"] or w_chall["brier"] <= w_champ["brier"]:
             is_better = True
+
+    eligibility = _threshold_pass(chall_metrics, manifest.promotion_thresholds)
+    promotion_allowed = bool(eligibility["eligible"] and is_better)
+    eligibility["champion_challenger_gate_passed"] = bool(is_better)
+    eligibility["promotion_allowed"] = promotion_allowed
+    report_path = write_training_report(run_id, manifest, trainer_metadata, champ_metrics, chall_metrics, eligibility)
+    print(f"Training report: {report_path}")
+    print(f"Threshold eligibility: {eligibility['eligible']}")
+    print(f"Promotion allowed: {promotion_allowed}")
             
-    if is_better:
+    if is_better and eligibility["eligible"]:
         print("\nResult: Challenger models show improved or competitive performance.")
     else:
-        print("\nResult: Champion models remain superior on validation metrics.")
+        print("\nResult: Challenger is not eligible for promotion under current champion/challenger metrics and thresholds.")
         
     if args.dry_run:
         print("\nDry-run mode active. Candidate models retained under models/experimental/.")
         sys.exit(0)
         
     print("\n[3/3] Interactive Promotion Flow")
+    if not promotion_allowed:
+        print("Promotion blocked by champion/challenger gate or manifest thresholds. Experimental models left under models/experimental/.")
+        sys.exit(0)
     decision = input("Do you want to promote the experimental challenger models to production? [y/N]: ").strip().lower()
     
     if decision in ["y", "yes"]:

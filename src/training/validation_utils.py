@@ -13,6 +13,40 @@ class SplitMetadata:
     split_date: Optional[str]
     train_rows: int
     test_rows: int
+    train_seasons: Optional[list[str]] = None
+    test_seasons: Optional[list[str]] = None
+
+
+def season_from_dates(dates: pd.Series) -> pd.Series:
+    parsed = pd.to_datetime(dates, errors="coerce")
+    years = parsed.dt.year.where(parsed.dt.month >= 10, parsed.dt.year - 1)
+    return years.astype("Int64").astype(str) + "-" + ((years + 1) % 100).astype("Int64").astype(str).str.zfill(2)
+
+
+def season_holdout_train_test_split(
+    X: pd.DataFrame,
+    y: pd.Series,
+    meta: pd.DataFrame,
+    *,
+    calibration_season: str,
+    date_col: str = "GAME_DATE",
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, SplitMetadata]:
+    if date_col not in meta.columns:
+        raise ValueError(f"Season holdout split requires `{date_col}` in metadata.")
+    seasons = season_from_dates(meta[date_col])
+    train_idx = meta.index[seasons != calibration_season]
+    test_idx = meta.index[seasons == calibration_season]
+    if len(train_idx) == 0 or len(test_idx) == 0:
+        raise ValueError(f"Season holdout split has train={len(train_idx)} test={len(test_idx)} for calibration_season={calibration_season}.")
+    split_meta = SplitMetadata(
+        strategy="season_holdout",
+        split_date=None,
+        train_rows=int(len(train_idx)),
+        test_rows=int(len(test_idx)),
+        train_seasons=sorted(seasons.loc[train_idx].dropna().unique().tolist()),
+        test_seasons=[calibration_season],
+    )
+    return X.loc[train_idx], X.loc[test_idx], y.loc[train_idx], y.loc[test_idx], split_meta
 
 
 def chronological_train_test_split(
