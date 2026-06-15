@@ -1,5 +1,24 @@
 version: '3.8'
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nba-postgres
+    environment:
+      POSTGRES_DB: nbaModelApp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/schema:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nbaModelApp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   ml-service:
     build: ./ml-service
     image: nba-ml-service:latest
@@ -9,3 +28,6 @@ services:
     volumes:
       - ./models:/app/models:ro
       - ./scripts:/app/scripts:ro
+
+volumes:
+  postgres_data:
