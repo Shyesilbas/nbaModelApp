@@ -23,6 +23,67 @@ The system is designed around leakage-controlled NBA prediction workflows:
 
 See [PROJECT_STATUS.md](PROJECT_STATUS.md) and [ARTIFACT_REGISTRY.md](ARTIFACT_REGISTRY.md) for the active phase, promoted artifacts, and model inventory.
 
+## Training Methodology
+
+Training is organized as a three-layer candidate pipeline: PLAYER models are trained first, SCORE models second, and WIN probability last. Candidate artifacts are written to `models/experimental/`, evaluated against the current production champion, and promoted to `models/production/` only after comparison.
+
+```bash
+PYTHONPATH=. python3 scripts/retrain_pipeline.py --season YYYY-YY --dry-run
+PYTHONPATH=. python3 scripts/retrain_pipeline.py --season YYYY-YY
+```
+
+The `--dry-run` mode trains and evaluates challenger artifacts without promotion. Running without `--dry-run` opens the promotion flow after champion-vs-challenger metrics are printed.
+
+### Season inclusion
+
+- WIN and SCORE training load every matching `data/processed/team_model_ready_v3_*.csv` file, so adding another processed season automatically expands the multi-season training pool.
+- PLAYER training uses `data/experimental/player_model_ready_v4_usg.csv`, which is the player-level model-ready dataset with usage and matchup features.
+- The `--season` argument in `scripts/retrain_pipeline.py` is used as the validation season for champion-vs-challenger comparison after candidate training.
+- Final promoted models are trained on all available eligible rows after holdout evaluation, while metrics are reported from chronological holdout splits.
+
+### Split strategy
+
+All model trainers use `chronological_train_test_split` from [src/training/validation_utils.py](src/training/validation_utils.py):
+
+- The preferred split is date-based, using `GAME_DATE`.
+- The latest 20 percent of rows by date are held out for evaluation.
+- If valid dates are unavailable, the helper falls back to a random split.
+- WIN uses stratified random fallback if it ever needs to fall back from date splitting.
+
+This avoids evaluating on randomly mixed future and past games when date metadata exists.
+
+### WIN model
+
+WIN v9 is a calibrated logistic-regression classifier trained from team model-ready v3 rows:
+
+- Target: `WIN`.
+- Base feature schema: production `feature_columns_v8.json` plus v9 strength features.
+- Added strength features include `PRE_GAME_ELO`, `OPP_PRE_GAME_ELO`, `ELO_DIFF`, `ABS_ELO_DIFF`, `WINRATE_DIFF_LAST_10`, `REST_DIFF`, close-strength flags, and playoff interaction features.
+- Static home/away split aliases are removed in favor of current-venue feature aliases to reduce venue leakage and inference mismatch.
+- Player projection aggregates can be merged into WIN training when compatible PLAYER artifacts and `player_model_ready_v4_usg.csv` are available.
+- The trainer evaluates uncalibrated, sigmoid-calibrated, and isotonic-calibrated candidates, then selects by lowest Brier score with ROC-AUC as the tie-breaker.
+
+### SCORE model
+
+SCORE v9 is a group of XGBoost regressors plus Ridge residual correction:
+
+- Pace model predicts game pace.
+- Home offensive-rating model predicts home scoring efficiency.
+- Away offensive-rating model predicts away scoring efficiency.
+- Margin model predicts expected margin.
+- Ridge correction models adjust total and margin residuals using indicators such as playoff flag, back-to-back flags, and rest advantage.
+
+Core SCORE feature families include recent pace, offensive rating, defensive rating, opponent pace/ratings, rest days, playoff/elimination context, core-player availability, travel distance, and timezone difference.
+
+### PLAYER model
+
+PLAYER v9 trains separate LightGBM regressors for `TARGET_PTS`, `TARGET_REB`, and `TARGET_AST`:
+
+- Input dataset: `data/experimental/player_model_ready_v4_usg.csv`.
+- Excluded columns include IDs, dates, matchup text, team/player labels, and non-feature metadata.
+- Feature families include recent player form, minutes trends, usage rate, home/away context, opponent context, position group, and engineered matchup signals present in the model-ready dataset.
+- Each target receives a Ridge residual calibration layer using playoff/home flags, position group, usage bucket, and minutes bucket indicators.
+
 ## Architecture
 
 ```text
@@ -46,6 +107,52 @@ scripts/                  Ingestion, feature engineering, exports, prediction, r
 6. Export static frontend JSON and serve dynamic predictions through the FastAPI service.
 
 More detail is available in [docs/pipeline_overview.md](docs/pipeline_overview.md).
+
+## Data Policy
+
+Generated data is intentionally not committed to this repository. The `data/` tree and `frontend/public/data/` exports can become large, change often, and are reproducible from the ingestion and export pipeline. Keeping them out of Git keeps the repository focused on source code, schemas, reports, and reproducible workflows.
+
+To rebuild a season, run the full data sequence from the repository root. Each step produces a different layer of the local data lake:
+
+| Step | Command | Produces |
+| --- | --- | --- |
+| Raw season ingest | `PYTHONPATH=. python3 main.py --season YYYY-YY --update-data` | Schedule/fixtures, team game logs, player game logs, and raw season files under `data/season=YYYY-YY/raw/`. This does not build core players, trade stints, model-ready datasets, or play-by-play. |
+| Roster and core-player analysis | `PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis` | Roster discovery, player importance scores, core-player rankings, and synchronized core-player outputs under canonical/production data paths. |
+| Trade and stint reconstruction | `PYTHONPATH=. python3 scripts/ingest/build_observed_affiliation_events.py --season YYYY-YY` | Observed player-team affiliation events used to prevent trade and roster leakage in later feature generation. |
+| Season bootstrap | `PYTHONPATH=. python3 main.py --season YYYY-YY --bootstrap-season` | Rolling team/player features, game results, model-ready datasets, season manifests, and frontend JSON exports. |
+| Validation | `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py` and `PYTHONPATH=. python3 scripts/audit/validate_season_path_refactor.py` | Structural checks for required paths, generated artifacts, and season-aware path handling. |
+| Frontend export refresh | `PYTHONPATH=. python3 scripts/export_frontend_data.py`, `scripts/export_all_seasons_games.py`, `scripts/export_player_profiles.py` | Static dashboard feeds under `frontend/public/data/`, including game, schedule, player, roster, and profile JSON. |
+| Play-by-play cache | `PYTHONPATH=. python3 scripts/build_play_by_play.py --season YYYY-YY --season-type "NBA Finals"` | Source play-by-play cache under `data/season=YYYY-YY/raw/play_by_play/` and frontend copies under `frontend/public/data/play_by_play/` unless `--no-frontend-sync` is used. |
+
+The minimum full rebuild sequence is:
+
+```bash
+PYTHONPATH=. python3 main.py --season YYYY-YY --update-data
+PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis
+PYTHONPATH=. python3 scripts/ingest/build_observed_affiliation_events.py --season YYYY-YY
+PYTHONPATH=. python3 main.py --season YYYY-YY --bootstrap-season
+```
+
+Then run validation and frontend exports:
+
+```bash
+PYTHONPATH=. python3 scripts/audit/validate_project_structure.py
+PYTHONPATH=. python3 scripts/audit/validate_season_path_refactor.py
+PYTHONPATH=. python3 scripts/export_frontend_data.py
+PYTHONPATH=. python3 scripts/export_all_seasons_games.py
+PYTHONPATH=. python3 scripts/export_player_profiles.py
+```
+
+Play-by-play is not produced by `--update-data` or `--bootstrap-season`. It is a separate cache used by richer game-detail views and must be generated explicitly when needed:
+
+```bash
+PYTHONPATH=. python3 scripts/build_play_by_play.py --season YYYY-YY --dry-run
+PYTHONPATH=. python3 scripts/build_play_by_play.py --season YYYY-YY --season-type "NBA Finals"
+```
+
+Use `--no-frontend-sync` if you only want to write the source cache under `data/season=YYYY-YY/raw/play_by_play/` without exporting copies into `frontend/public/data/play_by_play/`.
+
+For the full season onboarding runbook, see [docs/season_onboarding_guide.md](docs/season_onboarding_guide.md).
 
 ## Tech Stack
 
