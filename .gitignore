@@ -44,18 +44,15 @@ env/
 .DS_Store
 Thumbs.db
 
-# Project-specific ignored folders (large data and models)
-data/raw/**/*.csv
-data/raw/**/*.parquet
-data/processed/**/*.csv
-data/processed/**/*.parquet
-data/features/**/*.csv
-data/features/**/*.parquet
-data/frontend/*.json
-data/season=*/**/*.csv
-data/season=*/**/*.parquet
-data/season=*/analysis/
-data/season=*/experimental/
+# Project-specific generated/local assets
+data/
+frontend/public/data/
+scratch/
+.antigravity/
+.claude/
+.devin/
+
+# Model binaries are generated artifacts; metadata/schema JSON may stay tracked.
 models/**/*.pkl
 models/**/*.joblib
 models/**/*.h5
@@ -63,16 +60,6 @@ models/**/*.pt
 outputs/
 outputs/analysis/
 
-# Keep data directory structure in Git using .gitkeep if needed
-!data/
-!data/raw/
-!data/raw/team_games/
-!data/raw/player_games/
-!data/processed/
-!data/features/
 !models/
 !outputs/
 !notebooks/
-
-# Frontend generated JSON data assets (large files)
-frontend/public/data/*.json
