@@ -134,6 +134,29 @@ PYTHONPATH=. python3 scripts/db/validate_db_counts.py
 
 See [docs/postgres_data_layer.md](docs/postgres_data_layer.md) for schema details and example SQL queries.
 
+## Script Reference
+
+| Area | Script | What it does |
+| --- | --- | --- |
+| Audit | [scripts/audit/validate_project_structure.py](scripts/audit/validate_project_structure.py) | Checks required project paths and expected artifacts. |
+| Audit | [scripts/detect_drift_and_leakage.py](scripts/detect_drift_and_leakage.py) | Runs drift and leakage checks across model datasets. |
+| Ingestion | [scripts/ingest/ingest_games.py](scripts/ingest/ingest_games.py) | Imports game-level source data. |
+| Ingestion | [scripts/ingest/ingest_player_box_scores.py](scripts/ingest/ingest_player_box_scores.py) | Imports player box-score records. |
+| Ingestion | [scripts/ingest/ingest_team_box_scores.py](scripts/ingest/ingest_team_box_scores.py) | Imports team box-score records. |
+| Ingestion | [scripts/ingest/roster_snapshot_generator.py](scripts/ingest/roster_snapshot_generator.py) | Builds roster snapshots and stint-aware player affiliation data. |
+| Features | [scripts/build_matchup_features.py](scripts/build_matchup_features.py) | Builds matchup-level features for prediction workflows. |
+| Features | [scripts/features/build_player_features_from_boxscores.py](scripts/features/build_player_features_from_boxscores.py) | Builds player rolling features from box-score data. |
+| Export | [scripts/export_frontend_data.py](scripts/export_frontend_data.py) | Exports static JSON consumed by the dashboard. |
+| Export | [scripts/export_all_seasons_games.py](scripts/export_all_seasons_games.py) | Exports all-season game index data. |
+| Export | [scripts/export_player_profiles.py](scripts/export_player_profiles.py) | Exports player profile and history data. |
+| Prediction | [scripts/predict_matchup.py](scripts/predict_matchup.py) | Runs a single matchup prediction from the CLI. |
+| Prediction | [scripts/predict_daily_schedule.py](scripts/predict_daily_schedule.py) | Generates predictions for a full game date. |
+| Prediction | [scripts/predict_score.py](scripts/predict_score.py) | Runs score prediction from the CLI. |
+| Database | [scripts/db/init_db.py](scripts/db/init_db.py) | Initializes PostgreSQL schemas. |
+| Database | [scripts/db/import_mart.py](scripts/db/import_mart.py) | Imports selected mart datasets into PostgreSQL. |
+| Database | [scripts/db/validate_db_counts.py](scripts/db/validate_db_counts.py) | Validates database row counts against source data. |
+| Training | [scripts/retrain_pipeline.py](scripts/retrain_pipeline.py) | Runs the retraining workflow. |
+
 ## Key Workflows
 
 ### Export frontend data
@@ -159,6 +182,27 @@ PYTHONPATH=. python3 scripts/retrain_pipeline.py
 ### Onboard or refresh a season
 
 Use [docs/season_onboarding_guide.md](docs/season_onboarding_guide.md) for the current season bootstrap and refresh sequence.
+
+## Reports
+
+Reports are the fastest way to understand why the project is structured this way, how model versions were evaluated, and what validation evidence exists without reading the full codebase.
+
+| Report | What it shows |
+| --- | --- |
+| [Model performance and architecture](reports/production/model_performance_and_architecture_report.md) | Main technical reference for active WIN v9, SCORE v9, and PLAYER v9 models, including architecture, calibration, feature families, and chronological validation metrics. |
+| [V8 vs V9 model comparison](reports/production/v8_vs_v9_model_comparisons.md) | Explains the model-version changes, metric movement, feature adjustments, and why v9 artifacts were promoted. |
+| [2025-26 model v9 evaluation](reports/evaluation/season_2025-26_model_v9_evaluation_report.md) | Season-level evaluation of v9 behavior on 2025-26 data. |
+| [V8 vs V9 2025-26 comparison](reports/evaluation/compare_v8_vs_v9_season_2025-26.md) | Direct 2025-26 comparison between v8 and v9 model outputs. |
+| [2026 playoff score validation](reports/evaluation/score_2026_playoffs_validation.md) | Focused validation of SCORE model behavior on 2026 playoff games. |
+| [Data pipeline architecture](reports/operations/data_pipeline_architecture_report.md) | Operational map of ingestion, season bootstrapping, roster discovery, stint logic, and pipeline organization. |
+| [Team model-ready v3 report](reports/operations/team_model_ready_v3_report.md) | Documents the team model-ready v3 dataset and its feature/assembly behavior. |
+| [Final production truth audit](reports/audits/final_production_truth_report.md) | Production-readiness audit covering the final promoted artifacts and project truth state. |
+| [Win model promotion audit](reports/audits/win_model_promotion_report.md) | Promotion checklist and compatibility evidence for the WIN model. |
+| [Feature engineering flaws audit](reports/audits/feature_engineering_flaws_audit_report.md) | Quality-control ledger for feature engineering risks, venue alignment, parity issues, and fixes. |
+| [Opponent feature audit](reports/audits/opponent_feature_report.md) | Validation of opponent-side feature construction and alignment. |
+| [Drift and leakage audit](reports/audits/drift_and_leakage_2024-25_vs_2025-26.md) | Checks drift and leakage risk between 2024-25 and 2025-26 datasets. |
+| [Sample schedule prediction report](reports/predictions/schedule_2026-01-10_model_v9.md) | Example generated prediction report for a scheduled game date using model v9. |
+| [Reports index](reports/README.md) | Compact index of the core report set. |
 
 ## Documentation Map
 
