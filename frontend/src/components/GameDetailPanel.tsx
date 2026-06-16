@@ -502,6 +502,7 @@ export default function GameDetailPanel({
       {!loading && activeTab === "pbp" && (
         <PlayByPlayTab
           gameId={game.GAME_ID}
+          season={season}
         />
       )}
     </div>
@@ -538,8 +539,10 @@ interface PbpData {
 
 function PlayByPlayTab({
   gameId,
+  season,
 }: {
   gameId: string;
+  season: string;
 }) {
   const [data, setData] = useState<PbpData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -549,14 +552,8 @@ function PlayByPlayTab({
   useEffect(() => {
     setLoading(true);
     setError(null);
-    const normGameId = String(parseInt(gameId, 10)).padStart(10, "0");
-    fetch(`/data/play_by_play/${normGameId}.json`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Play-by-play logs not cached yet.");
-        }
-        return res.json();
-      })
+    const normGameId = String(gameId).replace(/\D/g, "").padStart(10, "0");
+    loadPrivateApi<PbpData>(`/frontend-data-api/play-by-play/${encodeURIComponent(normGameId)}?season=${encodeURIComponent(season)}`)
       .then((pbp: PbpData) => {
         setData(pbp);
         setLoading(false);
@@ -565,7 +562,7 @@ function PlayByPlayTab({
         setError(err.message || "Failed to load play-by-play.");
         setLoading(false);
       });
-  }, [gameId]);
+  }, [gameId, season]);
 
   if (loading) {
     return (

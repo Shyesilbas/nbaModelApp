@@ -42,6 +42,7 @@ export interface GameDetail {
 
 export interface GameFeedRow {
   GAME_ID: string;
+  SEASON?: string | null;
   GAME_DATE: string;
   HOME_TEAM_ABBREVIATION: string;
   AWAY_TEAM_ABBREVIATION: string;

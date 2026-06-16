@@ -17,7 +17,7 @@ from .service import (
     predict,
 )
 from .services.game_full import predict_game_full
-from .services.frontend_data import get_frontend_json, get_game_detail, get_game_index, get_manifest, get_player_history, get_team_rosters
+from .services.frontend_data import get_frontend_json, get_game_detail, get_game_index, get_manifest, get_play_by_play, get_player_history, get_team_rosters
 from .services.player_prediction import predict_players
 from .services.score_prediction import predict_score
 from .services.status import get_model_status
@@ -72,6 +72,11 @@ def frontend_game_index(request: Request, season: str = None):
 @router.get("/frontend-data-api/games/{game_id}")
 def frontend_game_detail(game_id: str, request: Request, season: str = None):
     return _run_endpoint(lambda: get_game_detail(game_id, request, season))
+
+
+@router.get("/frontend-data-api/play-by-play/{game_id}")
+def frontend_play_by_play(game_id: str, request: Request, season: str = None):
+    return _run_endpoint(lambda: get_play_by_play(game_id, request, season))
 
 
 @router.get("/frontend-data-api/players/{player_id}")
