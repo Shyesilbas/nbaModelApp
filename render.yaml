@@ -10,16 +10,4 @@ services:
     autoDeploy: true
     envVars:
       - key: ALLOWED_ORIGINS
-        value: https://nba-model-frontend.onrender.com
-
-  - type: web
-    name: nba-model-frontend
-    runtime: static
-    plan: free
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
-    autoDeploy: true
-    envVars:
-      - key: VITE_API_BASE_URL
-        value: https://nba-model-api.onrender.com
+        value: https://your-frontend-domain.example
