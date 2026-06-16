@@ -11,3 +11,5 @@ services:
     envVars:
       - key: ALLOWED_ORIGINS
         value: https://nba-model-app.vercel.app
+      - key: FRONTEND_DATA_DIR
+        value: /opt/render/project/src/.deploy/backend-runtime/data/frontend
