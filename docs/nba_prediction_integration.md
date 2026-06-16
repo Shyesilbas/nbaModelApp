@@ -6,8 +6,9 @@ Architecture
 
 Local run
 1. Start ML service (recommended using Docker):
-   docker build -t nba-ml-service ./ml-service
-   docker run -p 8001:8001 -v $(pwd)/models:/app/models:ro -v $(pwd)/scripts:/app/scripts:ro nba-ml-service
+   PYTHONPATH=. python3 scripts/export_backend_runtime_bundle.py --out-dir .deploy/backend-runtime
+   docker build -f ml-service/Dockerfile -t nba-ml-service .
+   docker run -p 8001:8001 nba-ml-service
 
 2. Start frontend:
    cd frontend

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
-import { loadJson, loadPrivateApi } from "../lib/dataCache";
+import { loadJson } from "../lib/dataCache";
+import { loadArchivedGameBoxscores, loadArchivedGameIndex } from "../lib/archiveData";
 import {
   GameCard,
   GameCardDetail,
@@ -9,7 +10,6 @@ import {
   normGid,
   playerTeamFilter,
   type PlayerBoxScore,
-  type ScheduleGameSummary,
   type TeamBoxScore,
 } from "./game-results";
 
@@ -23,20 +23,16 @@ const SEASON_TYPE_FILTERS: { id: SeasonTypeFilter; label: string; values: string
   { id: "finals", label: "NBA Finals", values: ["NBA Finals"] },
 ];
 
-const seasonToken = (season: string) => season.replace("-", "_");
-
-
 /* ── Main exported component ── */
 export default function GameResults() {
   const [seasonsList, setSeasonsList] = useState<string[]>(["2025-26", "2024-25", "2023-24", "2022-23"]);
-  const [allResults,  setAllResults]  = useState<(GameFeedRow & { SEASON?: string })[]>([]);
+  const [allResults,  setAllResults]  = useState<(GameFeedRow & { SEASON?: string | null })[]>([]);
   const [results,     setResults]     = useState<GameFeedRow[]>([]);
   const [gameDetailCache, setGameDetailCache] = useState<Record<string, {
     game_detail: GameDetail | null;
     team_boxscores: TeamBoxScore[];
     player_boxscores: PlayerBoxScore[];
   }>>({});
-  const [scheduleDetails, setScheduleDetails] = useState<Record<string, ScheduleGameSummary>>({});
   const [detailLoading, setDetailLoading] = useState(false);
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState<string | null>(null);
@@ -52,7 +48,7 @@ export default function GameResults() {
   };
   const [selectedSeason, setSelectedSeason] = useState<string>("2025-26");
 
-  // Initial load: games index + current season boxscores
+  // Initial load: archived games index
   useEffect(() => {
     loadJson<string[]>("/data/seasons.json", [])
       .then((data) => {
@@ -62,11 +58,10 @@ export default function GameResults() {
       })
       .catch(() => {});
 
-    loadPrivateApi<GameFeedRow[]>("/frontend-data-api/games?season=2025-26")
-      .then((r) => {
-        const taggedCurrent = (r as any[]).map((g) => ({ ...g, SEASON: "2025-26" }));
-        setAllResults(taggedCurrent);
-        setResults(r);
+    loadJson<(GameFeedRow & { SEASON?: string })[]>("/data/all_seasons_games.json", [])
+      .then((rows) => {
+        setAllResults(rows.map((g) => ({ ...g, SEASON: g.SEASON ?? null })));
+        setResults(rows.filter((g) => g.SEASON === "2025-26"));
         setLoading(false);
       })
       .catch((e) => { setError(e.message); setLoading(false); });
@@ -74,21 +69,16 @@ export default function GameResults() {
 
   // Lazy-load compact game index when switching seasons.
   useEffect(() => {
-    if (selectedSeason === "2025-26") return;
     if (allResults.some((g) => g.SEASON === selectedSeason)) return;
-    loadPrivateApi<(GameFeedRow & { SEASON?: string })[]>(`/frontend-data-api/games?season=${encodeURIComponent(selectedSeason)}`).then((rows) => {
-      setAllResults((prev) => [...prev, ...rows.map((g) => ({ ...g, SEASON: selectedSeason }))]);
+    loadArchivedGameIndex().then((rows) => {
+      setAllResults((prev) => [
+        ...prev,
+        ...rows
+          .filter((g) => g.SEASON === selectedSeason)
+          .map((g) => ({ ...g, SEASON: g.SEASON ?? selectedSeason })),
+      ]);
     });
   }, [selectedSeason, allResults]);
-
-  useEffect(() => {
-    loadJson<Record<string, ScheduleGameSummary>>(
-      `/data/schedule_details_${seasonToken(selectedSeason)}.json`,
-      {}
-    )
-      .then(setScheduleDetails)
-      .catch(() => setScheduleDetails({}));
-  }, [selectedSeason]);
 
   const sortedResults = useMemo(() => {
     const q = search.trim().toUpperCase();
@@ -131,11 +121,7 @@ export default function GameResults() {
   useEffect(() => {
     if (!selectedGame || !selectedGameId || gameDetailCache[selectedGameId]) return;
     setDetailLoading(true);
-    loadPrivateApi<{
-      game_detail: GameDetail | null;
-      team_boxscores: TeamBoxScore[];
-      player_boxscores: PlayerBoxScore[];
-    }>(`/frontend-data-api/games/${encodeURIComponent(selectedGame.GAME_ID)}?season=${encodeURIComponent(selectedSeason)}`)
+    loadArchivedGameBoxscores(selectedSeason, selectedGame.GAME_ID)
       .then((detail) => {
         setGameDetailCache((prev) => ({ ...prev, [selectedGameId]: detail }));
       })
@@ -320,10 +306,9 @@ export default function GameResults() {
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {selectedDateGames.map((game) => (
-            <GameCard
+          <GameCard
               key={game.GAME_ID}
               game={game}
-              summary={scheduleDetails[normGid(game.GAME_ID)]}
               onOpen={() => handleOpenGame(game.GAME_ID, "game")}
               onPredict={() => handleOpenGame(game.GAME_ID, "prediction")}
             />

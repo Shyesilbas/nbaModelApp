@@ -19,7 +19,7 @@ import {
   Clock,
 } from "lucide-react";
 import PlayerPhoto from "./PlayerPhoto";
-import { loadPrivateApi } from "../lib/dataCache";
+import { loadArchivedGameBoxscores, loadArchivedPlayByPlay } from "../lib/archiveData";
 import TeamLogo from "./TeamLogo";
 
 /* ── Types ── */
@@ -271,10 +271,7 @@ export default function GameDetailPanel({
   const normGameId = normId(game.GAME_ID);
 
   useEffect(() => {
-    loadPrivateApi<{
-      team_boxscores: TBS[];
-      player_boxscores: PBS[];
-    }>(`/frontend-data-api/games/${encodeURIComponent(game.GAME_ID)}?season=${encodeURIComponent(season)}`).then(({ team_boxscores: teamData, player_boxscores: playerData }) => {
+    loadArchivedGameBoxscores(season, game.GAME_ID).then(({ team_boxscores: teamData, player_boxscores: playerData }) => {
       const gameTeams: TBS[] = (teamData as TBS[]).filter(
         (t) => normId(t.GAME_ID) === normGameId
       );
@@ -553,12 +550,12 @@ function PlayByPlayTab({
     setLoading(true);
     setError(null);
     const normGameId = String(gameId).replace(/\D/g, "").padStart(10, "0");
-    loadPrivateApi<PbpData>(`/frontend-data-api/play-by-play/${encodeURIComponent(normGameId)}?season=${encodeURIComponent(season)}`)
+    loadArchivedPlayByPlay(normGameId, season)
       .then((pbp: PbpData) => {
         setData(pbp);
         setLoading(false);
       })
-      .catch((err) => {
+      .catch((err: any) => {
         setError(err.message || "Failed to load play-by-play.");
         setLoading(false);
       });

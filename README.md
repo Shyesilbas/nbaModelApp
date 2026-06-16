@@ -246,6 +246,21 @@ Common local endpoints:
 
 The service code lives under [ml-service/app](ml-service/app), with request and response contracts in [ml-service/app/schemas.py](ml-service/app/schemas.py).
 
+### Production hardening
+
+The FastAPI service now supports IP-based rate limiting and environment-driven CORS:
+
+```bash
+ALLOWED_ORIGINS=https://app.example.com,https://www.app.example.com
+RATE_LIMIT_PREDICT_MAX=30
+RATE_LIMIT_DATA_API_MAX=120
+RATE_LIMIT_FRONTEND_DATA_MAX=300
+RATE_LIMIT_WINDOW_SECONDS=60
+RATE_LIMIT_TRUST_X_FORWARDED_FOR=true
+```
+
+Defaults keep `/health`, `/docs`, `/openapi.json`, and `/redoc` open, while prediction and data endpoints are bucketed separately. For multi-instance deployments, swap the in-memory limiter for a shared store such as Redis.
+
 ## Frontend
 
 The dashboard is a React/TypeScript application backed by exported JSON data and live prediction endpoints.
@@ -255,6 +270,37 @@ cd frontend
 npm install
 npm run dev
 ```
+
+For a lean public bundle, generate the browser-facing data set before building:
+
+```bash
+PYTHONPATH=. python3 scripts/export_frontend_public_bundle.py --out-dir frontend/public/data
+cd frontend
+npm run build
+```
+
+For the backend runtime bundle, package only the active season and the code it needs:
+
+```bash
+PYTHONPATH=. python3 scripts/export_backend_runtime_bundle.py --out-dir .deploy/backend-runtime
+```
+
+Then build from the repository root:
+
+```bash
+docker build -f ml-service/Dockerfile -t nba-ml-service .
+```
+
+The backend bundle keeps the current season data, model artifacts, and player history JSONs. Historical play-by-play can be added later with `--include-play-by-play` if you decide it is worth the size.
+
+For a historical archive pack that serves all seasons statically:
+
+```bash
+PYTHONPATH=. python3 scripts/export_archive_pack.py --out-dir .deploy/archive-pack/data
+```
+
+That pack keeps the full season list plus the archive JSON files that the UI can read without extra backend calls.
+It also includes a condensed `play_by_play_moments/` tree with scoring, badge, clutch, lead-change, and quarter-end events instead of the full possession stream.
 
 Build and lint checks:
 
@@ -293,6 +339,8 @@ See [docs/postgres_data_layer.md](docs/postgres_data_layer.md) for schema detail
 | Export | [scripts/export_frontend_data.py](scripts/export_frontend_data.py) | Exports static JSON consumed by the dashboard. |
 | Export | [scripts/export_all_seasons_games.py](scripts/export_all_seasons_games.py) | Exports all-season game index data. |
 | Export | [scripts/export_player_profiles.py](scripts/export_player_profiles.py) | Exports player profile and history data. |
+| Export | [scripts/export_backend_runtime_bundle.py](scripts/export_backend_runtime_bundle.py) | Builds the slim backend runtime bundle for deployment. |
+| Export | [scripts/export_archive_pack.py](scripts/export_archive_pack.py) | Builds the static historical archive pack. |
 | Prediction | [scripts/predict_matchup.py](scripts/predict_matchup.py) | Runs a single matchup prediction from the CLI. |
 | Prediction | [scripts/predict_daily_schedule.py](scripts/predict_daily_schedule.py) | Generates predictions for a full game date. |
 | Prediction | [scripts/predict_score.py](scripts/predict_score.py) | Runs score prediction from the CLI. |
@@ -309,6 +357,12 @@ See [docs/postgres_data_layer.md](docs/postgres_data_layer.md) for schema detail
 PYTHONPATH=. python3 scripts/export_frontend_data.py
 PYTHONPATH=. python3 scripts/export_all_seasons_games.py
 PYTHONPATH=. python3 scripts/export_player_profiles.py
+```
+
+### Export archive pack
+
+```bash
+PYTHONPATH=. python3 scripts/export_archive_pack.py --out-dir .deploy/archive-pack/data
 ```
 
 ### Predict a daily schedule

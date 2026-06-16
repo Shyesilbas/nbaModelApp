@@ -20,14 +20,13 @@ services:
       retries: 10
 
   ml-service:
-    build: ./ml-service
+    build:
+      context: .
+      dockerfile: ml-service/Dockerfile
     image: nba-ml-service:latest
     ports:
       - "8001:8001"
     restart: unless-stopped
-    volumes:
-      - ./models:/app/models:ro
-      - ./scripts:/app/scripts:ro
 
 volumes:
   postgres_data:

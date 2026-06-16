@@ -3,10 +3,10 @@ import { Activity, AlertTriangle, Calendar, Clock, Cpu, Trophy, Zap } from "luci
 import TeamLogo from "../TeamLogo";
 import PlayerPhoto from "../PlayerPhoto";
 import { getModelStatus, normalizeGameFullPrediction, predictGameFull } from "../../api/predictions";
-import { loadPrivateApi } from "../../lib/dataCache";
 import { NBA_TEAMS } from "../../lib/nbaTeams";
 import { exportPredictionAsPDF } from "../../lib/predictionReport";
 import type { GameDetail, GameFeedRow } from "../../types/gameFeed";
+import { loadArchivedPlayByPlay } from "../../lib/archiveData";
 import { GameLeaders } from "./GameLeaders";
 import { GameSummaryBlock } from "./GameSummaryBlock";
 import { QuarterScores } from "./QuarterScores";
@@ -770,8 +770,7 @@ function PlayByPlayTab({ gameId, season }: { gameId: string; season?: string }) 
     setLoading(true);
     setError(null);
     const normGameId = normalizePbpGameId(gameId);
-    const query = season ? `?season=${encodeURIComponent(season)}` : "";
-    loadPrivateApi<PbpData>(`/frontend-data-api/play-by-play/${encodeURIComponent(normGameId)}${query}`)
+    loadArchivedPlayByPlay(normGameId, season)
       .then((pbp: PbpData) => {
         setData(pbp);
         setLoading(false);
