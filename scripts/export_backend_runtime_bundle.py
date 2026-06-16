@@ -72,6 +72,17 @@ def _write_bundle_marker(out_dir: Path, season: str, include_play_by_play: bool)
     marker.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _write_empty_player_stubs(out_dir: Path) -> None:
+    import json
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for filename in ("player_profiles.json", "player_season_games.json", "player_season_averages.json"):
+        path = out_dir / filename
+        with open(path, "w") as fh:
+            json.dump([], fh)
+        print(f"[WARN] Wrote empty stub -> {path}", file=sys.stderr)
+
+
 def build_backend_runtime_bundle(
     out_dir: Path,
     season: str | None = None,
@@ -90,7 +101,11 @@ def build_backend_runtime_bundle(
 
     frontend_out = out_dir / "data" / "frontend"
     build_frontend_public_bundle(frontend_out, active_season)
-    export_player_profiles(season=active_season, out_dir=str(frontend_out))
+    try:
+        export_player_profiles(season=active_season, out_dir=str(frontend_out))
+    except FileNotFoundError as exc:
+        print(f"[WARN] Skipping player profiles export: {exc}", file=sys.stderr)
+        _write_empty_player_stubs(frontend_out)
 
     for rel_path in RUNTIME_FILES:
         source = REPO_ROOT / rel_path.format(season=active_season)
