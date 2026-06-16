@@ -47,6 +47,7 @@ Thumbs.db
 # Project-specific generated/local assets
 data/
 frontend/public/data/
+.deploy/
 scratch/
 .antigravity/
 .claude/

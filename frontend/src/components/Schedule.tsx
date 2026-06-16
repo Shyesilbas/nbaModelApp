@@ -11,7 +11,8 @@ import {
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { predictWinProbability } from "../api/predictions";
-import { loadPrivateApi } from "../lib/dataCache";
+import { loadJson } from "../lib/dataCache";
+import { loadArchivedGameBoxscores } from "../lib/archiveData";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 
 // ─────────────────────────────────────────────────────────────
@@ -576,9 +577,9 @@ export default function Schedule() {
   const [predictionError, setPredictionError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadPrivateApi<ScheduleGame[]>("/frontend-data-api/games?season=2025-26")
+    loadJson<ScheduleGame[]>("/data/all_seasons_games.json", [])
       .then(async (games) => {
-        const scheduleRows = games as ScheduleGame[];
+        const scheduleRows = games.filter((game) => game.SEASON === "2025-26") as ScheduleGame[];
 
         const merged = scheduleRows
           .filter((row) => isFinalsGame(row.GAME_ID, row.SEASON_TYPE))
@@ -592,16 +593,13 @@ export default function Schedule() {
         const finals = merged.sort((a, b) => a.GAME_DATE.localeCompare(b.GAME_DATE) || a.GAME_ID.localeCompare(b.GAME_ID));
         const detailPayloads = await Promise.all(
           finals.map((game) =>
-            loadPrivateApi<{
-              game_detail: GameDetail | null;
-              player_boxscores: PlayerBoxScore[];
-            }>(`/frontend-data-api/games/${encodeURIComponent(game.GAME_ID)}?season=2025-26`).catch(() => ({
+            loadArchivedGameBoxscores("2025-26", game.GAME_ID).catch(() => ({
               game_detail: null,
               player_boxscores: [],
             }))
           )
         );
-        const playerRows = detailPayloads.flatMap((payload) => payload.player_boxscores);
+        const playerRows = detailPayloads.flatMap((payload) => payload.player_boxscores) as PlayerBoxScore[];
         const detailRows = detailPayloads.map((payload) => payload.game_detail).filter(Boolean) as GameDetail[];
         setGames(finals);
         setPlayerBS(playerRows);

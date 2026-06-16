@@ -1,9 +1,15 @@
 import os
+import sys
 import json
 import math
 import hashlib
 from datetime import datetime, timezone
+from pathlib import Path
 import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import get_default_season, normalize_season
@@ -93,7 +99,7 @@ def export_data(season: str = None):
     model_v2_path = paths.team_model_ready_v2
     model_v3_path = f"data/processed/team_model_ready_v3_{token}.csv"
     
-    out_dir = os.environ.get("FRONTEND_DATA_DIR", "data/frontend")
+    out_dir = os.environ.get("FRONTEND_DATA_DIR", "frontend/public/data")
     os.makedirs(out_dir, exist_ok=True)
     games_feed_path = os.path.join(out_dir, "games.json")
     

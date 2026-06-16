@@ -23,7 +23,7 @@ import hashlib
 from datetime import datetime, timezone
 
 import pandas as pd
-from scripts.season_utils import discover_seasons
+from scripts.season_utils import discover_seasons, normalize_season
 
 OUT_DIR = os.environ.get("FRONTEND_DATA_DIR", "data/frontend")
 
@@ -38,7 +38,7 @@ def nan_safe(val):
     return val
 
 
-def write_manifest(out_dir: str):
+def write_manifest(out_dir: str, season: str):
     files = {}
     for filename in sorted(os.listdir(out_dir)):
         if not filename.endswith(".json") or filename == "manifest.json":
@@ -53,7 +53,7 @@ def write_manifest(out_dir: str):
         }
 
     manifest = {
-        "season": "multi",
+        "season": season,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "version": hashlib.sha256(
             json.dumps(files, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -131,8 +131,10 @@ def compute_averages(games: list) -> dict:
     return result
 
 
-def main():
-    os.makedirs(OUT_DIR, exist_ok=True)
+def export_player_profiles(season: str | None = None, out_dir: str | None = None):
+    target_out_dir = out_dir or os.environ.get("FRONTEND_DATA_DIR", "data/frontend")
+    os.makedirs(target_out_dir, exist_ok=True)
+    requested_season = normalize_season(season) if season else None
 
     # ── Load metadata ──────────────────────────────────────────────────
     meta_df = load_player_metadata()
@@ -158,6 +160,10 @@ def main():
             }
 
     seasons = discover_seasons()
+    if requested_season is not None:
+        if requested_season not in seasons:
+            raise FileNotFoundError(f"Season data not found for {requested_season}")
+        seasons = {requested_season: seasons[requested_season]}
 
     # ── Per-season processing ──────────────────────────────────────────
     # These dicts accumulate across seasons
@@ -394,7 +400,7 @@ def main():
 
     profiles.sort(key=lambda x: x.get("PLAYER_NAME") or "")
 
-    profiles_path = os.path.join(OUT_DIR, "player_profiles.json")
+    profiles_path = os.path.join(target_out_dir, "player_profiles.json")
     with open(profiles_path, "w") as f:
         json.dump(profiles, f, separators=(",", ":"))
     print(f"\nWrote {len(profiles)} player profiles -> {profiles_path}")
@@ -402,28 +408,44 @@ def main():
     # ── Write game logs ────────────────────────────────────────────────
     # Convert keys to str for JSON
     games_out = {str(k): v for k, v in player_season_games.items()}
-    games_path = os.path.join(OUT_DIR, "player_season_games.json")
+    games_path = os.path.join(target_out_dir, "player_season_games.json")
     with open(games_path, "w") as f:
         json.dump(games_out, f, separators=(",", ":"))
     print(f"Wrote player_season_games -> {games_path}")
 
     avgs_out = {str(k): v for k, v in player_season_averages.items()}
-    averages_path = os.path.join(OUT_DIR, "player_season_averages.json")
+    averages_path = os.path.join(target_out_dir, "player_season_averages.json")
     with open(averages_path, "w") as f:
         json.dump(avgs_out, f, separators=(",", ":"))
     print(f"Wrote player_season_averages -> {averages_path}")
 
     # ── Verify Embiid as sanity check ─────────────────────────────────
     embiid_id = 203954
-    embiid_games = player_season_games.get(embiid_id, {}).get("2025-26", [])
+    sanity_season = requested_season or "2025-26"
+    embiid_games = player_season_games.get(embiid_id, {}).get(sanity_season, [])
     if embiid_games:
         played = sum(1 for g in embiid_games if not g["DID_NOT_PLAY"])
         dnp = sum(1 for g in embiid_games if g["DID_NOT_PLAY"])
-        print(f"\nEmbiid 2025-26: {played} played + {dnp} DNP = {len(embiid_games)} total")
+        print(f"\nEmbiid {sanity_season}: {played} played + {dnp} DNP = {len(embiid_games)} total")
 
-    write_manifest(OUT_DIR)
+    write_manifest(target_out_dir, requested_season or "multi")
 
     print("\nDone.")
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Export player profile and season history JSON files.")
+    parser.add_argument("--season", default=None, help="Export a single season instead of every discovered season.")
+    parser.add_argument(
+        "--out-dir",
+        default=os.environ.get("FRONTEND_DATA_DIR", "data/frontend"),
+        help="Output directory for the generated JSON bundle.",
+    )
+    args = parser.parse_args()
+
+    export_player_profiles(season=args.season, out_dir=args.out_dir)
 
 
 if __name__ == "__main__":

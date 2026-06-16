@@ -59,6 +59,10 @@ function dataUrl(path: string) {
   return `${DATA_API_BASE_URL}/frontend-data/${encodeURIComponent(filename)}`;
 }
 
+function staticDataUrl(path: string) {
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
 async function pruneOldCaches(activeVersion: string | null) {
   if (!canUsePersistentCache() || !activeVersion) return;
 
@@ -72,12 +76,19 @@ async function pruneOldCaches(activeVersion: string | null) {
 
 async function loadManifest(): Promise<DataManifest | null> {
   if (!manifestPromise) {
-    manifestPromise = fetch(`${DATA_API_BASE_URL}/frontend-data/manifest`, {
-      cache: "no-cache",
-      headers: dataHeaders(),
-    })
+    const staticManifest = fetch(staticDataUrl("/data/manifest.json"), { cache: "no-cache" })
       .then((response) => (response.ok ? response.json() : null))
       .catch(() => null);
+
+    manifestPromise = staticManifest.then((manifest) => {
+      if (manifest) return manifest;
+      return fetch(`${DATA_API_BASE_URL}/frontend-data/manifest`, {
+        cache: "no-cache",
+        headers: dataHeaders(),
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .catch(() => null);
+    });
   }
 
   const manifest = await manifestPromise;
@@ -98,13 +109,36 @@ async function loadManifest(): Promise<DataManifest | null> {
 async function fetchJsonWithPersistentCache(path: string): Promise<unknown> {
   const version = manifestVersion ?? localStorage.getItem(VERSION_KEY);
   const url = dataUrl(path);
+  const staticUrl = staticDataUrl(path);
+
+  const tryStaticFetch = async () => {
+    const response = await fetch(staticUrl, { cache: "no-cache" });
+    if (!response.ok) return null;
+    return response.json();
+  };
+
   if (!canUsePersistentCache()) {
+    const staticBody = await tryStaticFetch();
+    if (staticBody !== null) return staticBody;
+
     const response = await fetch(url, { headers: dataHeaders() });
     if (!response.ok) throw new Error(path.split("/").pop() ?? path);
     return response.json();
   }
 
   const cache = await window.caches.open(cacheName(version));
+  const staticRequest = new Request(staticUrl);
+  const cachedStatic = await cache.match(staticRequest);
+  if (cachedStatic) {
+    return cachedStatic.json();
+  }
+
+  const staticResponse = await fetch(staticRequest);
+  if (staticResponse.ok) {
+    await cache.put(staticRequest, staticResponse.clone());
+    return staticResponse.json();
+  }
+
   const request = new Request(url, { headers: dataHeaders() });
   const cached = await cache.match(request);
   if (cached) {
@@ -156,13 +190,7 @@ export async function prefetchManifestFiles(): Promise<void> {
     const manifest = await loadManifest();
     if (!manifest) return;
 
-    const response = await fetch(`${DATA_API_BASE_URL}/frontend-data/manifest`, {
-      cache: "no-cache",
-      headers: dataHeaders(),
-    });
-    if (!response.ok) return;
-    const manifestData = await response.json();
-    const files = manifestData?.files || {};
+    const files = (manifest as any)?.files || {};
 
     // Only prefetch files smaller than 1.5MB to prevent blocking the main thread
     const sortedFiles = Object.keys(files)
