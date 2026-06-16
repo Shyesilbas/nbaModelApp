@@ -11,8 +11,9 @@ services:
       - key: ALLOWED_ORIGINS
         value: https://nba-model-frontend.onrender.com
 
-  - type: static
+  - type: web
     name: nba-model-frontend
+    runtime: static
     rootDir: frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
