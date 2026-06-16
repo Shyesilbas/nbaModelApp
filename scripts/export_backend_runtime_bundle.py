@@ -72,15 +72,36 @@ def _write_bundle_marker(out_dir: Path, season: str, include_play_by_play: bool)
     marker.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _write_empty_player_stubs(out_dir: Path) -> None:
+def _write_empty_data_stubs(out_dir: Path) -> None:
     import json
 
+    # All files served by /frontend-data/{filename} endpoint in the API.
+    # Write empty stubs for any that are missing so the frontend gets [] instead of 404.
+    all_expected = {
+        "core_players.json": [],
+        "game_results.json": [],
+        "highlights.json": [],
+        "multi_team_players.json": [],
+        "player_name_lookup.json": [],
+        "player_profiles.json": [],
+        "player_season_averages.json": {},
+        "player_season_games.json": {},
+        "schedule.json": [],
+        "seasons.json": [],
+        "star_candidates.json": [],
+        "team_rosters.json": [],
+        "upcoming_games_context.json": [],
+        # games/all_seasons/boxscores are not in GENERIC_ALLOWED_FILES but write stubs too
+        "games.json": [],
+        "all_seasons_games.json": [],
+    }
     out_dir.mkdir(parents=True, exist_ok=True)
-    for filename in ("player_profiles.json", "player_season_games.json", "player_season_averages.json"):
+    for filename, empty_value in all_expected.items():
         path = out_dir / filename
-        with open(path, "w") as fh:
-            json.dump([], fh)
-        print(f"[WARN] Wrote empty stub -> {path}", file=sys.stderr)
+        if not path.exists():
+            with open(path, "w") as fh:
+                json.dump(empty_value, fh)
+            print(f"[WARN] Wrote empty stub -> {path}", file=sys.stderr)
 
 
 def build_backend_runtime_bundle(
@@ -105,7 +126,7 @@ def build_backend_runtime_bundle(
         export_player_profiles(season=active_season, out_dir=str(frontend_out))
     except FileNotFoundError as exc:
         print(f"[WARN] Skipping player profiles export: {exc}", file=sys.stderr)
-        _write_empty_player_stubs(frontend_out)
+    _write_empty_data_stubs(frontend_out)
 
     for rel_path in RUNTIME_FILES:
         source = REPO_ROOT / rel_path.format(season=active_season)
