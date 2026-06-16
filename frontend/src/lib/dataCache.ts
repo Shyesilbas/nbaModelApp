@@ -114,7 +114,7 @@ async function fetchJsonWithPersistentCache(path: string): Promise<unknown> {
   const tryStaticFetch = async () => {
     const response = await fetch(staticUrl, { cache: "no-cache" });
     if (!response.ok) return null;
-    return response.json();
+    return response.json().catch(() => null);
   };
 
   if (!canUsePersistentCache()) {
@@ -135,8 +135,11 @@ async function fetchJsonWithPersistentCache(path: string): Promise<unknown> {
 
   const staticResponse = await fetch(staticRequest);
   if (staticResponse.ok) {
-    await cache.put(staticRequest, staticResponse.clone());
-    return staticResponse.json();
+    const staticBody = await staticResponse.clone().json().catch(() => null);
+    if (staticBody !== null) {
+      await cache.put(staticRequest, staticResponse);
+      return staticBody;
+    }
   }
 
   const request = new Request(url, { headers: dataHeaders() });
