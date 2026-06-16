@@ -195,6 +195,7 @@ export default function GameResults() {
             homePlayers={playerTeamFilter(gamePlayers, selectedGame.HOME_TEAM_ABBREVIATION)}
             awayPlayers={playerTeamFilter(gamePlayers, selectedGame.AWAY_TEAM_ABBREVIATION)}
             initialTab={initialDetailTab}
+            season={selectedSeason}
           />
         )}
       </div>

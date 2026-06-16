@@ -338,7 +338,7 @@ class WinModelTrainer:
         imputed_missing_required_features = missing_allowed
         X = X[required_feature_cols]
         
-        if self.holdout_config.get("strategy") == "season_holdout":
+        if self.holdout_config.get("strategy") in {"season_holdout", "external_season_holdout"}:
             X_train_full, X_test, y_train_full, y_test, split_meta = season_holdout_train_test_split(
                 X,
                 y,
@@ -400,11 +400,13 @@ class WinModelTrainer:
             ("scaler", StandardScaler()),
             ("clf", LogisticRegression(max_iter=1000, random_state=42))
         ])
+        final_X = X_train_full if self.holdout_config.get("final_refit_scope") == "train_only" else X
+        final_y = y_train_full if self.holdout_config.get("final_refit_scope") == "train_only" else y
         if best_name == "uncalibrated":
-            final_model = final_pipeline.fit(X, y)
+            final_model = final_pipeline.fit(final_X, final_y)
         else:
             final_model = CalibratedClassifierCV(estimator=final_pipeline, method=best_name, cv=3)
-            final_model.fit(X, y)
+            final_model.fit(final_X, final_y)
 
         model_path = self.output_dir / "win_probability_model_v9.pkl"
         joblib.dump(final_model, model_path)
@@ -428,8 +430,9 @@ class WinModelTrainer:
             "imputed_missing_required_features": imputed_missing_required_features,
             "final_refit": {
                 "enabled": True,
-                "rows": int(len(X)),
-                "note": "Holdout metrics are computed before this final model is refit on all eligible rows."
+                "rows": int(len(final_X)),
+                "scope": self.holdout_config.get("final_refit_scope", "all_eligible_rows"),
+                "note": "Holdout metrics are computed before the final model is fit according to the configured refit scope."
             },
             "evaluation": "chronological_holdout",
             "split": split_meta.__dict__,

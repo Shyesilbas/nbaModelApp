@@ -3,6 +3,7 @@ import { Activity, AlertTriangle, Calendar, Clock, Cpu, Trophy, Zap } from "luci
 import TeamLogo from "../TeamLogo";
 import PlayerPhoto from "../PlayerPhoto";
 import { getModelStatus, normalizeGameFullPrediction, predictGameFull } from "../../api/predictions";
+import { loadPrivateApi } from "../../lib/dataCache";
 import { NBA_TEAMS } from "../../lib/nbaTeams";
 import { exportPredictionAsPDF } from "../../lib/predictionReport";
 import type { GameDetail, GameFeedRow } from "../../types/gameFeed";
@@ -26,7 +27,7 @@ import {
 
 /* ── Game Detail View ── */
 export function GameCardDetail({
-  game, gameDetail, homeBS, awayBS, homePlayers, awayPlayers, initialTab = "game",
+  game, gameDetail, homeBS, awayBS, homePlayers, awayPlayers, initialTab = "game", season,
 }: {
   game: GameFeedRow;
   gameDetail: GameDetail | null;
@@ -35,6 +36,7 @@ export function GameCardDetail({
   homePlayers: PlayerBoxScore[];
   awayPlayers: PlayerBoxScore[];
   initialTab?: "game" | "home" | "away" | "prediction" | "pbp";
+  season?: string;
 }) {
   const [activeTab, setActiveTab] = useState<"game" | "home" | "away" | "prediction" | "pbp">(initialTab);
   const [predResult, setPredResult] = useState<any>(null);
@@ -425,7 +427,7 @@ export function GameCardDetail({
           PLAY-BY-PLAY TAB
           ══════════════════════════════════════ */}
       {activeTab === "pbp" && (
-        <PlayByPlayTab gameId={game.GAME_ID} />
+        <PlayByPlayTab gameId={game.GAME_ID} season={season ?? game.SEASON ?? gameDetail?.season ?? undefined} />
       )}
 
       {/* ══════════════════════════════════════
@@ -757,7 +759,7 @@ function normalizePbpGameId(gameId: string) {
   return String(gameId).replace(/\D/g, "").padStart(10, "0");
 }
 
-function PlayByPlayTab({ gameId }: { gameId: string }) {
+function PlayByPlayTab({ gameId, season }: { gameId: string; season?: string }) {
   const [data, setData] = useState<PbpData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -767,11 +769,9 @@ function PlayByPlayTab({ gameId }: { gameId: string }) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/data/play_by_play/${normalizePbpGameId(gameId)}.json`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Play-by-play logs not cached yet.");
-        return res.json();
-      })
+    const normGameId = normalizePbpGameId(gameId);
+    const query = season ? `?season=${encodeURIComponent(season)}` : "";
+    loadPrivateApi<PbpData>(`/frontend-data-api/play-by-play/${encodeURIComponent(normGameId)}${query}`)
       .then((pbp: PbpData) => {
         setData(pbp);
         setLoading(false);
@@ -780,7 +780,7 @@ function PlayByPlayTab({ gameId }: { gameId: string }) {
         setError(err.message || "Failed to load play-by-play.");
         setLoading(false);
       });
-  }, [gameId]);
+  }, [gameId, season]);
 
   if (loading) {
     return (

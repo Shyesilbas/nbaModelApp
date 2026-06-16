@@ -6,6 +6,8 @@ Updated: 2026-06-15
 
 Training is now manifest-driven. The main control file is `config/training_manifest.yaml`.
 
+The accepted governance baseline is documented in `reports/operations/model_governance_golden_audit.md`.
+
 The manifest currently defines:
 
 - Train seasons for WIN and SCORE: `2020-21`, `2021-22`, `2022-23`, `2023-24`
@@ -17,6 +19,8 @@ The manifest currently defines:
 - Feature contract paths for each model family
 
 WIN and SCORE no longer train from an implicit `team_model_ready_v3_*.csv` glob. They resolve the exact train plus calibration season files listed by the manifest. Missing or empty files fail the run before model training starts.
+
+For WIN, the current governance policy trains the final non-production candidate on completed seasons before the external validation season and keeps `2025-26` as external validation only. Chronological quantile split is retained for diagnostics, not as the primary governance policy.
 
 ## Feature Contracts
 

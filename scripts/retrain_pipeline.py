@@ -330,13 +330,24 @@ def main():
     
     if manifest.model_enabled("win"):
         print("-> Training Win Probability Model (Calibrated Logistic Regression)...")
+        win_validation_file = ROOT / "data" / "processed" / f"team_model_ready_v3_{validation_season.replace('-', '_')}.csv"
+        win_data_files = list(manifest.team_dataset_files)
+        if win_validation_file.exists() and win_validation_file not in win_data_files:
+            win_data_files.append(win_validation_file)
+        win_holdout_config = dict(manifest.holdout)
+        win_holdout_config.update({
+            "strategy": "external_season_holdout",
+            "calibration_season": validation_season,
+            "final_refit_scope": "train_only",
+            "policy": "train_completed_seasons_before_external_validation",
+        })
         win_trainer = WinModelTrainer(
             output_dir=experimental_dir,
             player_data_path=manifest.player_dataset_path,
             player_models_dir=experimental_dir,
-            data_files=manifest.team_dataset_files,
+            data_files=win_data_files,
             manifest_metadata=manifest_metadata,
-            holdout_config=manifest.holdout,
+            holdout_config=win_holdout_config,
             feature_contract_path=manifest.feature_contracts.get("win"),
         )
         trainer_metadata["win"] = win_trainer.train_and_export()

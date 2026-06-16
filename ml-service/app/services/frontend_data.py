@@ -77,7 +77,22 @@ def get_frontend_json(filename: str, request: Request) -> Any:
 
 
 def _norm_game_id(value: Any) -> str:
-    return str(value or "").zfill(10)
+    text = str(value or "").strip()
+    if "." in text:
+        text = text.split(".", 1)[0]
+    digits = "".join(ch for ch in text if ch.isdigit())
+    return digits.zfill(10)
+
+
+def _season_from_game_id(game_id: str) -> str:
+    gid = _norm_game_id(game_id)
+    if len(gid) < 5 or not gid.startswith("00"):
+        raise HTTPException(status_code=400, detail=f"Cannot infer season from GAME_ID={game_id}")
+    try:
+        start_year = 2000 + int(gid[3:5])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Cannot infer season from GAME_ID={game_id}") from exc
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
 
 
 def _load_json(filename: str) -> Any:
@@ -129,6 +144,19 @@ def get_game_detail(game_id: str, request: Request, season: str | None = None) -
         "team_boxscores": team_rows,
         "player_boxscores": player_rows,
     }
+
+
+def get_play_by_play(game_id: str, request: Request, season: str | None = None) -> Any:
+    _check_token(request)
+    gid = _norm_game_id(game_id)
+    season_key = season or _season_from_game_id(gid)
+    pbp_dir = (REPO_ROOT / "data" / f"season={season_key}" / "raw" / "play_by_play").resolve()
+    path = (pbp_dir / f"{gid}.json").resolve()
+    if pbp_dir not in path.parents:
+        raise HTTPException(status_code=400, detail="Invalid play-by-play path")
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"play_by_play not found for {gid} in {season_key}")
+    return _read_json_file(str(path), path.stat().st_mtime_ns)
 
 
 def get_player_history(player_id: str, request: Request) -> Any:
