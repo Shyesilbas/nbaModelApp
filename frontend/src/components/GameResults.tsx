@@ -71,12 +71,12 @@ export default function GameResults() {
   useEffect(() => {
     if (allResults.some((g) => g.SEASON === selectedSeason)) return;
     loadArchivedGameIndex().then((rows) => {
-      setAllResults((prev) => [
-        ...prev,
-        ...rows
-          .filter((g) => g.SEASON === selectedSeason)
-          .map((g) => ({ ...g, SEASON: g.SEASON ?? selectedSeason })),
-      ]);
+      const filtered = rows
+        .filter((g) => g.SEASON === selectedSeason)
+        .map((g) => ({ ...g, SEASON: g.SEASON ?? selectedSeason }));
+      if (filtered.length > 0) {
+        setAllResults((prev) => [...prev, ...filtered]);
+      }
     });
   }, [selectedSeason, allResults]);
 

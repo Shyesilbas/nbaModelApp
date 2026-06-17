@@ -83,7 +83,9 @@ export default function NbaPrediction() {
     setLoadingData(true);
     loadPrivateApi<any[]>(`/frontend-data-api/games?season=${encodeURIComponent(selectedSeason)}`)
       .then((rows) => {
-        setAllResults((prev) => [...prev, ...rows.map((g: any) => ({ ...g, SEASON: selectedSeason }))]);
+        if (rows.length > 0) {
+          setAllResults((prev) => [...prev, ...rows.map((g: any) => ({ ...g, SEASON: selectedSeason }))]);
+        }
       })
       .catch((err) => {
         console.error("Error loading selected season:", err);
