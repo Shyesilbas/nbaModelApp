@@ -58,7 +58,7 @@ export default function GameResults() {
       })
       .catch(() => {});
 
-    loadJson<(GameFeedRow & { SEASON?: string })[]>("/data/all_seasons_games.json", [])
+    loadArchivedGameIndex("2025-26")
       .then((rows) => {
         setAllResults(rows.map((g) => ({ ...g, SEASON: g.SEASON ?? null })));
         setResults(rows.filter((g) => g.SEASON === "2025-26"));
