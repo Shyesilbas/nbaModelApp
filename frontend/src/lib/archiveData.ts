@@ -18,8 +18,13 @@ async function loadGameDetails(): Promise<GameDetail[]> {
   return gameDetailsPromise;
 }
 
-export async function loadArchivedGameIndex() {
-  return loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []);
+export async function loadArchivedGameIndex(season?: string | null): Promise<GameFeedRow[]> {
+  const seasonParam = season ? `?season=${encodeURIComponent(season)}` : "";
+  try {
+    return await loadPrivateApi<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`);
+  } catch {
+    return [];
+  }
 }
 
 export async function loadArchivedGameDetail(gameId: string) {

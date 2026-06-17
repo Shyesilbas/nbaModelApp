@@ -11,8 +11,7 @@ import {
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { predictWinProbability } from "../api/predictions";
-import { loadJson } from "../lib/dataCache";
-import { loadArchivedGameBoxscores } from "../lib/archiveData";
+import { loadArchivedGameBoxscores, loadArchivedGameIndex } from "../lib/archiveData";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 
 // ─────────────────────────────────────────────────────────────
@@ -577,7 +576,7 @@ export default function Schedule() {
   const [predictionError, setPredictionError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadJson<ScheduleGame[]>("/data/all_seasons_games.json", [])
+    loadArchivedGameIndex("2025-26")
       .then(async (games) => {
         const scheduleRows = games.filter((game) => game.SEASON === "2025-26") as ScheduleGame[];
 
