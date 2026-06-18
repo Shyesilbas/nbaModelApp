@@ -1,22 +1,16 @@
 {
-  "total_team_game_rows": 2642,
-  "team_games_regular": 2460,
-  "team_games_playin": 12,
+  "player_games_regular": 26651,
+  "total_players": 518,
   "team_games_playoffs": 160,
   "team_games_finals": 10,
-  "total_player_game_rows": 28698,
-  "player_games_regular": 26651,
-  "player_games_playin": 126,
-  "player_games_playoffs": 1820,
   "player_games_finals": 101,
+  "total_team_game_rows": 2642,
+  "player_games_playoffs": 1820,
+  "total_player_game_rows": 28698,
   "total_teams": 30,
-  "total_players": 518,
-  "v1_rows": 2612,
-  "v1_features": 11,
-  "v2_rows": 1772,
-  "v2_features": 47,
-  "v3_rows": 1772,
-  "v3_features": 106,
+  "team_games_playin": 12,
+  "team_games_regular": 2460,
+  "player_games_playin": 126,
   "files_status": [
     {
       "name": "Raw Team Game Logs",
@@ -73,30 +67,6 @@
       "rows": 518,
       "columns": 3,
       "size_kb": 18.44
-    },
-    {
-      "name": "V1 Model-Ready Dataset",
-      "path": "data/processed/team_model_ready_2025_26.csv",
-      "exists": true,
-      "rows": 2612,
-      "columns": 18,
-      "size_kb": 294.5
-    },
-    {
-      "name": "V2 Model-Ready Dataset",
-      "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/team_model_ready_v2.csv",
-      "exists": true,
-      "rows": 1772,
-      "columns": 54,
-      "size_kb": 538.83
-    },
-    {
-      "name": "V3 Model-Ready Dataset",
-      "path": "data/processed/team_model_ready_v3_2025_26.csv",
-      "exists": true,
-      "rows": 1772,
-      "columns": 113,
-      "size_kb": 1493.81
     },
     {
       "name": "Combined Schedule",

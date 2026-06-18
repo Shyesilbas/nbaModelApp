@@ -47,6 +47,24 @@ Thumbs.db
 # Project-specific generated/local assets
 data/
 frontend/public/data/
+!frontend/public/data/
+frontend/public/data/*
+!frontend/public/data/core_players.json
+!frontend/public/data/dataset_summary.json
+!frontend/public/data/games.json
+!frontend/public/data/highlights.json
+!frontend/public/data/manifest.json
+!frontend/public/data/multi_team_players.json
+!frontend/public/data/player_name_lookup.json
+!frontend/public/data/player_profiles.json
+!frontend/public/data/player_season_averages.json
+!frontend/public/data/schedule.json
+!frontend/public/data/seasons.json
+!frontend/public/data/star_candidates.json
+!frontend/public/data/team_rosters.json
+!frontend/public/data/upcoming_games_context.json
+!frontend/public/data/player_games/
+!frontend/public/data/player_games/*.json
 .deploy/
 scratch/
 .antigravity/

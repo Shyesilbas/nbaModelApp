@@ -1,7 +1,7 @@
 {
   "season": "2025-26",
-  "generated_at": "2026-06-17T18:26:44.938592+00:00",
-  "version": "d3d05fe39b96fe07",
+  "generated_at": "2026-06-18T18:19:33.976133+00:00",
+  "version": "024027b7d5fef0b6",
   "files": {
     "core_players.json": {
       "path": "/data/core_players.json",
@@ -10,13 +10,18 @@
     },
     "dataset_summary.json": {
       "path": "/data/dataset_summary.json",
-      "size_bytes": 3088,
-      "sha256": "7bbebe5deb1ea79a709bf01691b5a180faf325780116ed744288cebdf9285132"
+      "size_bytes": 2313,
+      "sha256": "118a716a6c7748c904fbb325f275715922eb825dacaf4b9da5d11fa0c385727e"
     },
-    "model_ready_v2_summary.json": {
-      "path": "/data/model_ready_v2_summary.json",
-      "size_bytes": 1987,
-      "sha256": "a8286d579ef41a7e9009820cc171d715c6d722f1e6bdaa4e5e3ea6e98753a834"
+    "games.json": {
+      "path": "/data/games.json",
+      "size_bytes": 2334554,
+      "sha256": "4be6e11a86fc9746db97268fddc802729a0e67409ac50398f8ab46d4a78475c4"
+    },
+    "highlights.json": {
+      "path": "/data/highlights.json",
+      "size_bytes": 5345,
+      "sha256": "d012c33c2726aed01ec581bb97d24ad7d12219d551842d19076374405bfe0e29"
     },
     "multi_team_players.json": {
       "path": "/data/multi_team_players.json",
@@ -28,6 +33,16 @@
       "size_bytes": 50545,
       "sha256": "7b609ec5e0253ac5195e9210b85f412eee0e75e81915468f7b923027f1149723"
     },
+    "player_profiles.json": {
+      "path": "/data/player_profiles.json",
+      "size_bytes": 351816,
+      "sha256": "d9c6c281438aad5a96a380afebbad7baf7a896c7d228a11db9046cf0b0894c15"
+    },
+    "player_season_averages.json": {
+      "path": "/data/player_season_averages.json",
+      "size_bytes": 1303248,
+      "sha256": "3d3efc0714dc2e9edb423985e7a2c3729c5ff9f4e269e2b49b49ff32736f7d68"
+    },
     "schedule.json": {
       "path": "/data/schedule.json",
       "size_bytes": 657948,
@@ -35,8 +50,8 @@
     },
     "seasons.json": {
       "path": "/data/seasons.json",
-      "size_bytes": 81,
-      "sha256": "6c4f3e0277e7abc93f8b21f02cb9e0ef74191d37f490bf44aaa83406e9db0db0"
+      "size_bytes": 15,
+      "sha256": "023f0b4d207e63ac38198f9255d5bdd97d634ec8b2a6eb65c3bc61bc6bf4923e"
     },
     "star_candidates.json": {
       "path": "/data/star_candidates.json",
