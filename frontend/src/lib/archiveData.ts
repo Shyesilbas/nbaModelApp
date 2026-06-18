@@ -33,11 +33,15 @@ export async function loadArchivedGameIndex(season?: string | null): Promise<Gam
     return archivedRows.length > 0 ? archivedRows : currentRows;
   }
 
-  const matchingRows = currentRows.filter((row: any) => !row.SEASON || row.SEASON === season);
+  const matchingRows = currentRows
+    .filter((row: any) => !row.SEASON || row.SEASON === season)
+    .map((row: any) => ({ ...row, SEASON: row.SEASON ?? season }));
   if (matchingRows.length > 0) return matchingRows;
 
   const archivedRows = await loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []);
-  return archivedRows.filter((row: any) => row.SEASON === season);
+  return archivedRows
+    .filter((row: any) => row.SEASON === season)
+    .map((row: any) => ({ ...row, SEASON: row.SEASON ?? season }));
 }
 
 export async function loadArchivedGameDetail(gameId: string) {
