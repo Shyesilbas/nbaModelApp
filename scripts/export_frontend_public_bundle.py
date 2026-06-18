@@ -117,6 +117,33 @@ def _write_slim_summary(out_dir: Path) -> None:
     summary_path.write_text(json.dumps(slim_summary, indent=2), encoding="utf-8")
 
 
+def _has_source_season_data(season: str) -> bool:
+    season_root = REPO_ROOT / f"data/season={season}"
+    return (
+        (season_root / "processed" / "schedule_combined.csv").exists()
+        and (season_root / "raw" / "player_games.csv").exists()
+    )
+
+
+def _copy_committed_public_data(out_dir: Path) -> bool:
+    source_dir = REPO_ROOT / "frontend" / "public" / "data"
+    if not source_dir.exists() or source_dir.resolve() == out_dir.resolve():
+        return False
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for path in source_dir.glob("*.json"):
+        shutil.copy2(path, out_dir / path.name)
+
+    player_games_src = source_dir / "player_games"
+    if player_games_src.exists():
+        player_games_dst = out_dir / "player_games"
+        if player_games_dst.exists():
+            shutil.rmtree(player_games_dst)
+        shutil.copytree(player_games_src, player_games_dst)
+
+    return True
+
+
 def _split_player_game_history(out_dir: Path) -> None:
     games_path = out_dir / "player_season_games.json"
     if not games_path.exists():
@@ -142,6 +169,11 @@ def build_public_bundle(out_dir: Path, season: str | None = None) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     active_season = season or "2025-26"
+    if not _has_source_season_data(active_season) and _copy_committed_public_data(out_dir):
+        _write_manifest(out_dir, active_season)
+        print(f"Copied committed frontend data bundle to {out_dir}")
+        return
+
     os.environ["FRONTEND_DATA_DIR"] = str(out_dir)
     export_public_data(season)
     export_player_profiles(season=season, out_dir=str(out_dir))
