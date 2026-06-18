@@ -50,6 +50,7 @@ frontend/public/data/
 !frontend/public/data/
 frontend/public/data/*
 !frontend/public/data/core_players.json
+!frontend/public/data/all_seasons_games.json
 !frontend/public/data/dataset_summary.json
 !frontend/public/data/games.json
 !frontend/public/data/highlights.json
