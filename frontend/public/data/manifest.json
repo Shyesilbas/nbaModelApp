@@ -1,8 +1,13 @@
 {
   "season": "2025-26",
-  "generated_at": "2026-06-18T18:19:33.976133+00:00",
-  "version": "024027b7d5fef0b6",
+  "generated_at": "2026-06-18T18:37:33.331106+00:00",
+  "version": "6feb2406dfc4e1d8",
   "files": {
+    "all_seasons_games.json": {
+      "path": "/data/all_seasons_games.json",
+      "size_bytes": 4698732,
+      "sha256": "4babe3bf515897ad7852b2fdf125d171480e695ac65d6c274a886e1f964cc0ce"
+    },
     "core_players.json": {
       "path": "/data/core_players.json",
       "size_bytes": 83340,
@@ -11,7 +16,7 @@
     "dataset_summary.json": {
       "path": "/data/dataset_summary.json",
       "size_bytes": 2313,
-      "sha256": "118a716a6c7748c904fbb325f275715922eb825dacaf4b9da5d11fa0c385727e"
+      "sha256": "87365d8ffc8053e3c14aac476d7383a24d36bb4b452179c784782e8f4c00fe10"
     },
     "games.json": {
       "path": "/data/games.json",
@@ -50,8 +55,8 @@
     },
     "seasons.json": {
       "path": "/data/seasons.json",
-      "size_bytes": 15,
-      "sha256": "023f0b4d207e63ac38198f9255d5bdd97d634ec8b2a6eb65c3bc61bc6bf4923e"
+      "size_bytes": 106,
+      "sha256": "aacf3715770189b49a3c6fba1ad532febd67d91a3b12e0b16aeebd89fa7db1bb"
     },
     "star_candidates.json": {
       "path": "/data/star_candidates.json",

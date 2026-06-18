@@ -22,11 +22,12 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.export_frontend_data import export_data as export_public_data
+from scripts.export_all_seasons_games import load_game_results as load_archived_game_results
 from scripts.export_player_profiles import export_player_profiles
+from scripts.season_utils import discover_seasons
 
 
 HEAVY_FILE_PATTERNS = (
-    "all_seasons_games.json",
     "game_details.json",
     "game_results_*.json",
     "player_season_games.json",
@@ -89,8 +90,22 @@ def _write_manifest(out_dir: Path, season: str) -> None:
 
 
 def _write_seasons_file(out_dir: Path, season: str) -> None:
+    discovered = sorted(discover_seasons().keys(), reverse=True)
+    seasons = discovered if discovered else [season]
     seasons_path = out_dir / "seasons.json"
-    seasons_path.write_text(json.dumps([season], indent=2), encoding="utf-8")
+    seasons_path.write_text(json.dumps(seasons, indent=2), encoding="utf-8")
+
+
+def _write_all_seasons_games(out_dir: Path) -> None:
+    rows: list[dict[str, Any]] = []
+    for season_key, season_path in discover_seasons().items():
+        rows.extend(load_archived_game_results(season_key, season_path))
+
+    rows.sort(key=lambda row: row.get("GAME_DATE") or "", reverse=True)
+    (out_dir / "all_seasons_games.json").write_text(
+        json.dumps(rows, separators=(",", ":")),
+        encoding="utf-8",
+    )
 
 
 def _remove_heavy_artifacts(out_dir: Path) -> None:
@@ -176,6 +191,7 @@ def build_public_bundle(out_dir: Path, season: str | None = None) -> None:
 
     os.environ["FRONTEND_DATA_DIR"] = str(out_dir)
     export_public_data(season)
+    _write_all_seasons_games(out_dir)
     export_player_profiles(season=season, out_dir=str(out_dir))
     _split_player_game_history(out_dir)
     _remove_heavy_artifacts(out_dir)

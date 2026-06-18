@@ -21,17 +21,23 @@ async function loadGameDetails(): Promise<GameDetail[]> {
 export async function loadArchivedGameIndex(season?: string | null): Promise<GameFeedRow[]> {
   const seasonParam = season ? `?season=${encodeURIComponent(season)}` : "";
   try {
-    return await loadPrivateApi<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`);
+    const apiRows = await loadPrivateApi<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`);
+    if (apiRows.length > 0) return apiRows;
   } catch {
-    const rows = await loadJson<GameFeedRow[]>("/data/games.json", []);
-    if (!season) return rows;
-
-    const matchingRows = rows.filter((row: any) => !row.SEASON || row.SEASON === season);
-    if (matchingRows.length > 0) return matchingRows;
-
-    const archivedRows = await loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []);
-    return archivedRows.filter((row: any) => row.SEASON === season);
+    // Fall through to the committed static archive below.
   }
+
+  const currentRows = await loadJson<GameFeedRow[]>("/data/games.json", []);
+  if (!season) {
+    const archivedRows = await loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []);
+    return archivedRows.length > 0 ? archivedRows : currentRows;
+  }
+
+  const matchingRows = currentRows.filter((row: any) => !row.SEASON || row.SEASON === season);
+  if (matchingRows.length > 0) return matchingRows;
+
+  const archivedRows = await loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []);
+  return archivedRows.filter((row: any) => row.SEASON === season);
 }
 
 export async function loadArchivedGameDetail(gameId: string) {
