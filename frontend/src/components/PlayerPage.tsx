@@ -765,16 +765,23 @@ export default function PlayerPage() {
     setSelectedPlayer(p);
     setSearch(p.PLAYER_NAME ?? "");
     setShowDropdown(false);
+    const playerId = String(p.PLAYER_ID);
     loadPrivateApi<{
       player_id: string;
       games: Record<string, GameRow[]>;
       averages: Record<string, SeasonAverages>;
-    }>(`/frontend-data-api/players/${encodeURIComponent(String(p.PLAYER_ID))}`)
+    }>(`/frontend-data-api/players/${encodeURIComponent(playerId)}`)
       .then((payload) => {
         setGamesData((prev) => ({ ...prev, [payload.player_id]: payload.games }));
         setAveragesData((prev) => ({ ...prev, [payload.player_id]: payload.averages }));
       })
-      .catch((e) => setError(e.message));
+      .catch(() => {
+        loadJson<Record<string, GameRow[]>>(`/data/player_games/${encodeURIComponent(playerId)}.json`, {})
+          .then((games) => {
+            setGamesData((prev) => ({ ...prev, [playerId]: games }));
+          })
+          .catch((e) => setError(e.message));
+      });
   };
 
   const pid = selectedPlayer ? String(selectedPlayer.PLAYER_ID) : null;

@@ -22,12 +22,14 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.export_frontend_data import export_data as export_public_data
+from scripts.export_player_profiles import export_player_profiles
 
 
 HEAVY_FILE_PATTERNS = (
     "all_seasons_games.json",
     "game_details.json",
     "game_results_*.json",
+    "player_season_games.json",
     "player_boxscores_*.json",
     "team_boxscores_*.json",
     "schedule_details_*.json",
@@ -115,12 +117,35 @@ def _write_slim_summary(out_dir: Path) -> None:
     summary_path.write_text(json.dumps(slim_summary, indent=2), encoding="utf-8")
 
 
+def _split_player_game_history(out_dir: Path) -> None:
+    games_path = out_dir / "player_season_games.json"
+    if not games_path.exists():
+        return
+
+    player_games = json.loads(games_path.read_text(encoding="utf-8"))
+    player_games_dir = out_dir / "player_games"
+    if player_games_dir.exists():
+        shutil.rmtree(player_games_dir)
+    player_games_dir.mkdir(parents=True, exist_ok=True)
+
+    for player_id, seasons in player_games.items():
+        safe_id = "".join(ch for ch in str(player_id) if ch.isdigit())
+        if not safe_id:
+            continue
+        (player_games_dir / f"{safe_id}.json").write_text(
+            json.dumps(seasons, separators=(",", ":")),
+            encoding="utf-8",
+        )
+
+
 def build_public_bundle(out_dir: Path, season: str | None = None) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     active_season = season or "2025-26"
     os.environ["FRONTEND_DATA_DIR"] = str(out_dir)
     export_public_data(season)
+    export_player_profiles(season=season, out_dir=str(out_dir))
+    _split_player_game_history(out_dir)
     _remove_heavy_artifacts(out_dir)
     _write_seasons_file(out_dir, active_season)
     _write_slim_summary(out_dir)
