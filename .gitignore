@@ -44,8 +44,26 @@ env/
 .DS_Store
 Thumbs.db
 
-# Project-specific generated/local assets
-data/
+# Project-specific generated/local assets — ignore all data/ except production runtime files
+data/*
+# Allow the current-season runtime files needed by Render (inference + frontend games feed)
+!data/season=2025-26
+data/season=2025-26/*
+!data/season=2025-26/features
+data/season=2025-26/features/*
+!data/season=2025-26/features/team_features.csv
+!data/season=2025-26/features/team_features.parquet
+!data/season=2025-26/features/player_features.csv
+!data/season=2025-26/features/player_features.parquet
+!data/season=2025-26/processed
+data/season=2025-26/processed/*
+!data/season=2025-26/processed/game_results.csv
+!data/season=2025-26/processed/schedule_combined.csv
+!data/season=2025-26/processed/upcoming_games_context.csv
+!data/season=2025-26/raw
+data/season=2025-26/raw/*
+!data/season=2025-26/raw/team_games.csv
+!data/season=2025-26/raw/player_games.csv
 frontend/public/data/
 !frontend/public/data/
 frontend/public/data/*
