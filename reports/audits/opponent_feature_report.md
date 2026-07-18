@@ -1,8 +1,8 @@
 # NBA Team Model-Ready Dataset V2 (Opponent-Aware) Report
 
 ## 1. Dataset Dimensions & Paths
-- **V2 CSV Output File**: `/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/team_model_ready_v2.csv`
-- **V2 Parquet Output File**: `/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/team_model_ready_v2.parquet`
+- **V2 CSV Output File**: `/Users/serhat/PycharmProjects/nbaModelApp/data/season=2025-26/processed/team_model_ready_v2.csv`
+- **V2 Parquet Output File**: `/Users/serhat/PycharmProjects/nbaModelApp/data/season=2025-26/processed/team_model_ready_v2.parquet`
 - **Final V2 Shape**: **1772 rows, 54 columns**
 - **Total Features**: **47 features** (Target `WIN` and 6 Metadata columns excluded)
 

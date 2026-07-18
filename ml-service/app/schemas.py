@@ -8,6 +8,12 @@ class WinProbRequest(BaseModel):
     away_team: str = Field(..., description="Away team abbreviation, e.g., BOS")
     prediction_date: date = Field(..., description="YYYY-MM-DD")
 
+class ShapExplanationRequest(BaseModel):
+    home_team: str
+    away_team: str
+    prediction_date: date
+    model_version: Optional[str] = "v9"
+
 
 class WinProbResponse(BaseModel):
     home_team: str
@@ -43,6 +49,8 @@ class ScorePredictionResponse(BaseModel):
     model_version: Optional[str]
     prediction_date: str
     error: Optional[str] = None
+    confidence_warning: Optional[str] = None
+
 
 
 class PlayerPrediction(BaseModel):
@@ -115,6 +123,8 @@ class ScorePredictionSub(BaseModel):
     total: float
     total_range: List[float]
     model_version: Optional[str] = None
+    confidence_warning: Optional[str] = None
+
 
 
 class WinProbabilitySub(BaseModel):
@@ -124,7 +134,9 @@ class WinProbabilitySub(BaseModel):
 
 
 class GameFullPlayer(BaseModel):
+    player_id: Optional[int] = None
     player_name: str
+
     position_group: str
     proj_pts: float
     proj_reb: float
@@ -173,4 +185,26 @@ class GameFullResponse(BaseModel):
     away_players: List[GameFullPlayer]
     scale_factors: ScaleFactorsSub
     explanation: Optional[GameExplanationSub] = None
+
+
+class ShapFactor(BaseModel):
+    feature: str
+    impact: float
+    direction: str
+    type: str  # "shap_feature" or "calibration_adjustment"
+
+class ModelShapExplanation(BaseModel):
+    base_value: float
+    final_prediction: float
+    top_factors: List[ShapFactor]
+    unit: Optional[str] = None
+    model_type: Optional[str] = None
+
+
+class ShapExplanationResponse(BaseModel):
+    home_team: str
+    away_team: str
+    prediction_date: str
+    win_model_explanation: Optional[ModelShapExplanation] = None
+    score_model_explanation: Optional[ModelShapExplanation] = None
 

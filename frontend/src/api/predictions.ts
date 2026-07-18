@@ -1,4 +1,4 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8001").replace(/\/$/, "");
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8001").replace(/\/$/, "");
 
 type GameFullRequest = {
   game_id?: string;
@@ -70,13 +70,14 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
       margin_range: data.score_prediction.margin_range,
       score_model_winner: data.score_prediction.margin >= 0 ? home : away,
       model_version: data.score_prediction.model_version,
+      confidence_warning: data.score_prediction.confidence_warning,
     },
     final_display_recommendation: {
       primary_winner_signal: "WIN_PROB",
     },
     player_predictions: {
       home_players: (data.home_players || []).map((p: any) => ({
-        player_id: p.player_name,
+        player_id: p.player_id ?? p.player_name,
         player_name: p.player_name,
         position_group: p.position_group,
         predicted_pts: p.proj_pts,
@@ -85,7 +86,7 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
         predicted_pra: p.proj_pra,
       })),
       away_players: (data.away_players || []).map((p: any) => ({
-        player_id: p.player_name,
+        player_id: p.player_id ?? p.player_name,
         player_name: p.player_name,
         position_group: p.position_group,
         predicted_pts: p.proj_pts,

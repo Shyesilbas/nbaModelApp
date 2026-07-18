@@ -1,20 +1,26 @@
 {
-  "total_player_game_rows": 28698,
-  "player_games_finals": 101,
-  "team_games_playoffs": 160,
-  "team_games_regular": 2460,
-  "total_teams": 30,
-  "player_games_playoffs": 1820,
   "total_team_game_rows": 2642,
-  "total_players": 518,
+  "team_games_regular": 2460,
   "team_games_playin": 12,
+  "team_games_playoffs": 160,
   "team_games_finals": 10,
+  "total_player_game_rows": 28698,
   "player_games_regular": 26651,
   "player_games_playin": 126,
+  "player_games_playoffs": 1820,
+  "player_games_finals": 101,
+  "total_teams": 0,
+  "total_players": 0,
+  "v1_rows": 0,
+  "v1_features": 0,
+  "v2_rows": 0,
+  "v2_features": 0,
+  "v3_rows": 0,
+  "v3_features": 0,
   "files_status": [
     {
       "name": "Raw Team Game Logs",
-      "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/raw/team_games.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2025-26/raw/team_games.csv",
       "exists": true,
       "rows": 2642,
       "columns": 29,
@@ -22,7 +28,7 @@
     },
     {
       "name": "Raw Player Game Logs",
-      "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/raw/player_games.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2025-26/raw/player_games.csv",
       "exists": true,
       "rows": 28698,
       "columns": 29,
@@ -31,46 +37,70 @@
     {
       "name": "Team Rosters",
       "path": "data/season=2025-26/analysis/team_rosters.csv",
-      "exists": true,
-      "rows": 518,
-      "columns": 10,
-      "size_kb": 59.84
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
     },
     {
       "name": "Core Players List",
       "path": "data/season=2025-26/analysis/core_players.csv",
-      "exists": true,
-      "rows": 518,
-      "columns": 7,
-      "size_kb": 29.07
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
     },
     {
       "name": "Star Candidates",
       "path": "data/season=2025-26/analysis/star_candidates.csv",
-      "exists": true,
-      "rows": 518,
-      "columns": 10,
-      "size_kb": 59.17
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
     },
     {
       "name": "Multi-Team Players",
       "path": "data/season=2025-26/analysis/multi_team_players.csv",
-      "exists": true,
-      "rows": 68,
-      "columns": 4,
-      "size_kb": 2.41
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
     },
     {
       "name": "Player Name Lookup",
       "path": "data/season=2025-26/analysis/player_name_lookup.csv",
-      "exists": true,
-      "rows": 518,
-      "columns": 3,
-      "size_kb": 18.44
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
+    },
+    {
+      "name": "V1 Model-Ready Dataset",
+      "path": "data/processed/team_model_ready_2025_26.csv",
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
+    },
+    {
+      "name": "V2 Model-Ready Dataset",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2025-26/processed/team_model_ready_v2.csv",
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
+    },
+    {
+      "name": "V3 Model-Ready Dataset",
+      "path": "data/processed/team_model_ready_v3_2025_26.csv",
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "size_kb": 0.0
     },
     {
       "name": "Combined Schedule",
-      "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/schedule_combined.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2025-26/processed/schedule_combined.csv",
       "exists": true,
       "rows": 1321,
       "columns": 17,
@@ -78,7 +108,7 @@
     },
     {
       "name": "Upcoming Games Context",
-      "path": "/Users/serhat/agProjects/nbaModelApp/data/season=2025-26/processed/upcoming_games_context.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2025-26/processed/upcoming_games_context.csv",
       "exists": true,
       "rows": 3,
       "columns": 33,

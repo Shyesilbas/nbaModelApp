@@ -22,7 +22,12 @@ export async function loadArchivedGameIndex(season?: string | null): Promise<Gam
   const seasonParam = season ? `?season=${encodeURIComponent(season)}` : "";
   try {
     const apiRows = await loadPrivateApi<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`);
-    if (apiRows.length > 0) return apiRows;
+    if (apiRows.length > 0) {
+      return apiRows.map((g) => ({
+        ...g,
+        SEASON: g.SEASON ?? season ?? "2025-26",
+      }));
+    }
   } catch {
     // Fall through to the committed static archive below.
   }

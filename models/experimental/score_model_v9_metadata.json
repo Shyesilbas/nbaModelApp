@@ -1,25 +1,9 @@
 {
     "version": "v9_Ridge",
-    "updated_at": "2026-06-15T13:35:04.768715Z",
-    "training_manifest": {
-        "path": "/Users/serhat/agProjects/nbaModelApp/config/training_manifest.yaml",
-        "train_seasons": [
-            "2020-21",
-            "2021-22",
-            "2022-23",
-            "2023-24"
-        ],
-        "calibration_season": "2024-25",
-        "validation_season": "2025-26",
-        "holdout": {
-            "strategy": "season_holdout",
-            "test_size": 0.2,
-            "date_col": "GAME_DATE",
-            "calibration_season": "2024-25"
-        }
-    },
+    "updated_at": "2026-07-17T19:40:16.201414Z",
+    "training_manifest": {},
     "feature_contract": {
-        "path": "/Users/serhat/agProjects/nbaModelApp/config/features/score_v9.yaml",
+        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/score_v9.yaml",
         "schema_version": "score_v9",
         "config": {
             "schema_version": "score_v9",
@@ -72,111 +56,75 @@
         }
     },
     "input_files": [
-        "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv",
-        "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv",
-        "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv",
-        "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv",
-        "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv"
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv"
     ],
     "row_counts_by_file": {
-        "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv": 1456,
-        "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv": 1766,
-        "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv": 1760,
-        "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv": 1766,
-        "/Users/serhat/agProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv": 1748
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv": 1772
     },
     "final_refit": {
         "enabled": true,
-        "rows": 8496,
+        "rows": 1772,
         "note": "Holdout metrics are computed before final submodels are refit on all eligible rows."
     },
     "evaluation": "chronological_holdout",
-    "pace_mae": 3.5685460654618724,
-    "home_rtg_mae": 9.138571048977388,
-    "away_rtg_mae": 8.947415170615445,
-    "margin_mae": 12.106483743470353,
-    "derived_home_score_mae": 8.999453774282518,
-    "derived_away_score_mae": 9.18765012741533,
+    "pace_mae": 3.6110929885219876,
+    "home_rtg_mae": 9.122084941528344,
+    "away_rtg_mae": 9.999590892457626,
+    "margin_mae": 13.814628047605966,
+    "derived_home_score_mae": 8.678068331829712,
+    "derived_away_score_mae": 8.857660511146172,
     "splits": {
         "pace": {
-            "strategy": "season_holdout",
-            "split_date": null,
-            "train_rows": 3374,
-            "test_rows": 871,
-            "train_seasons": [
-                "2020-21",
-                "2021-22",
-                "2022-23",
-                "2023-24"
-            ],
-            "test_seasons": [
-                "2024-25"
-            ]
+            "strategy": "chronological_quantile",
+            "split_date": "2026-04-02",
+            "train_rows": 712,
+            "test_rows": 172,
+            "train_seasons": null,
+            "test_seasons": null
         },
         "home_rtg": {
-            "strategy": "season_holdout",
-            "split_date": null,
-            "train_rows": 3374,
-            "test_rows": 871,
-            "train_seasons": [
-                "2020-21",
-                "2021-22",
-                "2022-23",
-                "2023-24"
-            ],
-            "test_seasons": [
-                "2024-25"
-            ]
+            "strategy": "chronological_quantile",
+            "split_date": "2026-04-02",
+            "train_rows": 712,
+            "test_rows": 172,
+            "train_seasons": null,
+            "test_seasons": null
         },
         "away_rtg": {
-            "strategy": "season_holdout",
-            "split_date": null,
-            "train_rows": 3374,
-            "test_rows": 877,
-            "train_seasons": [
-                "2020-21",
-                "2021-22",
-                "2022-23",
-                "2023-24"
-            ],
-            "test_seasons": [
-                "2024-25"
-            ]
+            "strategy": "chronological_quantile",
+            "split_date": "2026-04-01",
+            "train_rows": 710,
+            "test_rows": 178,
+            "train_seasons": null,
+            "test_seasons": null
         },
         "margin": {
-            "strategy": "season_holdout",
-            "split_date": null,
-            "train_rows": 3374,
-            "test_rows": 871,
-            "train_seasons": [
-                "2020-21",
-                "2021-22",
-                "2022-23",
-                "2023-24"
-            ],
-            "test_seasons": [
-                "2024-25"
-            ]
+            "strategy": "chronological_quantile",
+            "split_date": "2026-04-02",
+            "train_rows": 712,
+            "test_rows": 172,
+            "train_seasons": null,
+            "test_seasons": null
         },
-        "derived_score_eval_games": 871
+        "derived_score_eval_games": 172
     },
     "ridge_coefs": {
         "total": [
-            5.513636374318667,
-            0.09529467524752508,
-            0.9159674598453679,
-            -0.4692469205777077,
-            -0.8892429187594367
+            6.033370677589982,
+            0.3424475873025466,
+            -0.12289454548784809,
+            -0.8505441916320905,
+            -1.0952561922624529
         ],
-        "total_intercept": -0.3700312196788571,
+        "total_intercept": -0.1602169847494369,
         "margin": [
-            -1.3607038744607693,
-            1.5388365840427092,
-            -2.4832801376501212,
-            0.5365818725555189,
-            0.49018939566854464
+            -0.3912872560380332,
+            1.335029973661807,
+            -0.5139352715844698,
+            -1.4916887746587655,
+            0.13474429803882826
         ],
-        "margin_intercept": 0.10902172711768422,
+        "margin_intercept": 0.20509621504047942,
         "features": [
             "is_playoff",
             "home_b2b",

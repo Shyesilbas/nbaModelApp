@@ -1,232 +1,232 @@
 {
   "highest_scoring_games": [
     {
-      "GAME_ID": "0021900061",
-      "GAME_DATE": "2019-10-30",
-      "HOME_TEAM": "WAS",
-      "AWAY_TEAM": "HOU",
-      "HOME_SCORE": 158,
-      "AWAY_SCORE": 159,
-      "TOTAL_PTS": 317,
-      "SEASON_TYPE": "Regular Season"
-    },
-    {
-      "GAME_ID": "0021901238",
-      "GAME_DATE": "2020-07-31",
-      "HOME_TEAM": "DAL",
-      "AWAY_TEAM": "HOU",
-      "HOME_SCORE": 149,
-      "AWAY_SCORE": 153,
+      "GAME_ID": "0022500396",
+      "GAME_DATE": "2025-12-21",
+      "HOME_TEAM": "ATL",
+      "AWAY_TEAM": "CHI",
+      "HOME_SCORE": 150,
+      "AWAY_SCORE": 152,
       "TOTAL_PTS": 302,
       "SEASON_TYPE": "Regular Season"
     },
     {
-      "GAME_ID": "0021900687",
-      "GAME_DATE": "2020-01-26",
-      "HOME_TEAM": "ATL",
-      "AWAY_TEAM": "WAS",
-      "HOME_SCORE": 152,
-      "AWAY_SCORE": 133,
-      "TOTAL_PTS": 285,
+      "GAME_ID": "0022500240",
+      "GAME_DATE": "2025-11-16",
+      "HOME_TEAM": "UTA",
+      "AWAY_TEAM": "CHI",
+      "HOME_SCORE": 150,
+      "AWAY_SCORE": 147,
+      "TOTAL_PTS": 297,
       "SEASON_TYPE": "Regular Season"
     },
     {
-      "GAME_ID": "0021900705",
-      "GAME_DATE": "2020-01-28",
-      "HOME_TEAM": "MIL",
-      "AWAY_TEAM": "WAS",
-      "HOME_SCORE": 151,
-      "AWAY_SCORE": 131,
-      "TOTAL_PTS": 282,
+      "GAME_ID": "0022501053",
+      "GAME_DATE": "2026-03-25",
+      "HOME_TEAM": "PHI",
+      "AWAY_TEAM": "CHI",
+      "HOME_SCORE": 157,
+      "AWAY_SCORE": 137,
+      "TOTAL_PTS": 294,
       "SEASON_TYPE": "Regular Season"
     },
     {
-      "GAME_ID": "0021900957",
-      "GAME_DATE": "2020-03-09",
-      "HOME_TEAM": "ATL",
-      "AWAY_TEAM": "CHA",
-      "HOME_SCORE": 143,
-      "AWAY_SCORE": 138,
-      "TOTAL_PTS": 281,
+      "GAME_ID": "0022501153",
+      "GAME_DATE": "2026-04-07",
+      "HOME_TEAM": "NOP",
+      "AWAY_TEAM": "UTA",
+      "HOME_SCORE": 156,
+      "AWAY_SCORE": 137,
+      "TOTAL_PTS": 293,
+      "SEASON_TYPE": "Regular Season"
+    },
+    {
+      "GAME_ID": "0022500321",
+      "GAME_DATE": "2025-12-02",
+      "HOME_TEAM": "NOP",
+      "AWAY_TEAM": "MIN",
+      "HOME_SCORE": 142,
+      "AWAY_SCORE": 149,
+      "TOTAL_PTS": 291,
       "SEASON_TYPE": "Regular Season"
     }
   ],
   "lowest_scoring_games": [
     {
-      "GAME_ID": "0021900375",
-      "GAME_DATE": "2019-12-13",
-      "HOME_TEAM": "CHI",
-      "AWAY_TEAM": "CHA",
-      "HOME_SCORE": 73,
-      "AWAY_SCORE": 83,
-      "TOTAL_PTS": 156,
+      "GAME_ID": "0022500826",
+      "GAME_DATE": "2026-02-22",
+      "HOME_TEAM": "PHX",
+      "AWAY_TEAM": "POR",
+      "HOME_SCORE": 77,
+      "AWAY_SCORE": 92,
+      "TOTAL_PTS": 169,
       "SEASON_TYPE": "Regular Season"
     },
     {
-      "GAME_ID": "0041900167",
-      "GAME_DATE": "2020-09-01",
-      "HOME_TEAM": "DEN",
-      "AWAY_TEAM": "UTA",
-      "HOME_SCORE": 80,
-      "AWAY_SCORE": 78,
-      "TOTAL_PTS": 158,
+      "GAME_ID": "0042500106",
+      "GAME_DATE": "2026-05-01",
+      "HOME_TEAM": "ORL",
+      "AWAY_TEAM": "DET",
+      "HOME_SCORE": 79,
+      "AWAY_SCORE": 93,
+      "TOTAL_PTS": 172,
       "SEASON_TYPE": "Playoffs"
     },
     {
-      "GAME_ID": "0021900510",
-      "GAME_DATE": "2020-01-02",
-      "HOME_TEAM": "MIA",
-      "AWAY_TEAM": "TOR",
-      "HOME_SCORE": 84,
-      "AWAY_SCORE": 76,
-      "TOTAL_PTS": 160,
+      "GAME_ID": "0022501185",
+      "GAME_DATE": "2026-04-10",
+      "HOME_TEAM": "LAL",
+      "AWAY_TEAM": "PHX",
+      "HOME_SCORE": 101,
+      "AWAY_SCORE": 73,
+      "TOTAL_PTS": 174,
       "SEASON_TYPE": "Regular Season"
     },
     {
-      "GAME_ID": "0021900793",
-      "GAME_DATE": "2020-02-10",
-      "HOME_TEAM": "DET",
-      "AWAY_TEAM": "CHA",
-      "HOME_SCORE": 76,
-      "AWAY_SCORE": 87,
-      "TOTAL_PTS": 163,
-      "SEASON_TYPE": "Regular Season"
+      "GAME_ID": "0042500176",
+      "GAME_DATE": "2026-05-01",
+      "HOME_TEAM": "HOU",
+      "AWAY_TEAM": "LAL",
+      "HOME_SCORE": 78,
+      "AWAY_SCORE": 98,
+      "TOTAL_PTS": 176,
+      "SEASON_TYPE": "Playoffs"
     },
     {
-      "GAME_ID": "0021900269",
-      "GAME_DATE": "2019-11-29",
-      "HOME_TEAM": "ORL",
-      "AWAY_TEAM": "TOR",
-      "HOME_SCORE": 83,
-      "AWAY_SCORE": 90,
-      "TOTAL_PTS": 173,
+      "GAME_ID": "0022500127",
+      "GAME_DATE": "2025-10-28",
+      "HOME_TEAM": "GSW",
+      "AWAY_TEAM": "LAC",
+      "HOME_SCORE": 98,
+      "AWAY_SCORE": 79,
+      "TOTAL_PTS": 177,
       "SEASON_TYPE": "Regular Season"
     }
   ],
   "top_points": [
     {
-      "PLAYER_NAME": "Damian Lillard",
-      "TEAM": "POR",
-      "MATCHUP": "POR @ DAL",
-      "GAME_DATE": "2020-08-11",
-      "VALUE": 61,
-      "GAME_ID": "0021901300"
+      "PLAYER_NAME": "Bam Adebayo",
+      "TEAM": "MIA",
+      "MATCHUP": "MIA vs. WAS",
+      "GAME_DATE": "2026-03-10",
+      "VALUE": 83,
+      "GAME_ID": "0022500938"
     },
     {
-      "PLAYER_NAME": "Damian Lillard",
-      "TEAM": "POR",
-      "MATCHUP": "POR vs. GSW",
-      "GAME_DATE": "2020-01-20",
-      "VALUE": 61,
-      "GAME_ID": "0021900652"
-    },
-    {
-      "PLAYER_NAME": "James Harden",
-      "TEAM": "HOU",
-      "MATCHUP": "HOU vs. ATL",
-      "GAME_DATE": "2019-11-30",
+      "PLAYER_NAME": "Luka Don\u010di\u0107",
+      "TEAM": "LAL",
+      "MATCHUP": "LAL @ MIA",
+      "GAME_DATE": "2026-03-19",
       "VALUE": 60,
-      "GAME_ID": "0021900282"
+      "GAME_ID": "0022501010"
     },
     {
-      "PLAYER_NAME": "Damian Lillard",
-      "TEAM": "POR",
-      "MATCHUP": "POR vs. BKN",
-      "GAME_DATE": "2019-11-08",
-      "VALUE": 60,
-      "GAME_ID": "0021900125"
+      "PLAYER_NAME": "Nikola Joki\u0107",
+      "TEAM": "DEN",
+      "MATCHUP": "DEN vs. MIN",
+      "GAME_DATE": "2025-12-25",
+      "VALUE": 56,
+      "GAME_ID": "0022500013"
     },
     {
-      "PLAYER_NAME": "James Harden",
-      "TEAM": "HOU",
-      "MATCHUP": "HOU @ WAS",
-      "GAME_DATE": "2019-10-30",
-      "VALUE": 59,
-      "GAME_ID": "0021900061"
+      "PLAYER_NAME": "Shai Gilgeous-Alexander",
+      "TEAM": "OKC",
+      "MATCHUP": "OKC @ IND",
+      "GAME_DATE": "2025-10-23",
+      "VALUE": 55,
+      "GAME_ID": "0022500005"
+    },
+    {
+      "PLAYER_NAME": "Nikola Joki\u0107",
+      "TEAM": "DEN",
+      "MATCHUP": "DEN @ LAC",
+      "GAME_DATE": "2025-11-12",
+      "VALUE": 55,
+      "GAME_ID": "0022500224"
     }
   ],
   "top_assists": [
     {
-      "PLAYER_NAME": "Luka Don\u010di\u0107",
+      "PLAYER_NAME": "Ryan Nembhard",
       "TEAM": "DAL",
-      "MATCHUP": "DAL vs. MIL",
-      "GAME_DATE": "2020-08-08",
+      "MATCHUP": "DAL vs. CHI",
+      "GAME_DATE": "2026-04-12",
+      "VALUE": 23,
+      "GAME_ID": "0022501193"
+    },
+    {
+      "PLAYER_NAME": "Isaiah Collier",
+      "TEAM": "UTA",
+      "MATCHUP": "UTA @ IND",
+      "GAME_DATE": "2026-02-03",
+      "VALUE": 22,
+      "GAME_ID": "0022500717"
+    },
+    {
+      "PLAYER_NAME": "Nikola Joki\u0107",
+      "TEAM": "DEN",
+      "MATCHUP": "DEN vs. DAL",
+      "GAME_DATE": "2026-03-25",
       "VALUE": 19,
-      "GAME_ID": "0021901284"
+      "GAME_ID": "0022501059"
     },
     {
-      "PLAYER_NAME": "LeBron James",
-      "TEAM": "LAL",
-      "MATCHUP": "LAL vs. ORL",
-      "GAME_DATE": "2020-01-15",
+      "PLAYER_NAME": "Josh Giddey",
+      "TEAM": "CHI",
+      "MATCHUP": "CHI vs. CLE",
+      "GAME_DATE": "2026-03-19",
       "VALUE": 19,
-      "GAME_ID": "0021900613"
+      "GAME_ID": "0022501011"
     },
     {
-      "PLAYER_NAME": "Trae Young",
-      "TEAM": "ATL",
-      "MATCHUP": "ATL vs. PHI",
-      "GAME_DATE": "2020-01-30",
-      "VALUE": 18,
-      "GAME_ID": "0021900716"
-    },
-    {
-      "PLAYER_NAME": "Ben Simmons",
-      "TEAM": "PHI",
-      "MATCHUP": "PHI @ DET",
-      "GAME_DATE": "2019-12-23",
-      "VALUE": 17,
-      "GAME_ID": "0021900445"
-    },
-    {
-      "PLAYER_NAME": "Luka Don\u010di\u0107",
-      "TEAM": "DAL",
-      "MATCHUP": "DAL @ SAC",
-      "GAME_DATE": "2020-01-15",
-      "VALUE": 17,
-      "GAME_ID": "0021900612"
+      "PLAYER_NAME": "Andrew Nembhard",
+      "TEAM": "IND",
+      "MATCHUP": "IND vs. LAL",
+      "GAME_DATE": "2026-03-25",
+      "VALUE": 19,
+      "GAME_ID": "0022501052"
     }
   ],
   "top_rebounds": [
     {
-      "PLAYER_NAME": "Jonas Valan\u010di\u016bnas",
-      "TEAM": "MEM",
-      "MATCHUP": "MEM vs. SAC",
-      "GAME_DATE": "2020-02-28",
+      "PLAYER_NAME": "Scottie Barnes",
+      "TEAM": "TOR",
+      "MATCHUP": "TOR vs. GSW",
+      "GAME_DATE": "2025-12-28",
       "VALUE": 25,
-      "GAME_ID": "0021900881"
+      "GAME_ID": "0022500441"
     },
     {
       "PLAYER_NAME": "Andre Drummond",
-      "TEAM": "DET",
-      "MATCHUP": "DET @ CHI",
-      "GAME_DATE": "2019-11-01",
+      "TEAM": "PHI",
+      "MATCHUP": "PHI vs. MIA",
+      "GAME_DATE": "2025-11-23",
       "VALUE": 24,
-      "GAME_ID": "0021900073"
+      "GAME_ID": "0022500275"
     },
     {
-      "PLAYER_NAME": "Nikola Vu\u010devi\u0107",
-      "TEAM": "ORL",
-      "MATCHUP": "ORL vs. BKN",
-      "GAME_DATE": "2020-01-06",
+      "PLAYER_NAME": "Victor Wembanyama",
+      "TEAM": "SAS",
+      "MATCHUP": "SAS @ OKC",
+      "GAME_DATE": "2026-05-18",
       "VALUE": 24,
-      "GAME_ID": "0021900540"
+      "GAME_ID": "0042500311"
     },
     {
-      "PLAYER_NAME": "Andre Drummond",
-      "TEAM": "DET",
-      "MATCHUP": "DET @ WAS",
-      "GAME_DATE": "2019-11-04",
-      "VALUE": 24,
-      "GAME_ID": "0021900091"
+      "PLAYER_NAME": "Karl-Anthony Towns",
+      "TEAM": "NYK",
+      "MATCHUP": "NYK @ TOR",
+      "GAME_DATE": "2026-01-28",
+      "VALUE": 22,
+      "GAME_ID": "0022500675"
     },
     {
-      "PLAYER_NAME": "Clint Capela",
-      "TEAM": "HOU",
-      "MATCHUP": "HOU vs. DAL",
-      "GAME_DATE": "2019-11-24",
-      "VALUE": 23,
-      "GAME_ID": "0021900235"
+      "PLAYER_NAME": "Mitchell Robinson",
+      "TEAM": "NYK",
+      "MATCHUP": "NYK @ IND",
+      "GAME_DATE": "2026-03-13",
+      "VALUE": 22,
+      "GAME_ID": "0022500962"
     }
   ]
 }

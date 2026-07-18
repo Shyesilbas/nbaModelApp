@@ -1,5 +1,6 @@
 from datetime import date
 from typing import Any, Dict, List, Tuple
+import pandas as pd
 
 from scripts.build_matchup_features import build_features
 from scripts.inference.top_down_scaling import apply_top_down_scaling
@@ -50,13 +51,21 @@ def _score_values_from_response(score_resp: ScorePredictionResponse) -> Dict[str
         "total": score_resp.predicted_total_points,
         "total_range": score_resp.total_points_range,
         "model_version": score_resp.model_version,
+        "confidence_warning": getattr(score_resp, "confidence_warning", None),
     }
 
 
 def _build_game_full_player_list(df, scaled_pts, scaled_reb, scaled_ast, scale) -> List[GameFullPlayer]:
     players = []
     for i, (_, r) in enumerate(df.iterrows()):
+        pid = None
+        if "PLAYER_ID" in r and pd.notna(r["PLAYER_ID"]):
+            try:
+                pid = int(r["PLAYER_ID"])
+            except (ValueError, TypeError):
+                pid = None
         players.append(GameFullPlayer(
+            player_id=pid,
             player_name=str(r.get("PLAYER_NAME", f"Player {r['PLAYER_ID']}")),
             position_group=svc.CANONICAL_POSITIONS.get(int(r["PLAYER_ID"]), str(r.get("PLAYER_POSITION_GROUP", "UNKNOWN"))),
             proj_pts=round(scaled_pts[i], 1),
@@ -196,7 +205,8 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
             margin_range=score_values["margin_range"],
             total=round(score_values["total"], 1),
             total_range=score_values["total_range"],
-            model_version=score_values["model_version"]
+            model_version=score_values["model_version"],
+            confidence_warning=score_values.get("confidence_warning")
         ),
         win_probability=WinProbabilitySub(
             home_win_prob=round(win_resp.home_win_probability, 4),

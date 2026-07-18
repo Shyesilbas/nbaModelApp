@@ -1,6 +1,56 @@
 {
     "version": "v9_LightGBM_Ridge",
-    "updated_at": "2026-06-13T15:43:03.451253Z",
+    "updated_at": "2026-07-17T19:42:07.938167Z",
+    "training_manifest": {},
+    "feature_contract": {
+        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/player_v9.yaml",
+        "schema_version": "player_v9",
+        "config": {
+            "schema_version": "player_v9",
+            "targets": {
+                "TARGET_PTS": "pts",
+                "TARGET_REB": "reb",
+                "TARGET_AST": "ast"
+            },
+            "exclude_columns": [
+                "SEASON_ID",
+                "Player_ID",
+                "GAME_DATE",
+                "MATCHUP",
+                "VIDEO_AVAILABLE",
+                "PLAYER_NAME",
+                "SEASON_TYPE",
+                "OPPONENT_ABBREVIATION",
+                "GAME_ID",
+                "Game_ID",
+                "TEAM_ABBREVIATION",
+                "PLAYER_POSITION_GROUP"
+            ],
+            "required_context_columns": [
+                "SEASON_ID",
+                "GAME_DATE",
+                "IS_PLAYOFF",
+                "IS_HOME",
+                "PLAYER_POSITION_GROUP",
+                "USG_PCT_LAST_10",
+                "MIN_EMA_10"
+            ]
+        }
+    },
+    "input_file": "/Users/serhat/PycharmProjects/nbaModelApp/data/experimental/player_model_ready_v4_usg.csv",
+    "number_of_rows": 28698,
+    "training_rows": 28698,
+    "training_season_ids": [],
+    "season_coverage": [
+        22025,
+        42025,
+        52025
+    ],
+    "final_refit": {
+        "enabled": true,
+        "rows": 28698,
+        "note": "Holdout metrics are computed before each final target model is refit on all eligible rows."
+    },
     "features_count": 40,
     "targets": [
         "TARGET_PTS",
@@ -10,27 +60,29 @@
     "evaluation": "chronological_holdout",
     "evaluation_metrics": {
         "pts": {
-            "mae": 4.554242920531471,
-            "rmse": 5.986125115706029,
-            "r2": 0.5075082965370958,
+            "mae": 4.619391994809329,
+            "rmse": 6.058332708408466,
+            "r2": 0.5035388339864211,
             "split": {
                 "strategy": "chronological_quantile",
-                "split_date": "2026-02-07",
-                "train_rows": 45103,
-                "test_rows": 11080
+                "split_date": "2026-03-21",
+                "train_rows": 22973,
+                "test_rows": 5725,
+                "train_seasons": null,
+                "test_seasons": null
             },
             "ridge_coefs": [
-                0.1803278347180619,
-                -0.08965202461312774,
-                0.06255419021205412,
-                0.03516522670842046,
-                -0.09771941692046272,
-                -0.033509000610654704,
-                0.015699840026731346,
-                -0.03301899414682389,
-                0.027605800852326404
+                0.1787963819604665,
+                -0.0976697469466931,
+                0.04231468486880552,
+                0.03395349173168179,
+                -0.07626817659871851,
+                -0.024715034173946646,
+                0.007475784884278854,
+                -0.08218239806393575,
+                0.003221175980971608
             ],
-            "ridge_intercept": 0.012049599301902345,
+            "ridge_intercept": 0.03858998896440812,
             "ridge_features": [
                 "is_playoff",
                 "is_home",
@@ -44,27 +96,29 @@
             ]
         },
         "reb": {
-            "mae": 1.9390848789827337,
-            "rmse": 2.5535496910622357,
-            "r2": 0.4076208423057125,
+            "mae": 1.949256369575057,
+            "rmse": 2.578147806642391,
+            "r2": 0.41440784953321963,
             "split": {
                 "strategy": "chronological_quantile",
-                "split_date": "2026-02-07",
-                "train_rows": 45103,
-                "test_rows": 11080
+                "split_date": "2026-03-21",
+                "train_rows": 22973,
+                "test_rows": 5725,
+                "train_seasons": null,
+                "test_seasons": null
             },
             "ridge_coefs": [
-                0.005062523429081334,
-                -0.006501371374443844,
-                0.3395631363183593,
-                0.05582399206757645,
-                -0.39538712838653695,
-                -0.06223945560229118,
-                0.005309214931707548,
-                -0.016684418877002765,
-                0.04741794511410002
+                0.017346323713526533,
+                0.010957426861894727,
+                0.3411149334380582,
+                0.06617265264716272,
+                -0.4072875860722366,
+                -0.04045385923538785,
+                0.019104905969077234,
+                -0.002847144354956824,
+                0.03666243286107269
             ],
-            "ridge_intercept": -0.10894889430024093,
+            "ridge_intercept": -0.12941083892670974,
             "ridge_features": [
                 "is_playoff",
                 "is_home",
@@ -78,27 +132,29 @@
             ]
         },
         "ast": {
-            "mae": 1.3709479065922325,
-            "rmse": 1.872932601661815,
-            "r2": 0.4658577868359486,
+            "mae": 1.3738960457990286,
+            "rmse": 1.8964010604794843,
+            "r2": 0.45967383764528935,
             "split": {
                 "strategy": "chronological_quantile",
-                "split_date": "2026-02-07",
-                "train_rows": 45103,
-                "test_rows": 11080
+                "split_date": "2026-03-21",
+                "train_rows": 22973,
+                "test_rows": 5725,
+                "train_seasons": null,
+                "test_seasons": null
             },
             "ridge_coefs": [
-                0.07164438281671293,
-                -0.03137398319451586,
-                -0.13920369380631606,
-                0.07894007555665387,
-                0.06026361825004564,
-                0.03246905669899497,
-                0.006556616450886529,
-                -0.0129351253923226,
-                0.008533098183539794
+                0.0647409847963436,
+                -0.03182713768114081,
+                -0.14501881121052068,
+                0.07542991891680244,
+                0.06958889228798996,
+                0.029114946962173493,
+                0.003950437036092918,
+                -0.019048502845809986,
+                0.012911835742522502
             ],
-            "ridge_intercept": 0.04207174012843968,
+            "ridge_intercept": 0.046026627247705156,
             "ridge_features": [
                 "is_playoff",
                 "is_home",
@@ -110,78 +166,6 @@
                 "heavy_minutes",
                 "light_minutes"
             ]
-        }
-    },
-    "holdout_postprocessing_evidence": {
-        "source": "reports/evaluation/player_postprocessing_candidate_metrics.json",
-        "split_date": "2026-02-07",
-        "test_rows": 11080,
-        "best_strategies": {
-            "pts": "ridge_regression",
-            "reb": "ridge_regression",
-            "ast": "ridge_regression"
-        },
-        "holdout": {
-            "pts": {
-                "base_no_corr": {
-                    "mae": 4.554243,
-                    "rmse": 5.986125,
-                    "bias": -0.1912,
-                    "r2": 0.507508
-                },
-                "ridge_regression": {
-                    "mae": 4.547615,
-                    "rmse": 5.986115,
-                    "bias": -0.226955,
-                    "r2": 0.50751
-                },
-                "delta_ridge_minus_base": {
-                    "mae": -0.006628,
-                    "rmse": -1e-05,
-                    "bias_abs": 0.035755,
-                    "r2": 2e-06
-                }
-            },
-            "reb": {
-                "base_no_corr": {
-                    "mae": 1.939085,
-                    "rmse": 2.55355,
-                    "bias": -0.013254,
-                    "r2": 0.407621
-                },
-                "ridge_regression": {
-                    "mae": 1.919409,
-                    "rmse": 2.537335,
-                    "bias": -0.02783,
-                    "r2": 0.41512
-                },
-                "delta_ridge_minus_base": {
-                    "mae": -0.019675,
-                    "rmse": -0.016215,
-                    "bias_abs": 0.014576,
-                    "r2": 0.007499
-                }
-            },
-            "ast": {
-                "base_no_corr": {
-                    "mae": 1.370948,
-                    "rmse": 1.872933,
-                    "bias": -0.046065,
-                    "r2": 0.465858
-                },
-                "ridge_regression": {
-                    "mae": 1.366468,
-                    "rmse": 1.871261,
-                    "bias": -0.05786,
-                    "r2": 0.466811
-                },
-                "delta_ridge_minus_base": {
-                    "mae": -0.00448,
-                    "rmse": -0.001672,
-                    "bias_abs": 0.011795,
-                    "r2": 0.000953
-                }
-            }
         }
     }
 }

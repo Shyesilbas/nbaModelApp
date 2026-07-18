@@ -1,7 +1,7 @@
 {
   "season": "2025-26",
-  "generated_at": "2026-06-18T18:37:33.331106+00:00",
-  "version": "6feb2406dfc4e1d8",
+  "generated_at": "2026-07-17T19:33:41.824873+00:00",
+  "version": "a097c5b26e0bf75b",
   "files": {
     "all_seasons_games.json": {
       "path": "/data/all_seasons_games.json",
@@ -15,8 +15,8 @@
     },
     "dataset_summary.json": {
       "path": "/data/dataset_summary.json",
-      "size_bytes": 2313,
-      "sha256": "87365d8ffc8053e3c14aac476d7383a24d36bb4b452179c784782e8f4c00fe10"
+      "size_bytes": 3063,
+      "sha256": "6221c826958b2802ced78ac45338b8302f58072b9f18029b845f8707099892e6"
     },
     "games.json": {
       "path": "/data/games.json",
@@ -27,6 +27,11 @@
       "path": "/data/highlights.json",
       "size_bytes": 5345,
       "sha256": "d012c33c2726aed01ec581bb97d24ad7d12219d551842d19076374405bfe0e29"
+    },
+    "model_ready_v2_summary.json": {
+      "path": "/data/model_ready_v2_summary.json",
+      "size_bytes": 30,
+      "sha256": "b6015310035df95f616484e61e6fdc60243115536dbcc7faa5e44fa85b4e474e"
     },
     "multi_team_players.json": {
       "path": "/data/multi_team_players.json",
