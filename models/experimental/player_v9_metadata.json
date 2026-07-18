@@ -1,25 +1,9 @@
 {
     "version": "v9_LightGBM_Ridge",
-    "updated_at": "2026-06-15T13:33:36.913002Z",
-    "training_manifest": {
-        "path": "/Users/serhat/agProjects/nbaModelApp/config/training_manifest.yaml",
-        "train_seasons": [
-            "2020-21",
-            "2021-22",
-            "2022-23",
-            "2023-24"
-        ],
-        "calibration_season": "2024-25",
-        "validation_season": "2025-26",
-        "holdout": {
-            "strategy": "season_holdout",
-            "test_size": 0.2,
-            "date_col": "GAME_DATE",
-            "calibration_season": "2024-25"
-        }
-    },
+    "updated_at": "2026-07-17T19:42:07.938167Z",
+    "training_manifest": {},
     "feature_contract": {
-        "path": "/Users/serhat/agProjects/nbaModelApp/config/features/player_v9.yaml",
+        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/player_v9.yaml",
         "schema_version": "player_v9",
         "config": {
             "schema_version": "player_v9",
@@ -53,49 +37,18 @@
             ]
         }
     },
-    "input_file": "/Users/serhat/agProjects/nbaModelApp/data/experimental/player_model_ready_v4_usg.csv",
-    "number_of_rows": 165988,
-    "training_rows": 137290,
-    "training_season_ids": [
-        22020,
-        22021,
-        22022,
-        22023,
-        22024,
-        42020,
-        42021,
-        42022,
-        42023,
-        42024,
-        52020,
-        52021,
-        52022,
-        52023,
-        52024
-    ],
+    "input_file": "/Users/serhat/PycharmProjects/nbaModelApp/data/experimental/player_model_ready_v4_usg.csv",
+    "number_of_rows": 28698,
+    "training_rows": 28698,
+    "training_season_ids": [],
     "season_coverage": [
-        22020,
-        22021,
-        22022,
-        22023,
-        22024,
         22025,
-        42020,
-        42021,
-        42022,
-        42023,
-        42024,
         42025,
-        52020,
-        52021,
-        52022,
-        52023,
-        52024,
         52025
     ],
     "final_refit": {
         "enabled": true,
-        "rows": 137290,
+        "rows": 28698,
         "note": "Holdout metrics are computed before each final target model is refit on all eligible rows."
     },
     "features_count": 40,
@@ -107,36 +60,29 @@
     "evaluation": "chronological_holdout",
     "evaluation_metrics": {
         "pts": {
-            "mae": 4.596605196841089,
-            "rmse": 6.012905550512133,
-            "r2": 0.5377881052663378,
+            "mae": 4.619391994809329,
+            "rmse": 6.058332708408466,
+            "r2": 0.5035388339864211,
             "split": {
-                "strategy": "season_holdout",
-                "split_date": null,
-                "train_rows": 109050,
-                "test_rows": 28240,
-                "train_seasons": [
-                    "2020-21",
-                    "2021-22",
-                    "2022-23",
-                    "2023-24"
-                ],
-                "test_seasons": [
-                    "2024-25"
-                ]
+                "strategy": "chronological_quantile",
+                "split_date": "2026-03-21",
+                "train_rows": 22973,
+                "test_rows": 5725,
+                "train_seasons": null,
+                "test_seasons": null
             },
             "ridge_coefs": [
-                0.10370833788421072,
-                -0.0653429812246737,
-                0.0773188447559598,
-                0.045732306265473574,
-                -0.1230511510187171,
-                -0.0068795526559269375,
-                0.006407471685535087,
-                -0.03583922788488993,
-                0.0428945386702922
+                0.1787963819604665,
+                -0.0976697469466931,
+                0.04231468486880552,
+                0.03395349173168179,
+                -0.07626817659871851,
+                -0.024715034173946646,
+                0.007475784884278854,
+                -0.08218239806393575,
+                0.003221175980971608
             ],
-            "ridge_intercept": -0.004045136224243274,
+            "ridge_intercept": 0.03858998896440812,
             "ridge_features": [
                 "is_playoff",
                 "is_home",
@@ -150,36 +96,29 @@
             ]
         },
         "reb": {
-            "mae": 1.966388716729202,
-            "rmse": 2.593349499774889,
-            "r2": 0.4417577911761431,
+            "mae": 1.949256369575057,
+            "rmse": 2.578147806642391,
+            "r2": 0.41440784953321963,
             "split": {
-                "strategy": "season_holdout",
-                "split_date": null,
-                "train_rows": 109050,
-                "test_rows": 28240,
-                "train_seasons": [
-                    "2020-21",
-                    "2021-22",
-                    "2022-23",
-                    "2023-24"
-                ],
-                "test_seasons": [
-                    "2024-25"
-                ]
+                "strategy": "chronological_quantile",
+                "split_date": "2026-03-21",
+                "train_rows": 22973,
+                "test_rows": 5725,
+                "train_seasons": null,
+                "test_seasons": null
             },
             "ridge_coefs": [
-                0.008658421234889848,
-                -0.03174161007729134,
-                0.33151489208062557,
-                0.03890590985412401,
-                -0.3704208019215695,
-                -0.04709196482691285,
-                -0.02140817474352853,
-                -0.04440091734044905,
-                0.038473032586781954
+                0.017346323713526533,
+                0.010957426861894727,
+                0.3411149334380582,
+                0.06617265264716272,
+                -0.4072875860722366,
+                -0.04045385923538785,
+                0.019104905969077234,
+                -0.002847144354956824,
+                0.03666243286107269
             ],
-            "ridge_intercept": -0.07865346748548556,
+            "ridge_intercept": -0.12941083892670974,
             "ridge_features": [
                 "is_playoff",
                 "is_home",
@@ -193,36 +132,29 @@
             ]
         },
         "ast": {
-            "mae": 1.3538130620432496,
-            "rmse": 1.8543909857438374,
-            "r2": 0.49683447393937863,
+            "mae": 1.3738960457990286,
+            "rmse": 1.8964010604794843,
+            "r2": 0.45967383764528935,
             "split": {
-                "strategy": "season_holdout",
-                "split_date": null,
-                "train_rows": 109050,
-                "test_rows": 28240,
-                "train_seasons": [
-                    "2020-21",
-                    "2021-22",
-                    "2022-23",
-                    "2023-24"
-                ],
-                "test_seasons": [
-                    "2024-25"
-                ]
+                "strategy": "chronological_quantile",
+                "split_date": "2026-03-21",
+                "train_rows": 22973,
+                "test_rows": 5725,
+                "train_seasons": null,
+                "test_seasons": null
             },
             "ridge_coefs": [
-                0.04456430293586607,
-                -0.024333313660694748,
-                -0.1281129601926717,
-                0.06914389098153215,
-                0.0589690692068855,
-                0.01920186455029979,
-                -0.0026950787394791165,
-                -0.012617701365251316,
-                0.0025065834383813084
+                0.0647409847963436,
+                -0.03182713768114081,
+                -0.14501881121052068,
+                0.07542991891680244,
+                0.06958889228798996,
+                0.029114946962173493,
+                0.003950437036092918,
+                -0.019048502845809986,
+                0.012911835742522502
             ],
-            "ridge_intercept": 0.04551871335583838,
+            "ridge_intercept": 0.046026627247705156,
             "ridge_features": [
                 "is_playoff",
                 "is_home",

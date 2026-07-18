@@ -2,3 +2,5 @@ pandas
 numpy
 pyarrow
 psycopg[binary]
+shap
+matplotlib

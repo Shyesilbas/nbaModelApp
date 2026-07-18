@@ -692,6 +692,84 @@ function DiscoveryGrid({
   );
 }
 
+function calculateAveragesFromGames(seasonGames: GameRow[]): SeasonAverages {
+
+  const activeGames = seasonGames.filter(g => !g.DID_NOT_PLAY);
+  const gp = activeGames.length;
+  
+  if (gp === 0) {
+    return {
+      games_played: 0,
+      games_total: seasonGames.length,
+      teams: [],
+      MIN: null, PTS: null, REB: null, AST: null, STL: null, BLK: null, TOV: null,
+      FGM: null, FGA: null, FG_PCT: null, FG3M: null, FG3A: null, FG3_PCT: null,
+      FTM: null, FTA: null, FT_PCT: null, OREB: null, DREB: null, PLUS_MINUS: null
+    };
+  }
+
+  const sum = (key: keyof GameRow) => {
+    let s = 0;
+    let count = 0;
+    for (const g of activeGames) {
+      const val = g[key];
+      if (typeof val === 'number') {
+        s += val;
+        count++;
+      }
+    }
+    return count > 0 ? s : null;
+  };
+
+  const avg = (key: keyof GameRow) => {
+    const s = sum(key);
+    return s !== null ? s / gp : null;
+  };
+
+  const uniqueTeams = new Set<string>();
+  for (const g of seasonGames) {
+    if (g.TEAM_ABBREVIATION) uniqueTeams.add(g.TEAM_ABBREVIATION);
+  }
+
+  const fgmSum = sum("FGM");
+  const fgaSum = sum("FGA");
+  const fgPct = (fgmSum !== null && fgaSum !== null && fgaSum > 0) ? fgmSum / fgaSum : null;
+
+  const fg3mSum = sum("FG3M");
+  const fg3aSum = sum("FG3A");
+  const fg3Pct = (fg3mSum !== null && fg3aSum !== null && fg3aSum > 0) ? fg3mSum / fg3aSum : null;
+
+  const ftmSum = sum("FTM");
+  const ftaSum = sum("FTA");
+  const ftPct = (ftmSum !== null && ftaSum !== null && ftaSum > 0) ? ftmSum / ftaSum : null;
+
+  return {
+    games_played: gp,
+    games_total: seasonGames.length,
+    teams: Array.from(uniqueTeams),
+    MIN: avg("MIN"),
+    PTS: avg("PTS"),
+    REB: avg("REB"),
+    AST: avg("AST"),
+    STL: avg("STL"),
+    BLK: avg("BLK"),
+    TOV: avg("TOV"),
+    FGM: avg("FGM"),
+    FGA: avg("FGA"),
+    FG_PCT: fgPct,
+    FG3M: avg("FG3M"),
+    FG3A: avg("FG3A"),
+    FG3_PCT: fg3Pct,
+    FTM: avg("FTM"),
+    FTA: avg("FTA"),
+    FT_PCT: ftPct,
+    OREB: null,
+    DREB: null,
+    PLUS_MINUS: avg("PLUS_MINUS"),
+    confidence_warning: "estimated client-side"
+  } as any;
+}
+
 /* ─────────── Main Component ─────────── */
 export default function PlayerPage() {
   const [seasonsList, setSeasonsList] = useState<string[]>(["2022-23", "2023-24", "2024-25", "2025-26"]);
@@ -779,6 +857,12 @@ export default function PlayerPage() {
         loadJson<Record<string, GameRow[]>>(`/data/player_games/${encodeURIComponent(playerId)}.json`, {})
           .then((games) => {
             setGamesData((prev) => ({ ...prev, [playerId]: games }));
+            
+            const calculatedAverages: Record<string, SeasonAverages> = {};
+            for (const s of Object.keys(games)) {
+              calculatedAverages[s] = calculateAveragesFromGames(games[s]);
+            }
+            setAveragesData((prev) => ({ ...prev, [playerId]: calculatedAverages }));
           })
           .catch((e) => setError(e.message));
       });
@@ -1010,6 +1094,11 @@ export default function PlayerPage() {
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
                       {selectedSeason} Season Averages
                     </p>
+                    {(currentAvgs as any).confidence_warning && (
+                      <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest animate-pulse">
+                        Tahmini Ortalama
+                      </span>
+                    )}
                     <span className="ml-auto rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[9px] font-bold text-slate-500">
                       {currentAvgs.games_played} played / {currentAvgs.games_total} total
                     </span>

@@ -24,6 +24,7 @@ import {
   SignalCards,
   WinProbabilityArc,
 } from "./prediction";
+import PredictionExplanation from "./PredictionExplanation";
 
 // ---------------------------------------------------------------------------
 // Main Component
@@ -507,7 +508,7 @@ export default function NbaPrediction() {
         <div className="space-y-5">
 
           {/* Partial failure warnings */}
-          {(result.win_probability?.error || result.score_prediction?.error) && (
+          {(result.win_probability?.error || result.score_prediction?.error || result.score_prediction?.confidence_warning) && (
             <div className="p-4 bg-amber-50 border border-amber-200/50 rounded-2xl text-xs text-amber-800 font-semibold space-y-1.5">
               {result.win_probability?.error && (
                 <p className="flex items-center gap-1.5 m-0">
@@ -519,6 +520,12 @@ export default function NbaPrediction() {
                 <p className="flex items-center gap-1.5 m-0">
                   <AlertTriangle size={13} className="text-amber-600" />
                   Score Prediction Model: {result.score_prediction.error}
+                </p>
+              )}
+              {result.score_prediction?.confidence_warning && (
+                <p className="flex items-center gap-1.5 m-0">
+                  <AlertTriangle size={13} className="text-amber-600" />
+                  Prediction Warning: {result.score_prediction.confidence_warning}
                 </p>
               )}
             </div>
@@ -737,6 +744,13 @@ export default function NbaPrediction() {
               />
             </div>
           )}
+
+          {/* ── NEW SHAP EXPLANATION (API-driven) ── */}
+          <PredictionExplanation 
+            homeTeam={home} 
+            awayTeam={away} 
+            predictionDate={date} 
+          />
 
           {/* ── SECTION 5: PLAYER SPOTLIGHT + TABLES ── */}
           {result.player_predictions && !result.player_predictions.error && (

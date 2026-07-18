@@ -12,6 +12,8 @@ from .schemas import (
     ScorePredictionResponse,
     WinProbRequest,
     WinProbResponse,
+    ShapExplanationRequest,
+    ShapExplanationResponse
 )
 from .service import (
     predict,
@@ -21,6 +23,8 @@ from .services.frontend_data import get_frontend_json, get_game_detail, get_game
 from .services.player_prediction import predict_players
 from .services.score_prediction import predict_score
 from .services.status import get_model_status
+from .services.shap_service import explain_win_probability, explain_score_prediction
+from scripts.build_matchup_features import build_features
 
 router = APIRouter()
 
@@ -102,3 +106,21 @@ def model_status():
 @router.post("/predict/game_full", response_model=GameFullResponse)
 def predict_game_full_endpoint(req: GameFullRequest):
     return _run_endpoint(lambda: predict_game_full(req))
+
+@router.post("/predict/explain", response_model=ShapExplanationResponse)
+def explain_game_endpoint(req: ShapExplanationRequest):
+    def _explain():
+        pred_date_str = req.prediction_date.isoformat() if hasattr(req.prediction_date, 'isoformat') else str(req.prediction_date)
+        feats = build_features(req.home_team.upper(), req.away_team.upper(), pred_date_str)
+        
+        win_exp = explain_win_probability(req.home_team, req.away_team, feats, req.model_version)
+        score_exp = explain_score_prediction(req.home_team, req.away_team, feats, req.model_version)
+        
+        return ShapExplanationResponse(
+            home_team=req.home_team.upper(),
+            away_team=req.away_team.upper(),
+            prediction_date=pred_date_str,
+            win_model_explanation=win_exp,
+            score_model_explanation=score_exp
+        )
+    return _run_endpoint(_explain)

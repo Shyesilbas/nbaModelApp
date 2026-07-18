@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, Optional
 
 import pandas as pd
@@ -6,6 +7,8 @@ from scripts.build_matchup_features import build_features
 
 from .. import service as svc
 from ..schemas import ScorePredictionRequest, ScorePredictionResponse, WinProbRequest, WinProbResponse
+
+logger = logging.getLogger(__name__)
 
 
 def predict_score(
@@ -72,6 +75,7 @@ def predict_score(
         pred_total -= float(svc.score_loader.ridge_total_model.predict(X_ind)[0])
         pred_margin -= float(svc.score_loader.ridge_margin_model.predict(X_ind)[0])
 
+    confidence_warning = None
     try:
         win_resp = win_response
         if win_resp is None:
@@ -79,8 +83,11 @@ def predict_score(
             win_resp = svc.predict(win_req, features=features)
         if (win_resp.predicted_winner == home_team and pred_margin < 0) or (win_resp.predicted_winner == away_team and pred_margin > 0):
             pred_margin = -pred_margin
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(
+            f"Failed to check win/margin consistency for {home_team} vs {away_team} on {pred_date_str}. Error: {str(e)}"
+        )
+        confidence_warning = "win/margin consistency check failed"
 
     pred_home = (pred_total + pred_margin) / 2.0
     pred_away = (pred_total - pred_margin) / 2.0
@@ -106,5 +113,6 @@ def predict_score(
         score_model_winner=home_team if pred_margin >= 0 else away_team,
         note="Score prediction has high natural variance. Use win probability model as primary winner signal.",
         model_version=svc.score_loader.get_version(),
-        prediction_date=pred_date_str
+        prediction_date=pred_date_str,
+        confidence_warning=confidence_warning
     )

@@ -13,7 +13,12 @@ let manifestVersion: string | null = null;
 let manifestPromise: Promise<DataManifest | null> | null = null;
 
 function canUsePersistentCache() {
-  return typeof window !== "undefined" && "caches" in window;
+  return (
+    typeof window !== "undefined" &&
+    "caches" in window &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1"
+  );
 }
 
 function cacheName(version: string | null) {
