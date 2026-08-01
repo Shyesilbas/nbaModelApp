@@ -1,16 +1,11 @@
-import importlib
 from typing import Any
+from scripts.season_utils import get_default_season
+from src.orchestration import pipeline_workflows as workflows
 
 
 class PipelineOrchestrator:
     def __init__(self, args: Any):
         self.args = args
-        self._legacy_main = None
-
-    def _main_module(self):
-        if self._legacy_main is None:
-            self._legacy_main = importlib.import_module("main")
-        return self._legacy_main
 
     def dispatch(self) -> bool:
         """
@@ -19,51 +14,46 @@ class PipelineOrchestrator:
         Returns True when a command was handled, otherwise False so the caller
         can continue with the interactive/default flow.
         """
-        main_mod = self._main_module()
-
         if self.args.update_data:
-            main_mod._run_update_data(self.args)
+            workflows.run_update_data(self.args)
             return True
         if self.args.build_player_dataset_v4:
-            main_mod._run_build_player_dataset_v4(self.args)
+            workflows.run_build_player_dataset_pipeline(self.args)
             return True
         if self.args.train_player_models:
-            main_mod._run_train_player_models(self.args)
+            workflows.run_train_player_models_pipeline(self.args)
             return True
         if self.args.train_score_models:
-            main_mod._run_train_score_models(self.args)
+            workflows.run_train_score_models_pipeline(self.args)
             return True
         if self.args.train_win_model:
-            main_mod._run_train_win_model(self.args)
+            workflows.run_train_win_model_pipeline(self.args)
             return True
         if self.args.startup_check:
-            main_mod._run_startup_check(self.args)
+            workflows.run_startup_check(self.args)
             return True
         if self.args.sync_pipeline:
-            main_mod._run_sync_pipeline(self.args)
+            workflows.run_sync_pipeline(self.args)
             return True
         if self.args.pre_model_readiness:
-            main_mod._run_pre_model_readiness_pipeline(self.args)
+            workflows.run_pre_model_readiness_pipeline(self.args)
             return True
         if self.args.bootstrap_season:
-            from src.orchestration.pipeline_workflows import run_bootstrap_season_pipeline
-
-            run_bootstrap_season_pipeline(self.args)
+            workflows.run_bootstrap_season_pipeline(self.args)
             return True
         if self.args.export_frontend_data:
             from scripts.export_frontend_data import export_data
-
             export_data(season=self.args.season or get_default_season())
             return True
         if self.args.build_schedule_context:
-            main_mod._run_schedule_context_pipeline()
+            workflows.run_schedule_context_pipeline()
             return True
         if self.args.fetch_boxscores:
-            main_mod._run_boxscore_pipeline_cli(self.args)
+            workflows.run_boxscore_pipeline_cli(self.args)
             return True
         if self.args.check_data_freshness:
-            main_mod._run_data_freshness_pipeline(self.args)
+            workflows.run_data_freshness_pipeline(self.args)
             return True
 
         return False
-from scripts.season_utils import get_default_season
+

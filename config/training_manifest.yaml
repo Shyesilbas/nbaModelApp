@@ -10,6 +10,7 @@ holdout:
   strategy: season_holdout
   test_size: 0.2
   date_col: GAME_DATE
+  final_refit_scope: train_only
 
 models:
   win:

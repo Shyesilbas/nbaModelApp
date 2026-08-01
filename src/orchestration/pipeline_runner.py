@@ -124,11 +124,11 @@ class PipelineRunner:
         return build_team_model_dataset_v3(df_team_features_with_core)
 
     def build_schedule_context(self, save: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        df_combined = load_combined_schedule(save=save)
-        ctx_service = UpcomingContextService(save=save)
+        df_combined = load_combined_schedule(season=self.season, save=save)
+        ctx_service = UpcomingContextService(season=self.season, save=save)
         df_upcoming = ctx_service.build_context(save=save)
         if save:
-            export_data()
+            export_data(season=self.season)
         return df_combined, df_upcoming
 
     def rebuild_game_results(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:

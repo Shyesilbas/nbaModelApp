@@ -7,7 +7,7 @@ from src.ingestion.schedule_fetcher import update_schedule_files
 from src.validation.data_freshness_service import DataFreshnessService
 from src.ingestion.team_games_fetcher import fetch_missing_team_games_by_game_ids, append_team_games_to_raw_dataset
 from src.ingestion.player_games_fetcher import fetch_missing_player_games_by_game_ids, append_player_games_to_raw_dataset
-from src.orchestration import PipelineRunner
+from src.orchestration.pipeline_runner import PipelineRunner
 from scripts.season_utils import get_default_season
 from scripts.data_paths import get_data_paths
 
