@@ -9,7 +9,8 @@ class UpcomingContextService:
     Provides a class-based entrypoint for orchestration and easier mocking in tests.
     """
 
-    def __init__(self, save: bool = True):
+    def __init__(self, season: Optional[str] = None, save: bool = True):
+        self.season = season
         self.save = save
 
     def build_context(self, save: Optional[bool] = None) -> pd.DataFrame:

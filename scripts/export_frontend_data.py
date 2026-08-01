@@ -75,11 +75,6 @@ def _write_frontend_manifest(out_dir: str, season: str):
 def export_data(season: str = None):
     from scripts.season_utils import get_default_season
     normalized_s = normalize_season(season or get_default_season())
-    default_s = get_default_season()
-
-    if normalized_s != default_s:
-        print(f"Skipping frontend export for historical season {normalized_s} (only active season {default_s} is exported via export_frontend_data).")
-        return
 
     paths = get_data_paths(normalized_s)
     raw_team_path = paths.team_games_raw
