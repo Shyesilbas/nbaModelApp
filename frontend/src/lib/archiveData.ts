@@ -18,6 +18,21 @@ async function loadGameDetails(): Promise<GameDetail[]> {
   return gameDetailsPromise;
 }
 
+const inferSeasonFromGameId = (gameId?: string | number | null): string => {
+  if (!gameId) return "2025-26";
+  const s = String(gameId).replace(/\D/g, "").padStart(10, "0");
+  const yy = s.slice(3, 5);
+  if (yy === "25") return "2025-26";
+  if (yy === "24") return "2024-25";
+  if (yy === "23") return "2023-24";
+  if (yy === "22") return "2022-23";
+  if (yy === "21") return "2021-22";
+  if (yy === "20") return "2020-21";
+  if (yy === "19") return "2019-20";
+  if (yy === "18") return "2018-19";
+  return "2025-26";
+};
+
 export async function loadArchivedGameIndex(season?: string | null): Promise<GameFeedRow[]> {
   const seasonParam = season ? `?season=${encodeURIComponent(season)}` : "";
   try {
@@ -25,28 +40,31 @@ export async function loadArchivedGameIndex(season?: string | null): Promise<Gam
     if (apiRows.length > 0) {
       return apiRows.map((g) => ({
         ...g,
-        SEASON: g.SEASON ?? season ?? "2025-26",
+        SEASON: g.SEASON ?? inferSeasonFromGameId(g.GAME_ID) ?? season ?? "2025-26",
       }));
     }
   } catch {
     // Fall through to the committed static archive below.
   }
 
-  const currentRows = await loadJson<GameFeedRow[]>("/data/games.json", []);
+  const rawCurrentRows = await loadJson<GameFeedRow[]>("/data/games.json", []);
+  const currentRows = rawCurrentRows.map((row: any) => ({
+    ...row,
+    SEASON: row.SEASON || inferSeasonFromGameId(row.GAME_ID)
+  }));
+
   if (!season) {
     const archivedRows = await loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []);
     return archivedRows.length > 0 ? archivedRows : currentRows;
   }
 
-  const matchingRows = currentRows
-    .filter((row: any) => !row.SEASON || row.SEASON === season)
-    .map((row: any) => ({ ...row, SEASON: row.SEASON ?? season }));
+  const matchingRows = currentRows.filter((row: any) => row.SEASON === season);
   if (matchingRows.length > 0) return matchingRows;
 
   const archivedRows = await loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []);
   return archivedRows
-    .filter((row: any) => row.SEASON === season)
-    .map((row: any) => ({ ...row, SEASON: row.SEASON ?? season }));
+    .map((row: any) => ({ ...row, SEASON: row.SEASON || inferSeasonFromGameId(row.GAME_ID) }))
+    .filter((row: any) => row.SEASON === season);
 }
 
 export async function loadArchivedGameDetail(gameId: string) {

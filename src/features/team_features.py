@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
+from src.processing.pbp_integration import integrate_pbp_features
 
-def build_team_features(df: pd.DataFrame) -> pd.DataFrame:
+def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFrame:
     """
     Engineers features for NBA team games.
     
@@ -243,6 +244,9 @@ def build_team_features(df: pd.DataFrame) -> pd.DataFrame:
     playoff_map = load_playoff_context_map()
     df["IS_ELIMINATION_GAME"] = df["GAME_ID"].map(lambda x: playoff_map.get(str(x).split(".")[0].zfill(10), {}).get("IS_ELIMINATION_GAME", 0)).fillna(0).astype(int)
     df["CAN_CLINCH_SERIES"] = df["GAME_ID"].map(lambda x: playoff_map.get(str(x).split(".")[0].zfill(10), {}).get("CAN_CLINCH_SERIES", 0)).fillna(0).astype(int)
+
+    if season_dir:
+        df = integrate_pbp_features(df, season_dir)
 
     return df
 

@@ -920,6 +920,9 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
             f"{prefix}_MISSING_CORE_EXPECTED_PRA": sum(missing_expected_pra)
         })
 
+    features["GARBAGE_TIME_SHARE"] = 0.05
+    features["CLUTCH_MARGIN"] = 2
+
     return features
 
 

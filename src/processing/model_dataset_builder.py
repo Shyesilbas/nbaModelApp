@@ -241,6 +241,7 @@ ALLOWED_COLUMNS_V3 = ALLOWED_COLUMNS_V2 + [
     
     # V3 Advanced Metrics & Rolling Averages
     "PACE", "OFF_RTG", "DEF_RTG", "NET_RTG",
+    "GARBAGE_TIME_SHARE", "CLUTCH_MARGIN",
     "PACE_LAST_5", "PACE_LAST_10", 
     "OFF_RTG_LAST_5", "OFF_RTG_LAST_10",
     "DEF_RTG_LAST_5", "DEF_RTG_LAST_10",

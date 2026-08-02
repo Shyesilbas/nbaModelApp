@@ -31,8 +31,9 @@ from src.training.score_trainer import ScoreModelTrainer
 from src.training.win_trainer import WinModelTrainer
 
 
-def run_schedule_context_pipeline() -> None:
-    PipelineRunner().build_schedule_context(save=True)
+def run_schedule_context_pipeline(args: Any = None) -> None:
+    season = getattr(args, "season", None) if args else None
+    PipelineRunner(season=season).build_schedule_context(save=True)
 
 
 def run_boxscore_pipeline_cli(args: Any) -> None:
