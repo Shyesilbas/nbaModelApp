@@ -1,6 +1,6 @@
 {
     "version": "v9_Ridge",
-    "updated_at": "2026-08-01T19:47:05.261436Z",
+    "updated_at": "2026-08-02T10:17:39.754592Z",
     "training_manifest": {},
     "feature_contract": {
         "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/score_v9.yaml",

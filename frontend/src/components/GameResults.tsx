@@ -69,20 +69,22 @@ export default function GameResults() {
 
   // Lazy-load compact game index when switching seasons.
   useEffect(() => {
-    if (allResults.some((g) => g.SEASON === selectedSeason)) return;
-    loadArchivedGameIndex().then((rows) => {
+    loadArchivedGameIndex(selectedSeason).then((rows) => {
       const filtered = rows
-        .filter((g) => g.SEASON === selectedSeason)
         .map((g) => ({ ...g, SEASON: g.SEASON ?? selectedSeason }));
       if (filtered.length > 0) {
-        setAllResults((prev) => [...prev, ...filtered]);
+        setAllResults((prev) => {
+          const existingIds = new Set(prev.map(x => x.GAME_ID));
+          const newRows = filtered.filter(x => !existingIds.has(x.GAME_ID));
+          return [...prev, ...newRows];
+        });
       }
     });
-  }, [selectedSeason, allResults]);
+  }, [selectedSeason]);
 
   const sortedResults = useMemo(() => {
     const q = search.trim().toUpperCase();
-    const seasonPool = selectedSeason === "2025-26" ? results : allResults.filter((g: any) => g.SEASON === selectedSeason);
+    const seasonPool = allResults.filter((g: any) => g.SEASON === selectedSeason || (selectedSeason === "2025-26" && (!g.SEASON || g.SEASON === "2025-26")));
     const typeFilter = SEASON_TYPE_FILTERS.find((f) => f.id === seasonTypeFilter);
     return [...seasonPool]
       .filter((x) => !typeFilter || typeFilter.id === "all" || typeFilter.values.includes(x.SEASON_TYPE))

@@ -59,7 +59,7 @@ class PipelineRunner:
         df_team_clean = sort_team_games(clean_dates(df_team_raw, "GAME_DATE"))
         df_player_clean = sort_player_games(clean_dates(df_player_raw, "GAME_DATE"))
 
-        df_team_features = build_team_features(df_team_clean)
+        df_team_features = build_team_features(df_team_clean, season_dir=self.paths.season_dir)
         df_player_features = pd.DataFrame()
         try:
             from src.features import build_player_features
@@ -103,7 +103,7 @@ class PipelineRunner:
     def build_model_ready_v2(self) -> Tuple[pd.DataFrame, int]:
         df_team_raw = load_team_games(self.raw_team_dir, season=self.season)
         df_team_clean = sort_team_games(clean_dates(df_team_raw, "GAME_DATE"))
-        df_team_features = build_team_features(df_team_clean)
+        df_team_features = build_team_features(df_team_clean, season_dir=self.paths.season_dir)
         df_team_features_with_opp = build_opponent_features(df_team_features)
         return build_team_model_dataset_v2(df_team_features_with_opp)
 
@@ -113,7 +113,7 @@ class PipelineRunner:
 
         df_team_raw = load_team_games(self.raw_team_dir, season=self.season)
         df_team_clean = sort_team_games(clean_dates(df_team_raw, "GAME_DATE"))
-        df_team_features = build_team_features(df_team_clean)
+        df_team_features = build_team_features(df_team_clean, season_dir=self.paths.season_dir)
         df_team_features_with_opp = build_opponent_features(df_team_features)
         core_players_df = get_core_players(df_player_features)
         df_team_features_with_core = build_core_player_availability_features(

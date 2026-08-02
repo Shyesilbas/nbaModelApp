@@ -1,7 +1,7 @@
 {
   "model_name": "logistic_regression",
   "version": "9.0",
-  "training_date": "2026-08-01T19:47:21.254505Z",
+  "training_date": "2026-08-01T20:52:13.837968Z",
   "number_of_rows": 10280,
   "number_of_features": 62,
   "training_manifest": {},
@@ -46,6 +46,8 @@
         "H2H_GAMES_LAST_5": 0,
         "OPP_H2H_GAMES_LAST_5": 0,
         "IS_CLOSE_STRENGTH": 0,
+        "GARBAGE_TIME_SHARE": 0.0,
+        "CLUTCH_MARGIN": 0.0,
         "TEAM_V3_PROJ_PTS_SUM": 0.0,
         "TEAM_V3_PROJ_PTS_AVG": 0.0,
         "TEAM_V3_PROJ_REB_SUM": 0.0,

@@ -59,10 +59,38 @@ def load_full_schedule(season: Optional[str] = None) -> pd.DataFrame:
     raw_schedule_path = paths.raw_schedule
 
     if not os.path.exists(raw_schedule_path):
-        raise FileNotFoundError(
-            f"Main schedule file not found: {raw_schedule_path}\n"
-            "Place the Colab-exported CSV at that path and re-run."
-        )
+        team_games_path = paths.team_games_raw
+        if os.path.exists(team_games_path):
+            print(f"  ℹ️ Generating schedule.csv from team_games.csv ({team_games_path})...")
+            df_tg = pd.read_csv(team_games_path, dtype={"GAME_ID": str})
+            df_tg["GAME_ID"] = df_tg["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+            df_home = df_tg[df_tg["MATCHUP"].astype(str).str.contains("vs.", case=False, na=False)].copy()
+            df_away = df_tg[df_tg["MATCHUP"].astype(str).str.contains("@", case=False, na=False)].copy()
+            
+            df_merged = df_home.merge(
+                df_away,
+                on="GAME_ID",
+                suffixes=("_HOME", "_AWAY")
+            )
+            
+            df_sched = pd.DataFrame()
+            df_sched["GAME_ID"] = df_merged["GAME_ID"]
+            df_sched["GAME_DATE"] = df_merged["GAME_DATE_HOME"]
+            df_sched["HOME_TEAM_ABBREVIATION"] = df_merged["TEAM_ABBREVIATION_HOME"]
+            df_sched["AWAY_TEAM_ABBREVIATION"] = df_merged["TEAM_ABBREVIATION_AWAY"]
+            df_sched["HOME_SCORE"] = df_merged["PTS_HOME"]
+            df_sched["AWAY_SCORE"] = df_merged["PTS_AWAY"]
+            df_sched["SEASON_TYPE"] = df_merged["SEASON_TYPE_HOME"]
+            df_sched["IS_PLAYOFF"] = df_merged["SEASON_TYPE_HOME"].astype(str).str.contains("Playoff", case=False, na=False)
+            
+            os.makedirs(os.path.dirname(raw_schedule_path), exist_ok=True)
+            df_sched.to_csv(raw_schedule_path, index=False)
+            print(f"  ✅ Saved generated schedule.csv ({len(df_sched)} games)")
+        else:
+            raise FileNotFoundError(
+                f"Main schedule file not found: {raw_schedule_path}\n"
+                "Place the Colab-exported CSV at that path and re-run."
+            )
 
     df = pd.read_csv(raw_schedule_path, dtype={"GAME_ID": str})
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
@@ -91,10 +119,7 @@ def load_finals_upcoming_schedule(season: Optional[str] = None) -> pd.DataFrame:
     raw_finals_path = paths.raw_finals_schedule
 
     if not os.path.exists(raw_finals_path):
-        raise FileNotFoundError(
-            f"Finals upcoming schedule not found: {raw_finals_path}\n"
-            "Place the Colab-exported CSV at that path and re-run."
-        )
+        return _ensure_columns(pd.DataFrame(columns=UNIFIED_COLUMNS))
 
     df = pd.read_csv(raw_finals_path, dtype={"GAME_ID": str})
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
