@@ -51,6 +51,12 @@ WIN_STRENGTH_FEATURES = [
     "PLAYOFF_ABS_ELO_DIFF",
     "PLAYOFF_REST_DIFF",
     "CLOSE_STRENGTH_REST_DIFF",
+    "NET_RTG_DIFF_LAST_10",
+    "EFG_DIFF_LAST_10",
+    "THREE_POINT_RATE_DIFF",
+    "TOV_FORCED_DIFF",
+    "REBOUND_CONTROL_DIFF",
+    "PACE_COLLISION",
 ]
 
 DEFAULTABLE_REQUIRED_FEATURES = {
@@ -58,6 +64,12 @@ DEFAULTABLE_REQUIRED_FEATURES = {
     "CAN_CLINCH_SERIES": 0,
     "H2H_GAMES_LAST_5": 0,
     "OPP_H2H_GAMES_LAST_5": 0,
+    "NET_RTG_DIFF_LAST_10": 0.0,
+    "EFG_DIFF_LAST_10": 0.0,
+    "THREE_POINT_RATE_DIFF": 0.0,
+    "TOV_FORCED_DIFF": 0.0,
+    "REBOUND_CONTROL_DIFF": 0.0,
+    "PACE_COLLISION": 100.0,
     "IS_CLOSE_STRENGTH": 0,
     "TEAM_V3_PROJ_PTS_SUM": 0.0,
     "TEAM_V3_PROJ_PTS_AVG": 0.0,
@@ -82,22 +94,26 @@ class WinModelTrainer:
         self,
         data_path=None,
         output_dir=None,
+        version="v10",
         player_data_path=None,
         player_models_dir=None,
+        score_models_dir=None,
         data_files=None,
         manifest_metadata=None,
         holdout_config=None,
         feature_contract_path=None,
     ):
+        self.version = version
         root = Path(__file__).resolve().parents[2]
         self.data_pattern = data_path or str(root / "data/processed/team_model_ready_v3_*.csv")
         self.data_files = [Path(p) for p in data_files] if data_files else None
         self.output_dir = Path(output_dir or root / "models/experimental")
         self.player_data_path = Path(player_data_path or root / "data/experimental/player_model_ready_v4_usg.csv")
         self.player_models_dir = Path(player_models_dir or root / "models/experimental")
+        self.score_models_dir = Path(score_models_dir or self.output_dir)
         self.manifest_metadata = manifest_metadata or {}
         self.holdout_config = holdout_config or {}
-        self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/win_v9.yaml", root=root)
+        self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/win_v10.yaml", root=root)
         self.target_col = self.feature_contract.raw.get("target", "WIN")
         self.strength_features = self.feature_contract.list_value("derived_features")
         self.static_venue_split_features = set(self.feature_contract.list_value("static_venue_split_features"))
@@ -281,11 +297,73 @@ class WinModelTrainer:
                     raise RuntimeError("Failed to build player projection features for win model training") from exc
         return df, projection_enrichment
 
+    def apply_score_prediction_enrichment(self, df):
+        if "SCORE_PRED_MARGIN" in df.columns:
+            return df
+
+        root_prod = Path(__file__).resolve().parents[2] / "models/production"
+        candidates = [
+            (self.score_models_dir / "score_model_v10_margin.pkl", self.score_models_dir / "score_model_v10_metadata.json", self.score_models_dir / "score_model_v10_ridge_margin.pkl"),
+            (self.output_dir / "score_model_v10_margin.pkl", self.output_dir / "score_model_v10_metadata.json", self.output_dir / "score_model_v10_ridge_margin.pkl"),
+            (root_prod / "score_model_v10_margin.pkl", root_prod / "score_model_v10_metadata.json", root_prod / "score_model_v10_ridge_margin.pkl"),
+            (self.score_models_dir / "score_model_v9_margin.pkl", self.score_models_dir / "score_model_v9_metadata.json", self.score_models_dir / "score_model_v9_ridge_margin.pkl"),
+            (self.output_dir / "score_model_v9_margin.pkl", self.output_dir / "score_model_v9_metadata.json", self.output_dir / "score_model_v9_ridge_margin.pkl"),
+            (root_prod / "score_model_v9_margin.pkl", root_prod / "score_model_v9_metadata.json", root_prod / "score_model_v9_ridge_margin.pkl"),
+        ]
+        margin_model_path, meta_path, ridge_path = next(
+            ((m, meta, r) for m, meta, r in candidates if m.exists() and meta.exists()),
+            (None, None, None)
+        )
+        if margin_model_path is None:
+            df["SCORE_PRED_MARGIN"] = 0.0
+            return df
+
+        try:
+            margin_model = joblib.load(margin_model_path)
+            meta = json.loads(meta_path.read_text())
+            ridge_margin = joblib.load(ridge_path) if ridge_path and ridge_path.exists() else None
+            req_cols = meta.get("margin_features", [])
+
+            from scripts.generate_report import add_location_features, get_indicator_df
+            enriched_df = add_location_features(df.copy())
+
+            for c in req_cols:
+                if c not in enriched_df.columns:
+                    enriched_df[c] = 0.0
+
+            home_mask = enriched_df["IS_HOME"].astype(bool)
+            game_margins = {}
+            if home_mask.any():
+                home_df = enriched_df[home_mask].copy()
+                raw_margins = margin_model.predict(home_df[req_cols])
+                if ridge_margin is not None:
+                    X_ind = get_indicator_df(home_df)
+                    ridge_adj = ridge_margin.predict(X_ind)
+                    final_margins = raw_margins - ridge_adj
+                else:
+                    final_margins = raw_margins
+
+                game_ids = home_df["GAME_ID"].astype(str).values
+                for gid, m in zip(game_ids, final_margins):
+                    game_margins[gid] = float(m)
+
+            df_game_ids = df["GAME_ID"].astype(str).values
+            df_is_home = df["IS_HOME"].astype(bool).values
+            margins = np.zeros(len(df), dtype=float)
+            for i, (gid, is_h) in enumerate(zip(df_game_ids, df_is_home)):
+                m = game_margins.get(gid, 0.0)
+                margins[i] = m if is_h else -m
+            df["SCORE_PRED_MARGIN"] = margins
+        except Exception:
+            df["SCORE_PRED_MARGIN"] = 0.0
+        return df
+
     def train_and_export(self):
         files = self.resolve_dataset_files()
         df, row_counts_by_file = self.load_training_dataset(files)
         self.validate_dataset_contract(df)
         df, projection_enrichment = self.apply_player_projection_enrichment(df)
+        df = self.apply_score_prediction_enrichment(df)
 
         df_features, df_meta = self.separate_metadata(df)
         df_features = df_features.reset_index(drop=True)
@@ -297,7 +375,8 @@ class WinModelTrainer:
         meta_cols_before_strength = df_meta.columns.tolist()
         strength_input = pd.concat([df_features, df_meta], axis=1)
         strength_input = add_win_strength_features(strength_input)
-        df_features = strength_input[feature_cols_before_strength + self.strength_features].copy()
+        extra_strength = [c for c in self.strength_features if c not in feature_cols_before_strength]
+        df_features = strength_input[feature_cols_before_strength + extra_strength].copy()
         df_meta = strength_input[meta_cols_before_strength].copy()
 
         if "IS_HOME" in df_features.columns:
@@ -356,69 +435,90 @@ class WinModelTrainer:
                 stratify_random=True,
             )
         
+        import lightgbm as lgb
+        from sklearn.base import clone
+
         lr_pipeline = Pipeline([
             ("imputer", SimpleImputer(strategy="mean")),
             ("scaler", StandardScaler()),
             ("clf", LogisticRegression(max_iter=1000, random_state=42))
         ])
-        
-        lr_pipeline.fit(X_train_full, y_train_full)
-        
-        try:
-            y_proba_uncal = lr_pipeline.predict_proba(X_test)[:, 1]
-        except Exception:
-            y_proba_uncal = lr_pipeline.decision_function(X_test)
-        metrics_uncal = self.eval_metrics(y_test, y_proba_uncal)
-        
-        calibrator_sig = CalibratedClassifierCV(estimator=lr_pipeline, method="sigmoid", cv=3)
-        calibrator_sig.fit(X_train_full, y_train_full)
-        y_proba_sig = calibrator_sig.predict_proba(X_test)[:, 1]
-        metrics_sig = self.eval_metrics(y_test, y_proba_sig)
-        
-        try:
-            calibrator_iso = CalibratedClassifierCV(estimator=lr_pipeline, method="isotonic", cv=3)
-            calibrator_iso.fit(X_train_full, y_train_full)
-            y_proba_iso = calibrator_iso.predict_proba(X_test)[:, 1]
-            metrics_iso = self.eval_metrics(y_test, y_proba_iso)
-        except Exception:
-            metrics_iso = None
-            calibrator_iso = None
-            
-        candidates = [
-            ("uncalibrated", lr_pipeline, metrics_uncal),
-            ("sigmoid", calibrator_sig, metrics_sig)
-        ]
-        if metrics_iso is not None and calibrator_iso is not None:
-            candidates.append(("isotonic", calibrator_iso, metrics_iso))
-            
-        candidates_sorted = sorted(candidates, key=lambda item: (item[2]["brier_score"], -item[2]["roc_auc"]))
-        best_name, best_model, best_metrics = candidates_sorted[0]
-        
-        os.makedirs(self.output_dir, exist_ok=True)
-        final_pipeline = Pipeline([
+
+        lgb_pipeline = Pipeline([
             ("imputer", SimpleImputer(strategy="mean")),
-            ("scaler", StandardScaler()),
-            ("clf", LogisticRegression(max_iter=1000, random_state=42))
+            ("clf", lgb.LGBMClassifier(
+                n_estimators=150,
+                learning_rate=0.03,
+                max_depth=4,
+                num_leaves=15,
+                subsample=0.8,
+                colsample_bytree=0.8,
+                random_state=42,
+                verbose=-1
+            ))
         ])
+
+        candidates = []
+        metrics_dict = {}
+
+        for family_name, base_pipe in [("logistic_regression", lr_pipeline), ("lightgbm", lgb_pipeline)]:
+            pipe = clone(base_pipe)
+            pipe.fit(X_train_full, y_train_full)
+            try:
+                p_uncal = pipe.predict_proba(X_test)[:, 1]
+            except Exception:
+                p_uncal = pipe.decision_function(X_test)
+            m_uncal = self.eval_metrics(y_test, p_uncal)
+            candidates.append((f"{family_name}_uncalibrated", family_name, "uncalibrated", base_pipe, pipe, m_uncal))
+            metrics_dict[f"{family_name}_uncalibrated"] = m_uncal
+
+            cal_sig = CalibratedClassifierCV(estimator=clone(base_pipe), method="sigmoid", cv=3)
+            cal_sig.fit(X_train_full, y_train_full)
+            p_sig = cal_sig.predict_proba(X_test)[:, 1]
+            m_sig = self.eval_metrics(y_test, p_sig)
+            candidates.append((f"{family_name}_sigmoid", family_name, "sigmoid", base_pipe, cal_sig, m_sig))
+            metrics_dict[f"{family_name}_sigmoid"] = m_sig
+
+            try:
+                cal_iso = CalibratedClassifierCV(estimator=clone(base_pipe), method="isotonic", cv=3)
+                cal_iso.fit(X_train_full, y_train_full)
+                p_iso = cal_iso.predict_proba(X_test)[:, 1]
+                m_iso = self.eval_metrics(y_test, p_iso)
+                candidates.append((f"{family_name}_isotonic", family_name, "isotonic", base_pipe, cal_iso, m_iso))
+                metrics_dict[f"{family_name}_isotonic"] = m_iso
+            except Exception:
+                pass
+
+        candidates_sorted = sorted(candidates, key=lambda item: (item[5]["brier_score"], -item[5]["roc_auc"]))
+        best_cand_name, best_family, best_calib, best_base_pipe, _, best_metrics = candidates_sorted[0]
+
+        os.makedirs(self.output_dir, exist_ok=True)
         final_X = X_train_full if self.holdout_config.get("final_refit_scope") == "train_only" else X
         final_y = y_train_full if self.holdout_config.get("final_refit_scope") == "train_only" else y
-        if best_name == "uncalibrated":
-            final_model = final_pipeline.fit(final_X, final_y)
+
+        final_base = clone(best_base_pipe)
+        if best_calib == "uncalibrated":
+            final_model = final_base.fit(final_X, final_y)
         else:
-            final_model = CalibratedClassifierCV(estimator=final_pipeline, method=best_name, cv=3)
+            final_model = CalibratedClassifierCV(estimator=final_base, method=best_calib, cv=3)
             final_model.fit(final_X, final_y)
 
-        model_path = self.output_dir / "win_probability_model_v9.pkl"
+        model_path = self.output_dir / f"win_probability_model_{self.version}.pkl"
         joblib.dump(final_model, model_path)
+        if self.version == "v10":
+            joblib.dump(final_model, self.output_dir / "win_probability_model_v9.pkl")
         
         feature_cols = X.columns.tolist()
-        feat_path = self.output_dir / "feature_columns_v9.json"
+        feat_path = self.output_dir / f"feature_columns_{self.version}.json"
         with open(feat_path, "w") as f:
             json.dump(feature_cols, f, indent=2)
+        if self.version == "v10":
+            with open(self.output_dir / "feature_columns_v9.json", "w") as f:
+                json.dump(feature_cols, f, indent=2)
             
         metadata = {
             "model_name": "logistic_regression",
-            "version": "9.0",
+            "version": "10.0" if self.version == "v10" else "9.0",
             "training_date": datetime.utcnow().isoformat() + "Z",
             "number_of_rows": int(df.shape[0]),
             "number_of_features": int(X.shape[1]),
@@ -437,13 +537,11 @@ class WinModelTrainer:
             "evaluation": "chronological_holdout",
             "split": split_meta.__dict__,
             "dropped_static_venue_split_features": sorted(drop_static),
-            "strength_features": self.strength_features,
-            "metrics": {
-                "uncalibrated": metrics_uncal,
-                "sigmoid": metrics_sig,
-                "isotonic": metrics_iso
-            },
-            "selected_calibration": best_name,
+            "metrics": metrics_dict,
+            "selected_model": best_cand_name,
+            "selected_family": best_family,
+            "selected_calibration": best_calib,
+            "selected_metrics": best_metrics,
             "target_column": self.target_col
         }
         

@@ -7,16 +7,7 @@ from pathlib import Path
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import season_to_file_token
 
-def get_expected_score(elo_a, elo_b):
-    return 1 / (1 + 10 ** ((elo_b - elo_a) / 400))
-
-def update_elo(elo_a, elo_b, score_a, k=20):
-    expected_a = get_expected_score(elo_a, elo_b)
-    expected_b = 1 - expected_a
-    score_b = 1 - score_a
-    new_elo_a = elo_a + k * (score_a - expected_a)
-    new_elo_b = elo_b + k * (score_b - expected_b)
-    return new_elo_a, new_elo_b
+from src.features.continuous_elo import ContinuousEloEngine
 
 def compute_team_features(seasons):
     team_dfs = []
@@ -37,6 +28,11 @@ def compute_team_features(seasons):
     df_team["GAME_ID"] = df_team["GAME_ID"].astype(str).apply(lambda x: x.split('.')[0].zfill(10))
     df_team["GAME_DATE"] = pd.to_datetime(df_team["GAME_DATE"].astype(str).str[:10], errors='coerce')
     
+    if "IS_HOME" not in df_team.columns and "MATCHUP" in df_team.columns:
+        df_team["IS_HOME"] = df_team["MATCHUP"].astype(str).str.contains("vs.", case=False, na=False)
+    if "OPPONENT_ABBREVIATION" not in df_team.columns and "MATCHUP" in df_team.columns:
+        df_team["OPPONENT_ABBREVIATION"] = df_team["MATCHUP"].astype(str).str.split().str[-1]
+
     df_team = df_team.sort_values("GAME_DATE").reset_index(drop=True)
     
     df_team["MIN"] = pd.to_numeric(df_team["MIN"], errors="coerce").fillna(240)
@@ -46,37 +42,13 @@ def compute_team_features(seasons):
         lambda x: x.shift(1).rolling(window=5, min_periods=1).mean()
     )
     
-    team_elos = {}
-    unique_games = df_team[["GAME_ID", "GAME_DATE"]].drop_duplicates().sort_values("GAME_DATE")
-    pre_game_elos = []
+    # Continuous multi-season Elo calculation
+    engine = ContinuousEloEngine()
+    df_elo_team = engine.transform_games(df_team)
+    df_team["TEAM_ELO"] = df_elo_team["PRE_GAME_ELO"]
+    df_team["OPP_ELO"] = df_elo_team["OPP_PRE_GAME_ELO"]
     
-    for _, row in unique_games.iterrows():
-        game_id = row["GAME_ID"]
-        game_rows = df_team[df_team["GAME_ID"] == game_id]
-        if len(game_rows) != 2:
-            continue
-            
-        team_a_idx = game_rows.index[0]
-        team_b_idx = game_rows.index[1]
-        
-        team_a = game_rows.loc[team_a_idx, "TEAM_ABBREVIATION"]
-        team_b = game_rows.loc[team_b_idx, "TEAM_ABBREVIATION"]
-        
-        elo_a = team_elos.get(team_a, 1500)
-        elo_b = team_elos.get(team_b, 1500)
-        
-        pre_game_elos.append({"GAME_ID": game_id, "TEAM_ABBREVIATION": team_a, "TEAM_ELO": elo_a, "OPP_ELO": elo_b})
-        pre_game_elos.append({"GAME_ID": game_id, "TEAM_ABBREVIATION": team_b, "TEAM_ELO": elo_b, "OPP_ELO": elo_a})
-        
-        wl_a = game_rows.loc[team_a_idx, "WL"]
-        score_a = 1 if wl_a == "W" else 0
-        
-        new_elo_a, new_elo_b = update_elo(elo_a, elo_b, score_a)
-        team_elos[team_a] = new_elo_a
-        team_elos[team_b] = new_elo_b
-        
-    df_elo = pd.DataFrame(pre_game_elos)
-    df_team_feats = df_team[["GAME_ID", "TEAM_ABBREVIATION", "TEAM_PACE", "GAME_DATE"]].merge(df_elo, on=["GAME_ID", "TEAM_ABBREVIATION"], how="left")
+    df_team_feats = df_team[["GAME_ID", "TEAM_ABBREVIATION", "TEAM_PACE", "GAME_DATE", "TEAM_ELO", "OPP_ELO"]].copy()
     
     opp_pace = df_team_feats[["GAME_ID", "TEAM_ABBREVIATION", "TEAM_PACE"]].copy()
     opp_pace = opp_pace.rename(columns={"TEAM_ABBREVIATION": "OPPONENT_ABBREVIATION", "TEAM_PACE": "OPP_TEAM_PACE"})
@@ -109,7 +81,7 @@ def load_player_features(seasons):
 
 def build_player_dataset_v4(seasons=None, output_path=None, custom_metadata_df=None):
     if seasons is None:
-        seasons = ["2024-25", "2025-26"]
+        seasons = ["2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"]
         
     root_dir = Path(__file__).resolve().parents[2]
     

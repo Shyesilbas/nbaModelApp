@@ -30,30 +30,45 @@ def explain_win_probability(feats: dict) -> WinProbabilityExplanation:
         return WinProbabilityExplanation(intercept=0.0, features=[])
 
     model = svc.loader.model
-    if hasattr(model, "calibrated_classifiers_"):
+    if hasattr(model, "calibrated_classifiers_") and len(model.calibrated_classifiers_) > 0:
         pipeline = model.calibrated_classifiers_[0].estimator
+    elif hasattr(model, "estimator"):
+        pipeline = model.estimator
+    elif hasattr(model, "base_estimator"):
+        pipeline = model.base_estimator
     else:
         pipeline = model
 
-    imputer = pipeline.named_steps.get("imputer")
-    scaler = pipeline.named_steps.get("scaler")
-    clf = pipeline.named_steps.get("clf")
+    imputer = pipeline.named_steps.get("imputer") if hasattr(pipeline, "named_steps") else None
+    scaler = pipeline.named_steps.get("scaler") if hasattr(pipeline, "named_steps") else None
+    clf = pipeline.named_steps.get("clf") if hasattr(pipeline, "named_steps") else pipeline
 
     row = [feats.get(c, float("nan")) for c in svc.loader.feature_cols]
     df = pd.DataFrame([row], columns=svc.loader.feature_cols)
 
     X_imp = imputer.transform(df) if imputer else df.fillna(0.0)
-    X_scaled = scaler.transform(X_imp) if scaler else X_imp.values
+    X_scaled = scaler.transform(X_imp) if scaler else X_imp
 
-    coefs = clf.coef_[0]
-    intercept = float(clf.intercept_[0])
+    if hasattr(clf, "coef_"):
+        coefs = clf.coef_[0]
+        intercept = float(clf.intercept_[0])
+        contribs = coefs * np.asarray(X_scaled)[0]
+    else:
+        import shap
+        expl = shap.TreeExplainer(clf)
+        shap_vals = expl.shap_values(X_scaled)
+        if isinstance(shap_vals, list) and len(shap_vals) > 1:
+            contribs = np.asarray(shap_vals[1])[0]
+        else:
+            contribs = np.asarray(shap_vals)[0] if len(np.shape(shap_vals)) > 1 else np.asarray(shap_vals)
+        intercept = float(expl.expected_value[1] if isinstance(expl.expected_value, (list, np.ndarray)) else expl.expected_value)
 
     explanations = []
     for i, col in enumerate(svc.loader.feature_cols):
         raw_val = float(df.iloc[0, i])
         if np.isnan(raw_val):
             raw_val = 0.0
-        contrib = float(coefs[i] * float(X_scaled[0, i]))
+        contrib = float(contribs[i])
         meta = FEATURE_METADATA.get(col, {"display": col.replace("_", " ").title(), "category": "General"})
 
         if col in ["IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES"]:
@@ -76,6 +91,7 @@ def explain_win_probability(feats: dict) -> WinProbabilityExplanation:
 
     explanations.sort(key=lambda x: abs(x.contribution), reverse=True)
     return WinProbabilityExplanation(intercept=round(intercept, 4), features=explanations)
+
 
 
 def explain_xgboost_model(model, features_list, feats_dict, perspective: str = "home") -> List[ExplanationFeature]:

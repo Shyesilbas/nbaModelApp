@@ -68,7 +68,21 @@ def build_opponent_features(team_features_df: pd.DataFrame) -> pd.DataFrame:
         "DEF_RTG_LAST_5_opp": "OPP_DEF_RTG_LAST_5",
         "DEF_RTG_LAST_10_opp": "OPP_DEF_RTG_LAST_10",
         "NET_RTG_LAST_5_opp": "OPP_NET_RTG_LAST_5",
-        "NET_RTG_LAST_10_opp": "OPP_NET_RTG_LAST_10"
+        "NET_RTG_LAST_10_opp": "OPP_NET_RTG_LAST_10",
+
+        # Four Factors & Fatigue Opponent mapping
+        "EFG_PCT_LAST_5_opp": "OPP_EFG_PCT_LAST_5",
+        "EFG_PCT_LAST_10_opp": "OPP_EFG_PCT_LAST_10",
+        "TOV_PCT_LAST_5_opp": "OPP_TOV_PCT_LAST_5",
+        "TOV_PCT_LAST_10_opp": "OPP_TOV_PCT_LAST_10",
+        "ORB_PCT_LAST_5_opp": "OPP_ORB_PCT_LAST_5",
+        "ORB_PCT_LAST_10_opp": "OPP_ORB_PCT_LAST_10",
+        "FT_RATE_LAST_5_opp": "OPP_FT_RATE_LAST_5",
+        "FT_RATE_LAST_10_opp": "OPP_FT_RATE_LAST_10",
+        "FG3A_RATE_LAST_5_opp": "OPP_FG3A_RATE_LAST_5",
+        "FG3A_RATE_LAST_10_opp": "OPP_FG3A_RATE_LAST_10",
+        "IS_3_IN_4_opp": "OPP_IS_3_IN_4",
+        "IS_4_IN_5_opp": "OPP_IS_4_IN_5"
     }
     
     # Verify columns exist before renaming

@@ -91,13 +91,8 @@ def run_roster_analysis(
     # Rename Player_ID to PLAYER_ID
     df_roster_agg = df_roster_agg.rename(columns={"Player_ID": "PLAYER_ID"})
 
-    # Ensure players who were traded are only assigned to their most recent team
-    df_player_sorted = df_player.sort_values("GAME_DATE")
-    last_game_per_player = df_player_sorted.groupby("Player_ID").last().reset_index()
-    player_to_latest_team = dict(zip(last_game_per_player["Player_ID"], last_game_per_player["TEAM_ABBREVIATION"]))
-    
-    df_roster_agg["LATEST_TEAM"] = df_roster_agg["PLAYER_ID"].map(player_to_latest_team)
-    df_roster_agg = df_roster_agg[df_roster_agg["TEAM_ABBREVIATION"] == df_roster_agg["LATEST_TEAM"]].drop(columns=["LATEST_TEAM"])
+    # Retain valid player stints per team (minimum 3 games) so earlier-team games are not erased
+    df_roster_agg = df_roster_agg[df_roster_agg["GP"] >= 3].reset_index(drop=True)
     
     # Compute Importance Score
     df_roster_agg["IMPORTANCE_SCORE"] = (

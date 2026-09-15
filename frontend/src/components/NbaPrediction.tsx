@@ -1,46 +1,50 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Trophy,
   AlertTriangle,
-  Cpu,
   Sparkles,
   RefreshCw,
   Activity,
   ChevronDown,
   ChevronUp,
-  Zap,
   Calendar,
 } from "lucide-react";
+
 import TeamLogo from "./TeamLogo";
 import { getModelStatus, normalizeGameFullPrediction, predictGameFull } from "../api/predictions";
-import { loadJson, loadPrivateApi } from "../lib/dataCache";
+import { loadPrivateApi } from "../lib/dataCache";
 import { NBA_TEAMS } from "../lib/nbaTeams";
-import { exportPredictionAsPDF } from "../lib/predictionReport";
+
 import {
+  MatchupHeroCard,
+  MatchupTacticalHub,
   ModelDiagnostics,
   ModelExplanationSection,
-  NarrativeBlock,
   PlayerSpotlight,
-  SignalCards,
-  WinProbabilityArc,
 } from "./prediction";
-import PredictionExplanation from "./PredictionExplanation";
+
 
 // ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
 
-export default function NbaPrediction() {
-  const [home, setHome] = useState("");
-  const [away, setAway] = useState("");
-  const [date, setDate] = useState("");
+interface NbaPredictionProps {
+  initialGame?: {
+    home: string;
+    away: string;
+    date: string;
+  } | null;
+  onClearInitialGame?: () => void;
+}
+
+export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPredictionProps = {}) {
+  const [home, setHome] = useState(initialGame?.home || "");
+  const [away, setAway] = useState(initialGame?.away || "");
+  const [date, setDate] = useState(initialGame?.date || "");
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [upcomingGames, setUpcomingGames] = useState<any[]>([]);
-  const [scheduleGames, setScheduleGames] = useState<any[]>([]);
-  const [gameResults, setGameResults] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
 
@@ -48,26 +52,16 @@ export default function NbaPrediction() {
   const [filterTeam1, setFilterTeam1] = useState("");
   const [filterTeam2, setFilterTeam2] = useState("");
   const [modelStatus, setModelStatus] = useState<any>(null);
-  const [selectorOpen, setSelectorOpen] = useState(true);
+  const [selectorOpen, setSelectorOpen] = useState(!initialGame);
 
-  const [seasonsList, setSeasonsList] = useState<string[]>(["2025-26", "2024-25", "2023-24", "2022-23"]);
-  const [selectedSeason, setSelectedSeason] = useState<string>("2025-26");
   const [allResults, setAllResults] = useState<any[]>([]);
 
   useEffect(() => {
-    loadJson<string[]>("/data/seasons.json", [])
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setSeasonsList(data);
-        }
-      })
-      .catch(() => {});
-
     const fetchInitialData = async () => {
       try {
         setLoadingData(true);
-        const gamesRes = await loadPrivateApi<any[]>("/frontend-data-api/games?season=2025-26").catch(() => []);
-        setAllResults(gamesRes.map((g: any) => ({ ...g, SEASON: "2025-26" })));
+        const gamesRes = await loadPrivateApi<any[]>("/frontend-data-api/games?season=2026-27").catch(() => []);
+        setAllResults(gamesRes.map((g: any) => ({ ...g, SEASON: "2026-27" })));
       } catch (err: any) {
         console.error("Error loading schedule data for predictions:", err);
         setDataError("Could not load game schedules. Manual inputs are still active.");
@@ -79,38 +73,61 @@ export default function NbaPrediction() {
   }, []);
 
   useEffect(() => {
-    if (selectedSeason === "2025-26") return;
-    if (allResults.some((g) => g.SEASON === selectedSeason)) return;
-    setLoadingData(true);
-    loadPrivateApi<any[]>(`/frontend-data-api/games?season=${encodeURIComponent(selectedSeason)}`)
-      .then((rows) => {
-        if (rows.length > 0) {
-          setAllResults((prev) => [...prev, ...rows.map((g: any) => ({ ...g, SEASON: selectedSeason }))]);
-        }
-      })
-      .catch((err) => {
-        console.error("Error loading selected season:", err);
-        setDataError("Could not load selected season. Manual inputs are still active.");
-      })
-      .finally(() => setLoadingData(false));
-  }, [selectedSeason, allResults]);
-
-  useEffect(() => {
     if (allResults.length === 0) return;
 
-    const seasonGames = allResults.filter((g) => g.SEASON === selectedSeason);
     const seen = new Set();
-    const uniqueGames = seasonGames.filter((g: any) => {
+    const uniqueGames = allResults.filter((g: any) => {
       if (!g.GAME_ID || seen.has(g.GAME_ID)) return false;
       seen.add(g.GAME_ID);
       return true;
     });
-    uniqueGames.sort((a: any, b: any) => b.GAME_DATE.localeCompare(a.GAME_DATE));
 
-    setScheduleGames(uniqueGames);
-    setUpcomingGames(uniqueGames.filter((g: any) => !(g.GAME_STATUS === "Final" || g.HOME_SCORE != null || g.AWAY_SCORE != null)));
-    setGameResults(uniqueGames.filter((g: any) => g.GAME_STATUS === "Final" || g.HOME_SCORE != null || g.AWAY_SCORE != null));
-  }, [selectedSeason, allResults]);
+    const isCompletedGame = (g: any) =>
+      g.GAME_STATUS === "Final" ||
+      g.GAME_STATUS === "FINAL" ||
+      ((Number(g.HOME_SCORE) || 0) > 0 && (Number(g.AWAY_SCORE) || 0) > 0);
+
+    const unplayed = uniqueGames
+      .filter((g: any) => !isCompletedGame(g))
+      .sort((a: any, b: any) => a.GAME_DATE.localeCompare(b.GAME_DATE));
+
+    setUpcomingGames(unplayed);
+  }, [allResults]);
+
+  const submitGame = useCallback(async (h: string, a: string, d: string) => {
+    setError(null);
+    setResult(null);
+    setLoading(true);
+    try {
+      if (!h || !a) throw new Error("Please select both a home and away team.");
+      if (h === a) throw new Error("Home and away teams cannot be the same.");
+      if (!d) throw new Error("Please select a date for the matchup.");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error("Invalid date format. Please use YYYY-MM-DD.");
+      if (d < "2026-10-01") {
+        throw new Error("Predictions are only enabled for unplayed upcoming games (2026-27 season and onward). Past completed games cannot be predicted.");
+      }
+
+      const data = await predictGameFull({ home_team_id: h, away_team_id: a, prediction_date: d });
+      const normalized = normalizeGameFullPrediction(data, h, a, d);
+      setResult(normalized);
+      setSelectorOpen(false);
+    } catch (e: any) {
+      setError(e.message || "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (initialGame?.home && initialGame?.away && initialGame?.date) {
+      setHome(initialGame.home);
+      setAway(initialGame.away);
+      setDate(initialGame.date);
+      setSelectorOpen(false);
+      submitGame(initialGame.home, initialGame.away, initialGame.date);
+      onClearInitialGame?.();
+    }
+  }, [initialGame, submitGame, onClearInitialGame]);
 
   useEffect(() => {
     const fetchModelStatus = async () => {
@@ -128,8 +145,6 @@ export default function NbaPrediction() {
 
   const teamAbbr = (abbr: string) => abbr?.toUpperCase?.() || "";
 
-
-
   const handleSelectGame = (game: any) => {
     setHome(game.HOME_TEAM_ABBREVIATION);
     setAway(game.AWAY_TEAM_ABBREVIATION);
@@ -137,31 +152,15 @@ export default function NbaPrediction() {
     setResult(null);
     setError(null);
     setSelectorOpen(false);
+    submitGame(game.HOME_TEAM_ABBREVIATION, game.AWAY_TEAM_ABBREVIATION, game.GAME_DATE);
   };
 
-  const submit = useCallback(async () => {
-    setError(null);
-    setResult(null);
-    setLoading(true);
-    try {
-      if (!home || !away) throw new Error("Please select both a home and away team.");
-      if (home === away) throw new Error("Home and away teams cannot be the same.");
-      if (!date) throw new Error("Please select a date for the matchup.");
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Invalid date format. Please use YYYY-MM-DD.");
+  const submit = useCallback(() => {
+    return submitGame(home, away, date);
+  }, [submitGame, home, away, date]);
 
-      const data = await predictGameFull({ home_team_id: home, away_team_id: away, prediction_date: date });
-      const normalized = normalizeGameFullPrediction(data, home, away, date);
-      setResult(normalized);
-      setSelectorOpen(false);
-    } catch (e: any) {
-      setError(e.message || "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  }, [home, away, date]);
-
-  const filteredSchedule = scheduleGames.filter((g: any) => {
-    if (!filterTeam1) return false;
+  const filteredSchedule = upcomingGames.filter((g: any) => {
+    if (!filterTeam1) return true;
     if (filterTeam1 && !filterTeam2) {
       return (
         g.HOME_TEAM_ABBREVIATION?.toUpperCase() === filterTeam1.toUpperCase() ||
@@ -178,22 +177,6 @@ export default function NbaPrediction() {
 
   const homeInfo = getTeamInfo(home);
   const awayInfo = getTeamInfo(away);
-
-  const actualGame =
-    mode === "scheduled"
-      ? gameResults.find(
-          (g: any) =>
-            g.HOME_TEAM_ABBREVIATION?.toUpperCase() === home.toUpperCase() &&
-            g.AWAY_TEAM_ABBREVIATION?.toUpperCase() === away.toUpperCase() &&
-            g.GAME_DATE === date
-        )
-      : null;
-
-  const hasActualResult = actualGame && actualGame.HOME_SCORE !== null && actualGame.AWAY_SCORE !== null;
-  const isPredictionCorrect =
-    result &&
-    hasActualResult &&
-    (result.win_probability?.predicted_winner || result.predicted_winner) === actualGame.WINNER_TEAM_ABBREVIATION;
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
@@ -272,7 +255,7 @@ export default function NbaPrediction() {
 
         {selectorOpen && (
           <div className="border-t border-slate-100 px-5 pb-5 pt-4 space-y-4 animate-fade-in">
-            {/* Mode tabs and Season Selector */}
+            {/* Mode tabs */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div className="flex border border-slate-200 bg-slate-50 p-1 rounded-xl w-fit gap-1">
                 {(["scheduled", "custom"] as const).map((m) => (
@@ -285,29 +268,10 @@ export default function NbaPrediction() {
                         : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
-                    {m === "scheduled" ? "Scheduled Games" : "Custom Matchup"}
+                    {m === "scheduled" ? "Upcoming Schedule" : "Custom Matchup"}
                   </button>
                 ))}
               </div>
-
-              {mode === "scheduled" && (
-                <div className="flex flex-wrap gap-1.5 items-center">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mr-1">Season:</span>
-                  {seasonsList.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => { setSelectedSeason(s); setResult(null); setError(null); }}
-                      className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] transition-all duration-200 ${
-                        selectedSeason === s
-                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
-                          : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Scheduled mode */}
@@ -431,6 +395,7 @@ export default function NbaPrediction() {
                   <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Date</label>
                   <input
                     type="date"
+                    min="2026-10-01"
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-xs"
                     value={date}
                     onChange={(e) => { setDate(e.target.value); setResult(null); setError(null); }}
@@ -531,212 +496,32 @@ export default function NbaPrediction() {
             </div>
           )}
 
-          {/* ── SECTION 2: HERO PREDICTION CARD ── */}
+          {/* ── SECTION 2: HERO PREDICTION CARD & STADIUM HUB ── */}
           {result.win_probability && !result.win_probability.error && winnerInfo && (
-            <div className="prediction-hero rounded-[2rem] overflow-hidden relative animate-scale-in">
-              {/* Team color bleeds */}
-              <div
-                className="absolute inset-y-0 left-0 w-1/3 opacity-20 pointer-events-none"
-                style={{ background: `radial-gradient(ellipse at left center, ${awayInfo.color}, transparent 70%)` }}
-              />
-              <div
-                className="absolute inset-y-0 right-0 w-1/3 opacity-20 pointer-events-none"
-                style={{ background: `radial-gradient(ellipse at right center, ${homeInfo.color}, transparent 70%)` }}
-              />
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-              <div className="relative p-6 lg:p-8">
-                {/* Header row */}
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-2">
-                    <Cpu size={12} className="text-white/30" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30">
-                      NBA Prediction Engine
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => exportPredictionAsPDF({ result, date, fallbackHome: home, fallbackAway: away })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-wider transition-all duration-200 border border-white/10 shadow-xs"
-                    >
-                      Export PDF
-                    </button>
-                    <div className="flex items-center gap-2">
-                      <Calendar size={11} className="text-white/30" />
-                      <span className="text-[9px] font-mono font-bold text-white/30">{formatDate(date)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Main hero area: Away | Arc Gauge | Home */}
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 lg:gap-8">
-                  {/* Away team */}
-                  <div className="text-center space-y-3">
-                    <div className="flex justify-center">
-                      <div
-                        className="w-20 h-20 rounded-2xl flex items-center justify-center ring-2 ring-white/10 shadow-xl"
-                        style={{ backgroundColor: `${awayInfo.color}22`, borderColor: `${awayInfo.color}44` }}
-                      >
-                        <TeamLogo abbr={teamAbbr(awayInfo.abbr)} name={awayInfo.name} size={56} />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Away</p>
-                      <h2
-                        className="text-xl font-black uppercase tracking-tight text-white leading-tight mt-1"
-                        style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-                      >
-                        {awayInfo.name}
-                      </h2>
-                      <p className="text-3xl font-black font-mono mt-2" style={{ color: awayInfo.color }}>
-                        {(result.win_probability.away_win_probability * 100).toFixed(1)}%
-                      </p>
-                      <p className="text-[9px] font-bold text-white/30 uppercase tracking-wider mt-1">Win Probability</p>
-                    </div>
-                    {result.win_probability.predicted_winner === awayInfo.abbr && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 winner-pulse">
-                        <Trophy size={11} className="text-emerald-400" />
-                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">Predicted Winner</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Center: Arc gauge */}
-                  <div className="flex flex-col items-center gap-2">
-                    <WinProbabilityArc
-                      homeProb={result.win_probability.home_win_probability}
-                      awayProb={result.win_probability.away_win_probability}
-                      homeColor={homeInfo.color}
-                      awayColor={awayInfo.color}
-                      homeAbbr={homeInfo.abbr}
-                      awayAbbr={awayInfo.abbr}
-                      confidence={result.win_probability.confidence_bucket || ""}
-                      margin={result.score_prediction?.predicted_margin ?? 0}
-                      winnerAbbr={winnerInfo.abbr}
-                    />
-                    {/* Confidence badge */}
-                    <div
-                      className="px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest"
-                      style={{
-                        backgroundColor:
-                          result.win_probability.confidence_bucket?.toUpperCase().includes("STRONG")
-                            ? "rgba(16,185,129,0.15)"
-                            : result.win_probability.confidence_bucket?.toUpperCase().includes("MODERATE")
-                            ? "rgba(59,130,246,0.15)"
-                            : "rgba(245,158,11,0.15)",
-                        borderColor:
-                          result.win_probability.confidence_bucket?.toUpperCase().includes("STRONG")
-                            ? "rgba(16,185,129,0.3)"
-                            : result.win_probability.confidence_bucket?.toUpperCase().includes("MODERATE")
-                            ? "rgba(59,130,246,0.3)"
-                            : "rgba(245,158,11,0.3)",
-                        color:
-                          result.win_probability.confidence_bucket?.toUpperCase().includes("STRONG")
-                            ? "#10b981"
-                            : result.win_probability.confidence_bucket?.toUpperCase().includes("MODERATE")
-                            ? "#60a5fa"
-                            : "#fbbf24",
-                      }}
-                    >
-                      {result.win_probability.confidence_bucket || "MEDIUM"}
-                    </div>
-                  </div>
-
-                  {/* Home team */}
-                  <div className="text-center space-y-3">
-                    <div className="flex justify-center">
-                      <div
-                        className="w-20 h-20 rounded-2xl flex items-center justify-center ring-2 ring-white/10 shadow-xl"
-                        style={{ backgroundColor: `${homeInfo.color}22`, borderColor: `${homeInfo.color}44` }}
-                      >
-                        <TeamLogo abbr={teamAbbr(homeInfo.abbr)} name={homeInfo.name} size={56} />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Home</p>
-                      <h2
-                        className="text-xl font-black uppercase tracking-tight text-white leading-tight mt-1"
-                        style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-                      >
-                        {homeInfo.name}
-                      </h2>
-                      <p className="text-3xl font-black font-mono mt-2" style={{ color: homeInfo.color }}>
-                        {(result.win_probability.home_win_probability * 100).toFixed(1)}%
-                      </p>
-                      <p className="text-[9px] font-bold text-white/30 uppercase tracking-wider mt-1">Win Probability</p>
-                    </div>
-                    {result.win_probability.predicted_winner === homeInfo.abbr && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 winner-pulse">
-                        <Trophy size={11} className="text-emerald-400" />
-                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">Predicted Winner</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Bottom KPI strip */}
-                {result.score_prediction && !result.score_prediction.error && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-white/08">
-                    {[
-                      {
-                        label: "Predicted Score",
-                        value: `${result.score_prediction.predicted_home_score?.toFixed(0)} – ${result.score_prediction.predicted_away_score?.toFixed(0)}`,
-                        sub: `${homeInfo.abbr} – ${awayInfo.abbr}`,
-                      },
-                      {
-                        label: "Expected Margin",
-                        value: `${Math.abs(result.score_prediction.predicted_margin).toFixed(1)} pts`,
-                        sub: `${winnerInfo.abbr} lead`,
-                      },
-                      {
-                        label: "Total Points",
-                        value: `${result.score_prediction.predicted_total_points?.toFixed(0)} pts`,
-                        sub: `${result.score_prediction.total_points_range?.[0]}–${result.score_prediction.total_points_range?.[1]} range`,
-                      },
-                      {
-                        label: "Confidence",
-                        value: result.win_probability.confidence_bucket || "MEDIUM",
-                        sub: "Model signal strength",
-                      },
-                    ].map((kpi, i) => (
-                      <div key={i} className="text-center p-3 rounded-xl bg-white/04 border border-white/06">
-                        <p className="text-[9px] font-black uppercase tracking-widest text-white/30">{kpi.label}</p>
-                        <p
-                          className="text-sm font-black text-white mt-1.5 font-mono"
-                          style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: "1rem" }}
-                        >
-                          {kpi.value}
-                        </p>
-                        <p className="text-[9px] text-white/25 font-bold mt-1">{kpi.sub}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <MatchupHeroCard
+              result={result}
+              homeInfo={homeInfo}
+              awayInfo={awayInfo}
+              winnerInfo={winnerInfo}
+              date={date}
+              onRefresh={submit}
+              isLoading={loading}
+            />
           )}
 
-          {/* ── SECTION 3: SIGNAL INSIGHT CARDS ── */}
+          {/* ── SECTION 3: TACTICAL BLUEPRINT & GAME SCRIPT ── */}
           {result.win_probability && !result.win_probability.error && winnerInfo && (
-            <div className="space-y-3 animate-fade-in-up stagger-2">
-              <div className="flex items-center gap-2">
-                <Zap size={13} className="text-indigo-500" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                  Why the Model Favors {winnerInfo.name}
-                </p>
-              </div>
-              <SignalCards result={result} homeInfo={homeInfo} awayInfo={awayInfo} winnerInfo={winnerInfo} />
-            </div>
+            <MatchupTacticalHub
+              result={result}
+              homeInfo={homeInfo}
+              awayInfo={awayInfo}
+              winnerInfo={winnerInfo}
+            />
           )}
 
-          {/* ── SECTION 4: NARRATIVE GAME SCRIPT ── */}
-          {result.win_probability && !result.win_probability.error && winnerInfo && (
-            <NarrativeBlock result={result} homeInfo={homeInfo} awayInfo={awayInfo} winnerInfo={winnerInfo} />
-          )}
-
-          {/* ── EXPLAINABLE AI MODEL INSIGHTS (XAI) ── */}
+          {/* ── SECTION 4: EXPLAINABLE AI MODEL INSIGHTS (XAI) ── */}
           {result.explanation && (
-            <div className="animate-fade-in-up">
+            <div className="animate-fade-in-up stagger-3">
               <ModelExplanationSection
                 result={result}
                 homeInfo={homeInfo}
@@ -745,145 +530,16 @@ export default function NbaPrediction() {
             </div>
           )}
 
-          {/* ── NEW SHAP EXPLANATION (API-driven) ── */}
-          <PredictionExplanation 
-            homeTeam={home} 
-            awayTeam={away} 
-            predictionDate={date} 
-          />
-
-          {/* ── SECTION 5: PLAYER SPOTLIGHT + TABLES ── */}
+          {/* ── SECTION 5: PLAYER PROJECTION SPOTLIGHT & ROSTERS ── */}
           {result.player_predictions && !result.player_predictions.error && (
-            <div className="surface rounded-[1.5rem] p-5 lg:p-6 animate-fade-in-up stagger-4">
+            <div className="surface rounded-[1.75rem] p-5 lg:p-7 border border-slate-200/80 bg-white shadow-sm animate-fade-in-up stagger-4">
               <PlayerSpotlight
                 players={result.player_predictions}
                 homeInfo={homeInfo}
                 awayInfo={awayInfo}
+                gameDate={date}
+                season="2026-27"
               />
-            </div>
-          )}
-
-          {/* ── SECTION 7: SCORE PREDICTION PANEL ── */}
-          {result.score_prediction && !result.score_prediction.error && (
-            <div className="surface rounded-[1.5rem] p-5 lg:p-6 space-y-4 animate-fade-in-up stagger-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Score Prediction</p>
-                  <h3 className="text-base font-black text-slate-800 mt-0.5" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                    80% Confidence Score Ranges
-                  </h3>
-                </div>
-                <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded bg-slate-100 text-slate-500 border border-slate-200 font-mono">
-                  {result.score_prediction.model_version || "score_v2"}
-                </span>
-              </div>
-
-              {/* Score boxes */}
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { team: awayInfo, score: result.score_prediction.predicted_away_score, range: result.score_prediction.away_score_range },
-                  { team: homeInfo, score: result.score_prediction.predicted_home_score, range: result.score_prediction.home_score_range },
-                ].map((s) => (
-                  <div key={s.team.abbr} className="score-box">
-                    <div className="flex items-center justify-center gap-2 mb-3">
-                      <TeamLogo abbr={teamAbbr(s.team.abbr)} name={s.team.name} size={24} />
-                      <p className="text-xs font-black text-slate-600">{s.team.abbr}</p>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase">
-                        {s.team.abbr === homeInfo.abbr ? "Home" : "Away"}
-                      </span>
-                    </div>
-                    <p className="text-4xl font-black font-mono" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: s.team.color }}>
-                      {s.score?.toFixed(0)}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-mono font-bold mt-2">
-                      Range: {s.range?.[0]} – {s.range?.[1]} pts
-                    </p>
-                    {/* Mini range track */}
-                    <div className="mt-3 h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      {(() => {
-                        const minV = 80, maxV = 140;
-                        const rS = Math.max(0, Math.min(100, ((s.range?.[0] - minV) / (maxV - minV)) * 100));
-                        const rE = Math.max(0, Math.min(100, ((s.range?.[1] - minV) / (maxV - minV)) * 100));
-                        const pP = Math.max(0, Math.min(100, ((s.score - minV) / (maxV - minV)) * 100));
-                        return (
-                          <div className="relative h-full">
-                            <div className="absolute h-full opacity-30 rounded-full" style={{ left: `${rS}%`, width: `${rE - rS}%`, backgroundColor: s.team.color }} />
-                            <div className="absolute h-full w-1.5 rounded-full" style={{ left: `${pP}%`, backgroundColor: s.team.color, boxShadow: `0 0 6px ${s.team.color}80` }} />
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Total + Margin */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Expected Total Points</p>
-                  <p className="text-xl font-black text-slate-900 mt-1.5 font-mono">
-                    {result.score_prediction.predicted_total_points.toFixed(1)} pts
-                  </p>
-                  <p className="text-[9px] font-mono font-bold text-slate-400 mt-1">
-                    Range: {result.score_prediction.total_points_range[0]} – {result.score_prediction.total_points_range[1]}
-                  </p>
-                </div>
-                <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Expected Point Margin</p>
-                  <p className="text-xl font-black text-slate-900 mt-1.5 font-mono">
-                    {Math.abs(result.score_prediction.predicted_margin).toFixed(1)} pts
-                  </p>
-                  <p className="text-[9px] font-mono font-bold text-slate-400 mt-1">
-                    {result.score_prediction.predicted_margin >= 0 ? homeInfo.abbr : awayInfo.abbr} Lead ·{" "}
-                    {result.score_prediction.margin_range[0]} to {result.score_prediction.margin_range[1]}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── SECTION 9: MODEL VS ACTUAL VERDICT ── */}
-          {hasActualResult && (
-            <div className={isPredictionCorrect ? "verdict-card-correct animate-fade-in-up stagger-6" : "verdict-card-wrong animate-fade-in-up stagger-6"}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Activity size={14} className={isPredictionCorrect ? "text-emerald-600" : "text-rose-500"} />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Model vs Actual Outcome</p>
-                </div>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border ${isPredictionCorrect ? "bg-emerald-100 text-emerald-700 border-emerald-300" : "bg-rose-100 text-rose-700 border-rose-300"}`}>
-                  {isPredictionCorrect ? "Correct Prediction" : "Incorrect Prediction"}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-4 bg-white/60 rounded-xl border border-white/80">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Model Predicted</p>
-                  <div className="flex items-center gap-2.5">
-                    <TeamLogo abbr={teamAbbr(result.win_probability?.predicted_winner || result.predicted_winner)} name={getTeamInfo(result.win_probability?.predicted_winner || result.predicted_winner).name} size={28} />
-                    <div>
-                      <p className="text-xs font-black text-slate-800">{getTeamInfo(result.win_probability?.predicted_winner || result.predicted_winner).abbr} to Win</p>
-                      {result.win_probability && (
-                        <p className="text-[10px] font-bold text-slate-400 mt-0.5 font-mono">
-                          {(Math.max(result.win_probability.home_win_probability, result.win_probability.away_win_probability) * 100).toFixed(1)}% prob
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4 bg-white/60 rounded-xl border border-white/80">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Actual Outcome</p>
-                  <div className="flex items-center gap-2.5">
-                    <TeamLogo abbr={teamAbbr(actualGame.WINNER_TEAM_ABBREVIATION)} name={getTeamInfo(actualGame.WINNER_TEAM_ABBREVIATION).name} size={28} />
-                    <div>
-                      <p className="text-xs font-black text-slate-800">
-                        {getTeamInfo(actualGame.WINNER_TEAM_ABBREVIATION).abbr} Won {actualGame.HOME_SCORE} – {actualGame.AWAY_SCORE}
-                      </p>
-                      <p className="text-[10px] font-bold text-slate-400 mt-0.5 font-mono uppercase">
-                        {actualGame.GAME_STATUS || "Final"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 

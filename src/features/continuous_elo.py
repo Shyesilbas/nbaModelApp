@@ -1,0 +1,199 @@
+from __future__ import annotations
+
+import math
+from collections import defaultdict
+from typing import Dict, List, Optional, Tuple
+import numpy as np
+import pandas as pd
+
+
+INITIAL_ELO = 1500.0
+BASE_K_FACTOR = 20.0
+HOME_COURT_ADVANTAGE = 100.0
+SEASON_REGRESSION = 0.75
+
+
+def _calc_season_key(date_val: pd.Timestamp) -> str:
+    year = date_val.year
+    month = date_val.month
+    if month >= 10:
+        start_year = year
+        end_year = (year + 1) % 100
+    else:
+        start_year = year - 1
+        end_year = year % 100
+    return f"{start_year}-{end_year:02d}"
+
+
+def compute_mov_multiplier(margin: float, elo_diff: float) -> float:
+    """
+    FiveThirtyEight Margin of Victory (MOV) multiplier for NBA Elo.
+    Prevents garbage time distortion while rewarding dominant wins.
+    """
+    abs_mov = abs(margin)
+    mult = math.log(abs_mov + 1.0) * (2.2 / (elo_diff * 0.001 + 2.2))
+    return float(max(0.2, min(mult, 3.5)))
+
+
+class ContinuousEloEngine:
+    """
+    Chronological, leakage-safe multi-season Elo engine for the NBA.
+    Maintains persistent franchise strength across seasons with:
+    - Home court advantage (+100 Elo points)
+    - Margin of victory (MOV) adaptive updates
+    - Inter-season mean reversion (0.75 Elo + 0.25 * 1500)
+    """
+
+    def __init__(
+        self,
+        initial_elo: float = INITIAL_ELO,
+        k_factor: float = BASE_K_FACTOR,
+        home_advantage: float = HOME_COURT_ADVANTAGE,
+        season_regression: float = SEASON_REGRESSION,
+    ):
+        self.initial_elo = initial_elo
+        self.k_factor = k_factor
+        self.home_advantage = home_advantage
+        self.season_regression = season_regression
+        self.ratings: Dict[str, float] = defaultdict(lambda: self.initial_elo)
+        self.current_season: Optional[str] = None
+
+    def apply_season_regression(self):
+        """Regresses all franchise ratings towards league mean between seasons."""
+        for team in list(self.ratings.keys()):
+            self.ratings[team] = (
+                self.season_regression * self.ratings[team]
+                + (1.0 - self.season_regression) * self.initial_elo
+            )
+
+    def process_season_transition_if_needed(self, season_key: str):
+        if self.current_season is None:
+            self.current_season = season_key
+        elif season_key != self.current_season:
+            self.apply_season_regression()
+            self.current_season = season_key
+
+    def transform_games(self, df_all_games: pd.DataFrame) -> pd.DataFrame:
+        """
+        Takes raw or processed team games dataframe covering multiple seasons,
+        sorts chronologically, and appends pre-game Elo features without look-ahead leakage.
+        """
+        df = df_all_games.copy()
+        if "IS_HOME" not in df.columns and "MATCHUP" in df.columns:
+            df["IS_HOME"] = df["MATCHUP"].astype(str).str.contains("vs.", case=False, na=False)
+        if "OPPONENT_ABBREVIATION" not in df.columns and "MATCHUP" in df.columns:
+            df["OPPONENT_ABBREVIATION"] = df["MATCHUP"].astype(str).str.split().str[-1]
+
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
+        df["_TEMP_GID"] = df["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+
+        # Sort strictly chronologically: Date, Game ID, and ensure Home team is evaluated consistently
+        df = df.sort_values(["GAME_DATE", "_TEMP_GID", "IS_HOME"], ascending=[True, True, False]).reset_index(drop=True)
+
+        pre_elos: Dict[int, float] = {}
+        opp_pre_elos: Dict[int, float] = {}
+
+        unique_games = df.groupby("_TEMP_GID", sort=False)
+
+        for gid, game_rows in unique_games:
+            game_date = game_rows["GAME_DATE"].iloc[0]
+            season_key = _calc_season_key(game_date)
+            self.process_season_transition_if_needed(season_key)
+
+            if len(game_rows) != 2:
+                # Fallback for solitary records
+                for idx, row in game_rows.iterrows():
+                    team = row["TEAM_ABBREVIATION"]
+                    opp = row["OPPONENT_ABBREVIATION"]
+                    pre_elos[idx] = self.ratings[team]
+                    opp_pre_elos[idx] = self.ratings[opp]
+                continue
+
+            home_sub = game_rows[game_rows["IS_HOME"].astype(bool)]
+            away_sub = game_rows[~game_rows["IS_HOME"].astype(bool)]
+
+            if home_sub.empty or away_sub.empty:
+                home_sub = game_rows.iloc[[0]]
+                away_sub = game_rows.iloc[[1]]
+
+            home_idx = int(home_sub.index[0])
+            away_idx = int(away_sub.index[0])
+
+            home_team = home_sub["TEAM_ABBREVIATION"].iloc[0]
+            away_team = away_sub["TEAM_ABBREVIATION"].iloc[0]
+
+            home_elo = self.ratings[home_team]
+            away_elo = self.ratings[away_team]
+
+            # Save PRE-GAME ratings (Strictly before game outcome update)
+            pre_elos[home_idx] = home_elo
+            opp_pre_elos[home_idx] = away_elo
+
+            pre_elos[away_idx] = away_elo
+            opp_pre_elos[away_idx] = home_elo
+
+            # Check if game outcome exists
+            if "WL" in home_sub.columns and pd.notna(home_sub["WL"].iloc[0]):
+                home_won = 1.0 if home_sub["WL"].iloc[0] == "W" else 0.0
+            elif "WIN" in home_sub.columns and pd.notna(home_sub["WIN"].iloc[0]):
+                home_won = float(home_sub["WIN"].iloc[0])
+            else:
+                continue
+
+            home_pts = float(home_sub["PTS"].iloc[0]) if "PTS" in home_sub.columns and pd.notna(home_sub["PTS"].iloc[0]) else 100.0
+            away_pts = float(away_sub["PTS"].iloc[0]) if "PTS" in away_sub.columns and pd.notna(away_sub["PTS"].iloc[0]) else 100.0
+            margin = home_pts - away_pts
+
+            # Effective home Elo with home court advantage boost
+            home_effective = home_elo + self.home_advantage
+            elo_diff = abs(home_effective - away_elo)
+
+            expected_home = 1.0 / (1.0 + 10.0 ** ((away_elo - home_effective) / 400.0))
+            mov_mult = compute_mov_multiplier(margin, elo_diff)
+
+            shift = self.k_factor * mov_mult * (home_won - expected_home)
+
+            self.ratings[home_team] = home_elo + shift
+            self.ratings[away_team] = away_elo - shift
+
+        df["PRE_GAME_ELO"] = df.index.map(pre_elos)
+        df["OPP_PRE_GAME_ELO"] = df.index.map(opp_pre_elos)
+        df["ELO_DIFF"] = df["PRE_GAME_ELO"] - df["OPP_PRE_GAME_ELO"]
+        df["ABS_ELO_DIFF"] = df["ELO_DIFF"].abs()
+
+        is_home_bool = df["IS_HOME"].astype(bool)
+        df["HOME_COURT_ELO_DIFF"] = np.where(
+            is_home_bool,
+            (df["PRE_GAME_ELO"] + self.home_advantage) - df["OPP_PRE_GAME_ELO"],
+            df["PRE_GAME_ELO"] - (df["OPP_PRE_GAME_ELO"] + self.home_advantage)
+        )
+        df["ELO_EXPECTED_WIN_PROB"] = 1.0 / (1.0 + 10.0 ** (-df["HOME_COURT_ELO_DIFF"] / 400.0))
+
+        df = df.drop(columns=["_TEMP_GID"])
+        return df
+
+
+def build_continuous_elo_dataset(seasons: List[str]) -> Tuple[pd.DataFrame, Dict[str, float]]:
+    """
+    Loads raw team games across specified seasons, chronologically connects them,
+    and returns DataFrame with continuous pre-game Elo ratings.
+    """
+    from scripts.data_paths import get_data_paths
+    from pathlib import Path
+
+    dfs: List[pd.DataFrame] = []
+    for s in seasons:
+        dp = get_data_paths(s)
+        p = Path(dp.team_games_raw)
+        if p.exists():
+            s_df = pd.read_csv(p)
+            s_df["SEASON"] = s
+            dfs.append(s_df)
+
+    if not dfs:
+        raise FileNotFoundError(f"No team games found for seasons {seasons}")
+
+    full_df = pd.concat(dfs, ignore_index=True)
+    engine = ContinuousEloEngine()
+    enriched_df = engine.transform_games(full_df)
+    return enriched_df, dict(engine.ratings)

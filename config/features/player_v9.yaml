@@ -6,16 +6,22 @@ targets:
 exclude_columns:
   - SEASON_ID
   - Player_ID
+  - PLAYER_ID
+  - player_id
   - GAME_DATE
   - MATCHUP
   - VIDEO_AVAILABLE
   - PLAYER_NAME
+  - player_name
   - SEASON_TYPE
   - OPPONENT_ABBREVIATION
   - GAME_ID
   - Game_ID
+  - game_id
   - TEAM_ABBREVIATION
   - PLAYER_POSITION_GROUP
+  - PLAYOFF_ROUND
+  - SERIES_GAME_NUMBER
 required_context_columns:
   - SEASON_ID
   - GAME_DATE

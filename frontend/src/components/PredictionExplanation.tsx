@@ -40,6 +40,7 @@ export default function PredictionExplanation({ homeTeam, awayTeam, predictionDa
     async function fetchExplanation() {
       try {
         setLoading(true);
+        setError(null);
         const res = await fetch(`${API_BASE_URL}/predict/explain`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -47,14 +48,17 @@ export default function PredictionExplanation({ homeTeam, awayTeam, predictionDa
             home_team: homeTeam,
             away_team: awayTeam,
             prediction_date: predictionDate,
-            model_version: 'v9'
+            model_version: 'v10'
           })
         });
-        if (!res.ok) throw new Error('Failed to load explanation');
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.detail || errBody.error || `Server error (${res.status})`);
+        }
         const json = await res.json();
         setData(json);
       } catch (e: any) {
-        setError(e.message);
+        setError(e.message || "Açıklama yüklenemedi");
       } finally {
         setLoading(false);
       }
@@ -68,44 +72,75 @@ export default function PredictionExplanation({ homeTeam, awayTeam, predictionDa
   if (error) return <div className="p-4 text-sm text-red-500">Failed to load explanation: {error}</div>;
   if (!data) return null;
 
+  const formatFeatureName = (name: string) => {
+    return name
+      .replace(/^HOME_OFF_RTG_/, "")
+      .replace(/^PACE_/, "")
+      .replace(/^OPP_/, "Rakip ")
+      .replace(/^TEAM_/, "Takım ")
+      .replace(/_LAST_\d+/, "")
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
   const renderChart = (title: string, modelData: ModelExplanation, formatVal: (v: number) => string) => {
-    // We reverse so the highest absolute impact is at the top of a horizontal bar chart
     const chartData = [...modelData.top_factors].reverse().map(f => ({
-      name: f.feature,
+      name: formatFeatureName(f.feature),
+      rawFeature: f.feature,
       value: f.impact,
       type: f.type,
       direction: f.direction
     }));
 
-    const chartTitle = modelData.model_type 
-      ? `${title} (${modelData.model_type.toUpperCase()})` 
-      : title;
-
     return (
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-2">{chartTitle}</h3>
-        <div className="text-sm text-gray-400 mb-4 flex space-x-4">
-          <span>Base Value: <strong className="text-white">{formatVal(modelData.base_value)}</strong></span>
-          <span>Final Calibrated: <strong className="text-white">{formatVal(modelData.final_prediction)}</strong></span>
+      <div className="bg-slate-900/60 border border-slate-700/60 rounded-xl p-4 sm:p-5 flex-1 space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-200 m-0">
+            {title}
+          </h3>
+          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+            {modelData.model_type?.toUpperCase()}
+          </span>
         </div>
-        <div className="h-64 w-full">
+
+        <div className="flex items-center gap-4 text-xs text-slate-400 font-mono">
+          <span>Baz Değer (Base): <strong className="text-slate-200">{formatVal(modelData.base_value)}</strong></span>
+          <span>Kalibre Edilmiş Sonuç: <strong className="text-emerald-400">{formatVal(modelData.final_prediction)}</strong></span>
+        </div>
+
+        <div className="h-64 w-full pt-2">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart layout="vertical" data={chartData} margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
+            <BarChart layout="vertical" data={chartData} margin={{ top: 5, right: 20, left: 130, bottom: 5 }}>
               <XAxis type="number" hide />
-              <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <Tooltip 
-                formatter={(value: number, _name: string, props: any) => {
-                  const typeLabel = props.payload.type === 'calibration_adjustment' ? ' (Ridge/Isotonic Adj)' : '';
-                  return [`${value > 0 ? '+' : ''}${formatVal(value)}${typeLabel}`, 'Impact'];
-                }}
-                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '0.5rem', color: '#f3f4f6' }}
+              <YAxis 
+                dataKey="name" 
+                type="category" 
+                width={130} 
+                tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} 
               />
-              <ReferenceLine x={0} stroke="#4b5563" />
+              <Tooltip 
+                formatter={(value: any, _name: any, props: any) => {
+                  const num = typeof value === "number" ? value : Number(value) || 0;
+                  const typeLabel = props?.payload?.type === 'calibration_adjustment' ? ' (Kalibrasyon Etkisi)' : '';
+                  return [`${num > 0 ? '+' : ''}${formatVal(num)}${typeLabel}`, 'Etki (Impact)'];
+                }}
+                labelFormatter={(_label, payload) => payload?.[0]?.payload?.rawFeature || _label}
+                contentStyle={{ 
+                  backgroundColor: '#0f172a', 
+                  borderColor: '#334155', 
+                  borderRadius: '0.75rem', 
+                  color: '#f8fafc',
+                  fontSize: '11px',
+                  fontWeight: 600
+                }}
+              />
+              <ReferenceLine x={0} stroke="#475569" strokeDasharray="3 3" />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                 {chartData.map((entry, index) => {
-                  let color = entry.value > 0 ? '#10b981' : '#ef4444'; // green or red
+                  let color = entry.value > 0 ? '#10b981' : '#f43f5e';
                   if (entry.type === 'calibration_adjustment') {
-                    color = entry.value > 0 ? '#3b82f6' : '#8b5cf6'; // blue/purple for calibration
+                    color = entry.value > 0 ? '#6366f1' : '#8b5cf6';
                   }
                   return <Cell key={`cell-${index}`} fill={color} />;
                 })}
@@ -113,42 +148,49 @@ export default function PredictionExplanation({ homeTeam, awayTeam, predictionDa
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="flex text-xs space-x-4 mt-2 justify-center">
-          <div className="flex items-center"><div className="w-3 h-3 bg-emerald-500 rounded-sm mr-1"></div> Positive Impact</div>
-          <div className="flex items-center"><div className="w-3 h-3 bg-red-500 rounded-sm mr-1"></div> Negative Impact</div>
-          <div className="flex items-center"><div className="w-3 h-3 bg-blue-500 rounded-sm mr-1"></div> Calibration (+/+)</div>
+
+        <div className="flex text-[10px] font-bold space-x-4 pt-2 border-t border-slate-800 justify-center text-slate-400">
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm"></span> Pozitif Katkı</div>
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-rose-500 rounded-sm"></span> Negatif Baskı</div>
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-indigo-500 rounded-sm"></span> Kalibrasyon Düzeltmesi</div>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 mt-6">
-      <div className="mb-4 border-b border-gray-700 pb-2">
-        <h2 className="text-xl font-bold text-gray-100 flex items-center">
-          <svg className="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-          AI Decision Explanation (SHAP)
-        </h2>
-        <p className="text-sm text-gray-400 mt-1">
-          Displays the top features influencing the raw model before and after mathematical calibration.
-        </p>
+    <div className="rounded-[1.5rem] bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border border-slate-800 p-5 lg:p-6 text-white shadow-xl space-y-5 animate-fade-in-up">
+      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-white uppercase tracking-wider m-0">
+              SHAP Matematiksel Karar Analizi
+            </h3>
+            <p className="text-[10px] text-slate-400 font-medium m-0">
+              Her bir feature'ın modele kattığı pozitif ve negatif marjinal değerler
+            </p>
+          </div>
+        </div>
+
+        <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-mono">
+          TreeSHAP Engine
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {data.win_model_explanation && renderChart(
-          "Win Probability Drivers (Home)", 
-          data.win_model_explanation, 
-          (v) => (v * 100).toFixed(1) + '%'
+          "Kazanma Olasılığı Etkenleri",
+          data.win_model_explanation,
+          (v) => `${(v * 100).toFixed(1)}%`
         )}
-        
+
         {data.score_model_explanation && renderChart(
-          "Pace & Score Drivers", 
-          data.score_model_explanation, 
-          (v) => {
-            const unit = data.score_model_explanation.unit || "pts";
-            const unitStr = unit === "pace" ? " possessions" : (unit === "probability" ? "%" : ` ${unit}`);
-            return v.toFixed(2) + unitStr;
-          }
+          "Skor & Tempo Dinamikleri",
+          data.score_model_explanation,
+          (v) => `${v.toFixed(1)} pts`
         )}
       </div>
     </div>

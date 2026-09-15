@@ -15,7 +15,7 @@ from scripts.artifact_paths import resolve_artifact_path
 
 
 class ShapExplainer:
-    def __init__(self, model_version: str = "v9"):
+    def __init__(self, model_version: str = "v10"):
         self.model_version = model_version
 
     def explain_win_probability(
@@ -38,7 +38,9 @@ class ShapExplainer:
         with open(f_path, "r", encoding="utf-8") as f:
             feature_cols = json.load(f)
 
-        if hasattr(model, "estimator"):
+        if hasattr(model, "calibrated_classifiers_") and len(model.calibrated_classifiers_) > 0:
+            pipeline = model.calibrated_classifiers_[0].estimator
+        elif hasattr(model, "estimator"):
             pipeline = model.estimator
         elif hasattr(model, "base_estimator"):
             pipeline = model.base_estimator
@@ -48,9 +50,9 @@ class ShapExplainer:
         row = [features_dict.get(c, 0.0) for c in feature_cols]
         X_local = pd.DataFrame([row], columns=feature_cols)
 
-        scaler = pipeline.named_steps.get("scaler")
-        imputer = pipeline.named_steps.get("imputer")
-        clf = pipeline.named_steps.get("clf")
+        scaler = pipeline.named_steps.get("scaler") if hasattr(pipeline, "named_steps") else None
+        imputer = pipeline.named_steps.get("imputer") if hasattr(pipeline, "named_steps") else None
+        clf = pipeline.named_steps.get("clf") if hasattr(pipeline, "named_steps") else pipeline
 
         if not clf:
             return None
@@ -58,37 +60,54 @@ class ShapExplainer:
         X_imp = imputer.transform(X_local) if imputer else X_local
         X_scaled = scaler.transform(X_imp) if scaler else X_imp
 
-        explainer = shap.LinearExplainer(clf, X_scaled)
-        shap_vals_raw = explainer.shap_values(X_scaled)
+        clf_type = type(clf).__name__.lower()
+        if "lgbm" in clf_type or "xgb" in clf_type or "catboost" in clf_type or "tree" in clf_type or "forest" in clf_type:
+            explainer = shap.TreeExplainer(clf)
+            shap_vals_raw = explainer.shap_values(X_scaled)
+            base_val = explainer.expected_value
+        else:
+            explainer = shap.LinearExplainer(clf, X_scaled)
+            shap_vals_raw = explainer.shap_values(X_scaled)
+            base_val = explainer.expected_value
 
-        base_val = explainer.expected_value
-        if isinstance(base_val, np.ndarray):
-            base_val = base_val[0]
+        if isinstance(base_val, (list, np.ndarray)):
+            base_val = float(base_val[1] if len(base_val) > 1 else base_val[0])
+        else:
+            base_val = float(base_val)
 
-        shap_vals = shap_vals_raw[0] if isinstance(shap_vals_raw, list) else shap_vals_raw
+        if isinstance(shap_vals_raw, list) and len(shap_vals_raw) > 1:
+            shap_vals = shap_vals_raw[1]
+        else:
+            shap_vals = shap_vals_raw
+
+        shap_vals = np.array(shap_vals)
         if len(shap_vals.shape) > 1:
             shap_vals = shap_vals[0]
 
         factors = []
         for i, col in enumerate(feature_cols):
-            val = shap_vals[i]
-            if abs(val) > 0.001:
+            val = float(shap_vals[i])
+            if abs(val) > 0.0001:
                 factors.append({
                     "feature": col,
-                    "impact": float(val),
+                    "impact": val,
                     "direction": "positive" if val > 0 else "negative",
                     "type": "shap_feature"
                 })
 
         factors.sort(key=lambda x: abs(x["impact"]), reverse=True)
 
+        try:
+            final_prob = float(model.predict_proba(X_local)[0][1])
+        except Exception:
+            final_prob = 0.5
+
         base_pred_logit = base_val + sum(f["impact"] for f in factors)
-        base_pred_prob = 1.0 / (1.0 + np.exp(-base_pred_logit))
-        final_prob = float(model.predict_proba(X_local)[0][1])
+        base_pred_prob = 1.0 / (1.0 + np.exp(-np.clip(base_pred_logit, -20.0, 20.0)))
         calibration_shift = final_prob - base_pred_prob
 
         factors.append({
-            "feature": "ISOTONIC_CALIBRATION_ADJUSTMENT",
+            "feature": "CALIBRATION_ADJUSTMENT",
             "impact": float(calibration_shift),
             "direction": "positive" if calibration_shift > 0 else "negative",
             "type": "calibration_adjustment"
@@ -111,14 +130,28 @@ class ShapExplainer:
             "score_model", "metadata_path", f"models/production/score_model_{self.model_version}_metadata.json"
         )
         pace_path = resolve_artifact_path(
-            "score_model", "pace_model_path", f"models/production/score_model_{self.model_version}_pace.pkl"
+            "score_model", "total_model_path", f"models/production/score_model_{self.model_version}_pace.pkl"
         )
+        if not Path(pace_path).exists():
+            pace_path = resolve_artifact_path(
+                "score_model", "pace_model_path", f"models/production/score_model_{self.model_version}_pace.pkl"
+            )
+
         home_rtg_path = resolve_artifact_path(
-            "score_model", "home_rtg_model_path", f"models/production/score_model_{self.model_version}_home_rtg.pkl"
+            "score_model", "home_model_path", f"models/production/score_model_{self.model_version}_home_rtg.pkl"
         )
+        if not Path(home_rtg_path).exists():
+            home_rtg_path = resolve_artifact_path(
+                "score_model", "home_rtg_model_path", f"models/production/score_model_{self.model_version}_home_rtg.pkl"
+            )
+
         away_rtg_path = resolve_artifact_path(
-            "score_model", "away_rtg_model_path", f"models/production/score_model_{self.model_version}_away_rtg.pkl"
+            "score_model", "away_model_path", f"models/production/score_model_{self.model_version}_away_rtg.pkl"
         )
+        if not Path(away_rtg_path).exists():
+            away_rtg_path = resolve_artifact_path(
+                "score_model", "away_rtg_model_path", f"models/production/score_model_{self.model_version}_away_rtg.pkl"
+            )
 
         if not all(Path(p).exists() for p in [m_path, pace_path, home_rtg_path, away_rtg_path]):
             return None
@@ -136,43 +169,48 @@ class ShapExplainer:
 
         X_pace = pd.DataFrame([[features_dict.get(c, 0.0) for c in pace_features]], columns=pace_features)
         X_home = pd.DataFrame([[features_dict.get(c, 0.0) for c in home_rtg_features]], columns=home_rtg_features)
+        X_away = pd.DataFrame([[features_dict.get(c, 0.0) for c in away_rtg_features]], columns=away_rtg_features)
 
         pace_exp = shap.TreeExplainer(pace_model)
         home_exp = shap.TreeExplainer(home_rtg_model)
 
-        pace_shap = pace_exp.shap_values(X_pace)[0]
-        home_shap = home_exp.shap_values(X_home)[0]
+        pace_shap = pace_exp.shap_values(X_pace)
+        home_shap = home_exp.shap_values(X_home)
+
+        pace_shap = pace_shap[0] if len(np.shape(pace_shap)) > 1 else pace_shap
+        home_shap = home_shap[0] if len(np.shape(home_shap)) > 1 else home_shap
 
         factors = []
         for i, col in enumerate(pace_features):
-            val = pace_shap[i]
-            if abs(val) > 0.1:
+            val = float(pace_shap[i])
+            if abs(val) > 0.01:
                 factors.append({
                     "feature": f"PACE_{col}",
-                    "impact": float(val),
+                    "impact": val,
                     "direction": "positive" if val > 0 else "negative",
                     "type": "pace_factor"
                 })
 
         for i, col in enumerate(home_rtg_features):
-            val = home_shap[i]
-            if abs(val) > 0.1:
+            val = float(home_shap[i])
+            if abs(val) > 0.01:
                 factors.append({
                     "feature": f"HOME_OFF_RTG_{col}",
-                    "impact": float(val),
+                    "impact": val,
                     "direction": "positive" if val > 0 else "negative",
                     "type": "efficiency_factor"
                 })
 
         factors.sort(key=lambda x: abs(x["impact"]), reverse=True)
 
-        base_pace = float(pace_exp.expected_value)
-        base_home = float(home_exp.expected_value)
+        base_pace = float(pace_exp.expected_value if not isinstance(pace_exp.expected_value, (list, np.ndarray)) else pace_exp.expected_value[0])
+        base_home = float(home_exp.expected_value if not isinstance(home_exp.expected_value, (list, np.ndarray)) else home_exp.expected_value[0])
         base_total = (base_pace * base_home / 100.0) * 2.0
 
         pred_pace = float(pace_model.predict(X_pace)[0])
         pred_home = float(home_rtg_model.predict(X_home)[0])
-        pred_total = (pred_pace * pred_home / 100.0) * 2.0
+        pred_away = float(away_rtg_model.predict(X_away)[0])
+        pred_total = (pred_pace * (pred_home + pred_away) / 200.0) * 2.0
 
         return {
             "base_value": float(base_total),
@@ -181,3 +219,4 @@ class ShapExplainer:
             "unit": "points",
             "model_type": "score_total"
         }
+

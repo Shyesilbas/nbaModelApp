@@ -17,7 +17,7 @@ import {
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { loadJson, loadPrivateApi } from "../lib/dataCache";
-import { TEAM_NAME_BY_ABBR, TEAM_THEME_BY_ABBR } from "../lib/nbaTeams";
+import { TEAM_NAME_BY_ABBR, getTeamTheme } from "../lib/nbaTeams";
 
 interface PlayerRoster {
   TEAM_ABBREVIATION: string;
@@ -35,10 +35,6 @@ interface PlayerRoster {
 interface TeamExplorerProps {
   rosters: PlayerRoster[];
 }
-
-const getTeamTheme = (teamAbbr: string) => {
-  return TEAM_THEME_BY_ABBR[teamAbbr as keyof typeof TEAM_THEME_BY_ABBR] || { primary: "#1d428a", secondary: "#c9082a" };
-};
 
 const ROLE_BY_RANK = [
   {
@@ -69,9 +65,9 @@ const ROLE_BY_RANK = [
 ] as const;
 
 const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
-  const [seasonsList, setSeasonsList] = useState<string[]>(["2025-26", "2024-25", "2023-24", "2022-23"]);
-  const [selectedSeason, setSelectedSeason] = useState<string>("2025-26");
-  const [seasonRosters, setSeasonRosters] = useState<Record<string, PlayerRoster[]>>({ "2025-26": rosters });
+  const [seasonsList, setSeasonsList] = useState<string[]>(["2026-27", "2025-26", "2024-25", "2023-24", "2022-23"]);
+  const [selectedSeason, setSelectedSeason] = useState<string>("2026-27");
+  const [seasonRosters, setSeasonRosters] = useState<Record<string, PlayerRoster[]>>({ "2026-27": rosters });
   const [loadingSeason, setLoadingSeason] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string>("BOS");
@@ -79,7 +75,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
-    setSeasonRosters((prev) => ({ ...prev, "2025-26": rosters }));
+    setSeasonRosters((prev) => ({ ...prev, "2026-27": rosters }));
   }, [rosters]);
 
   useEffect(() => {
@@ -207,40 +203,49 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
       <section 
         className="relative overflow-hidden rounded-[2rem] border p-8 shadow-sm transition-all duration-500"
         style={{
-          background: `linear-gradient(135deg, ${activeTeamTheme.primary}0a 0%, #ffffff 50%, ${activeTeamTheme.secondary}05 100%)`,
-          borderColor: `${activeTeamTheme.primary}1a`
+          background: `linear-gradient(135deg, ${activeTeamTheme.primary}0c 0%, #ffffff 45%, ${activeTeamTheme.secondary}08 100%)`,
+          borderColor: `${activeTeamTheme.primary}25`
         }}
       >
-        <div className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ background: `radial-gradient(circle, ${activeTeamTheme.primary}08 0%, transparent 70%)` }} />
+        {/* Dual-color top accent bar */}
+        <div 
+          className="absolute inset-x-0 top-0 h-1.5"
+          style={{ background: `linear-gradient(90deg, ${activeTeamTheme.primary}, ${activeTeamTheme.secondary})` }}
+        />
+        <div 
+          className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl pointer-events-none" 
+          style={{ background: `radial-gradient(circle, ${activeTeamTheme.glow} 0%, transparent 70%)` }} 
+        />
         
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-3">
             <div 
               className="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] shadow-xs"
-              style={{ color: activeTeamTheme.primary, backgroundColor: `${activeTeamTheme.primary}10`, borderColor: `${activeTeamTheme.primary}1f` }}
+              style={{ color: activeTeamTheme.primary, backgroundColor: `${activeTeamTheme.primary}12`, borderColor: `${activeTeamTheme.primary}24` }}
             >
               <Search size={12} className="animate-pulse" />
               Franchise Deep Lens
             </div>
-            <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-slate-900 m-0 uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Team Explorer
-            </h1>
+            <div className="flex items-center gap-3">
+              <TeamLogo abbr={selectedTeam} name={TEAM_NAME_BY_ABBR[selectedTeam as keyof typeof TEAM_NAME_BY_ABBR]} size={48} />
+              <div>
+                <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-slate-900 m-0 uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                  {TEAM_NAME_BY_ABBR[selectedTeam as keyof typeof TEAM_NAME_BY_ABBR] || selectedTeam}
+                </h1>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mt-1">
+                  Team Explorer · {selectedSeason} Season
+                </p>
+              </div>
+            </div>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-500">
-              Explore discovered player listings and dynamic core rosters across every loaded season.
+              Explore discovered player listings, core rotation hierarchy, and dynamic franchise ratings.
             </p>
           </div>
 
           {/* Quick Metrics */}
           <div className="flex flex-wrap gap-4">
-            <div className="glass-card flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-100 shadow-xs">
-              <TeamLogo abbr={selectedTeam} name={TEAM_NAME_BY_ABBR[selectedTeam as keyof typeof TEAM_NAME_BY_ABBR]} size={36} />
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Franchise</p>
-                <p className="text-lg font-black text-slate-800 leading-none mt-1">{selectedTeam}</p>
-              </div>
-            </div>
-            <div className="glass-card flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-100 shadow-xs">
-              <div className="p-2 bg-slate-50 rounded-lg text-slate-500">
+            <div className="glass-card flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/90 backdrop-blur-sm border border-slate-200/70 shadow-xs">
+              <div className="p-2 rounded-xl" style={{ backgroundColor: `${activeTeamTheme.primary}12`, color: activeTeamTheme.primary }}>
                 <User size={18} />
               </div>
               <div>
@@ -249,8 +254,8 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
               </div>
             </div>
 
-            <div className="glass-card flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-100 shadow-xs">
-              <div className="p-2 bg-slate-50 rounded-lg text-slate-500" style={{ color: activeTeamTheme.primary, backgroundColor: `${activeTeamTheme.primary}10` }}>
+            <div className="glass-card flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/90 backdrop-blur-sm border border-slate-200/70 shadow-xs">
+              <div className="p-2 rounded-xl" style={{ color: activeTeamTheme.primary, backgroundColor: `${activeTeamTheme.primary}15` }}>
                 <Flame size={18} />
               </div>
               <div>
@@ -259,8 +264,8 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
               </div>
             </div>
 
-            <div className="glass-card flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-slate-100 shadow-xs">
-              <div className="p-2 bg-slate-50 rounded-lg text-slate-500" style={{ color: activeTeamTheme.secondary, backgroundColor: `${activeTeamTheme.secondary}10` }}>
+            <div className="glass-card flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/90 backdrop-blur-sm border border-slate-200/70 shadow-xs">
+              <div className="p-2 rounded-xl" style={{ color: activeTeamTheme.secondary, backgroundColor: `${activeTeamTheme.secondary}15` }}>
                 <TrendingUp size={18} />
               </div>
               <div>
@@ -308,12 +313,12 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                 <button
                   key={team}
                   onClick={() => setSelectedTeam(team)}
-                  className="flex-shrink-0 rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer hover:scale-[1.03] flex items-center gap-2"
+                  className="flex-shrink-0 rounded-xl border px-3.5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer hover:scale-[1.03] flex items-center gap-2"
                   style={{
                     borderColor: isSelected ? theme.primary : "#e2e8f0",
                     backgroundColor: isSelected ? `${theme.primary}15` : "#ffffff",
                     color: isSelected ? theme.primary : "#64748b",
-                    boxShadow: isSelected ? `0 4px 12px ${theme.primary}18, inset 0 0 0 1px ${theme.primary}10` : undefined,
+                    boxShadow: isSelected ? `0 4px 14px ${theme.glow}, inset 0 0 0 1px ${theme.primary}20` : undefined,
                   }}
                 >
                   <TeamLogo abbr={team} name={TEAM_NAME_BY_ABBR[team as keyof typeof TEAM_NAME_BY_ABBR]} size={20} />
@@ -349,6 +354,8 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
             const Icon = role.icon;
             const featured = idx === 0;
             const compact = idx >= 3;
+            const isTop3 = idx < 3;
+            const cardAccentColor = isTop3 ? activeTeamTheme.primary : activeTeamTheme.secondary;
             return (
               <div
                 key={player.PLAYER_ID}
@@ -356,19 +363,19 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                   featured ? "lg:col-span-5 min-h-[22rem]" : compact ? "lg:col-span-3 min-h-[15rem]" : "lg:col-span-4 min-h-[18rem]"
                 }`}
                 style={{
-                  borderColor: idx < 3 ? `${activeTeamTheme.primary}22` : `${activeTeamTheme.secondary}22`,
-                  boxShadow: `0 1px 0 rgba(15,23,42,0.02), 0 20px 50px ${idx < 3 ? `${activeTeamTheme.primary}10` : `${activeTeamTheme.secondary}08`}`,
+                  borderColor: isTop3 ? `${activeTeamTheme.primary}28` : `${activeTeamTheme.secondary}22`,
+                  boxShadow: `0 1px 0 rgba(15,23,42,0.02), 0 20px 40px ${isTop3 ? activeTeamTheme.glow : `${activeTeamTheme.secondary}0a`}`,
                 }}
               >
                 <div
                   className="absolute inset-x-0 top-0 h-1.5"
-                  style={{ background: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary }}
+                  style={{ background: isTop3 ? `linear-gradient(90deg, ${activeTeamTheme.primary}, ${activeTeamTheme.secondary})` : activeTeamTheme.secondary }}
                 />
-                <div className="flex h-full flex-col gap-4 p-5" style={{ background: featured ? `linear-gradient(180deg, ${activeTeamTheme.primary}08 0%, #ffffff 46%)` : "#ffffff" }}>
+                <div className="flex h-full flex-col gap-4 p-5" style={{ background: featured ? `linear-gradient(180deg, ${activeTeamTheme.primary}0a 0%, #ffffff 46%)` : "#ffffff" }}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary, backgroundColor: idx < 3 ? `${activeTeamTheme.primary}10` : `${activeTeamTheme.secondary}10`, borderColor: idx < 3 ? `${activeTeamTheme.primary}18` : `${activeTeamTheme.secondary}18` }}>
+                        <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: cardAccentColor, backgroundColor: `${cardAccentColor}12`, borderColor: `${cardAccentColor}22` }}>
                           Rank {idx + 1}
                         </span>
                         <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{player.TEAM_ABBREVIATION}</span>
@@ -377,17 +384,25 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                         {player.PLAYER_NAME}
                       </p>
                       <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
-                        <Icon size={14} style={{ color: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary }} />
+                        <Icon size={14} style={{ color: cardAccentColor }} />
                         <span className="font-semibold">{role.title}</span>
                       </div>
                     </div>
-                    <PlayerPhoto playerId={player.PLAYER_ID} name={player.PLAYER_NAME} size={featured ? 72 : 56} />
+                    <PlayerPhoto 
+                      playerId={player.PLAYER_ID} 
+                      name={player.PLAYER_NAME} 
+                      size={featured ? 72 : 56} 
+                      style={{
+                        borderColor: cardAccentColor,
+                        boxShadow: `0 0 0 2px ${cardAccentColor}25, 0 4px 12px ${activeTeamTheme.glow}`,
+                      }}
+                    />
                   </div>
 
                   <p className="text-sm leading-relaxed text-slate-500">{role.description}</p>
 
                   <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-black" style={{ color: idx < 3 ? activeTeamTheme.primary : activeTeamTheme.secondary, backgroundColor: idx < 3 ? `${activeTeamTheme.primary}10` : `${activeTeamTheme.secondary}10` }}>
+                    <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-black" style={{ color: cardAccentColor, backgroundColor: `${cardAccentColor}12` }}>
                       Impact {player.IMPORTANCE_SCORE.toFixed(1)}
                     </span>
                     <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -396,23 +411,23 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                   </div>
 
                   <div className={`grid gap-3 ${featured ? "grid-cols-5" : "grid-cols-2"}`}>
-                    <div className="rounded-2xl bg-slate-50/80 p-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">PPG</p>
+                    <div className="rounded-2xl p-3 border" style={{ backgroundColor: `${activeTeamTheme.primary}08`, borderColor: `${activeTeamTheme.primary}18` }}>
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: activeTeamTheme.primary }}>PPG</p>
                       <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_PTS.toFixed(1)}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50/80 p-3">
+                    <div className="rounded-2xl bg-slate-50/80 p-3 border border-slate-100">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">RPG</p>
                       <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_REB.toFixed(1)}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50/80 p-3">
+                    <div className="rounded-2xl bg-slate-50/80 p-3 border border-slate-100">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">APG</p>
                       <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_AST.toFixed(1)}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50/80 p-3">
+                    <div className="rounded-2xl bg-slate-50/80 p-3 border border-slate-100">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">MIN</p>
                       <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_MIN.toFixed(0)}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50/80 p-3">
+                    <div className="rounded-2xl bg-slate-50/80 p-3 border border-slate-100">
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">G</p>
                       <p className="mt-1 text-lg font-black text-slate-900">{player.GP}</p>
                     </div>
@@ -572,32 +587,54 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                 const isTop3 = corePlayers.slice(0, 3).some(cp => cp.PLAYER_ID === player.PLAYER_ID);
                 return (
                   <tr key={player.PLAYER_ID} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="p-4 font-bold text-slate-800 flex items-center gap-2">
-                      {player.PLAYER_NAME}
-                      {isTop3 && (
-                        <span 
-                          className="px-1.5 py-0.5 text-[9px] rounded font-black uppercase tracking-wider"
-                          style={{ backgroundColor: `${activeTeamTheme.primary}12`, color: activeTeamTheme.primary }}
-                        >
-                          Top 3
-                        </span>
-                      )}
-                      {!isTop3 && isTop5 && (
-                        <span 
-                          className="px-1.5 py-0.5 text-[9px] rounded font-black uppercase tracking-wider"
-                          style={{ backgroundColor: `${activeTeamTheme.secondary}12`, color: activeTeamTheme.secondary }}
-                        >
-                          Top 5
-                        </span>
-                      )}
+                    <td className="p-4 font-bold text-slate-800">
+                      <div className="flex items-center gap-3">
+                        <PlayerPhoto 
+                          playerId={player.PLAYER_ID} 
+                          name={player.PLAYER_NAME} 
+                          size={32}
+                          style={{
+                            borderColor: isTop3 ? activeTeamTheme.primary : "#e2e8f0",
+                          }} 
+                        />
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900">{player.PLAYER_NAME}</span>
+                          {isTop3 && (
+                            <span 
+                              className="px-2 py-0.5 text-[9px] rounded-full font-black uppercase tracking-wider"
+                              style={{ backgroundColor: `${activeTeamTheme.primary}15`, color: activeTeamTheme.primary }}
+                            >
+                              Top 3
+                            </span>
+                          )}
+                          {!isTop3 && isTop5 && (
+                            <span 
+                              className="px-2 py-0.5 text-[9px] rounded-full font-black uppercase tracking-wider"
+                              style={{ backgroundColor: `${activeTeamTheme.secondary}15`, color: activeTeamTheme.secondary }}
+                            >
+                              Top 5
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="p-4 font-mono text-slate-400 text-xs">{player.PLAYER_ID}</td>
                     <td className="p-4 text-center font-mono tabular-nums">{player.GP}</td>
-                    <td className="p-4 text-right font-mono tabular-nums">{player.AVG_MIN.toFixed(1)}</td>
-                    <td className="p-4 text-right font-mono tabular-nums">{player.AVG_PTS.toFixed(1)}</td>
-                    <td className="p-4 text-right font-mono tabular-nums">{player.AVG_REB.toFixed(1)}</td>
-                    <td className="p-4 text-right font-mono tabular-nums">{player.AVG_AST.toFixed(1)}</td>
-                    <td className="p-4 text-right font-mono font-bold tabular-nums" style={{ color: activeTeamTheme.primary }}>{player.IMPORTANCE_SCORE.toFixed(2)}%</td>
+                    <td className="p-4 text-right font-mono tabular-nums font-semibold">{player.AVG_MIN.toFixed(1)}</td>
+                    <td className="p-4 text-right font-mono tabular-nums font-bold text-slate-900">{player.AVG_PTS.toFixed(1)}</td>
+                    <td className="p-4 text-right font-mono tabular-nums font-semibold text-slate-700">{player.AVG_REB.toFixed(1)}</td>
+                    <td className="p-4 text-right font-mono tabular-nums font-semibold text-slate-700">{player.AVG_AST.toFixed(1)}</td>
+                    <td className="p-4 text-right font-mono font-black tabular-nums">
+                      <span 
+                        className="inline-block px-2.5 py-1 rounded-lg text-xs font-black"
+                        style={{ 
+                          backgroundColor: `${activeTeamTheme.primary}12`, 
+                          color: activeTeamTheme.primary 
+                        }}
+                      >
+                        {player.IMPORTANCE_SCORE.toFixed(2)}%
+                      </span>
+                    </td>
                   </tr>
                 );
               })}

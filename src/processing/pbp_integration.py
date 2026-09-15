@@ -44,7 +44,16 @@ def integrate_pbp_features(df_team_features: pd.DataFrame, season_dir: str) -> p
         df_team_features["CLUTCH_MARGIN"] = 0
         return df_team_features
         
-    df_merged = df_team_features.merge(df_pbp[["GAME_ID", "GARBAGE_TIME_SHARE", "CLUTCH_MARGIN"]], on="GAME_ID", how="left")
+    df_team = df_team_features.copy()
+    orig_game_id = df_team["GAME_ID"].copy()
+    df_team["_merge_game_id"] = df_team["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+    df_pbp["_merge_game_id"] = df_pbp["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+
+    pbp_cols = ["_merge_game_id", "GARBAGE_TIME_SHARE", "CLUTCH_MARGIN"]
+    pbp_sub = df_pbp[pbp_cols].drop_duplicates(subset=["_merge_game_id"])
+    df_merged = df_team.merge(pbp_sub, on="_merge_game_id", how="left")
+    df_merged["GAME_ID"] = orig_game_id
+    df_merged.drop(columns=["_merge_game_id"], inplace=True)
     df_merged["GARBAGE_TIME_SHARE"] = df_merged["GARBAGE_TIME_SHARE"].fillna(0.0)
     df_merged["CLUTCH_MARGIN"] = df_merged["CLUTCH_MARGIN"].fillna(0)
     return df_merged

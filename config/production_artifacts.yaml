@@ -1,20 +1,20 @@
 win_model:
-  model_path: models/production/win_probability_model_v9.pkl
-  feature_columns_path: models/production/feature_columns_v9.json
+  model_path: models/production/win_probability_model_v10.pkl
+  feature_columns_path: models/production/feature_columns_v10.json
   metadata_path: models/production/model_metadata.json
   status: production
-  notes: "Current production win probability model. V9 Logistic Regression with venue-only, Elo, close-strength, and playoff interaction features."
+  notes: "Current production win probability model. V10 Logistic Regression with venue-only, Elo, close-strength, playoff interaction features, and score margin calibration."
 
 score_model:
-  home_model_path: models/production/score_model_v9_home_rtg.pkl
-  away_model_path: models/production/score_model_v9_away_rtg.pkl
-  total_model_path: models/production/score_model_v9_pace.pkl
-  margin_model_path: models/production/score_model_v9_margin.pkl
-  ridge_total_path: models/production/score_model_v9_ridge_total.pkl
-  ridge_margin_path: models/production/score_model_v9_ridge_margin.pkl
-  metadata_path: models/production/score_model_v9_metadata.json
+  home_model_path: models/production/score_model_v10_home_rtg.pkl
+  away_model_path: models/production/score_model_v10_away_rtg.pkl
+  total_model_path: models/production/score_model_v10_pace.pkl
+  margin_model_path: models/production/score_model_v10_margin.pkl
+  ridge_total_path: models/production/score_model_v10_ridge_total.pkl
+  ridge_margin_path: models/production/score_model_v10_ridge_margin.pkl
+  metadata_path: models/production/score_model_v10_metadata.json
   status: production
-  notes: "Current production score model V9 (XGBoost models with Ridge segment-level post-processing calibration)."
+  notes: "Current production score model V10 (XGBoost models with Ridge segment-level post-processing calibration)."
 
 core_players:
   path: data/production/core_players.csv

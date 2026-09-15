@@ -6,9 +6,11 @@ type Props = {
   name: string;
   size?: number;
   className?: string;
+  style?: React.CSSProperties;
 };
 
-function PlayerPhotoComponent({ playerId, name, size = 44, className = "" }: Props) {
+function PlayerPhotoComponent({ playerId, name, size = 44, className = "", style }: Props) {
+
   const [failed, setFailed] = React.useState(false);
   const src = getPlayerHeadshotUrl(playerId);
 
@@ -20,7 +22,7 @@ function PlayerPhotoComponent({ playerId, name, size = 44, className = "" }: Pro
     return (
       <div
         className={`flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 ${className}`}
-        style={{ width: size, height: size }}
+        style={{ width: size, height: size, ...style }}
         title={name}
       >
         {name.slice(0, 2)}
@@ -37,7 +39,9 @@ function PlayerPhotoComponent({ playerId, name, size = 44, className = "" }: Pro
       height={size}
       loading="lazy"
       decoding="async"
+      style={style}
       className={`rounded-full object-cover ring-1 ring-slate-200 bg-white ${className}`}
+
       onError={() => setFailed(true)}
     />
   );
