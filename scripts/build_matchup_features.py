@@ -565,7 +565,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     res["OPP_CORE_TOP3_PLAYED_COUNT"] = res.get("AWAY_TOP3_AVAILABLE", 0.0)
     res["TEAM_CORE_TOP3_AVAILABLE_RATE"] = res.get("HOME_TOP3_AVAILABLE", 0.0) / 3.0
 
-    # Early Season Dynamic Decay & Roster-Adjusted Baseline Adapter (0-10 games transition)
+    # Early Season Dynamic Decay & Roster-Adjusted Baseline Adapter (0-5 games transition)
     try:
         season_start_year = int(season.split("-")[0])
         season_start_dt = pd.Timestamp(f"{season_start_year}-09-01")
