@@ -19,9 +19,10 @@ async function loadGameDetails(): Promise<GameDetail[]> {
 }
 
 const inferSeasonFromGameId = (gameId?: string | number | null): string => {
-  if (!gameId) return "2025-26";
+  if (!gameId) return "2026-27";
   const s = String(gameId).replace(/\D/g, "").padStart(10, "0");
   const yy = s.slice(3, 5);
+  if (yy === "26") return "2026-27";
   if (yy === "25") return "2025-26";
   if (yy === "24") return "2024-25";
   if (yy === "23") return "2023-24";
@@ -30,7 +31,7 @@ const inferSeasonFromGameId = (gameId?: string | number | null): string => {
   if (yy === "20") return "2020-21";
   if (yy === "19") return "2019-20";
   if (yy === "18") return "2018-19";
-  return "2025-26";
+  return "2026-27";
 };
 
 export async function loadArchivedGameIndex(season?: string | null): Promise<GameFeedRow[]> {

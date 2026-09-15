@@ -24,6 +24,7 @@ import {
   Cell,
 } from "recharts";
 import PlayerPhoto from "./PlayerPhoto";
+import { getTeamTheme } from "../lib/nbaTeams";
 
 interface PlayerCore {
   TEAM_ABBREVIATION: string;
@@ -52,42 +53,6 @@ interface CorePlayersProps {
   corePlayers: PlayerCore[];
   rosters: RosterPlayer[];
 }
-
-const TEAM_THEMES: { [key: string]: { primary: string; secondary: string } } = {
-  ATL: { primary: "#e03a3e", secondary: "#c1d32f" },
-  BOS: { primary: "#007a33", secondary: "#ba9653" },
-  BKN: { primary: "#2d2d2d", secondary: "#777777" },
-  CHA: { primary: "#1d1160", secondary: "#00788c" },
-  CHI: { primary: "#ce1141", secondary: "#080808" },
-  CLE: { primary: "#860038", secondary: "#fdbb30" },
-  DAL: { primary: "#00538c", secondary: "#b0b7bc" },
-  DEN: { primary: "#0e2240", secondary: "#fec524" },
-  DET: { primary: "#1d42ba", secondary: "#c8102e" },
-  GSW: { primary: "#1d428a", secondary: "#ffc72c" },
-  HOU: { primary: "#ce1141", secondary: "#c4ced4" },
-  IND: { primary: "#002d62", secondary: "#fdbb30" },
-  LAC: { primary: "#c8102e", secondary: "#1d428a" },
-  LAL: { primary: "#552583", secondary: "#fdb927" },
-  MEM: { primary: "#12173f", secondary: "#5d76a9" },
-  MIA: { primary: "#98002e", secondary: "#f9a01b" },
-  MIL: { primary: "#00471b", secondary: "#eee1c6" },
-  MIN: { primary: "#0c2340", secondary: "#78be20" },
-  NOP: { primary: "#0c2340", secondary: "#b4975a" },
-  NYK: { primary: "#006bb6", secondary: "#f58426" },
-  OKC: { primary: "#007ac1", secondary: "#ef3b24" },
-  ORL: { primary: "#0077c0", secondary: "#c4ced4" },
-  PHI: { primary: "#006bb6", secondary: "#ed174c" },
-  PHX: { primary: "#1d1160", secondary: "#e56020" },
-  POR: { primary: "#e03a3e", secondary: "#080808" },
-  SAC: { primary: "#5a2d81", secondary: "#63727a" },
-  SAS: { primary: "#7a7a7a", secondary: "#080808" },
-  TOR: { primary: "#ce1141", secondary: "#080808" },
-  UTA: { primary: "#002b5c", secondary: "#f9a01b" },
-  WAS: { primary: "#0c2340", secondary: "#e31837" },
-};
-
-const getTeamTheme = (teamAbbr: string) =>
-  TEAM_THEMES[teamAbbr] || { primary: "#1d428a", secondary: "#c9082a" };
 
 const getRoleLabel = (rank: number): string => {
   if (rank === 1) return "Primary Franchise Engine";

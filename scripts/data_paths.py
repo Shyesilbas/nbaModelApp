@@ -25,6 +25,7 @@ class DataPaths:
     win_model_dataset: str
     score_model_dataset: str
     team_model_ready_v2: str
+    season_dir: str
 
 def get_data_paths(season: str = None) -> DataPaths:
     # 1. Load config
@@ -71,4 +72,5 @@ def get_data_paths(season: str = None) -> DataPaths:
         win_model_dataset=str(processed_root / win_dataset_name),
         score_model_dataset=str(processed_root / score_dataset_name),
         team_model_ready_v2=str(processed_root / "team_model_ready_v2.csv"),
+        season_dir=str(season_dir),
     )

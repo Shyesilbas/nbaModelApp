@@ -16,7 +16,7 @@
   "v2_rows": 1772,
   "v2_features": 47,
   "v3_rows": 1772,
-  "v3_features": 106,
+  "v3_features": 182,
   "files_status": [
     {
       "name": "Raw Team Game Logs",
@@ -95,8 +95,8 @@
       "path": "data/processed/team_model_ready_v3_2025_26.csv",
       "exists": true,
       "rows": 1772,
-      "columns": 113,
-      "size_kb": 1493.81
+      "columns": 189,
+      "size_kb": 3634.77
     },
     {
       "name": "Combined Schedule",

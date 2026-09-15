@@ -59,9 +59,11 @@ def build_player_features(df: pd.DataFrame) -> pd.DataFrame:
         df["IS_HOME"] = np.nan
         df["OPPONENT_ABBREVIATION"] = np.nan
 
-    # 4. IS_PLAYOFF: derived from SEASON_TYPE
-    if "SEASON_TYPE" in df.columns:
-        df["IS_PLAYOFF"] = df["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
+    # 4. Standardize season metadata and playoff indicators deterministically
+    from src.processing.season_type_normalizer import normalize_season_metadata_columns
+    gid_col = "GAME_ID" if "GAME_ID" in df.columns else ("Game_ID" if "Game_ID" in df.columns else None)
+    if gid_col:
+        df = normalize_season_metadata_columns(df, game_id_col=gid_col)
     else:
         df["IS_PLAYOFF"] = False
 

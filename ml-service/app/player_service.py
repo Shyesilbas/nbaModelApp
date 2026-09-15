@@ -83,7 +83,11 @@ def _roster_candidates(last_games, team: str, active_ids):
     return last_games[last_games["TEAM_ABBREVIATION"] == team]
 
 
-def _filter_recent_active(candidates, past_df, team: str):
+def _filter_recent_active(candidates, past_df, team: str, active_ids=None):
+    if active_ids:
+        # If an official roster is defined for this season/matchup, respect it and preserve traded additions
+        return candidates
+
     team_dates = sorted(past_df[past_df["TEAM_ABBREVIATION"] == team]["GAME_DATE"].unique())
     if len(team_dates) < 5:
         return candidates
@@ -124,11 +128,14 @@ def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, predictio
     last_games = past_df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
     season = date_to_season(pred_dt)
 
-    home_candidates = _roster_candidates(last_games, home_team, _active_roster_ids(home_team, season))
-    away_candidates = _roster_candidates(last_games, away_team, _active_roster_ids(away_team, season))
+    home_active = _active_roster_ids(home_team, season)
+    away_active = _active_roster_ids(away_team, season)
 
-    home_candidates = _filter_recent_active(home_candidates, past_df, home_team)
-    away_candidates = _filter_recent_active(away_candidates, past_df, away_team)
+    home_candidates = _roster_candidates(last_games, home_team, home_active)
+    away_candidates = _roster_candidates(last_games, away_team, away_active)
+
+    home_candidates = _filter_recent_active(home_candidates, past_df, home_team, home_active)
+    away_candidates = _filter_recent_active(away_candidates, past_df, away_team, away_active)
 
     minutes_col = "MIN_EMA_10" if "MIN_EMA_10" in df.columns else ("MIN_LAST_5" if "MIN_LAST_5" in df.columns else "MIN")
     home_roster = home_candidates.sort_values(minutes_col, ascending=False).head(11)

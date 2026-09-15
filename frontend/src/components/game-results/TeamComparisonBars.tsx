@@ -1,5 +1,6 @@
 import type { TeamBoxScore } from "./types";
 import { fmtInt, fmtPct } from "./utils";
+import { getTeamTheme } from "../../lib/nbaTeams";
 
 export function TeamComparisonBars({ home, away }: { home: TeamBoxScore | null; away: TeamBoxScore | null }) {
   if (!home || !away) {
@@ -9,6 +10,9 @@ export function TeamComparisonBars({ home, away }: { home: TeamBoxScore | null; 
       </div>
     );
   }
+
+  const homeTheme = getTeamTheme(home.TEAM_ABBREVIATION);
+  const awayTheme = getTeamTheme(away.TEAM_ABBREVIATION);
 
   type BarRow = {
     label: string;
@@ -29,16 +33,20 @@ export function TeamComparisonBars({ home, away }: { home: TeamBoxScore | null; 
   ];
 
   return (
-    <div className="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-[0_10px_40px_rgba(15,23,42,0.06)]">
+    <div className="rounded-[1.5rem] border border-slate-200/80 bg-white p-5 shadow-xs">
       <div className="mb-5 flex items-center justify-between">
         <div>
           <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Team Comparison</p>
           <p className="mt-0.5 text-sm font-semibold text-slate-700">Side-by-side performance</p>
         </div>
-        <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest">
-          <span className="text-[#1d428a]">{home.TEAM_ABBREVIATION}</span>
-          <span className="text-slate-300">vs</span>
-          <span className="text-[#c9082a]">{away.TEAM_ABBREVIATION}</span>
+        <div className="flex items-center gap-3 text-xs font-black uppercase tracking-wider">
+          <span className="px-2 py-0.5 rounded-full" style={{ backgroundColor: `${homeTheme.primary}15`, color: homeTheme.primary }}>
+            {home.TEAM_ABBREVIATION}
+          </span>
+          <span className="text-slate-300 font-bold">vs</span>
+          <span className="px-2 py-0.5 rounded-full" style={{ backgroundColor: `${awayTheme.primary}15`, color: awayTheme.primary }}>
+            {away.TEAM_ABBREVIATION}
+          </span>
         </div>
       </div>
 
@@ -55,11 +63,17 @@ export function TeamComparisonBars({ home, away }: { home: TeamBoxScore | null; 
           return (
             <div key={row.label}>
               <div className="mb-1.5 flex items-center justify-between">
-                <span className={`text-sm font-black tabular-nums ${homeWins && !tied ? "text-slate-900" : "text-slate-400"}`}>
+                <span 
+                  className={`text-sm font-black tabular-nums ${homeWins && !tied ? "text-slate-900 font-extrabold" : "text-slate-400"}`}
+                  style={{ color: homeWins && !tied ? homeTheme.primary : undefined }}
+                >
                   {row.fmt(row.hVal)}
                 </span>
                 <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-slate-400">{row.label}</span>
-                <span className={`text-sm font-black tabular-nums ${awayWins && !tied ? "text-slate-900" : "text-slate-400"}`}>
+                <span 
+                  className={`text-sm font-black tabular-nums ${awayWins && !tied ? "text-slate-900 font-extrabold" : "text-slate-400"}`}
+                  style={{ color: awayWins && !tied ? awayTheme.primary : undefined }}
+                >
                   {row.fmt(row.aVal)}
                 </span>
               </div>
@@ -69,14 +83,14 @@ export function TeamComparisonBars({ home, away }: { home: TeamBoxScore | null; 
                   className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
                   style={{
                     width: `${homePct}%`,
-                    background: homeWins && !tied ? "#1d428a" : "#cbd5e1",
+                    background: homeWins && !tied ? homeTheme.primary : "#cbd5e1",
                   }}
                 />
                 <div
                   className="absolute right-0 top-0 h-full rounded-full transition-all duration-500"
                   style={{
                     width: `${100 - homePct}%`,
-                    background: awayWins && !tied ? "#c9082a" : "#cbd5e1",
+                    background: awayWins && !tied ? awayTheme.primary : "#cbd5e1",
                   }}
                 />
               </div>

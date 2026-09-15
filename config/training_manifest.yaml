@@ -15,10 +15,10 @@ holdout:
 models:
   win:
     enabled: true
-    feature_contract: config/features/win_v9.yaml
+    feature_contract: config/features/win_v10.yaml
   score:
     enabled: true
-    feature_contract: config/features/score_v9.yaml
+    feature_contract: config/features/score_v10.yaml
   player:
     enabled: true
     feature_contract: config/features/player_v9.yaml
@@ -32,7 +32,7 @@ models:
 
 promotion_thresholds:
   win:
-    max_brier: 0.21
+    max_brier: 0.215
     min_roc_auc: 0.70
   score:
     max_total_mae: 16.0

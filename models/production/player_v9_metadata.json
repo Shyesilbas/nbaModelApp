@@ -1,7 +1,23 @@
 {
     "version": "v9_LightGBM_Ridge",
-    "updated_at": "2026-07-17T19:42:07.938167Z",
-    "training_manifest": {},
+    "updated_at": "2026-09-14T20:19:14.509709Z",
+    "training_manifest": {
+        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
+        "train_seasons": [
+            "2020-21",
+            "2021-22",
+            "2022-23",
+            "2023-24"
+        ],
+        "calibration_season": "2024-25",
+        "validation_season": "2025-26",
+        "holdout": {
+            "strategy": "season_holdout",
+            "test_size": 0.2,
+            "date_col": "GAME_DATE",
+            "calibration_season": "2024-25"
+        }
+    },
     "feature_contract": {
         "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/player_v9.yaml",
         "schema_version": "player_v9",
@@ -15,16 +31,22 @@
             "exclude_columns": [
                 "SEASON_ID",
                 "Player_ID",
+                "PLAYER_ID",
+                "player_id",
                 "GAME_DATE",
                 "MATCHUP",
                 "VIDEO_AVAILABLE",
                 "PLAYER_NAME",
+                "player_name",
                 "SEASON_TYPE",
                 "OPPONENT_ABBREVIATION",
                 "GAME_ID",
                 "Game_ID",
+                "game_id",
                 "TEAM_ABBREVIATION",
-                "PLAYER_POSITION_GROUP"
+                "PLAYER_POSITION_GROUP",
+                "PLAYOFF_ROUND",
+                "SERIES_GAME_NUMBER"
             ],
             "required_context_columns": [
                 "SEASON_ID",
@@ -38,20 +60,51 @@
         }
     },
     "input_file": "/Users/serhat/PycharmProjects/nbaModelApp/data/experimental/player_model_ready_v4_usg.csv",
-    "number_of_rows": 28698,
-    "training_rows": 28698,
-    "training_season_ids": [],
+    "number_of_rows": 165988,
+    "training_rows": 137290,
+    "training_season_ids": [
+        22020,
+        22021,
+        22022,
+        22023,
+        22024,
+        42020,
+        42021,
+        42022,
+        42023,
+        42024,
+        52020,
+        52021,
+        52022,
+        52023,
+        52024
+    ],
     "season_coverage": [
+        22020,
+        22021,
+        22022,
+        22023,
+        22024,
         22025,
+        42020,
+        42021,
+        42022,
+        42023,
+        42024,
         42025,
+        52020,
+        52021,
+        52022,
+        52023,
+        52024,
         52025
     ],
     "final_refit": {
         "enabled": true,
-        "rows": 28698,
+        "rows": 137290,
         "note": "Holdout metrics are computed before each final target model is refit on all eligible rows."
     },
-    "features_count": 40,
+    "features_count": 39,
     "targets": [
         "TARGET_PTS",
         "TARGET_REB",
@@ -60,29 +113,36 @@
     "evaluation": "chronological_holdout",
     "evaluation_metrics": {
         "pts": {
-            "mae": 4.619391994809329,
-            "rmse": 6.058332708408466,
-            "r2": 0.5035388339864211,
+            "mae": 4.603569342090932,
+            "rmse": 6.01407855052959,
+            "r2": 0.5376077507139998,
             "split": {
-                "strategy": "chronological_quantile",
-                "split_date": "2026-03-21",
-                "train_rows": 22973,
-                "test_rows": 5725,
-                "train_seasons": null,
-                "test_seasons": null
+                "strategy": "season_holdout",
+                "split_date": null,
+                "train_rows": 109050,
+                "test_rows": 28240,
+                "train_seasons": [
+                    "2020-21",
+                    "2021-22",
+                    "2022-23",
+                    "2023-24"
+                ],
+                "test_seasons": [
+                    "2024-25"
+                ]
             },
             "ridge_coefs": [
-                0.1787963819604665,
-                -0.0976697469466931,
-                0.04231468486880552,
-                0.03395349173168179,
-                -0.07626817659871851,
-                -0.024715034173946646,
-                0.007475784884278854,
-                -0.08218239806393575,
-                0.003221175980971608
+                0.12396736577880638,
+                -0.0682896739896347,
+                0.08167278404678512,
+                0.0551610499738986,
+                -0.13683383410591435,
+                -0.0005413925249392997,
+                0.007716736219643343,
+                -0.049083484513414696,
+                0.039574079702122025
             ],
-            "ridge_intercept": 0.03858998896440812,
+            "ridge_intercept": -0.0035535753297704902,
             "ridge_features": [
                 "is_playoff",
                 "is_home",
@@ -96,29 +156,36 @@
             ]
         },
         "reb": {
-            "mae": 1.949256369575057,
-            "rmse": 2.578147806642391,
-            "r2": 0.41440784953321963,
+            "mae": 1.9709678330760525,
+            "rmse": 2.596009388345995,
+            "r2": 0.44061207321463614,
             "split": {
-                "strategy": "chronological_quantile",
-                "split_date": "2026-03-21",
-                "train_rows": 22973,
-                "test_rows": 5725,
-                "train_seasons": null,
-                "test_seasons": null
+                "strategy": "season_holdout",
+                "split_date": null,
+                "train_rows": 109050,
+                "test_rows": 28240,
+                "train_seasons": [
+                    "2020-21",
+                    "2021-22",
+                    "2022-23",
+                    "2023-24"
+                ],
+                "test_seasons": [
+                    "2024-25"
+                ]
             },
             "ridge_coefs": [
-                0.017346323713526533,
-                0.010957426861894727,
-                0.3411149334380582,
-                0.06617265264716272,
-                -0.4072875860722366,
-                -0.04045385923538785,
-                0.019104905969077234,
-                -0.002847144354956824,
-                0.03666243286107269
+                0.012903002372897794,
+                -0.029228591365422586,
+                0.3521048821406394,
+                0.046169816787743914,
+                -0.39827469923527475,
+                -0.04753336677688325,
+                -0.01935051646473176,
+                -0.043432164944739955,
+                0.04899734543552532
             ],
-            "ridge_intercept": -0.12941083892670974,
+            "ridge_intercept": -0.09041311802243236,
             "ridge_features": [
                 "is_playoff",
                 "is_home",
@@ -132,29 +199,36 @@
             ]
         },
         "ast": {
-            "mae": 1.3738960457990286,
-            "rmse": 1.8964010604794843,
-            "r2": 0.45967383764528935,
+            "mae": 1.3593149021364763,
+            "rmse": 1.8585039709023319,
+            "r2": 0.4945999857263661,
             "split": {
-                "strategy": "chronological_quantile",
-                "split_date": "2026-03-21",
-                "train_rows": 22973,
-                "test_rows": 5725,
-                "train_seasons": null,
-                "test_seasons": null
+                "strategy": "season_holdout",
+                "split_date": null,
+                "train_rows": 109050,
+                "test_rows": 28240,
+                "train_seasons": [
+                    "2020-21",
+                    "2021-22",
+                    "2022-23",
+                    "2023-24"
+                ],
+                "test_seasons": [
+                    "2024-25"
+                ]
             },
             "ridge_coefs": [
-                0.0647409847963436,
-                -0.03182713768114081,
-                -0.14501881121052068,
-                0.07542991891680244,
-                0.06958889228798996,
-                0.029114946962173493,
-                0.003950437036092918,
-                -0.019048502845809986,
-                0.012911835742522502
+                0.04719260081961972,
+                -0.023872500080396406,
+                -0.12892906457354558,
+                0.07175201862438611,
+                0.057177046034147735,
+                0.021118972448379132,
+                -0.0022527832539625124,
+                -0.012393283720468844,
+                0.002552484406318792
             ],
-            "ridge_intercept": 0.046026627247705156,
+            "ridge_intercept": 0.044558391265227,
             "ridge_features": [
                 "is_playoff",
                 "is_home",

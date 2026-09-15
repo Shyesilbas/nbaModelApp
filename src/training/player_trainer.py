@@ -58,10 +58,17 @@ class PlayerModelTrainer:
             raise ValueError("Player dataset is empty after load.")
 
     def build_feature_matrix(self, df):
-        features = [c for c in df.columns if c not in self.exclude_cols and c not in self.targets_map.keys()]
+        exclude_lower = {str(c).lower() for c in self.exclude_cols}
+        features = [
+            c for c in df.columns 
+            if c.lower() not in exclude_lower and c not in self.targets_map.keys()
+        ]
         if not features:
             raise ValueError("Player feature contract resolved zero feature columns.")
-        return df[features], features
+        X = df[features].copy()
+        for col in features:
+            X[col] = pd.to_numeric(X[col], errors="coerce")
+        return X, features
 
     def filter_training_rows(self, df):
         if not self.training_season_ids:
@@ -142,9 +149,26 @@ class PlayerModelTrainer:
             X_ind["heavy_minutes"] = (train_df["MIN_EMA_10"] >= 30.0).astype(float)
             X_ind["light_minutes"] = (train_df["MIN_EMA_10"] < 15.0).astype(float)
 
-            # Predict on full dataset to calculate residuals
-            full_preds = pipeline.predict(X)
-            residuals = full_preds - y
+            # Out-Of-Fold residual calculation for Ridge calibration to prevent in-sample overfitting
+            from sklearn.model_selection import KFold
+            kf = KFold(n_splits=5, shuffle=True, random_state=42)
+            oof_preds = pd.Series(index=train_df.index, dtype=float)
+            for f_tr, f_val in kf.split(X):
+                fold_pipe = Pipeline([
+                    ('imputer', SimpleImputer(strategy='mean')),
+                    ('lgb', lgb.LGBMRegressor(
+                        n_estimators=150, 
+                        learning_rate=0.05, 
+                        max_depth=5, 
+                        random_state=42, 
+                        n_jobs=-1, 
+                        verbose=-1
+                    ))
+                ])
+                fold_pipe.fit(X.iloc[f_tr], y.iloc[f_tr])
+                oof_preds.iloc[f_val] = fold_pipe.predict(X.iloc[f_val])
+
+            residuals = oof_preds - y
 
             ridge = Ridge(alpha=10.0)
             ridge.fit(X_ind, residuals)

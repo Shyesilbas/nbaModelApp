@@ -149,32 +149,38 @@ def predict_single_game(home, away, date, model_ver):
         
         pred_total_raw = pred_pace * (pred_home_rtg + pred_away_rtg) / 100.0
         
-        # Apply Ridge Corrections
+        # Apply Ridge Corrections for Pace/Total and Margin
         ridge_total_path = ROOT / f"models/production/score_model_{model_ver}_ridge_total.pkl"
         ridge_margin_path = ROOT / f"models/production/score_model_{model_ver}_ridge_margin.pkl"
         
-        if ridge_total_path.exists() and ridge_margin_path.exists():
+        ind_df = pd.DataFrame([{
+            "IS_PLAYOFF": float(features.get("IS_PLAYOFF", 0.0)),
+            "IS_B2B": float(features.get("IS_B2B", 0.0)),
+            "OPP_IS_B2B": float(features.get("OPP_IS_B2B", 0.0)),
+            "DAYS_REST": float(features.get("DAYS_REST", 3.0)),
+            "OPP_DAYS_REST": float(features.get("OPP_DAYS_REST", 3.0)),
+        }])
+        X_ind = get_indicator_df(ind_df)
+        
+        if ridge_total_path.exists():
             ridge_total = joblib.load(ridge_total_path)
-            ridge_margin = joblib.load(ridge_margin_path)
-            
-            # Construct indicator series
-            ind_df = pd.DataFrame([{
-                "IS_PLAYOFF": float(features.get("IS_PLAYOFF", 0.0)),
-                "IS_B2B": float(features.get("IS_B2B", 0.0)),
-                "OPP_IS_B2B": float(features.get("OPP_IS_B2B", 0.0)),
-                "DAYS_REST": float(features.get("DAYS_REST", 3.0)),
-                "OPP_DAYS_REST": float(features.get("OPP_DAYS_REST", 3.0)),
-            }])
-            X_ind = get_indicator_df(ind_df)
-            
             pred_total = pred_total_raw - float(ridge_total.predict(X_ind)[0])
-            pred_margin = pred_margin_raw - float(ridge_margin.predict(X_ind)[0])
         else:
             pred_total = pred_total_raw
-            pred_margin = pred_margin_raw
             
+        if ridge_margin_path.exists():
+            ridge_margin = joblib.load(ridge_margin_path)
+            pred_margin = pred_margin_raw - float(ridge_margin.predict(X_ind)[0])
+        else:
+            pred_margin = pred_margin_raw
+
         pred_home = (pred_total + pred_margin) / 2.0
         pred_away = (pred_total - pred_margin) / 2.0
+
+        # Mathematical link: Bounded and calibrated win probability from expected score margin
+        # P = 1 / (1 + exp(-k * margin))
+        k = 0.145
+        win_prob = 1.0 / (1.0 + math.exp(-k * pred_margin))
         
     return {
         "home": home,
@@ -188,7 +194,7 @@ def main():
     parser = argparse.ArgumentParser(description="NBA Daily Schedule Predictor CLI")
     parser.add_argument("--date", help="Target date to predict games (YYYY-MM-DD). If omitted, latest date in schedule is used.")
     parser.add_argument("--season", help="Target season (e.g. 2025-26)")
-    parser.add_argument("--model", default="v9", help="Model version to use (v8 or v9). Defaults to v9.")
+    parser.add_argument("--model", default="v10", help="Model version to use (v9 or v10). Defaults to v10.")
     args = parser.parse_args()
 
     season = normalize_season(args.season) if args.season else get_default_season()

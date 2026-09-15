@@ -13,7 +13,7 @@ This file tracks the overall status of the project.
 | Model | Artifact | Status |
 |-------|----------|--------|
 | WIN | `models/production/win_probability_model_v9.pkl` | **ACTIVE** — v9 logistic regression (6-season V3 datasets: 2020-21 to 2025-26, strict train-only refit scope) |
-| SCORE home/away/total/margin | `models/production/score_model_v9_*.pkl` | **ACTIVE** — v9 XGBoost + Ridge calibration (6-season V3 datasets: 2020-21 to 2025-26) |
+| SCORE home/away/total/margin | `models/production/score_model_v9_*.pkl` | **ACTIVE** — v9 XGBoost + Ridge calibration with bottom-up player projections, Four Factors, and Continuous Elo (6-season V3 datasets: 2020-21 to 2025-26) |
 | PLAYER PTS/REB/AST | `models/production/player_v9_lgb_*.pkl` and `player_v9_ridge_*.pkl` | **ACTIVE** — v9 LightGBM + Ridge calibration (6-season V4 datasets: 2020-21 to 2025-26) |
 
 ## Phase Status

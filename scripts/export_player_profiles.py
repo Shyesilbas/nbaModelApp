@@ -170,14 +170,32 @@ def export_player_profiles(season: str | None = None, out_dir: str | None = None
     player_season_games: dict = {}
     player_season_averages: dict = {}
     player_name_from_bs: dict = {}
+    current_team_map: dict = {}
 
-    for season_key, season_path in seasons.items():
+    for season_key, season_path in sorted(seasons.items(), key=lambda x: x[0]):
         print(f"\nProcessing {season_key}...")
 
         bs = load_boxscores(season_key, season_path)
         gr = load_game_results(season_key, season_path)
+        roster_path = os.path.join(season_path, "analysis", "team_rosters.csv")
+
+        # Update current team from roster if available
+        if os.path.exists(roster_path):
+            try:
+                roster_df = pd.read_csv(roster_path)
+                for _, r_row in roster_df.iterrows():
+                    r_pid = int(r_row["PLAYER_ID"])
+                    r_team = str(r_row["TEAM_ABBREVIATION"]).strip()
+                    r_name = str(r_row.get("PLAYER_NAME", "")).strip()
+                    if r_team:
+                        current_team_map[r_pid] = r_team
+                    if r_name and r_pid not in player_name_from_bs:
+                        player_name_from_bs[r_pid] = r_name
+            except Exception as e:
+                print(f"  [WARN] Failed to read roster {roster_path}: {e}", file=sys.stderr)
 
         if bs.empty:
+            # If no boxscores yet (e.g. upcoming season), only track current team and player names
             continue
 
         # Mark boxscore-level DNP (MIN is null or 0)
@@ -219,6 +237,8 @@ def export_player_profiles(season: str | None = None, out_dir: str | None = None
             pid = int(pid_raw)
             teams = grp_df["TEAM_ABBREVIATION"].dropna().unique().tolist()
             player_teams[pid] = teams
+            if teams:
+                current_team_map[pid] = teams[-1]
             if pid not in player_name_from_bs:
                 names = grp_df["PLAYER_NAME"].dropna()
                 player_name_from_bs[pid] = str(names.iloc[0]) if len(names) > 0 else ""
@@ -386,14 +406,17 @@ def export_player_profiles(season: str | None = None, out_dir: str | None = None
         print(f"  {len(all_pids)} players, {len(game_lookup)} games")
 
     # ── Build player profiles ──────────────────────────────────────────
-    all_player_ids = set(player_season_games.keys())
+    all_player_ids = set(player_season_games.keys()) | set(player_season_averages.keys()) | set(current_team_map.keys())
     profiles = []
     for pid in all_player_ids:
         meta = meta_map.get(pid, {})
         name = meta.get("PLAYER_NAME") or player_name_from_bs.get(pid, "")
+        latest_team = current_team_map.get(pid)
         entry = {
             "PLAYER_ID": pid,
             "PLAYER_NAME": name,
+            "CURRENT_TEAM": latest_team,
+            "CURRENT_TEAM_ABBREVIATION": latest_team,
             **{k: v for k, v in meta.items() if k not in ("PLAYER_ID", "PLAYER_NAME")},
         }
         profiles.append(entry)
@@ -404,6 +427,13 @@ def export_player_profiles(season: str | None = None, out_dir: str | None = None
     with open(profiles_path, "w") as f:
         json.dump(profiles, f, separators=(",", ":"))
     print(f"\nWrote {len(profiles)} player profiles -> {profiles_path}")
+
+    # ── Write seasons.json ─────────────────────────────────────────────
+    seasons_list = sorted(list(seasons.keys()))
+    seasons_path = os.path.join(target_out_dir, "seasons.json")
+    with open(seasons_path, "w") as f:
+        json.dump(seasons_list, f, indent=2)
+    print(f"Wrote seasons list -> {seasons_path}")
 
     # ── Write game logs ────────────────────────────────────────────────
     # Convert keys to str for JSON

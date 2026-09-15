@@ -53,11 +53,9 @@ def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFram
         df["IS_HOME"] = np.nan
         df["OPPONENT_ABBREVIATION"] = np.nan
 
-    # 4. IS_PLAYOFF: derived from SEASON_TYPE
-    if "SEASON_TYPE" in df.columns:
-        df["IS_PLAYOFF"] = df["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
-    else:
-        df["IS_PLAYOFF"] = False
+    # 4. Standardize season metadata and playoff indicators deterministically
+    from src.processing.season_type_normalizer import normalize_season_metadata_columns
+    df = normalize_season_metadata_columns(df)
 
     # 5. WIN: 1 if WL == "W", else 0
     if "WL" in df.columns:
@@ -65,14 +63,21 @@ def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFram
     else:
         df["WIN"] = 0
 
-    # 6. DAYS_REST
+    # 6. DAYS_REST and Schedule Fatigue
     if team_col in df.columns and "GAME_DATE" in df.columns:
         df["DAYS_REST"] = df.groupby(team_col)["GAME_DATE"].diff().dt.days
-        # 7. IS_B2B
         df["IS_B2B"] = df["DAYS_REST"] == 1
+        
+        # 3 games in 4 days and 4 games in 5 days
+        diff_2 = df.groupby(team_col)["GAME_DATE"].diff(2).dt.days
+        diff_3 = df.groupby(team_col)["GAME_DATE"].diff(3).dt.days
+        df["IS_3_IN_4"] = (diff_2 <= 3).astype(int)
+        df["IS_4_IN_5"] = (diff_3 <= 4).astype(int)
     else:
         df["DAYS_REST"] = np.nan
         df["IS_B2B"] = False
+        df["IS_3_IN_4"] = 0
+        df["IS_4_IN_5"] = 0
 
     # 8. PTS_LAST_5 & PTS_LAST_10 (shifted by 1 to prevent data leakage)
     if team_col in df.columns and "PTS" in df.columns:
@@ -98,24 +103,42 @@ def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFram
         df["WINRATE_LAST_5"] = np.nan
         df["WINRATE_LAST_10"] = np.nan
 
-    # 9b. Base Advanced Metrics (PACE, OFF_RTG) needed for DEF_RTG
+    # 9b. Base Advanced Metrics (PACE, OFF_RTG) and Four Factors
     # POSS = FGA + 0.44 * FTA - OREB + TOV
     # PACE = 48.0 * (POSS / (MIN / 5))
-    if all(col in df.columns for col in ["FGA", "FTA", "OREB", "TOV", "MIN"]):
+    needed_box_cols = ["FGA", "FTA", "OREB", "TOV", "MIN", "FGM", "FG3M", "FG3A", "DREB"]
+    if all(col in df.columns for col in needed_box_cols):
+        for col in needed_box_cols:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
         df["POSS"] = df["FGA"] + 0.44 * df["FTA"] - df["OREB"] + df["TOV"]
-        df["PACE"] = 48.0 * (df["POSS"] / (df["MIN"] / 5))
-        df["OFF_RTG"] = 100.0 * (df["PTS"] / df["POSS"])
+        df["PACE"] = 48.0 * (df["POSS"] / (df["MIN"].replace(0, np.nan) / 5))
+        df["OFF_RTG"] = 100.0 * (df["PTS"] / df["POSS"].replace(0, np.nan))
+
+        # Dean Oliver Four Factors (Offense)
+        fga_safe = df["FGA"].replace(0, np.nan)
+        poss_safe = df["POSS"].replace(0, np.nan)
+        df["EFG_PCT"] = (df["FGM"] + 0.5 * df["FG3M"]) / fga_safe
+        df["TOV_PCT"] = df["TOV"] / poss_safe
+        df["FT_RATE"] = df["FTA"] / fga_safe
+        df["FG3A_RATE"] = df["FG3A"] / fga_safe
     else:
         df["POSS"] = np.nan
         df["PACE"] = np.nan
         df["OFF_RTG"] = np.nan
+        df["EFG_PCT"] = np.nan
+        df["TOV_PCT"] = np.nan
+        df["FT_RATE"] = np.nan
+        df["FG3A_RATE"] = np.nan
 
-    # 10. PTS_ALLOWED (opponent points) and DEF_RTG (opponent off_rtg)
+    # 10. Opponent box stats mapping for defensive ratings and defensive four factors
     if "GAME_ID" in df.columns and "PTS" in df.columns:
-        pts_map = df[["GAME_ID", "TEAM_ABBREVIATION", "PTS"]].rename(columns={"PTS": "OPP_PTS_TEMP"})
-        if "OFF_RTG" in df.columns:
-            rtg_map = df[["GAME_ID", "TEAM_ABBREVIATION", "OFF_RTG"]].rename(columns={"OFF_RTG": "OPP_OFF_RTG_TEMP"})
-            pts_map = pts_map.merge(rtg_map, on=["GAME_ID", "TEAM_ABBREVIATION"], how="left")
+        opp_cols_to_map = ["PTS", "OFF_RTG", "FGM", "FGA", "FG3M", "FG3A", "FTM", "FTA", "OREB", "DREB", "TOV", "POSS"]
+        available_opp_cols = [c for c in opp_cols_to_map if c in df.columns]
+        
+        pts_map = df[["GAME_ID", "TEAM_ABBREVIATION"] + available_opp_cols].copy()
+        rename_dict = {c: f"OPP_{c}_TEMP" for c in available_opp_cols}
+        pts_map = pts_map.rename(columns=rename_dict)
             
         df = df.merge(
             pts_map,
@@ -127,33 +150,67 @@ def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFram
         if "TEAM_ABBREVIATION_temp_drop" in df.columns:
             df = df.drop(columns=["TEAM_ABBREVIATION_temp_drop"])
             
-        df["PTS_ALLOWED"] = df["OPP_PTS_TEMP"]
-        df = df.drop(columns=["OPP_PTS_TEMP"])
-        
-        if "OPP_OFF_RTG_TEMP" in df.columns:
-            df["DEF_RTG"] = df["OPP_OFF_RTG_TEMP"]
-            df = df.drop(columns=["OPP_OFF_RTG_TEMP"])
+        df["PTS_ALLOWED"] = df.get("OPP_PTS_TEMP", np.nan)
+        df["DEF_RTG"] = df.get("OPP_OFF_RTG_TEMP", np.nan)
+
+        # Calculate ORB_PCT and Defensive Four Factors
+        if "OREB" in df.columns and "OPP_DREB_TEMP" in df.columns:
+            tot_orb = df["OREB"] + df["OPP_DREB_TEMP"]
+            df["ORB_PCT"] = df["OREB"] / tot_orb.replace(0, np.nan)
         else:
-            df["DEF_RTG"] = np.nan
+            df["ORB_PCT"] = np.nan
+
+        if "OPP_FGM_TEMP" in df.columns and "OPP_FGA_TEMP" in df.columns:
+            opp_fga_safe = df["OPP_FGA_TEMP"].replace(0, np.nan)
+            opp_poss_safe = df["OPP_POSS_TEMP"].replace(0, np.nan)
+            df["DEF_EFG_PCT"] = (df["OPP_FGM_TEMP"] + 0.5 * df["OPP_FG3M_TEMP"]) / opp_fga_safe
+            df["DEF_TOV_PCT"] = df["OPP_TOV_TEMP"] / opp_poss_safe
+            df["DEF_FT_RATE"] = df["OPP_FTA_TEMP"] / opp_fga_safe
+            df["DEF_FG3A_RATE"] = df["OPP_FG3A_TEMP"] / opp_fga_safe
+            
+            if "DREB" in df.columns and "OPP_OREB_TEMP" in df.columns:
+                tot_def_reb = df["DREB"] + df["OPP_OREB_TEMP"]
+                df["DEF_ORB_PCT"] = df["OPP_OREB_TEMP"] / tot_def_reb.replace(0, np.nan)
+            else:
+                df["DEF_ORB_PCT"] = np.nan
+        else:
+            df["DEF_EFG_PCT"] = np.nan
+            df["DEF_TOV_PCT"] = np.nan
+            df["DEF_FT_RATE"] = np.nan
+            df["DEF_FG3A_RATE"] = np.nan
+            df["DEF_ORB_PCT"] = np.nan
+
+        # Clean temp columns
+        drop_temps = [c for c in df.columns if c.endswith("_TEMP")]
+        df = df.drop(columns=drop_temps)
     else:
         df["PTS_ALLOWED"] = np.nan
         df["DEF_RTG"] = np.nan
+        df["ORB_PCT"] = np.nan
+        df["DEF_EFG_PCT"] = np.nan
+        df["DEF_TOV_PCT"] = np.nan
+        df["DEF_FT_RATE"] = np.nan
+        df["DEF_FG3A_RATE"] = np.nan
+        df["DEF_ORB_PCT"] = np.nan
 
     # Fallback to PTS - PLUS_MINUS if PTS_ALLOWED is missing
     if "PTS_ALLOWED" in df.columns and df["PTS_ALLOWED"].isna().any() and "PTS" in df.columns and "PLUS_MINUS" in df.columns:
         df["PTS_ALLOWED"] = df["PTS_ALLOWED"].fillna(df["PTS"] - df["PLUS_MINUS"])
 
-    # 11. PTS_ALLOWED_LAST_5 & PTS_ALLOWED_LAST_10 (shifted by 1 to prevent data leakage)
-    if team_col in df.columns and "PTS_ALLOWED" in df.columns:
-        df["PTS_ALLOWED_LAST_5"] = df.groupby(team_col)["PTS_ALLOWED"].transform(
-            lambda x: x.shift(1).rolling(window=5, min_periods=1).mean()
-        )
-        df["PTS_ALLOWED_LAST_10"] = df.groupby(team_col)["PTS_ALLOWED"].transform(
-            lambda x: x.shift(1).rolling(window=10, min_periods=1).mean()
-        )
-    else:
-        df["PTS_ALLOWED_LAST_5"] = np.nan
-        df["PTS_ALLOWED_LAST_10"] = np.nan
+    # 11. Rolling Averages for Four Factors (Shifted by 1 to prevent look-ahead leakage)
+    four_factor_cols = [
+        "PTS_ALLOWED", "EFG_PCT", "TOV_PCT", "ORB_PCT", "FT_RATE", "FG3A_RATE",
+        "DEF_EFG_PCT", "DEF_TOV_PCT", "DEF_ORB_PCT", "DEF_FT_RATE", "DEF_FG3A_RATE"
+    ]
+    if team_col in df.columns:
+        for fcol in four_factor_cols:
+            if fcol in df.columns:
+                df[f"{fcol}_LAST_5"] = df.groupby(team_col)[fcol].transform(
+                    lambda x: x.shift(1).rolling(window=5, min_periods=1).mean()
+                )
+                df[f"{fcol}_LAST_10"] = df.groupby(team_col)[fcol].transform(
+                    lambda x: x.shift(1).rolling(window=10, min_periods=1).mean()
+                )
 
     # 12. Home/Away split form (rolling 5, shifted by 1, forward filled per team)
     home_mask = df["IS_HOME"] == True

@@ -1,15 +1,15 @@
 {
   "model_name": "logistic_regression",
-  "version": "9.0",
-  "training_date": "2026-07-17T19:39:04.034722Z",
-  "number_of_rows": 1772,
-  "number_of_features": 62,
+  "version": "10.0",
+  "training_date": "2026-09-15T10:38:16.220896Z",
+  "number_of_rows": 10280,
+  "number_of_features": 87,
   "training_manifest": {},
   "feature_contract": {
-    "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/win_v9.yaml",
-    "schema_version": "win_v9",
+    "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/win_v10.yaml",
+    "schema_version": "win_v10",
     "config": {
-      "schema_version": "win_v9",
+      "schema_version": "win_v10",
       "target": "WIN",
       "base_feature_file": "models/production/feature_columns_v8.json",
       "derived_features": [
@@ -24,7 +24,18 @@
         "PLAYOFF_ELO_DIFF",
         "PLAYOFF_ABS_ELO_DIFF",
         "PLAYOFF_REST_DIFF",
-        "CLOSE_STRENGTH_REST_DIFF"
+        "CLOSE_STRENGTH_REST_DIFF",
+        "NET_RTG_DIFF_LAST_10",
+        "EFG_DIFF_LAST_10",
+        "THREE_POINT_RATE_DIFF",
+        "TOV_FORCED_DIFF",
+        "REBOUND_CONTROL_DIFF",
+        "PACE_COLLISION",
+        "AST_TO_TOV_DIFF_LAST_5",
+        "HAVOC_RATE_DIFF_LAST_5",
+        "FT_MARGIN_DIFF_LAST_5",
+        "FG3_REGRESSION_DIFF",
+        "SCORE_PRED_MARGIN"
       ],
       "static_venue_split_features": [
         "HOME_WINRATE_LAST_5",
@@ -40,12 +51,55 @@
         "OPP_AWAY_PTS_LAST_5",
         "OPP_AWAY_PTS_ALLOWED_LAST_5"
       ],
+      "required_features": [
+        "FG3_REGRESSION_DELTA",
+        "OPP_FG3_REGRESSION_DELTA",
+        "AST_TO_TOV_LAST_5",
+        "OPP_AST_TO_TOV_LAST_5",
+        "HAVOC_RATE_LAST_5",
+        "OPP_HAVOC_RATE_LAST_5",
+        "FOUL_RATE_LAST_5",
+        "OPP_FOUL_RATE_LAST_5",
+        "FT_MARGIN_LAST_5",
+        "OPP_FT_MARGIN_LAST_5",
+        "PTS_SHARE_3PT_LAST_5",
+        "OPP_PTS_SHARE_3PT_LAST_5",
+        "PTS_SHARE_PAINT_LAST_5",
+        "OPP_PTS_SHARE_PAINT_LAST_5"
+      ],
       "defaultable_features": {
         "IS_ELIMINATION_GAME": 0,
         "CAN_CLINCH_SERIES": 0,
         "H2H_GAMES_LAST_5": 0,
         "OPP_H2H_GAMES_LAST_5": 0,
+        "NET_RTG_DIFF_LAST_10": 0.0,
+        "EFG_DIFF_LAST_10": 0.0,
+        "THREE_POINT_RATE_DIFF": 0.0,
+        "TOV_FORCED_DIFF": 0.0,
+        "REBOUND_CONTROL_DIFF": 0.0,
+        "PACE_COLLISION": 100.0,
         "IS_CLOSE_STRENGTH": 0,
+        "GARBAGE_TIME_SHARE": 0.0,
+        "CLUTCH_MARGIN": 0.0,
+        "SCORE_PRED_MARGIN": 0.0,
+        "AST_TO_TOV_DIFF_LAST_5": 0.0,
+        "HAVOC_RATE_DIFF_LAST_5": 0.0,
+        "FT_MARGIN_DIFF_LAST_5": 0.0,
+        "FG3_REGRESSION_DIFF": 0.0,
+        "FG3_REGRESSION_DELTA": 0.0,
+        "OPP_FG3_REGRESSION_DELTA": 0.0,
+        "AST_TO_TOV_LAST_5": 1.8,
+        "OPP_AST_TO_TOV_LAST_5": 1.8,
+        "HAVOC_RATE_LAST_5": 0.12,
+        "OPP_HAVOC_RATE_LAST_5": 0.12,
+        "FOUL_RATE_LAST_5": 0.19,
+        "OPP_FOUL_RATE_LAST_5": 0.19,
+        "FT_MARGIN_LAST_5": 0.0,
+        "OPP_FT_MARGIN_LAST_5": 0.0,
+        "PTS_SHARE_3PT_LAST_5": 0.33,
+        "OPP_PTS_SHARE_3PT_LAST_5": 0.33,
+        "PTS_SHARE_PAINT_LAST_5": 0.45,
+        "OPP_PTS_SHARE_PAINT_LAST_5": 0.45,
         "TEAM_V3_PROJ_PTS_SUM": 0.0,
         "TEAM_V3_PROJ_PTS_AVG": 0.0,
         "TEAM_V3_PROJ_REB_SUM": 0.0,
@@ -70,46 +124,39 @@
     }
   },
   "input_files": [
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv"
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv"
   ],
   "row_counts_by_file": {
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv": 1772
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv": 1772,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv": 1766,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv": 1766,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv": 1760,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv": 1760,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv": 1456
   },
   "player_projection_enrichment": {
-    "attempted": false,
-    "applied": false,
+    "attempted": true,
+    "applied": true,
     "reason": null
   },
-  "imputed_missing_required_features": [
-    "TEAM_V3_PROJ_PTS_SUM",
-    "TEAM_V3_PROJ_PTS_AVG",
-    "TEAM_V3_PROJ_REB_SUM",
-    "TEAM_V3_PROJ_REB_AVG",
-    "TEAM_V3_PROJ_AST_SUM",
-    "TEAM_V3_PROJ_AST_AVG",
-    "TEAM_V3_PROJ_PRA_SUM",
-    "TEAM_V3_PROJ_PRA_AVG",
-    "OPP_V3_PROJ_PTS_SUM",
-    "OPP_V3_PROJ_PTS_AVG",
-    "OPP_V3_PROJ_REB_SUM",
-    "OPP_V3_PROJ_REB_AVG",
-    "OPP_V3_PROJ_AST_SUM",
-    "OPP_V3_PROJ_AST_AVG",
-    "OPP_V3_PROJ_PRA_SUM",
-    "OPP_V3_PROJ_PRA_AVG"
-  ],
+  "imputed_missing_required_features": [],
   "final_refit": {
     "enabled": true,
-    "rows": 1772,
+    "rows": 10280,
     "scope": "all_eligible_rows",
     "note": "Holdout metrics are computed before the final model is fit according to the configured refit scope."
   },
   "evaluation": "chronological_holdout",
   "split": {
     "strategy": "chronological_quantile",
-    "split_date": "2026-04-02",
-    "train_rows": 1428,
-    "test_rows": 344,
+    "split_date": "2025-04-08",
+    "train_rows": 8238,
+    "test_rows": 2042,
     "train_seasons": null,
     "test_seasons": null
   },
@@ -127,46 +174,66 @@
     "OPP_HOME_PTS_LAST_5",
     "OPP_HOME_WINRATE_LAST_5"
   ],
-  "strength_features": [
-    "PRE_GAME_ELO",
-    "OPP_PRE_GAME_ELO",
-    "ELO_DIFF",
-    "ABS_ELO_DIFF",
-    "WINRATE_DIFF_LAST_10",
-    "ABS_WINRATE_DIFF_LAST_10",
-    "REST_DIFF",
-    "IS_CLOSE_STRENGTH",
-    "PLAYOFF_ELO_DIFF",
-    "PLAYOFF_ABS_ELO_DIFF",
-    "PLAYOFF_REST_DIFF",
-    "CLOSE_STRENGTH_REST_DIFF"
-  ],
   "metrics": {
-    "uncalibrated": {
-      "accuracy": 0.6627906976744186,
-      "precision": 0.6627906976744186,
-      "recall": 0.6627906976744186,
-      "f1": 0.6627906976744186,
-      "roc_auc": 0.7489183342347214,
-      "brier_score": 0.20185293924618877
+    "logistic_regression_uncalibrated": {
+      "accuracy": 0.6753183153770813,
+      "precision": 0.6761811023622047,
+      "recall": 0.672869735553379,
+      "f1": 0.6745213549337261,
+      "roc_auc": 0.7367927777207535,
+      "brier_score": 0.20815643069035494
     },
-    "sigmoid": {
-      "accuracy": 0.6482558139534884,
-      "precision": 0.6473988439306358,
-      "recall": 0.6511627906976745,
-      "f1": 0.6492753623188405,
-      "roc_auc": 0.736783396430503,
-      "brier_score": 0.20657926392541312
+    "logistic_regression_sigmoid": {
+      "accuracy": 0.6743388834476004,
+      "precision": 0.674852652259332,
+      "recall": 0.672869735553379,
+      "f1": 0.6738597351642962,
+      "roc_auc": 0.7367601619660009,
+      "brier_score": 0.20769125032478156
     },
-    "isotonic": {
-      "accuracy": 0.6598837209302325,
-      "precision": 0.6589595375722543,
-      "recall": 0.6627906976744186,
-      "f1": 0.6608695652173913,
-      "roc_auc": 0.7344848566792861,
-      "brier_score": 0.20651942664525294
+    "logistic_regression_isotonic": {
+      "accuracy": 0.6777668952007836,
+      "precision": 0.6770731707317074,
+      "recall": 0.6797257590597453,
+      "f1": 0.678396871945259,
+      "roc_auc": 0.736754406244574,
+      "brier_score": 0.20793012874030015
+    },
+    "lightgbm_uncalibrated": {
+      "accuracy": 0.6576885406464251,
+      "precision": 0.6584645669291339,
+      "recall": 0.6552399608227228,
+      "f1": 0.6568483063328424,
+      "roc_auc": 0.7322822106958571,
+      "brier_score": 0.20788372834259491
+    },
+    "lightgbm_sigmoid": {
+      "accuracy": 0.6567091087169442,
+      "precision": 0.6568627450980392,
+      "recall": 0.6562193927522038,
+      "f1": 0.6565409113179814,
+      "roc_auc": 0.7382413009465283,
+      "brier_score": 0.20697635274371431
+    },
+    "lightgbm_isotonic": {
+      "accuracy": 0.6581782566111655,
+      "precision": 0.6554379210779596,
+      "recall": 0.6669931439764937,
+      "f1": 0.6611650485436893,
+      "roc_auc": 0.7366992472475661,
+      "brier_score": 0.205833589365392
     }
   },
-  "selected_calibration": "uncalibrated",
+  "selected_model": "lightgbm_isotonic",
+  "selected_family": "lightgbm",
+  "selected_calibration": "isotonic",
+  "selected_metrics": {
+    "accuracy": 0.6581782566111655,
+    "precision": 0.6554379210779596,
+    "recall": 0.6669931439764937,
+    "f1": 0.6611650485436893,
+    "roc_auc": 0.7366992472475661,
+    "brier_score": 0.205833589365392
+  },
   "target_column": "WIN"
 }

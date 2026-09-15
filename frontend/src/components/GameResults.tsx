@@ -24,7 +24,11 @@ const SEASON_TYPE_FILTERS: { id: SeasonTypeFilter; label: string; values: string
 ];
 
 /* ── Main exported component ── */
-export default function GameResults() {
+export default function GameResults({
+  onNavigateToPrediction,
+}: {
+  onNavigateToPrediction?: (game: { HOME_TEAM_ABBREVIATION: string; AWAY_TEAM_ABBREVIATION: string; GAME_DATE: string }) => void;
+} = {}) {
   const [seasonsList, setSeasonsList] = useState<string[]>(["2025-26", "2024-25", "2023-24", "2022-23"]);
   const [allResults,  setAllResults]  = useState<(GameFeedRow & { SEASON?: string | null })[]>([]);
   const [results,     setResults]     = useState<GameFeedRow[]>([]);
@@ -40,13 +44,13 @@ export default function GameResults() {
   const [seasonTypeFilter, setSeasonTypeFilter] = useState<SeasonTypeFilter>("all");
   const [selectedDate,setSelectedDate]= useState<string>("");
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [initialDetailTab, setInitialDetailTab] = useState<"game" | "home" | "away" | "prediction">("game");
+  const [initialDetailTab, setInitialDetailTab] = useState<"game" | "home" | "away" | "pbp">("game");
 
-  const handleOpenGame = (gameId: string, startTab: "game" | "home" | "away" | "prediction" = "game") => {
+  const handleOpenGame = (gameId: string, startTab: "game" | "home" | "away" | "pbp" = "game") => {
     setInitialDetailTab(startTab);
     setSelectedGameId(gameId);
   };
-  const [selectedSeason, setSelectedSeason] = useState<string>("2025-26");
+  const [selectedSeason, setSelectedSeason] = useState<string>("2026-27");
 
   // Initial load: archived games index
   useEffect(() => {
@@ -58,10 +62,10 @@ export default function GameResults() {
       })
       .catch(() => {});
 
-    loadArchivedGameIndex("2025-26")
+    loadArchivedGameIndex("2026-27")
       .then((rows) => {
-        setAllResults(rows.map((g) => ({ ...g, SEASON: g.SEASON ?? null })));
-        setResults(rows.filter((g) => g.SEASON === "2025-26"));
+        setAllResults(rows.map((g) => ({ ...g, SEASON: g.SEASON ?? "2026-27" })));
+        setResults(rows.filter((g) => g.SEASON === "2026-27"));
         setLoading(false);
       })
       .catch((e) => { setError(e.message); setLoading(false); });
@@ -84,16 +88,16 @@ export default function GameResults() {
 
   const sortedResults = useMemo(() => {
     const q = search.trim().toUpperCase();
-    const seasonPool = allResults.filter((g: any) => g.SEASON === selectedSeason || (selectedSeason === "2025-26" && (!g.SEASON || g.SEASON === "2025-26")));
+    const seasonPool = allResults.filter((g: any) => g.SEASON === selectedSeason);
     const typeFilter = SEASON_TYPE_FILTERS.find((f) => f.id === seasonTypeFilter);
     return [...seasonPool]
       .filter((x) => !typeFilter || typeFilter.id === "all" || typeFilter.values.includes(x.SEASON_TYPE))
       .filter((x) => !q || (x.HOME_TEAM_ABBREVIATION ?? "").includes(q) || (x.AWAY_TEAM_ABBREVIATION ?? "").includes(q) || x.GAME_ID.includes(q))
-      .sort((a, b) => (b.GAME_DATE ?? "").localeCompare(a.GAME_DATE ?? ""));
+      .sort((a, b) => (a.GAME_DATE ?? "").localeCompare(b.GAME_DATE ?? ""));
   }, [results, allResults, selectedSeason, seasonTypeFilter, search]);
 
   const uniqueDates = useMemo(
-    () => Array.from(new Set(sortedResults.map((g) => g.GAME_DATE ?? "").filter(Boolean))).sort((a, b) => b.localeCompare(a)),
+    () => Array.from(new Set(sortedResults.map((g) => g.GAME_DATE ?? "").filter(Boolean))).sort((a, b) => a.localeCompare(b)),
     [sortedResults],
   );
 
@@ -103,7 +107,7 @@ export default function GameResults() {
   }, [selectedSeason, seasonTypeFilter, uniqueDates.length]);
 
   const seasonTypeCounts = useMemo(() => {
-    const seasonPool = selectedSeason === "2025-26" ? results : allResults.filter((g: any) => g.SEASON === selectedSeason);
+    const seasonPool = allResults.filter((g: any) => g.SEASON === selectedSeason);
     return SEASON_TYPE_FILTERS.reduce<Record<SeasonTypeFilter, number>>((acc, filter) => {
       acc[filter.id] = filter.id === "all"
         ? seasonPool.length
@@ -192,127 +196,141 @@ export default function GameResults() {
 
   return (
     <div className="space-y-4">
-      {/* ── Hero ── */}
-      <section className="rounded-[1.75rem] border border-slate-200 bg-white px-5 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1d428a]/10">
-              <Trophy size={15} className="text-[#1d428a]" />
+      {/* ── Filters & Controls Bar ── */}
+      <section className="rounded-[1.75rem] border border-slate-200/80 bg-white p-4 lg:p-5 shadow-xs">
+        <div className="flex flex-col gap-4">
+          
+          {/* Top Row: Season Selector & Season Types */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+            {/* Season Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Season:</span>
+              <div className="flex flex-wrap gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
+                {seasonsList.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => { setSelectedSeason(s); setSelectedGameId(null); }}
+                    className={[
+                      "rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] transition-all duration-150 cursor-pointer",
+                      selectedSeason === s
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/80",
+                    ].join(" ")}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-black uppercase tracking-tight text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                Game Scores
-              </h2>
-              <p className="text-xs text-slate-500">Final scores, team edges and player logs.</p>
+
+            {/* Season Type Filter Tabs */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Type:</span>
+              <div className="flex flex-wrap gap-1">
+                {SEASON_TYPE_FILTERS.map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() => {
+                      setSeasonTypeFilter(filter.id);
+                      setSelectedGameId(null);
+                    }}
+                    disabled={seasonTypeCounts[filter.id] === 0}
+                    className={[
+                      "rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer flex items-center gap-1",
+                      seasonTypeFilter === filter.id
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800",
+                    ].join(" ")}
+                  >
+                    {filter.label}
+                    <span className={seasonTypeFilter === filter.id ? "text-white/70" : "text-slate-400 font-semibold"}>
+                      ({seasonTypeCounts[filter.id]})
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-          {/* Season selector pills */}
-          <div className="flex flex-wrap gap-1.5">
-            {seasonsList.map((s) => (
+
+          {/* Bottom Row: Date Navigation & Team Search */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Date Navigation */}
+            <div className="flex items-center gap-2">
               <button
-                key={s}
-                onClick={() => { setSelectedSeason(s); setSelectedGameId(null); }}
-                className={[
-                  "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] transition-all duration-200",
-                  selectedSeason === s
-                    ? "bg-[#1d428a] text-white shadow-md shadow-[#1d428a]/25"
-                    : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700",
-                ].join(" ")}
+                onClick={() => setSelectedDate(uniqueDates[selectedDateIndex + 1] ?? selectedDate)}
+                disabled={selectedDateIndex >= uniqueDates.length - 1}
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 cursor-pointer shadow-2xs"
+                title="Previous match day"
               >
-                {s}
+                <ChevronLeft size={14} />
               </button>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* ── Season type filter ── */}
-      <section className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-400">Season type</p>
-            <p className="mt-0.5 text-xs font-medium text-slate-500">{sortedResults.length} matching games</p>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {SEASON_TYPE_FILTERS.map((filter) => (
+              <div className="min-w-[130px] text-center px-3 py-1 rounded-xl bg-slate-50 border border-slate-100">
+                <p className="text-xs font-black text-slate-900 leading-tight">
+                  {selectedDate ? fmtDate(selectedDate) : "No date"}
+                </p>
+                <p className="text-[9px] font-bold text-slate-400 leading-none mt-0.5">
+                  {selectedDateGames.length} game{selectedDateGames.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+
               <button
-                key={filter.id}
-                onClick={() => {
-                  setSeasonTypeFilter(filter.id);
-                  setSelectedGameId(null);
-                }}
-                disabled={seasonTypeCounts[filter.id] === 0}
-                className={[
-                  "rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-35",
-                  seasonTypeFilter === filter.id
-                    ? "bg-slate-900 text-white shadow-md shadow-slate-900/15"
-                    : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800",
-                ].join(" ")}
+                onClick={() => setSelectedDate(uniqueDates[selectedDateIndex - 1] ?? selectedDate)}
+                disabled={selectedDateIndex <= 0}
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 cursor-pointer shadow-2xs"
+                title="Next match day"
               >
-                {filter.label}
-                <span className={seasonTypeFilter === filter.id ? "ml-1.5 text-white/70" : "ml-1.5 text-slate-400"}>
-                  {seasonTypeCounts[filter.id]}
-                </span>
+                <ChevronRight size={14} />
               </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Date navigation ── */}
-      <section className="rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Nav controls */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelectedDate(uniqueDates[selectedDateIndex + 1] ?? selectedDate)}
-              disabled={selectedDateIndex >= uniqueDates.length - 1}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-30"
-            >
-              <ChevronLeft size={14} />
-            </button>
-
-            <div className="text-center">
-              <p className="text-sm font-black text-slate-900">{selectedDate ? fmtDate(selectedDate) : "No date"}</p>
-              <p className="text-[10px] text-slate-400">
-                {selectedDateGames.length} game{selectedDateGames.length !== 1 ? "s" : ""}
-                {" · "}
-                {uniqueDates.length} days total
-              </p>
             </div>
 
-            <button
-              onClick={() => setSelectedDate(uniqueDates[selectedDateIndex - 1] ?? selectedDate)}
-              disabled={selectedDateIndex <= 0}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-30"
-            >
-              <ChevronRight size={14} />
-            </button>
+            {/* Team Search Input */}
+            <div className="relative flex-1 max-w-xs min-w-[160px]">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search team (e.g. LAL, BOS)..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 hover:text-slate-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Search */}
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search team…"
-            className="w-48 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#1d428a] focus:bg-white focus:ring-2 focus:ring-[#1d428a]/10 transition"
-          />
         </div>
       </section>
 
       {/* ── Game cards grid ── */}
       {selectedDateGames.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-400">
-          No games for this date.
+        <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-12 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+            <Trophy size={20} />
+          </div>
+          <p className="text-sm font-black uppercase tracking-wide text-slate-700">No games found for this selection</p>
+          <p className="text-xs text-slate-400 mt-1">Try selecting a different match day, category, or clear search filters.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
           {selectedDateGames.map((game) => (
-          <GameCard
+            <GameCard
               key={game.GAME_ID}
               game={game}
               onOpen={() => handleOpenGame(game.GAME_ID, "game")}
-              onPredict={() => handleOpenGame(game.GAME_ID, "prediction")}
+              onPredict={() => {
+                if (onNavigateToPrediction) {
+                  onNavigateToPrediction({
+                    HOME_TEAM_ABBREVIATION: game.HOME_TEAM_ABBREVIATION,
+                    AWAY_TEAM_ABBREVIATION: game.AWAY_TEAM_ABBREVIATION,
+                    GAME_DATE: game.GAME_DATE,
+                  });
+                }
+              }}
             />
           ))}
         </div>

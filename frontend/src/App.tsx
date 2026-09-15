@@ -10,7 +10,6 @@ import {
 import GameResults from "./components/GameResults";
 import TeamExplorer from "./components/TeamExplorer";
 import CorePlayers from "./components/CorePlayers";
-import StarCandidates from "./components/StarCandidates";
 import MultiTeamPlayers from "./components/MultiTeamPlayers";
 import NbaPrediction from "./components/NbaPrediction";
 import PlayerPage from "./components/PlayerPage";
@@ -23,17 +22,16 @@ const MENU = [
   { id: "player-profile", label: "Player Profile", icon: <UserCircle size={15} />,  section: null },
   { id: "team-explorer",  label: "Team Explorer",  icon: <Search size={15} />,      section: "Analysis" },
   { id: "core-players",   label: "Core Players",   icon: <Layers size={15} />,      section: null },
-  { id: "star-candidates",label: "Star Candidates",icon: <Trophy size={15} />,      section: null },
   { id: "multi-team",     label: "Trade Discovery",icon: <RefreshCw size={15} />,   section: null },
   { id: "nba-prediction", label: "Predictions",    icon: <BarChart2 size={15} />,   section: "Models" },
 ];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("game-results");
+  const [predictionTarget, setPredictionTarget] = useState<{ home: string; away: string; date: string } | null>(null);
 
   const [rosters, setRosters]               = useState<any[]>([]);
   const [corePlayers, setCorePlayers]       = useState<any[]>([]);
-  const [starCandidates, setStarCandidates] = useState<any[]>([]);
   const [multiTeamPlayers, setMultiTeamPlayers] = useState<any[]>([]);
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState<string | null>(null);
@@ -42,15 +40,13 @@ export default function App() {
     const fetchAll = async () => {
       try {
         await loadJson("/data/dataset_summary.json");
-        const [rostersData, coreData, starData, multiData] = await Promise.all([
+        const [rostersData, coreData, multiData] = await Promise.all([
           loadJson<any[]>("/data/team_rosters.json"),
           loadJson<any[]>("/data/core_players.json"),
-          loadJson<any[]>("/data/star_candidates.json"),
           loadJson<any[]>("/data/multi_team_players.json"),
         ]);
         setRosters(rostersData);
         setCorePlayers(coreData);
-        setStarCandidates(starData);
         setMultiTeamPlayers(multiData);
         setLoading(false);
         // Start background prefetching of all files in the manifest
@@ -155,13 +151,28 @@ export default function App() {
               </div>
             ) : (
               <div className="space-y-5">
-                {activeTab === "game-results"   && <GameResults />}
+                {activeTab === "game-results" && (
+                  <GameResults
+                    onNavigateToPrediction={(game) => {
+                      setPredictionTarget({
+                        home: game.HOME_TEAM_ABBREVIATION,
+                        away: game.AWAY_TEAM_ABBREVIATION,
+                        date: game.GAME_DATE,
+                      });
+                      setActiveTab("nba-prediction");
+                    }}
+                  />
+                )}
                 {activeTab === "player-profile" && <PlayerPage />}
                 {activeTab === "team-explorer"  && <TeamExplorer rosters={rosters} />}
                 {activeTab === "core-players"   && <CorePlayers corePlayers={corePlayers} rosters={rosters} />}
-                {activeTab === "star-candidates"&& <StarCandidates candidates={starCandidates} />}
                 {activeTab === "multi-team"     && <MultiTeamPlayers players={multiTeamPlayers} />}
-                {activeTab === "nba-prediction" && <NbaPrediction />}
+                {activeTab === "nba-prediction" && (
+                  <NbaPrediction
+                    initialGame={predictionTarget}
+                    onClearInitialGame={() => setPredictionTarget(null)}
+                  />
+                )}
               </div>
             )}
           </div>

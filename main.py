@@ -521,7 +521,7 @@ def main():
     print("--- STEP 4: ENGINEERING FEATURES ---")
     
     print("Building team features (home/away, rest days, back-to-backs, rolling averages)...")
-    df_team_features = build_team_features(df_team_clean)
+    df_team_features = build_team_features(df_team_clean, season_dir=paths.season_dir)
     print(f"Team features completed. Final shape: {df_team_features.shape}")
     
     print("Building player features (individual rest days, back-to-backs, rolling stats)...")

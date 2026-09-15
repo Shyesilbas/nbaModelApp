@@ -1,7 +1,10 @@
+export { MatchupHeroCard } from "./MatchupHeroCard";
+export { MatchupTacticalHub } from "./MatchupTacticalHub";
 export { ModelDiagnostics } from "./ModelDiagnostics";
 export { ModelExplanationSection } from "./ModelExplanationSection";
 export { NarrativeBlock } from "./NarrativeBlock";
 export { PlayerSpotlight } from "./PlayerSpotlight";
+export { PlayerMatchupModal } from "./PlayerMatchupModal";
 export { SignalCards } from "./SignalCards";
 export { WinProbabilityArc } from "./WinProbabilityArc";
 export type { TeamInfo } from "./types";

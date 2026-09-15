@@ -3,8 +3,8 @@
 ## 1. Dataset Dimensions & Paths
 - **V3 CSV Output File**: `data/processed/team_model_ready_v3_2025_26.csv`
 - **V3 Parquet Output File**: `data/processed/team_model_ready_v3_2025_26.parquet`
-- **Final V3 Shape**: **1772 rows, 113 columns**
-- **Total Features**: **106 features** (Target `WIN` and 6 Metadata columns excluded)
+- **Final V3 Shape**: **1772 rows, 151 columns**
+- **Total Features**: **144 features** (Target `WIN` and 6 Metadata columns excluded)
 
 ## 2. Pre-Game Rolling Feature Row Drops
 - **Row count after joining core availability features**: 2642
