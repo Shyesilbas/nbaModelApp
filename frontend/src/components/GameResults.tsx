@@ -102,8 +102,17 @@ export default function GameResults({
   );
 
   useEffect(() => {
-    // Reset date when season changes
-    setSelectedDate(uniqueDates[0] ?? "");
+    // For past seasons, default to the latest/last match date (e.g. Finals / season end).
+    // For current/upcoming season (2026-27), default to the earliest match date.
+    if (uniqueDates.length > 0) {
+      if (selectedSeason === "2026-27") {
+        setSelectedDate(uniqueDates[0]);
+      } else {
+        setSelectedDate(uniqueDates[uniqueDates.length - 1]);
+      }
+    } else {
+      setSelectedDate("");
+    }
   }, [selectedSeason, seasonTypeFilter, uniqueDates.length]);
 
   const seasonTypeCounts = useMemo(() => {
@@ -257,8 +266,8 @@ export default function GameResults({
             {/* Date Navigation */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setSelectedDate(uniqueDates[selectedDateIndex + 1] ?? selectedDate)}
-                disabled={selectedDateIndex >= uniqueDates.length - 1}
+                onClick={() => setSelectedDate(uniqueDates[selectedDateIndex - 1] ?? selectedDate)}
+                disabled={selectedDateIndex <= 0}
                 className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 cursor-pointer shadow-2xs"
                 title="Previous match day"
               >
@@ -275,8 +284,8 @@ export default function GameResults({
               </div>
 
               <button
-                onClick={() => setSelectedDate(uniqueDates[selectedDateIndex - 1] ?? selectedDate)}
-                disabled={selectedDateIndex <= 0}
+                onClick={() => setSelectedDate(uniqueDates[selectedDateIndex + 1] ?? selectedDate)}
+                disabled={selectedDateIndex >= uniqueDates.length - 1}
                 className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 cursor-pointer shadow-2xs"
                 title="Next match day"
               >
