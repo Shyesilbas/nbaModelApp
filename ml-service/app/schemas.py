@@ -3,16 +3,26 @@ from typing import List, Optional
 from datetime import date
 
 
+class PlayerStatusOverride(BaseModel):
+    player_id: Optional[int] = None
+    player_name: Optional[str] = None
+    status: str = "ACTIVE"  # "ACTIVE", "RESTRICTED", "OUT"
+    minute_limit: Optional[float] = None
+    status_factor: Optional[float] = None
+
+
 class WinProbRequest(BaseModel):
     home_team: str = Field(..., description="Home team abbreviation, e.g., LAL")
     away_team: str = Field(..., description="Away team abbreviation, e.g., BOS")
     prediction_date: date = Field(..., description="YYYY-MM-DD")
+    player_status_overrides: Optional[List[PlayerStatusOverride]] = Field(None, description="Optional player injury/status overrides")
 
 class ShapExplanationRequest(BaseModel):
     home_team: str
     away_team: str
     prediction_date: date
     model_version: Optional[str] = "v9"
+    player_status_overrides: Optional[List[PlayerStatusOverride]] = None
 
 
 class WinProbResponse(BaseModel):
@@ -31,6 +41,7 @@ class ScorePredictionRequest(BaseModel):
     home_team: str = Field(..., description="Home team abbreviation, e.g., LAL")
     away_team: str = Field(..., description="Away team abbreviation, e.g., BOS")
     prediction_date: date = Field(..., description="YYYY-MM-DD")
+    player_status_overrides: Optional[List[PlayerStatusOverride]] = Field(None, description="Optional player injury/status overrides")
 
 
 class ScorePredictionResponse(BaseModel):
@@ -61,6 +72,7 @@ class PlayerPrediction(BaseModel):
     predicted_reb: float
     predicted_ast: float
     predicted_pra: float
+    status: Optional[str] = "ACTIVE"
 
 class PlayerPredictionResponse(BaseModel):
     home_team: str
@@ -111,6 +123,7 @@ class GameFullRequest(BaseModel):
     home_score_prediction: Optional[float] = Field(None, description="Optional. If omitted, uses Score Model.")
     away_score_prediction: Optional[float] = Field(None, description="Optional. If omitted, uses Score Model.")
     prediction_date: Optional[date] = Field(None, description="YYYY-MM-DD. Defaults to today if omitted.")
+    player_status_overrides: Optional[List[PlayerStatusOverride]] = Field(None, description="Optional player injury/status overrides")
 
 
 class ScorePredictionSub(BaseModel):
@@ -136,7 +149,6 @@ class WinProbabilitySub(BaseModel):
 class GameFullPlayer(BaseModel):
     player_id: Optional[int] = None
     player_name: str
-
     position_group: str
     proj_pts: float
     proj_reb: float
@@ -144,6 +156,7 @@ class GameFullPlayer(BaseModel):
     proj_pra: float
     raw_pts: float
     scale_factor: float
+    status: Optional[str] = "ACTIVE"
 
 
 class ScaleFactorsSub(BaseModel):

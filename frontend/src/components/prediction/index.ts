@@ -5,6 +5,7 @@ export { ModelExplanationSection } from "./ModelExplanationSection";
 export { NarrativeBlock } from "./NarrativeBlock";
 export { PlayerSpotlight } from "./PlayerSpotlight";
 export { PlayerMatchupModal } from "./PlayerMatchupModal";
+export { LineupInjuryHub } from "./LineupInjuryHub";
 export { SignalCards } from "./SignalCards";
 export { WinProbabilityArc } from "./WinProbabilityArc";
 export type { TeamInfo } from "./types";

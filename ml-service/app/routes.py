@@ -107,6 +107,51 @@ def model_status():
 def predict_game_full_endpoint(req: GameFullRequest):
     return _run_endpoint(lambda: predict_game_full(req))
 
+
+@router.get("/predict/rosters-preview")
+def rosters_preview_endpoint(home_team: str, away_team: str, prediction_date: str):
+    def _preview():
+        from .player_service import get_player_predictions
+        from . import service as svc
+        import pandas as pd
+
+        df_players = get_player_predictions(
+            home_team.upper(),
+            away_team.upper(),
+            prediction_date,
+            svc.player_loader,
+            svc.score_loader,
+        )
+        home_df = df_players[df_players["IS_HOME"] == 1]
+        away_df = df_players[df_players["IS_HOME"] == 0]
+
+        def to_list(df):
+            out = []
+            for _, r in df.iterrows():
+                pid = int(r["PLAYER_ID"]) if pd.notna(r.get("PLAYER_ID")) else None
+                out.append({
+                    "player_id": pid,
+                    "player_name": str(r.get("PLAYER_NAME", f"Player {pid}")),
+                    "position_group": svc.CANONICAL_POSITIONS.get(pid, str(r.get("PLAYER_POSITION_GROUP", "UNKNOWN"))),
+                    "predicted_pts": round(float(r.get("RAW_PROJ_PTS", 0.0)), 1),
+                    "predicted_reb": round(float(r.get("RAW_PROJ_REB", 0.0)), 1),
+                    "predicted_ast": round(float(r.get("RAW_PROJ_AST", 0.0)), 1),
+                    "status": "ACTIVE"
+                })
+            out.sort(key=lambda x: x["predicted_pts"], reverse=True)
+            return out
+
+        return {
+            "home_team": home_team.upper(),
+            "away_team": away_team.upper(),
+            "prediction_date": prediction_date,
+            "home_players": to_list(home_df),
+            "away_players": to_list(away_df)
+        }
+
+    return _run_endpoint(_preview)
+
+
 @router.post("/predict/explain", response_model=ShapExplanationResponse)
 def explain_game_endpoint(req: ShapExplanationRequest):
     def _explain():
@@ -124,3 +169,4 @@ def explain_game_endpoint(req: ShapExplanationRequest):
             score_model_explanation=score_exp
         )
     return _run_endpoint(_explain)
+

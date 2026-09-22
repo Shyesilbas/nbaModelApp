@@ -186,7 +186,7 @@ def _ensure_datetime(df, col):
         df[col] = pd.to_datetime(df[col], errors="coerce")
 
 
-def build_features(home_team: str, away_team: str, prediction_date: str, season: str = None):
+def build_features(home_team: str, away_team: str, prediction_date: str, season: str = None, player_status_overrides: list = None):
     """Return Ordered dict (feature_name -> value) matching the active win model feature list.
     home_team and away_team should be team abbreviations (e.g., "LAL"). prediction_date is YYYY-MM-DD.
     """
@@ -486,13 +486,17 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
         out["OPP_H2H_PTS_ALLOWED_LAST_5"] = float(safe_get(away_row, "H2H_PTS_ALLOWED_LAST_5", np.nan))
 
     try:
-        player_feats = compute_player_features_for_inference(home_team, away_team, prediction_date, season=season)
+        player_feats = compute_player_features_for_inference(
+            home_team, away_team, prediction_date, season=season, player_status_overrides=player_status_overrides
+        )
         out.update(player_feats)
     except Exception as e:
         print(f"Warning: failed to compute player features for inference: {e}")
 
     try:
-        ridge_feats = compute_ridge_player_features_for_inference(home_team, away_team, prediction_date)
+        ridge_feats = compute_ridge_player_features_for_inference(
+            home_team, away_team, prediction_date, player_status_overrides=player_status_overrides
+        )
         out.update(ridge_feats)
     except Exception as e:
         print(f"Warning: failed to compute ridge player features for inference: {e}")
@@ -660,7 +664,53 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     return res
 
 
-def compute_ridge_player_features_for_inference(home_team: str, away_team: str, prediction_date: str):
+def _parse_player_overrides(overrides):
+    lookup = {}
+    if not overrides:
+        return lookup
+    for item in overrides:
+        if isinstance(item, dict):
+            pid = item.get("player_id")
+            pname = item.get("player_name")
+            status = str(item.get("status", "ACTIVE")).upper()
+            minute_limit = item.get("minute_limit")
+            factor = item.get("status_factor")
+        else:
+            pid = getattr(item, "player_id", None)
+            pname = getattr(item, "player_name", None)
+            status = str(getattr(item, "status", "ACTIVE")).upper()
+            minute_limit = getattr(item, "minute_limit", None)
+            factor = getattr(item, "status_factor", None)
+
+        if factor is None:
+            if status in ("OUT", "INACTIVE"):
+                factor = 0.0
+            elif status in ("RESTRICTED", "QUESTIONABLE"):
+                factor = 0.6
+            else:
+                factor = 1.0
+
+        entry = {
+            "status": status,
+            "factor": float(factor),
+            "minute_limit": minute_limit,
+        }
+        if pid is not None:
+            try:
+                lookup[int(pid)] = entry
+            except (ValueError, TypeError):
+                pass
+        if pname:
+            lookup[str(pname).strip().lower()] = entry
+    return lookup
+
+
+def compute_ridge_player_features_for_inference(
+    home_team: str,
+    away_team: str,
+    prediction_date: str,
+    player_status_overrides: list = None,
+):
     import joblib
     import os
     
@@ -787,6 +837,28 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
 
     home_X = build_inference_df(home_roster.copy(), away_def_dict)
     away_X = build_inference_df(away_roster.copy(), home_def_dict)
+
+    # Calculate status factors
+    override_lookup = _parse_player_overrides(player_status_overrides)
+
+    def extract_factors(roster_df):
+        factors = []
+        for _, r in roster_df.iterrows():
+            pid = r.get("PLAYER_ID")
+            pname = str(r.get("PLAYER_NAME", "")).strip().lower()
+            entry = None
+            if pd.notna(pid):
+                try:
+                    entry = override_lookup.get(int(pid))
+                except (ValueError, TypeError):
+                    entry = None
+            if entry is None and pname:
+                entry = override_lookup.get(pname)
+            factors.append(entry["factor"] if entry is not None else 1.0)
+        return np.array(factors, dtype=float)
+
+    home_factors = extract_factors(home_roster)
+    away_factors = extract_factors(away_roster)
     
     res = {}
     # Compute PTS, REB, AST predictions using V4 LightGBM models
@@ -796,15 +868,34 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
         model = models[t]
         home_proj = model.predict(home_X[player_features])
         away_proj = model.predict(away_X[player_features])
+
+        home_scaled = home_proj * home_factors
+        away_scaled = away_proj * away_factors
+
+        if t == "pts":
+            # 35% Usage redistribution for lost scoring to active teammates
+            home_lost = max(0.0, float((home_proj - home_scaled).sum()))
+            if home_lost > 0:
+                h_active = home_factors > 0.0
+                h_active_sum = home_scaled[h_active].sum()
+                if h_active_sum > 0:
+                    home_scaled[h_active] += home_lost * 0.35 * (home_scaled[h_active] / h_active_sum)
+
+            away_lost = max(0.0, float((away_proj - away_scaled).sum()))
+            if away_lost > 0:
+                a_active = away_factors > 0.0
+                a_active_sum = away_scaled[a_active].sum()
+                if a_active_sum > 0:
+                    away_scaled[a_active] += away_lost * 0.35 * (away_scaled[a_active] / a_active_sum)
         
-        home_predictions[t] = home_proj
-        away_predictions[t] = away_proj
+        home_predictions[t] = home_scaled
+        away_predictions[t] = away_scaled
         
-        res[f"TEAM_V3_PROJ_{t.upper()}_SUM"] = float(home_proj.sum())
-        res[f"TEAM_V3_PROJ_{t.upper()}_AVG"] = float(home_proj.mean())
+        res[f"TEAM_V3_PROJ_{t.upper()}_SUM"] = float(home_scaled.sum())
+        res[f"TEAM_V3_PROJ_{t.upper()}_AVG"] = float(home_scaled.mean())
         
-        res[f"OPP_V3_PROJ_{t.upper()}_SUM"] = float(away_proj.sum())
-        res[f"OPP_V3_PROJ_{t.upper()}_AVG"] = float(away_proj.mean())
+        res[f"OPP_V3_PROJ_{t.upper()}_SUM"] = float(away_scaled.sum())
+        res[f"OPP_V3_PROJ_{t.upper()}_AVG"] = float(away_scaled.mean())
         
     # Calculate V4 PRA mathematically as PTS + REB + AST
     home_pra = home_predictions["pts"] + home_predictions["reb"] + home_predictions["ast"]
@@ -818,7 +909,13 @@ def compute_ridge_player_features_for_inference(home_team: str, away_team: str, 
     return res
 
 
-def compute_player_features_for_inference(home_team: str, away_team: str, prediction_date: str, season: str = None):
+def compute_player_features_for_inference(
+    home_team: str,
+    away_team: str,
+    prediction_date: str,
+    season: str = None,
+    player_status_overrides: list = None,
+):
     if not season:
         pred_dt = pd.to_datetime(prediction_date)
         year = pred_dt.year
@@ -912,6 +1009,7 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
         df_core = pd.read_csv(core_path)
 
     features = {}
+    override_lookup = _parse_player_overrides(player_status_overrides)
 
     for prefix, team in [("HOME", home_team), ("AWAY", away_team)]:
         team_core = df_core[df_core["TEAM_ABBREVIATION"] == team]
@@ -957,17 +1055,31 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
         for _, cp_row in team_core.iterrows():
             pid = int(cp_row["PLAYER_ID"])
             rank = int(cp_row["CORE_RANK"])
+            pname = str(cp_row.get("PLAYER_NAME", "")).strip().lower()
 
-            # 1. Determine availability using proxy
-            if len(last_3_game_ids) == 0:
+            # Check override lookup first
+            override_entry = None
+            if override_lookup:
+                override_entry = override_lookup.get(pid)
+                if override_entry is None and pname:
+                    override_entry = override_lookup.get(pname)
+
+            # 1. Determine availability using override or historical proxy
+            if override_entry is not None:
+                is_available = (override_entry["factor"] > 0.0)
+                status_factor = override_entry["factor"]
+            elif len(last_3_game_ids) == 0:
                 is_available = True
+                status_factor = 1.0
             else:
                 p_games = df_player_hist[df_player_hist["Player_ID"] == pid]
                 p_games_last_3 = p_games[p_games["Game_ID"].astype(str).isin(last_3_game_ids)] if not p_games.empty else pd.DataFrame()
                 if p_games_last_3.empty:
                     is_available = False
+                    status_factor = 0.0
                 else:
-                    is_available = (p_games_last_3["MIN"].fillna(0) > 0).any()
+                    is_available = bool((p_games_last_3["MIN"].fillna(0) > 0).any())
+                    status_factor = 1.0 if is_available else 0.0
 
             if is_available:
                 avail_count += 1
@@ -984,11 +1096,11 @@ def compute_player_features_for_inference(home_team: str, away_team: str, predic
             p_games = df_player_hist[df_player_hist["Player_ID"] == pid]
             if not p_games.empty:
                 p_recent = p_games.sort_values("GAME_DATE", ascending=True).tail(5)
-                exp_min = float(p_recent["MIN"].mean())
-                exp_pts = float(p_recent["PTS"].mean())
-                exp_ast = float(p_recent["AST"].mean())
-                exp_reb = float(p_recent["REB"].mean())
-                exp_pra = float((p_recent["PTS"] + p_recent["REB"] + p_recent["AST"]).mean())
+                exp_min = float(p_recent["MIN"].mean()) * status_factor
+                exp_pts = float(p_recent["PTS"].mean()) * status_factor
+                exp_ast = float(p_recent["AST"].mean()) * status_factor
+                exp_reb = float(p_recent["REB"].mean()) * status_factor
+                exp_pra = float((p_recent["PTS"] + p_recent["REB"] + p_recent["AST"]).mean()) * status_factor
             else:
                 exp_min = 0.0
                 exp_pts = 0.0

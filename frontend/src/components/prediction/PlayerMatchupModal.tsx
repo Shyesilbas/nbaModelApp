@@ -15,6 +15,7 @@ export interface PlayerMatchupData {
   predicted_pra: number;
   raw_pts?: number;
   scale_factor?: number;
+  status?: "ACTIVE" | "RESTRICTED" | "OUT";
 }
 
 interface PlayerMatchupModalProps {
@@ -97,10 +98,17 @@ export function PlayerMatchupModal({
 
           if (!isMounted) return;
 
-          const seasonGames = payload.games?.[season] || Object.values(payload.games || {})[0] || [];
-          const seasonAvg = payload.averages?.[season] || Object.values(payload.averages || {})[0] || null;
+          const gamesBySeason = payload.games || {};
+          const availableSeasons = Object.keys(gamesBySeason).sort();
+          const latestSeason = availableSeasons.length > 0 ? availableSeasons[availableSeasons.length - 1] : "";
+          const targetSeason = gamesBySeason[season]?.length ? season : latestSeason;
 
-          setGames(seasonGames.filter((g) => !g.DID_NOT_PLAY));
+          const allPlayedGames = Object.values(gamesBySeason).flat().filter((g) => !g.DID_NOT_PLAY);
+          allPlayedGames.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
+
+          const seasonAvg = payload.averages?.[targetSeason] || payload.averages?.[latestSeason] || null;
+
+          setGames(allPlayedGames);
           setSeasonAverages(seasonAvg);
           setLoading(false);
           return;
@@ -116,10 +124,16 @@ export function PlayerMatchupModal({
 
         if (!isMounted) return;
 
-        const seasonGames = playerGamesMap[season] || Object.values(playerGamesMap)[0] || [];
-        const seasonAvg = playerAveragesMap[playerId]?.[season] || Object.values(playerAveragesMap[playerId] || {})[0] || null;
+        const availableSeasons = Object.keys(playerGamesMap).sort();
+        const latestSeason = availableSeasons.length > 0 ? availableSeasons[availableSeasons.length - 1] : "";
+        const targetSeason = playerGamesMap[season]?.length ? season : latestSeason;
 
-        setGames(seasonGames.filter((g) => !g.DID_NOT_PLAY));
+        const allPlayedGames = Object.values(playerGamesMap).flat().filter((g) => !g.DID_NOT_PLAY);
+        allPlayedGames.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
+
+        const seasonAvg = playerAveragesMap[playerId]?.[targetSeason] || playerAveragesMap[playerId]?.[latestSeason] || null;
+
+        setGames(allPlayedGames);
         setSeasonAverages(seasonAvg);
       } catch (err: any) {
         if (!isMounted) return;
@@ -166,7 +180,7 @@ export function PlayerMatchupModal({
     };
 
     return {
-      recentGames: eligibleGames.slice(0, 8),
+      recentGames: eligibleGames.slice(0, 10),
       stats5: calcAvg(g5),
     };
   }, [games, gameDate]);

@@ -176,10 +176,59 @@ def _ridge_calibration_frame(full_X):
     return X_ind
 
 
-def get_player_predictions(home_team: str, away_team: str, prediction_date: str, player_loader, score_loader):
+def _parse_player_overrides(overrides):
+    lookup = {}
+    if not overrides:
+        return lookup
+    for item in overrides:
+        if isinstance(item, dict):
+            pid = item.get("player_id")
+            pname = item.get("player_name")
+            status = str(item.get("status", "ACTIVE")).upper()
+            minute_limit = item.get("minute_limit")
+            factor = item.get("status_factor")
+        else:
+            pid = getattr(item, "player_id", None)
+            pname = getattr(item, "player_name", None)
+            status = str(getattr(item, "status", "ACTIVE")).upper()
+            minute_limit = getattr(item, "minute_limit", None)
+            factor = getattr(item, "status_factor", None)
+
+        if factor is None:
+            if status in ("OUT", "INACTIVE"):
+                factor = 0.0
+            elif status in ("RESTRICTED", "QUESTIONABLE"):
+                factor = 0.6
+            else:
+                factor = 1.0
+
+        entry = {
+            "status": status,
+            "factor": float(factor),
+            "minute_limit": minute_limit,
+        }
+        if pid is not None:
+            try:
+                lookup[int(pid)] = entry
+            except (ValueError, TypeError):
+                pass
+        if pname:
+            lookup[str(pname).strip().lower()] = entry
+    return lookup
+
+
+def get_player_predictions(
+    home_team: str,
+    away_team: str,
+    prediction_date: str,
+    player_loader,
+    score_loader,
+    player_status_overrides=None,
+):
     """
-    Generate player predictions for home and away teams using the V3 Ridge models.
+    Generate player predictions for home and away teams using the V3/V4 Ridge models.
     Respects prediction_date to prevent future data leakage and use accurate historical rosters.
+    Applies player injury/status overrides and redistributes scoring usage when players are out/restricted.
     """
     pred_dt = pd.to_datetime(prediction_date)
     season = date_to_season(pred_dt)
@@ -226,12 +275,64 @@ def get_player_predictions(home_team: str, away_team: str, prediction_date: str,
         raw_reb = raw_reb - res_reb
         raw_ast = raw_ast - res_ast
         
-    full_X["RAW_PROJ_PTS"] = np.maximum(0, raw_pts)
-    full_X["RAW_PROJ_REB"] = np.maximum(0, raw_reb)
-    full_X["RAW_PROJ_AST"] = np.maximum(0, raw_ast)
+    full_X["RAW_PROJ_PTS"] = np.maximum(0.0, raw_pts)
+    full_X["RAW_PROJ_REB"] = np.maximum(0.0, raw_reb)
+    full_X["RAW_PROJ_AST"] = np.maximum(0.0, raw_ast)
     
-    # 5. Top-Down Scaling via Score Model
-    # Wait, the Score Model needs to be called to get team totals!
-    # But this function only returns the players. We need team expected points.
-    
+    # Process overrides and usage redistribution
+    override_lookup = _parse_player_overrides(player_status_overrides)
+    status_list = []
+    factor_list = []
+    min_limit_list = []
+
+    for _, row in full_X.iterrows():
+        pid = row.get("PLAYER_ID")
+        pname = str(row.get("PLAYER_NAME", "")).strip().lower()
+        entry = None
+        if pd.notna(pid):
+            try:
+                entry = override_lookup.get(int(pid))
+            except (ValueError, TypeError):
+                entry = None
+        if entry is None and pname:
+            entry = override_lookup.get(pname)
+
+        if entry is not None:
+            status_list.append(entry["status"])
+            factor_list.append(entry["factor"])
+            min_limit_list.append(entry["minute_limit"])
+        else:
+            status_list.append("ACTIVE")
+            factor_list.append(1.0)
+            min_limit_list.append(None)
+
+    full_X["STATUS"] = status_list
+    full_X["STATUS_FACTOR"] = factor_list
+    full_X["MINUTE_LIMIT"] = min_limit_list
+
+    base_pts = full_X["RAW_PROJ_PTS"].copy()
+    scaled_raw_pts = full_X["RAW_PROJ_PTS"] * full_X["STATUS_FACTOR"]
+    scaled_raw_reb = full_X["RAW_PROJ_REB"] * full_X["STATUS_FACTOR"]
+    scaled_raw_ast = full_X["RAW_PROJ_AST"] * full_X["STATUS_FACTOR"]
+
+    full_X["RAW_PROJ_PTS"] = scaled_raw_pts
+    full_X["RAW_PROJ_REB"] = scaled_raw_reb
+    full_X["RAW_PROJ_AST"] = scaled_raw_ast
+
+    # 35% Usage redistribution for lost scoring to active teammates
+    for team_code in full_X["TEAM_ABBREVIATION"].unique():
+        t_mask = full_X["TEAM_ABBREVIATION"] == team_code
+        team_base_pts = base_pts[t_mask].sum()
+        team_curr_pts = full_X.loc[t_mask, "RAW_PROJ_PTS"].sum()
+        lost_pts = max(0.0, team_base_pts - team_curr_pts)
+
+        if lost_pts > 0:
+            redistribute_pts = lost_pts * 0.35
+            active_mask = t_mask & (full_X["STATUS_FACTOR"] > 0.0)
+            active_pts_sum = full_X.loc[active_mask, "RAW_PROJ_PTS"].sum()
+            if active_pts_sum > 0:
+                shares = full_X.loc[active_mask, "RAW_PROJ_PTS"] / active_pts_sum
+                full_X.loc[active_mask, "RAW_PROJ_PTS"] += redistribute_pts * shares
+
     return full_X
+
