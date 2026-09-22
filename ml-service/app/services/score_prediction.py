@@ -32,7 +32,13 @@ def predict_score(
 
     if features is None:
         try:
-            features = build_features(home_team, away_team, pred_date_str, season=getattr(request, "season", None))
+            features = build_features(
+                home_team,
+                away_team,
+                pred_date_str,
+                season=getattr(request, "season", None),
+                player_status_overrides=getattr(request, "player_status_overrides", None),
+            )
         except Exception as e:
             if "No historical games" in str(e) or "Leakage" in str(e) or "No team-level games" in str(e):
                 raise ValueError(str(e))
@@ -56,7 +62,17 @@ def predict_score(
     pred_pace = float(svc.score_loader.pace_model.predict(X_pace)[0])
     pred_home_rtg = float(svc.score_loader.home_rtg_model.predict(X_home_rtg)[0])
 
-    features_away = away_features if away_features is not None else build_features(away_team, home_team, pred_date_str, season=getattr(request, "season", None))
+    features_away = (
+        away_features
+        if away_features is not None
+        else build_features(
+            away_team,
+            home_team,
+            pred_date_str,
+            season=getattr(request, "season", None),
+            player_status_overrides=getattr(request, "player_status_overrides", None),
+        )
+    )
     X_away_rtg = pd.DataFrame([[features_away[c] for c in away_off_rtg_features]], columns=away_off_rtg_features)
     pred_away_rtg = float(svc.score_loader.away_rtg_model.predict(X_away_rtg)[0])
 

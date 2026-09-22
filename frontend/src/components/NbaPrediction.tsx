@@ -10,7 +10,13 @@ import {
 } from "lucide-react";
 
 import TeamLogo from "./TeamLogo";
-import { getModelStatus, normalizeGameFullPrediction, predictGameFull } from "../api/predictions";
+import {
+  getModelStatus,
+  normalizeGameFullPrediction,
+  predictGameFull,
+  getRostersPreview,
+  type PlayerStatusOverride,
+} from "../api/predictions";
 import { loadPrivateApi } from "../lib/dataCache";
 import { NBA_TEAMS } from "../lib/nbaTeams";
 
@@ -20,6 +26,7 @@ import {
   ModelDiagnostics,
   ModelExplanationSection,
   PlayerSpotlight,
+  LineupInjuryHub,
 } from "./prediction";
 
 
@@ -55,16 +62,28 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [selectorOpen, setSelectorOpen] = useState(!initialGame);
 
   const [allResults, setAllResults] = useState<any[]>([]);
+  const [playerOverrides, setPlayerOverrides] = useState<Record<string, PlayerStatusOverride>>({});
+  const [previewRosters, setPreviewRosters] = useState<{
+    home_players?: any[];
+    away_players?: any[];
+  } | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         setLoadingData(true);
-        const gamesRes = await loadPrivateApi<any[]>("/frontend-data-api/games?season=2026-27").catch(() => []);
-        setAllResults(gamesRes.map((g: any) => ({ ...g, SEASON: "2026-27" })));
+        setDataError(null);
+        let data: any[] = [];
+        try {
+          data = await loadPrivateApi<any[]>("/frontend-data-api/games?season=2026-27");
+        } catch {
+          data = await loadPrivateApi<any[]>("/frontend-data/game_results.json").catch(() => []);
+        }
+        setAllResults(data || []);
       } catch (err: any) {
-        console.error("Error loading schedule data for predictions:", err);
-        setDataError("Could not load game schedules. Manual inputs are still active.");
+        console.error("Error loading schedule data:", err);
+        setDataError("Failed to load upcoming schedule data.");
       } finally {
         setLoadingData(false);
       }
@@ -73,19 +92,22 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   }, []);
 
   useEffect(() => {
-    if (allResults.length === 0) return;
+    if (!allResults.length) return;
 
-    const seen = new Set();
-    const uniqueGames = allResults.filter((g: any) => {
-      if (!g.GAME_ID || seen.has(g.GAME_ID)) return false;
-      seen.add(g.GAME_ID);
-      return true;
+    // Deduplicate games by GAME_ID
+    const uniqueMap = new Map();
+    allResults.forEach((g: any) => {
+      if (g.GAME_ID && !uniqueMap.has(g.GAME_ID)) {
+        uniqueMap.set(g.GAME_ID, g);
+      }
     });
+    const uniqueGames = Array.from(uniqueMap.values());
 
-    const isCompletedGame = (g: any) =>
-      g.GAME_STATUS === "Final" ||
-      g.GAME_STATUS === "FINAL" ||
-      ((Number(g.HOME_SCORE) || 0) > 0 && (Number(g.AWAY_SCORE) || 0) > 0);
+    const isCompletedGame = (g: any) => {
+      const homeScore = Number(g.HOME_SCORE);
+      const awayScore = Number(g.AWAY_SCORE);
+      return !isNaN(homeScore) && !isNaN(awayScore) && (homeScore > 0 || awayScore > 0);
+    };
 
     const unplayed = uniqueGames
       .filter((g: any) => !isCompletedGame(g))
@@ -94,40 +116,104 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
     setUpcomingGames(unplayed);
   }, [allResults]);
 
-  const submitGame = useCallback(async (h: string, a: string, d: string) => {
-    setError(null);
-    setResult(null);
-    setLoading(true);
-    try {
-      if (!h || !a) throw new Error("Please select both a home and away team.");
-      if (h === a) throw new Error("Home and away teams cannot be the same.");
-      if (!d) throw new Error("Please select a date for the matchup.");
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error("Invalid date format. Please use YYYY-MM-DD.");
-      if (d < "2026-10-01") {
-        throw new Error("Predictions are only enabled for unplayed upcoming games (2026-27 season and onward). Past completed games cannot be predicted.");
-      }
-
-      const data = await predictGameFull({ home_team_id: h, away_team_id: a, prediction_date: d });
-      const normalized = normalizeGameFullPrediction(data, h, a, d);
-      setResult(normalized);
-      setSelectorOpen(false);
-    } catch (e: any) {
-      setError(e.message || "Unknown error");
-    } finally {
-      setLoading(false);
+  // Load preview rosters whenever home, away, date are chosen
+  useEffect(() => {
+    if (!home || !away || !date || home === away) {
+      setPreviewRosters(null);
+      return;
     }
-  }, []);
+    let isMounted = true;
+    const fetchPreview = async () => {
+      setLoadingPreview(true);
+      try {
+        const preview = await getRostersPreview(home, away, date);
+        if (isMounted) {
+          setPreviewRosters(preview);
+        }
+      } catch (err) {
+        console.warn("Could not load preview rosters:", err);
+      } finally {
+        if (isMounted) setLoadingPreview(false);
+      }
+    };
+    fetchPreview();
+    return () => {
+      isMounted = false;
+    };
+  }, [home, away, date]);
+
+  const submitGame = useCallback(
+    async (
+      h: string,
+      a: string,
+      d: string,
+      overridesMap: Record<string, PlayerStatusOverride> = playerOverrides
+    ) => {
+      setError(null);
+      setLoading(true);
+      try {
+        if (!h || !a) throw new Error("Please select both a home and away team.");
+        if (h === a) throw new Error("Home and away teams cannot be the same.");
+        if (!d) throw new Error("Please select a date for the matchup.");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error("Invalid date format. Please use YYYY-MM-DD.");
+        if (d < "2026-10-01") {
+          throw new Error("Predictions are only enabled for unplayed upcoming games (2026-27 season and onward). Past completed games cannot be predicted.");
+        }
+
+        const overridesList = Object.values(overridesMap);
+        const data = await predictGameFull({
+          home_team_id: h,
+          away_team_id: a,
+          prediction_date: d,
+          player_status_overrides: overridesList.length > 0 ? overridesList : undefined,
+        });
+        const normalized = normalizeGameFullPrediction(data, h, a, d);
+        setResult(normalized);
+        setSelectorOpen(false);
+      } catch (e: any) {
+        setError(e.message || "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [playerOverrides]
+  );
+
+  const handleOverrideChange = (key: string, override: PlayerStatusOverride) => {
+    setPlayerOverrides((prev) => {
+      const next = { ...prev };
+      if (override.status === "ACTIVE") {
+        delete next[key];
+      } else {
+        next[key] = override;
+      }
+      return next;
+    });
+  };
+
+  const handleResetOverrides = () => {
+    setPlayerOverrides({});
+    if (result) {
+      submitGame(home, away, date, {});
+    }
+  };
+
+  const handleApplyOverrides = () => {
+    submitGame(home, away, date, playerOverrides);
+  };
 
   useEffect(() => {
     if (initialGame?.home && initialGame?.away && initialGame?.date) {
       setHome(initialGame.home);
       setAway(initialGame.away);
       setDate(initialGame.date);
-      setSelectorOpen(false);
-      submitGame(initialGame.home, initialGame.away, initialGame.date);
+      setPlayerOverrides({});
+      setResult(null);
+      setError(null);
+      setSelectorOpen(true);
       onClearInitialGame?.();
     }
-  }, [initialGame, submitGame, onClearInitialGame]);
+  }, [initialGame, onClearInitialGame]);
 
   useEffect(() => {
     const fetchModelStatus = async () => {
@@ -149,15 +235,15 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
     setHome(game.HOME_TEAM_ABBREVIATION);
     setAway(game.AWAY_TEAM_ABBREVIATION);
     setDate(game.GAME_DATE);
+    setPlayerOverrides({});
     setResult(null);
     setError(null);
-    setSelectorOpen(false);
-    submitGame(game.HOME_TEAM_ABBREVIATION, game.AWAY_TEAM_ABBREVIATION, game.GAME_DATE);
+    setSelectorOpen(true);
   };
 
   const submit = useCallback(() => {
-    return submitGame(home, away, date);
-  }, [submitGame, home, away, date]);
+    return submitGame(home, away, date, playerOverrides);
+  }, [submitGame, home, away, date, playerOverrides]);
 
   const filteredSchedule = upcomingGames.filter((g: any) => {
     if (!filterTeam1) return true;
@@ -404,6 +490,39 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
               </div>
             )}
 
+            {/* Pre-prediction Lineup & Injury Configuration */}
+            {home && away && date && home !== away && (
+              <div className="pt-2 border-t border-slate-100">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    Sakatlık & Rotasyon Ayarları (Tahmin Öncesi / Canlı)
+                  </span>
+                  {Object.keys(playerOverrides).length > 0 && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                      {Object.keys(playerOverrides).length} Oyuncu Durumu Değiştirildi
+                    </span>
+                  )}
+                </div>
+                {loadingPreview && !previewRosters && !result ? (
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 text-center text-xs text-slate-400">
+                    Kadro ve rotasyon bilgileri yükleniyor...
+                  </div>
+                ) : (
+                  <LineupInjuryHub
+                    homeInfo={homeInfo}
+                    awayInfo={awayInfo}
+                    homePlayers={result?.player_predictions?.home_players || previewRosters?.home_players || []}
+                    awayPlayers={result?.player_predictions?.away_players || previewRosters?.away_players || []}
+                    overrides={playerOverrides}
+                    onOverrideChange={handleOverrideChange}
+                    onResetOverrides={handleResetOverrides}
+                    onApplyChanges={result ? handleApplyOverrides : undefined}
+                    loading={loading || loadingPreview}
+                  />
+                )}
+              </div>
+            )}
+
             {/* CTA */}
             {home && away && date && (
               <div className="flex items-center gap-3 pt-1">
@@ -414,7 +533,11 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-black uppercase tracking-wider transition-colors shadow-md shadow-indigo-200"
                 >
                   {loading ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                  {loading ? "Analyzing..." : "Run Prediction Model"}
+                  {loading
+                    ? "Analyzing..."
+                    : Object.keys(playerOverrides).length > 0
+                    ? "Run Prediction (With Lineup Changes)"
+                    : "Run Prediction Model"}
                 </button>
                 {result && (
                   <button
@@ -530,9 +653,26 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
             </div>
           )}
 
+          {/* ── SECTION 4.5: INTERACTIVE LINEUP & INJURY HUB ── */}
+          {result.player_predictions && !result.player_predictions.error && (
+            <div className="animate-fade-in-up stagger-4">
+              <LineupInjuryHub
+                homeInfo={homeInfo}
+                awayInfo={awayInfo}
+                homePlayers={result.player_predictions.home_players || []}
+                awayPlayers={result.player_predictions.away_players || []}
+                overrides={playerOverrides}
+                onOverrideChange={handleOverrideChange}
+                onResetOverrides={handleResetOverrides}
+                onApplyChanges={handleApplyOverrides}
+                loading={loading}
+              />
+            </div>
+          )}
+
           {/* ── SECTION 5: PLAYER PROJECTION SPOTLIGHT & ROSTERS ── */}
           {result.player_predictions && !result.player_predictions.error && (
-            <div className="surface rounded-[1.75rem] p-5 lg:p-7 border border-slate-200/80 bg-white shadow-sm animate-fade-in-up stagger-4">
+            <div className="surface rounded-[1.75rem] p-5 lg:p-7 border border-slate-200/80 bg-white shadow-sm animate-fade-in-up stagger-5">
               <PlayerSpotlight
                 players={result.player_predictions}
                 homeInfo={homeInfo}

@@ -1,18 +1,28 @@
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8001").replace(/\/$/, "");
 
-type GameFullRequest = {
+export type PlayerStatusOverride = {
+  player_id?: number | string;
+  player_name?: string;
+  status: "ACTIVE" | "RESTRICTED" | "OUT";
+  minute_limit?: number;
+  status_factor?: number;
+};
+
+export type GameFullRequest = {
   game_id?: string;
   home_team_id: string;
   away_team_id: string;
   prediction_date: string;
   home_score_prediction?: number;
   away_score_prediction?: number;
+  player_status_overrides?: PlayerStatusOverride[];
 };
 
-type WinProbabilityRequest = {
+export type WinProbabilityRequest = {
   home_team: string;
   away_team: string;
   prediction_date: string;
+  player_status_overrides?: PlayerStatusOverride[];
 };
 
 async function parseJsonResponse<T>(res: Response): Promise<T> {
@@ -44,6 +54,16 @@ export async function predictGameFull(request: GameFullRequest) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
   });
+  return parseJsonResponse<any>(res);
+}
+
+export async function getRostersPreview(home: string, away: string, date: string) {
+  const params = new URLSearchParams({
+    home_team: home,
+    away_team: away,
+    prediction_date: date,
+  });
+  const res = await fetch(`${API_BASE_URL}/predict/rosters-preview?${params.toString()}`);
   return parseJsonResponse<any>(res);
 }
 
@@ -84,6 +104,7 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
         predicted_reb: p.proj_reb,
         predicted_ast: p.proj_ast,
         predicted_pra: p.proj_pra,
+        status: p.status || "ACTIVE",
       })),
       away_players: (data.away_players || []).map((p: any) => ({
         player_id: p.player_id ?? p.player_name,
@@ -93,6 +114,7 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
         predicted_reb: p.proj_reb,
         predicted_ast: p.proj_ast,
         predicted_pra: p.proj_pra,
+        status: p.status || "ACTIVE",
       })),
     },
     explanation: data.explanation,

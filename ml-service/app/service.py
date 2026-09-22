@@ -44,7 +44,13 @@ def predict(request: WinProbRequest, features: Optional[Dict[str, Any]] = None) 
     # Build features using shared pipeline
     if features is None:
         try:
-            feats = build_features(request.home_team.upper(), request.away_team.upper(), pred_date_str, season=getattr(request, "season", None))
+            feats = build_features(
+                request.home_team.upper(),
+                request.away_team.upper(),
+                pred_date_str,
+                season=getattr(request, "season", None),
+                player_status_overrides=getattr(request, "player_status_overrides", None),
+            )
         except Exception as e:
             if "No historical games" in str(e) or "Leakage" in str(e) or "No team-level games" in str(e):
                 raise ValueError(str(e))

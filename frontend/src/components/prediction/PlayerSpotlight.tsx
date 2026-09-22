@@ -50,6 +50,7 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
         predicted_pra: p.predicted_pra,
         raw_pts: p.raw_pts,
         scale_factor: p.scale_factor,
+        status: p.status,
       },
       team: isHome ? homeInfo : awayInfo,
       opponent: isHome ? awayInfo : homeInfo,
@@ -115,6 +116,16 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                     {s.player?.teamAbbr}
                   </span>
                   <span className="text-[9px] text-white/40 font-bold uppercase">{s.player?.position_group}</span>
+                  {s.player?.status === "OUT" && (
+                    <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-rose-500/30 text-rose-300 border border-rose-500/40">
+                      OUT
+                    </span>
+                  )}
+                  {s.player?.status === "RESTRICTED" && (
+                    <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-amber-500/30 text-amber-300 border border-amber-500/40">
+                      RESTR.
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -168,49 +179,67 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {side.players?.map((p: PlayerMatchupData) => (
-                    <tr 
-                      key={p.player_id} 
-                      onClick={() => handleOpenPlayerModal(p, side.isHome)}
-                      className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
-                    >
+                  {side.players?.map((p: PlayerMatchupData) => {
+                    const isOut = p.status === "OUT";
+                    const isRestricted = p.status === "RESTRICTED";
 
-                      <td className="px-3 py-2 font-bold text-slate-800">
-                        <div className="flex items-center gap-2">
-                          <PlayerPhoto playerId={p.player_id} name={p.player_name} size={22} />
-                          <span className="group-hover:text-indigo-600 transition-colors">{p.player_name}</span>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2 text-center text-[10px] uppercase font-semibold text-slate-400">
-                        {p.position_group}
-                      </td>
-                      <td className="px-2 py-2 text-right font-black font-mono text-slate-900">
-                        {p.predicted_pts.toFixed(1)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-semibold font-mono text-slate-600">
-                        {p.predicted_reb.toFixed(1)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-semibold font-mono text-slate-600">
-                        {p.predicted_ast.toFixed(1)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-black font-mono text-indigo-600">
-                        {p.predicted_pra.toFixed(1)}
-                      </td>
-                      <td className="px-2.5 py-2 text-center">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenPlayerModal(p, side.isHome);
-                          }}
-                          className="w-6 h-6 rounded-md bg-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 text-slate-400 inline-flex items-center justify-center transition-colors shadow-2xs"
-                          title={`${p.player_name} - Maç Raporu ve Son Maçlar`}
-                        >
-                          <Info size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                    return (
+                      <tr 
+                        key={p.player_id} 
+                        onClick={() => handleOpenPlayerModal(p, side.isHome)}
+                        className={`hover:bg-slate-50/80 transition-colors cursor-pointer group ${
+                          isOut ? "bg-rose-50/40 text-slate-400" : isRestricted ? "bg-amber-50/30" : ""
+                        }`}
+                      >
+                        <td className="px-3 py-2 font-bold text-slate-800">
+                          <div className="flex items-center gap-2">
+                            <PlayerPhoto playerId={p.player_id} name={p.player_name} size={22} />
+                            <span className={`group-hover:text-indigo-600 transition-colors ${isOut ? "line-through text-slate-400" : ""}`}>
+                              {p.player_name}
+                            </span>
+                            {isOut && (
+                              <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
+                                OUT
+                              </span>
+                            )}
+                            {isRestricted && (
+                              <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
+                                RESTR.
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 text-center text-[10px] uppercase font-semibold text-slate-400">
+                          {p.position_group}
+                        </td>
+                        <td className="px-2 py-2 text-right font-black font-mono text-slate-900">
+                          {p.predicted_pts.toFixed(1)}
+                        </td>
+                        <td className="px-2 py-2 text-right font-semibold font-mono text-slate-600">
+                          {p.predicted_reb.toFixed(1)}
+                        </td>
+                        <td className="px-2 py-2 text-right font-semibold font-mono text-slate-600">
+                          {p.predicted_ast.toFixed(1)}
+                        </td>
+                        <td className="px-2 py-2 text-right font-black font-mono text-indigo-600">
+                          {p.predicted_pra.toFixed(1)}
+                        </td>
+                        <td className="px-2.5 py-2 text-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenPlayerModal(p, side.isHome);
+                            }}
+                            className="w-6 h-6 rounded-md bg-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 text-slate-400 inline-flex items-center justify-center transition-colors shadow-2xs"
+                            title={`${p.player_name} - Maç Raporu ve Son Maçlar`}
+                          >
+                            <Info size={13} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

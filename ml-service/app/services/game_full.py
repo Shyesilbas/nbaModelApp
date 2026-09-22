@@ -73,7 +73,8 @@ def _build_game_full_player_list(df, scaled_pts, scaled_reb, scaled_ast, scale) 
             proj_ast=round(scaled_ast[i], 1),
             proj_pra=round(scaled_pts[i] + scaled_reb[i] + scaled_ast[i], 1),
             raw_pts=round(r["RAW_PROJ_PTS"], 1),
-            scale_factor=round(scale, 3)
+            scale_factor=round(scale, 3),
+            status=str(r.get("STATUS", "ACTIVE")),
         ))
     return players
 
@@ -84,8 +85,16 @@ def _predict_game_full_players(
     pred_date_str: str,
     home_score: float,
     away_score: float,
+    player_status_overrides: list = None,
 ) -> Tuple[List[GameFullPlayer], List[GameFullPlayer], float, float]:
-    players_df = get_player_predictions(home_team, away_team, pred_date_str, svc.player_loader, svc.score_loader)
+    players_df = get_player_predictions(
+        home_team,
+        away_team,
+        pred_date_str,
+        svc.player_loader,
+        svc.score_loader,
+        player_status_overrides=player_status_overrides,
+    )
     home_players_df = players_df[players_df["IS_HOME"] == 1]
     away_players_df = players_df[players_df["IS_HOME"] == 0]
 
@@ -146,20 +155,40 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
     def get_features_home():
         nonlocal features_home
         if features_home is None:
-            features_home = build_features(home_team, away_team, pred_date_str)
+            features_home = build_features(
+                home_team,
+                away_team,
+                pred_date_str,
+                player_status_overrides=request.player_status_overrides,
+            )
         return features_home
 
     def get_features_away():
         nonlocal features_away
         if features_away is None:
-            features_away = build_features(away_team, home_team, pred_date_str)
+            features_away = build_features(
+                away_team,
+                home_team,
+                pred_date_str,
+                player_status_overrides=request.player_status_overrides,
+            )
         return features_away
 
     if request.home_score_prediction is not None and request.away_score_prediction is not None:
         score_values = _manual_score_values(request.home_score_prediction, request.away_score_prediction)
     else:
-        score_req = ScorePredictionRequest(home_team=home_team, away_team=away_team, prediction_date=pred_date_str)
-        win_req = WinProbRequest(home_team=home_team, away_team=away_team, prediction_date=pred_date_str)
+        score_req = ScorePredictionRequest(
+            home_team=home_team,
+            away_team=away_team,
+            prediction_date=pred_date_str,
+            player_status_overrides=request.player_status_overrides,
+        )
+        win_req = WinProbRequest(
+            home_team=home_team,
+            away_team=away_team,
+            prediction_date=pred_date_str,
+            player_status_overrides=request.player_status_overrides,
+        )
         win_resp = svc.predict(win_req, features=get_features_home())
         score_resp = predict_score(
             score_req,
@@ -180,12 +209,18 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
             pred_date_str,
             score_values["home_score"],
             score_values["away_score"],
+            player_status_overrides=request.player_status_overrides,
         )
     except Exception as e:
         print("Player inference failed in /predict/game_full:", e)
 
     if win_resp is None:
-        win_req = WinProbRequest(home_team=home_team, away_team=away_team, prediction_date=pred_date_str)
+        win_req = WinProbRequest(
+            home_team=home_team,
+            away_team=away_team,
+            prediction_date=pred_date_str,
+            player_status_overrides=request.player_status_overrides,
+        )
         win_resp = svc.predict(win_req, features=get_features_home())
 
     explanation = None
