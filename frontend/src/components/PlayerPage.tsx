@@ -149,10 +149,10 @@ function StatBlock({
   return (
     <div
       className={[
-        "flex flex-col items-center justify-center rounded-2xl border px-3 py-3 text-center transition-all duration-200",
+        "flex flex-col items-center justify-center rounded-md border px-3 py-3 text-center transition-colors duration-200",
         highlight
-          ? "border-slate-200/90 bg-gradient-to-br from-slate-50/80 to-white shadow-[0_4px_16px_rgba(15,23,42,0.06)]"
-          : "border-slate-200/80 bg-slate-50/60",
+          ? "border-slate-200 bg-white"
+          : "border-slate-200 bg-slate-50",
       ].join(" ")}
       style={highlight && teamColor ? { borderTop: `2.5px solid ${teamColor}` } : undefined}
     >
@@ -186,7 +186,7 @@ function InfoChip({
 }) {
   if (!value) return null;
   return (
-    <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${className || "border-slate-200/80 bg-slate-50/70"}`}>
+    <div className={`flex items-center gap-2 border border-slate-200 px-3 py-2 ${className || "bg-slate-50"}`}>
       <span className="shrink-0 text-slate-400">{icon}</span>
       <div className="min-w-0">
         <p className="text-[8px] font-black uppercase tracking-[0.22em] text-slate-400">{label}</p>
@@ -200,15 +200,13 @@ function SeasonSelector({
   seasons,
   selected,
   onChange,
-  teamColor = "#1d428a",
 }: {
   seasons: string[];
   selected: string;
   onChange: (s: string) => void;
-  teamColor?: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-4 border-b border-slate-200">
       {seasons.map((s) => {
         const isSelected = selected === s;
         return (
@@ -216,19 +214,11 @@ function SeasonSelector({
             key={s}
             onClick={() => onChange(s)}
             className={[
-              "rounded-full px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] transition-all duration-200 cursor-pointer",
+              "border-b-2 px-1 py-2 text-[11px] font-bold uppercase tracking-[0.16em] transition-colors duration-200 cursor-pointer",
               isSelected
-                ? "text-white shadow-md font-black"
-                : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800",
+                ? "border-[#c8102e] text-slate-900 font-black"
+                : "border-transparent text-slate-500 hover:text-slate-900",
             ].join(" ")}
-            style={
-              isSelected
-                ? {
-                    backgroundColor: teamColor,
-                    boxShadow: `0 4px 14px ${teamColor}35`,
-                  }
-                : undefined
-            }
           >
             {s}
           </button>
@@ -355,7 +345,7 @@ function GameLogTable({
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/80">
+      <div className="overflow-x-auto rounded-md border border-slate-200 bg-slate-50/80">
         <table className="w-full text-xs">
           <thead>
             <tr>
@@ -394,7 +384,7 @@ function GameLogTable({
                             <span className="text-slate-400 font-semibold">{item.from}</span>
                             <ArrowRightLeft size={12} className="text-amber-400 mx-1 animate-pulse" />
                             <TeamLogo abbr={item.to} name="" size={18} />
-                            <span className="text-[#1d428a] font-bold">{item.to}</span>
+                            <span className="text-[#c8102e] font-bold">{item.to}</span>
                           </div>
                         </div>
                         <p className="text-[10px] font-semibold text-slate-400">
@@ -421,13 +411,13 @@ function GameLogTable({
                   className={[
                     "border-t border-slate-100 transition-colors",
                     isDnp ? "bg-amber-50/60 hover:bg-amber-50" : "bg-white hover:bg-slate-50",
-                    clickable ? "cursor-pointer hover:bg-[#1d428a]/5 group" : "",
+                    clickable ? "cursor-pointer hover:bg-[#c8102e]/5 group" : "",
                   ].join(" ")}
                 >
                   <td className="sticky left-0 bg-inherit px-3 py-2.5">
                     <p className="text-[11px] font-semibold text-slate-700">{fmtDate(g.GAME_DATE)}</p>
                     {clickable && (
-                      <p className="mt-0.5 text-[8px] font-black uppercase tracking-widest text-[#1d428a] opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="mt-0.5 text-[8px] font-black uppercase tracking-widest text-[#c8102e] opacity-0 group-hover:opacity-100 transition-opacity">
                         View box score
                       </p>
                     )}
@@ -486,7 +476,7 @@ function GameLogTable({
                   <td className="px-2 py-2.5 text-center">
                     <span className={[
                       "rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest",
-                      g.IS_PLAYOFF ? "bg-[#1d428a]/10 text-[#1d428a]" : "bg-slate-100 text-slate-400",
+                      g.IS_PLAYOFF ? "bg-[#c8102e]/10 text-[#c8102e]" : "bg-slate-100 text-slate-400",
                     ].join(" ")}>
                       {g.IS_PLAYOFF ? "PO" : "RS"}
                     </span>
@@ -520,7 +510,7 @@ function GameLogTable({
                   className={[
                     "rounded-lg px-3 py-1.5 text-[10px] font-bold transition-all",
                     pg === page
-                      ? "bg-[#1d428a] text-white"
+                      ? "bg-[#c8102e] text-white"
                       : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50",
                   ].join(" ")}
                 >
@@ -560,7 +550,7 @@ function FeaturedCard({
   return (
     <button
       onClick={onClick}
-      className="group w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-left shadow-[0_4px_20px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_14px_35px_rgba(15,23,42,0.12)] hover:border-slate-300 relative cursor-pointer"
+      className="group w-full overflow-hidden rounded-sm border border-slate-200 bg-white text-left shadow-sm transition-colors duration-200 hover:shadow-md hover:border-slate-400 relative cursor-pointer"
     >
       {/* Dynamic Team Accent Stripe */}
       <div
@@ -585,7 +575,7 @@ function FeaturedCard({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-black text-slate-900 leading-tight group-hover:text-indigo-900 transition-colors">
+            <p className="truncate text-[13px] font-black text-slate-900 leading-tight group-hover:text-[#c8102e] transition-colors">
               {profile.PLAYER_NAME}
             </p>
             <div className="mt-1 flex items-center gap-1.5 flex-wrap">
@@ -618,7 +608,7 @@ function FeaturedCard({
             ].map(({ v, lbl, highlight }) => (
               <div
                 key={lbl}
-                className="rounded-xl border border-slate-100 bg-slate-50/80 px-2 py-1.5 text-center transition-colors group-hover:bg-slate-50"
+                className="rounded-sm border border-slate-100 bg-slate-50/80 px-2 py-1.5 text-center transition-colors group-hover:bg-slate-50"
               >
                 <p
                   className="text-sm font-black leading-none font-mono"
@@ -752,8 +742,8 @@ function DiscoveryGrid({
     <div className="space-y-8">
       {renderSection("Top Scorers", "2025–26 · PPG leaders", topScorers)}
       {renderSection("Playmakers", "2025–26 · APG leaders", topPlaymakers)}
-      {renderSection("Glass Eaters", "2025–26 · RPG leaders", topRebounders)}
-      {renderSection("In the Archives", "Players from 2018–25 seasons · no longer active", legacyPlayers)}
+      {renderSection("Rebound leaders", "2025–26 · RPG leaders", topRebounders)}
+      {renderSection("Past seasons", "Players from 2018–25 · no longer active", legacyPlayers)}
     </div>
   );
 }
@@ -975,7 +965,7 @@ export default function PlayerPage() {
   if (loading) {
     return (
       <div className="flex h-72 flex-col items-center justify-center gap-4">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#1d428a] border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#c8102e] border-t-transparent" />
         <p className="text-[10px] font-black uppercase tracking-[0.32em] text-slate-400">
           Loading player data...
         </p>
@@ -985,15 +975,15 @@ export default function PlayerPage() {
 
   if (error) {
     return (
-      <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-4 rounded-[2rem] border border-rose-200 bg-white p-8 text-center shadow-lg">
-        <div className="rounded-2xl bg-rose-50 p-4 text-rose-600">
+      <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-4 rounded-sm border border-rose-200 bg-white p-8 text-center shadow-lg">
+        <div className="rounded-md bg-rose-50 p-4 text-rose-600">
           <AlertCircle size={28} />
         </div>
         <div>
           <h2 className="text-xl font-black text-slate-900">Data not found</h2>
           <p className="mt-2 text-sm text-slate-500">{error}</p>
         </div>
-        <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-[11px] text-slate-500">
+        <p className="rounded-sm border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-[11px] text-slate-500">
           python3 scripts/export_player_profiles.py
         </p>
       </div>
@@ -1001,31 +991,35 @@ export default function PlayerPage() {
   }
 
   return (
-    <div className="space-y-5 animate-fade-in-up">
+    <div className="space-y-5">
 
       {/* ── Search bar ── */}
-      <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.07)]">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Player Search</p>
-          <p className="text-[10px] text-slate-400">{profiles.length} players · 2018–26</p>
+      <div className="border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-5 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#c8102e]">NBA · Player Index</p>
+            <h1 className="mt-1 text-3xl font-black uppercase leading-none tracking-tight text-slate-950 sm:text-4xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Players</h1>
+          </div>
+          <p className="text-xs text-slate-500">{profiles.length.toLocaleString()} players · 2018–26</p>
         </div>
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Find a player</p>
         <div className="relative">
           <div className="relative">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search any player from 2018–19 onwards (inc. retired)..."
+              placeholder="Search by player name"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setShowDropdown(true); }}
               onFocus={() => setShowDropdown(true)}
               onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1d428a]/30 transition-all"
+              className="w-full rounded-sm border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/10 transition-all"
             />
             <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           </div>
 
           {showDropdown && filteredProfiles.length > 0 && (
-            <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.12)]">
+            <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 overflow-y-auto rounded-sm border border-slate-200 bg-white shadow-lg">
               {filteredProfiles.map((p) => (
                 <button
                   key={p.PLAYER_ID}
@@ -1070,22 +1064,16 @@ export default function PlayerPage() {
             const playerTheme = getTeamTheme(primaryTeamAbbr);
 
             return (
-              <div className="relative rounded-[1.75rem] border border-slate-200/90 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.08)] overflow-hidden">
-                {/* Dynamic Ambient Background Glow */}
-                <div
-                  className="pointer-events-none absolute -top-20 -right-20 w-80 h-80 rounded-full blur-3xl opacity-15"
-                  style={{ backgroundColor: playerTheme.primary }}
-                />
-                
+              <div className="relative border border-slate-200 bg-white shadow-sm overflow-hidden">
                 {/* Dynamic Top Stripe with Team Colors */}
                 <div
-                  className="h-2 w-full"
+                  className="h-1 w-full"
                   style={{
                     background: `linear-gradient(90deg, ${playerTheme.primary}, ${playerTheme.secondary || playerTheme.primary})`,
                   }}
                 />
 
-                <div className="relative z-10 p-6">
+                <div className="relative z-10 p-5 sm:p-7">
                   <div className="flex flex-col gap-6 md:flex-row md:items-start">
                     <div className="flex flex-col items-center gap-3 md:items-start shrink-0">
                       <div className="relative">
@@ -1093,7 +1081,7 @@ export default function PlayerPage() {
                           playerId={selectedPlayer.PLAYER_ID}
                           name={selectedPlayer.PLAYER_NAME ?? ""}
                           size={120}
-                          className="rounded-full ring-4 ring-slate-100 shadow-xl"
+                            className="rounded-sm ring-1 ring-slate-200"
                           style={{ borderColor: `${playerTheme.primary}44` }}
                         />
                         {selectedPlayer.OFFICIAL_POSITION && (
@@ -1204,7 +1192,7 @@ export default function PlayerPage() {
           })()}
 
           {availableSeasons.length === 0 ? (
-            <div className="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-6 text-center">
+            <div className="rounded-sm border border-amber-200 bg-amber-50 p-6 text-center">
               <AlertCircle size={24} className="mx-auto mb-2 text-amber-500" />
               <p className="text-sm font-semibold text-amber-700">No game data found for this player in the database.</p>
             </div>
@@ -1216,7 +1204,7 @@ export default function PlayerPage() {
                 const playerTheme = getTeamTheme(primaryTeamAbbr);
 
                 return (
-                  <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+                  <div className="rounded-sm border border-slate-200/80 bg-white p-5 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Season</p>
@@ -1226,7 +1214,6 @@ export default function PlayerPage() {
                         seasons={availableSeasons}
                         selected={selectedSeason}
                         onChange={setSelectedSeason}
-                        teamColor={playerTheme.primary}
                       />
                     </div>
                   </div>
@@ -1235,9 +1222,9 @@ export default function PlayerPage() {
 
               {/* Season Averages */}
               {currentAvgs && currentAvgs.games_total > 0 && (
-                <div className="rounded-[1.75rem] border border-slate-100 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+                <div className="rounded-sm border border-slate-100 bg-white p-6 shadow-sm">
                   <div className="mb-4 flex items-center gap-2 flex-wrap">
-                    <TrendingUp size={16} className="text-indigo-600" />
+                    <TrendingUp size={16} className="text-[#c8102e]" />
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
                       {selectedSeason} Season Averages
                     </p>
@@ -1254,10 +1241,10 @@ export default function PlayerPage() {
 
 
               {/* Game Log */}
-              <div className="rounded-[1.75rem] border border-slate-100 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+              <div className="rounded-sm border border-slate-100 bg-white p-6 shadow-sm">
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-[#1d428a]" />
+                    <Calendar size={16} className="text-[#c8102e]" />
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
                       {selectedSeason} Game Log
                     </p>
@@ -1267,7 +1254,7 @@ export default function PlayerPage() {
                     <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[9px] font-bold text-amber-700">
                       {currentGames.filter((g) => g.DID_NOT_PLAY).length} DNP
                     </span>
-                    <span className="rounded-full bg-[#1d428a]/10 px-2.5 py-1 text-[9px] font-bold text-[#1d428a]">
+                    <span className="rounded-full bg-[#c8102e]/10 px-2.5 py-1 text-[9px] font-bold text-[#c8102e]">
                       {currentGames.filter((g) => g.IS_PLAYOFF).length} playoff
                     </span>
                   </div>
@@ -1282,7 +1269,7 @@ export default function PlayerPage() {
                       placeholder="Search opponent team name or abbreviation (e.g. Boston, LAL, Nuggets)..."
                       value={opponentSearch}
                       onChange={(e) => setOpponentSearch(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200/80 bg-slate-50/50 py-2 pl-8 pr-4 text-xs font-semibold text-slate-700 outline-none ring-offset-2 transition-all placeholder:text-slate-400 focus:border-[#1d428a] focus:bg-white focus:ring-2 focus:ring-[#1d428a]/10 animate-fade-in"
+                      className="w-full rounded-md border border-slate-200/80 bg-slate-50/50 py-2 pl-8 pr-4 text-xs font-semibold text-slate-700 outline-none ring-offset-2 transition-all placeholder:text-slate-400 focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/10 animate-fade-in"
                     />
                   </div>
                 )}
@@ -1293,7 +1280,7 @@ export default function PlayerPage() {
                     DNP = Sakat / Oynamadı
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="rounded-full bg-[#1d428a]/10 px-1.5 py-0.5 text-[8px] font-black text-[#1d428a]">PO</span>
+                    <span className="rounded-full bg-[#c8102e]/10 px-1.5 py-0.5 text-[8px] font-black text-[#c8102e]">PO</span>
                     Playoff
                   </span>
                   <span className="flex items-center gap-1.5">
@@ -1326,8 +1313,8 @@ export default function PlayerPage() {
                     </div>
                   )
                 ) : selectedSeason === "2026-27" ? (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 py-10 px-4 text-center">
-                    <Calendar size={28} className="mx-auto mb-2 text-[#1d428a]/50" />
+                  <div className="rounded-md border border-dashed border-slate-200 bg-slate-50/50 py-10 px-4 text-center">
+                    <Calendar size={28} className="mx-auto mb-2 text-[#c8102e]/50" />
                     <p className="text-sm font-bold text-slate-800">2026-27 Sezonu Fikstürü Hazırlandı</p>
                     <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
                       1,274 maçlık yeni sezon fikstürü sisteme yüklenmiştir. Maçlar oynandıkça maç sonuçları ve detaylı kutu istatistikleri burada otomatik olarak listelenecektir.
@@ -1344,11 +1331,11 @@ export default function PlayerPage() {
 
       {/* ── Discovery grid (shown when no player selected) ── */}
       {!selectedPlayer && profiles.length > 0 && (
-        <div className="rounded-[1.75rem] border border-slate-200/80 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.07)]">
+        <div className="rounded-sm border border-slate-200/80 bg-white p-6 shadow-sm">
           <div className="mb-6">
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Player Discovery</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Player Leaders & Archive</p>
             <h2 className="mt-1 text-xl font-black text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Browse Players · 2018–26
+              Explore NBA players · 2018–26
             </h2>
             <p className="mt-0.5 text-[11px] text-slate-400">
               {profiles.length} players across 8 seasons — including retired &amp; traded players. Click any card or search above.

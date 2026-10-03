@@ -1,228 +1,19 @@
 {
-    "version": "v10_Ridge",
-    "updated_at": "2026-09-15T09:22:48.443354Z",
-    "training_manifest": {
-        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
-        "train_seasons": [
-            "2020-21",
-            "2021-22",
-            "2022-23",
-            "2023-24"
-        ],
-        "calibration_season": "2024-25",
-        "validation_season": "2025-26",
-        "holdout": {
-            "strategy": "season_holdout",
-            "test_size": 0.2,
-            "date_col": "GAME_DATE",
-            "calibration_season": "2024-25"
-        }
-    },
-    "feature_contract": {
-        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/score_v10.yaml",
-        "schema_version": "score_v10",
-        "config": {
-            "schema_version": "score_v10",
-            "targets": {
-                "pace": "TARGET_PACE",
-                "home_off_rtg": "TARGET_HOME_OFF_RTG",
-                "away_off_rtg": "TARGET_AWAY_OFF_RTG",
-                "margin": "TARGET_MARGIN"
-            },
-            "pace_features": [
-                "PACE_LAST_5",
-                "PACE_LAST_10",
-                "OPP_PACE_LAST_5",
-                "OPP_PACE_LAST_10",
-                "OFF_RTG_LAST_5",
-                "DEF_RTG_LAST_5",
-                "OPP_OFF_RTG_LAST_5",
-                "OPP_DEF_RTG_LAST_5",
-                "DAYS_REST",
-                "OPP_DAYS_REST",
-                "IS_ELIMINATION_GAME",
-                "CAN_CLINCH_SERIES",
-                "IS_3_IN_4",
-                "OPP_IS_3_IN_4",
-                "PACE_COLLISION",
-                "FG3A_RATE_LAST_5",
-                "OPP_FG3A_RATE_LAST_5",
-                "FOUL_RATE_LAST_5",
-                "OPP_FOUL_RATE_LAST_5"
-            ],
-            "base_off_rtg_features": [
-                "OFF_RTG_LAST_5",
-                "OFF_RTG_LAST_10",
-                "PACE_LAST_5",
-                "WINRATE_LAST_5",
-                "OPP_DEF_RTG_LAST_5",
-                "OPP_DEF_RTG_LAST_10",
-                "OPP_PACE_LAST_5",
-                "TEAM_CORE_TOP3_PLAYED_COUNT",
-                "TEAM_CORE_TOP3_AVAILABLE_RATE",
-                "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
-                "OPP_CORE_TOP3_PLAYED_COUNT",
-                "DAYS_REST",
-                "OPP_DAYS_REST",
-                "IS_ELIMINATION_GAME",
-                "CAN_CLINCH_SERIES",
-                "TEAM_V3_PROJ_PTS_SUM",
-                "OPP_V3_PROJ_PTS_SUM",
-                "TEAM_V3_PROJ_PRA_SUM",
-                "EFG_PCT_LAST_5",
-                "EFG_PCT_LAST_10",
-                "DEF_EFG_PCT_LAST_5",
-                "FT_RATE_LAST_5",
-                "TOV_PCT_LAST_5",
-                "FG3A_RATE_LAST_5",
-                "FG3A_RATE_LAST_10",
-                "ORB_PCT_LAST_5",
-                "DEF_TOV_PCT_LAST_5",
-                "DEF_ORB_PCT_LAST_5",
-                "AST_TO_TOV_LAST_5",
-                "AST_TO_FGM_LAST_5",
-                "HAVOC_RATE_LAST_5",
-                "PTS_SHARE_3PT_LAST_5",
-                "PTS_SHARE_PAINT_LAST_5",
-                "FG3_REGRESSION_DELTA"
-            ],
-            "away_extra_features": [
-                "TRAVEL_DISTANCE",
-                "TIMEZONE_DIFF"
-            ],
-            "margin_extra_features": [
-                "DEF_RTG_LAST_5",
-                "DEF_RTG_LAST_10",
-                "OPP_OFF_RTG_LAST_5",
-                "NET_RTG_LAST_5",
-                "NET_RTG_LAST_10",
-                "OPP_NET_RTG_LAST_5",
-                "NET_RTG_DIFF_LAST_10",
-                "EFG_DIFF_LAST_10",
-                "THREE_POINT_RATE_DIFF",
-                "FT_MARGIN_LAST_5",
-                "OPP_HAVOC_RATE_LAST_5",
-                "ELO_DIFF",
-                "PRE_GAME_ELO",
-                "OPP_PRE_GAME_ELO"
-            ]
-        }
-    },
-    "input_files": [
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv",
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv",
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv",
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv",
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv"
-    ],
-    "row_counts_by_file": {
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv": 1456,
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv": 1766,
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv": 1760,
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv": 1766,
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv": 1760
-    },
-    "final_refit": {
-        "enabled": true,
-        "rows": 8508,
-        "note": "Holdout metrics are computed before final submodels are refit on all eligible rows."
-    },
-    "evaluation": "chronological_holdout",
-    "pace_mae": 3.568088841760641,
-    "home_rtg_mae": 9.126445776084715,
-    "away_rtg_mae": 8.8345260037957,
-    "margin_mae": 11.524100383949548,
-    "derived_home_score_mae": 8.944472549394362,
-    "derived_away_score_mae": 8.991810504782471,
-    "splits": {
-        "pace": {
-            "strategy": "season_holdout",
-            "split_date": null,
-            "train_rows": 3374,
-            "test_rows": 877,
-            "train_seasons": [
-                "2020-21",
-                "2021-22",
-                "2022-23",
-                "2023-24"
-            ],
-            "test_seasons": [
-                "2024-25"
-            ]
-        },
-        "home_rtg": {
-            "strategy": "season_holdout",
-            "split_date": null,
-            "train_rows": 3374,
-            "test_rows": 877,
-            "train_seasons": [
-                "2020-21",
-                "2021-22",
-                "2022-23",
-                "2023-24"
-            ],
-            "test_seasons": [
-                "2024-25"
-            ]
-        },
-        "away_rtg": {
-            "strategy": "season_holdout",
-            "split_date": null,
-            "train_rows": 3374,
-            "test_rows": 883,
-            "train_seasons": [
-                "2020-21",
-                "2021-22",
-                "2022-23",
-                "2023-24"
-            ],
-            "test_seasons": [
-                "2024-25"
-            ]
-        },
-        "margin": {
-            "strategy": "season_holdout",
-            "split_date": null,
-            "train_rows": 3374,
-            "test_rows": 877,
-            "train_seasons": [
-                "2020-21",
-                "2021-22",
-                "2022-23",
-                "2023-24"
-            ],
-            "test_seasons": [
-                "2024-25"
-            ]
-        },
-        "derived_score_eval_games": 877
-    },
-    "ridge_coefs": {
-        "total": [
-            6.141594442799847,
-            -0.026248964115658725,
-            0.8705537619841643,
-            -0.20154971395549687,
-            -0.8487701809394387
-        ],
-        "total_intercept": -0.5224633222950769,
-        "margin": [
-            -2.0329605583131465,
-            1.8009104943165204,
-            -2.624044314155931,
-            0.551061399335709,
-            0.5479303434144388
-        ],
-        "margin_intercept": 0.17791781795220696,
-        "features": [
-            "is_playoff",
-            "home_b2b",
-            "away_b2b",
-            "home_rest_advantage",
-            "away_rest_advantage"
-        ]
-    },
-    "pace_features": [
+  "version": "v10.1_Ridge",
+  "updated_at": "2026-10-03T20:05:03.408954Z",
+  "training_manifest": {},
+  "feature_contract": {
+    "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/score_v10.yaml",
+    "schema_version": "score_v10",
+    "config": {
+      "schema_version": "score_v10",
+      "targets": {
+        "pace": "TARGET_PACE",
+        "home_off_rtg": "TARGET_HOME_OFF_RTG",
+        "away_off_rtg": "TARGET_AWAY_OFF_RTG",
+        "margin": "TARGET_MARGIN"
+      },
+      "pace_features": [
         "PACE_LAST_5",
         "PACE_LAST_10",
         "OPP_PACE_LAST_5",
@@ -242,8 +33,8 @@
         "OPP_FG3A_RATE_LAST_5",
         "FOUL_RATE_LAST_5",
         "OPP_FOUL_RATE_LAST_5"
-    ],
-    "home_off_rtg_features": [
+      ],
+      "base_off_rtg_features": [
         "OFF_RTG_LAST_5",
         "OFF_RTG_LAST_10",
         "PACE_LAST_5",
@@ -251,10 +42,8 @@
         "OPP_DEF_RTG_LAST_5",
         "OPP_DEF_RTG_LAST_10",
         "OPP_PACE_LAST_5",
-        "TEAM_CORE_TOP3_PLAYED_COUNT",
         "TEAM_CORE_TOP3_AVAILABLE_RATE",
         "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
-        "OPP_CORE_TOP3_PLAYED_COUNT",
         "DAYS_REST",
         "OPP_DAYS_REST",
         "IS_ELIMINATION_GAME",
@@ -278,80 +67,12 @@
         "PTS_SHARE_3PT_LAST_5",
         "PTS_SHARE_PAINT_LAST_5",
         "FG3_REGRESSION_DELTA"
-    ],
-    "away_off_rtg_features": [
-        "OFF_RTG_LAST_5",
-        "OFF_RTG_LAST_10",
-        "PACE_LAST_5",
-        "WINRATE_LAST_5",
-        "OPP_DEF_RTG_LAST_5",
-        "OPP_DEF_RTG_LAST_10",
-        "OPP_PACE_LAST_5",
-        "TEAM_CORE_TOP3_PLAYED_COUNT",
-        "TEAM_CORE_TOP3_AVAILABLE_RATE",
-        "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
-        "OPP_CORE_TOP3_PLAYED_COUNT",
-        "DAYS_REST",
-        "OPP_DAYS_REST",
-        "IS_ELIMINATION_GAME",
-        "CAN_CLINCH_SERIES",
-        "TEAM_V3_PROJ_PTS_SUM",
-        "OPP_V3_PROJ_PTS_SUM",
-        "TEAM_V3_PROJ_PRA_SUM",
-        "EFG_PCT_LAST_5",
-        "EFG_PCT_LAST_10",
-        "DEF_EFG_PCT_LAST_5",
-        "FT_RATE_LAST_5",
-        "TOV_PCT_LAST_5",
-        "FG3A_RATE_LAST_5",
-        "FG3A_RATE_LAST_10",
-        "ORB_PCT_LAST_5",
-        "DEF_TOV_PCT_LAST_5",
-        "DEF_ORB_PCT_LAST_5",
-        "AST_TO_TOV_LAST_5",
-        "AST_TO_FGM_LAST_5",
-        "HAVOC_RATE_LAST_5",
-        "PTS_SHARE_3PT_LAST_5",
-        "PTS_SHARE_PAINT_LAST_5",
-        "FG3_REGRESSION_DELTA",
+      ],
+      "away_extra_features": [
         "TRAVEL_DISTANCE",
         "TIMEZONE_DIFF"
-    ],
-    "margin_features": [
-        "OFF_RTG_LAST_5",
-        "OFF_RTG_LAST_10",
-        "PACE_LAST_5",
-        "WINRATE_LAST_5",
-        "OPP_DEF_RTG_LAST_5",
-        "OPP_DEF_RTG_LAST_10",
-        "OPP_PACE_LAST_5",
-        "TEAM_CORE_TOP3_PLAYED_COUNT",
-        "TEAM_CORE_TOP3_AVAILABLE_RATE",
-        "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
-        "OPP_CORE_TOP3_PLAYED_COUNT",
-        "DAYS_REST",
-        "OPP_DAYS_REST",
-        "IS_ELIMINATION_GAME",
-        "CAN_CLINCH_SERIES",
-        "TEAM_V3_PROJ_PTS_SUM",
-        "OPP_V3_PROJ_PTS_SUM",
-        "TEAM_V3_PROJ_PRA_SUM",
-        "EFG_PCT_LAST_5",
-        "EFG_PCT_LAST_10",
-        "DEF_EFG_PCT_LAST_5",
-        "FT_RATE_LAST_5",
-        "TOV_PCT_LAST_5",
-        "FG3A_RATE_LAST_5",
-        "FG3A_RATE_LAST_10",
-        "ORB_PCT_LAST_5",
-        "DEF_TOV_PCT_LAST_5",
-        "DEF_ORB_PCT_LAST_5",
-        "AST_TO_TOV_LAST_5",
-        "AST_TO_FGM_LAST_5",
-        "HAVOC_RATE_LAST_5",
-        "PTS_SHARE_3PT_LAST_5",
-        "PTS_SHARE_PAINT_LAST_5",
-        "FG3_REGRESSION_DELTA",
+      ],
+      "margin_extra_features": [
         "DEF_RTG_LAST_5",
         "DEF_RTG_LAST_10",
         "OPP_OFF_RTG_LAST_5",
@@ -366,5 +87,235 @@
         "ELO_DIFF",
         "PRE_GAME_ELO",
         "OPP_PRE_GAME_ELO"
+      ]
+    }
+  },
+  "input_files": [
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv"
+  ],
+  "row_counts_by_file": {
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv": 1772,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv": 1766,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv": 1766,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv": 1760,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv": 1760,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv": 1456
+  },
+  "final_refit": {
+    "enabled": true,
+    "rows": 10280,
+    "note": "Holdout metrics are computed before final submodels are refit on all eligible rows."
+  },
+  "evaluation": "chronological_holdout",
+  "pace_mae": 3.600782023728824,
+  "home_rtg_mae": 8.971254068023,
+  "away_rtg_mae": 9.592860075408403,
+  "margin_mae": 12.216892195761218,
+  "derived_home_score_mae": 9.230140649568845,
+  "derived_away_score_mae": 8.648142120135832,
+  "splits": {
+    "pace": {
+      "strategy": "chronological_quantile",
+      "split_date": "2025-04-08",
+      "train_rows": 4116,
+      "test_rows": 1019,
+      "train_seasons": null,
+      "test_seasons": null
+    },
+    "home_rtg": {
+      "strategy": "chronological_quantile",
+      "split_date": "2025-04-08",
+      "train_rows": 4116,
+      "test_rows": 1019,
+      "train_seasons": null,
+      "test_seasons": null
+    },
+    "away_rtg": {
+      "strategy": "chronological_quantile",
+      "split_date": "2025-04-08",
+      "train_rows": 4122,
+      "test_rows": 1023,
+      "train_seasons": null,
+      "test_seasons": null
+    },
+    "margin": {
+      "strategy": "chronological_quantile",
+      "split_date": "2025-04-08",
+      "train_rows": 4116,
+      "test_rows": 1019,
+      "train_seasons": null,
+      "test_seasons": null
+    },
+    "derived_score_eval_games": 1019
+  },
+  "ridge_coefs": {
+    "total": [
+      6.367683936752371,
+      -0.030795278552367356,
+      0.8594763543040492,
+      -0.45629267567551574,
+      -0.7953982913574278
+    ],
+    "total_intercept": -0.4811218347876736,
+    "margin": [
+      -1.63972695094246,
+      2.034679946302825,
+      -2.308283781725147,
+      0.05041272116499732,
+      0.3390383586230756
+    ],
+    "margin_intercept": 0.17722152972540073,
+    "features": [
+      "is_playoff",
+      "home_b2b",
+      "away_b2b",
+      "home_rest_advantage",
+      "away_rest_advantage"
     ]
+  },
+  "pace_features": [
+    "PACE_LAST_5",
+    "PACE_LAST_10",
+    "OPP_PACE_LAST_5",
+    "OPP_PACE_LAST_10",
+    "OFF_RTG_LAST_5",
+    "DEF_RTG_LAST_5",
+    "OPP_OFF_RTG_LAST_5",
+    "OPP_DEF_RTG_LAST_5",
+    "DAYS_REST",
+    "OPP_DAYS_REST",
+    "IS_ELIMINATION_GAME",
+    "CAN_CLINCH_SERIES",
+    "IS_3_IN_4",
+    "OPP_IS_3_IN_4",
+    "PACE_COLLISION",
+    "FG3A_RATE_LAST_5",
+    "OPP_FG3A_RATE_LAST_5",
+    "FOUL_RATE_LAST_5",
+    "OPP_FOUL_RATE_LAST_5"
+  ],
+  "home_off_rtg_features": [
+    "OFF_RTG_LAST_5",
+    "OFF_RTG_LAST_10",
+    "PACE_LAST_5",
+    "WINRATE_LAST_5",
+    "OPP_DEF_RTG_LAST_5",
+    "OPP_DEF_RTG_LAST_10",
+    "OPP_PACE_LAST_5",
+    "TEAM_CORE_TOP3_AVAILABLE_RATE",
+    "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
+    "DAYS_REST",
+    "OPP_DAYS_REST",
+    "IS_ELIMINATION_GAME",
+    "CAN_CLINCH_SERIES",
+    "TEAM_V3_PROJ_PTS_SUM",
+    "OPP_V3_PROJ_PTS_SUM",
+    "TEAM_V3_PROJ_PRA_SUM",
+    "EFG_PCT_LAST_5",
+    "EFG_PCT_LAST_10",
+    "DEF_EFG_PCT_LAST_5",
+    "FT_RATE_LAST_5",
+    "TOV_PCT_LAST_5",
+    "FG3A_RATE_LAST_5",
+    "FG3A_RATE_LAST_10",
+    "ORB_PCT_LAST_5",
+    "DEF_TOV_PCT_LAST_5",
+    "DEF_ORB_PCT_LAST_5",
+    "AST_TO_TOV_LAST_5",
+    "AST_TO_FGM_LAST_5",
+    "HAVOC_RATE_LAST_5",
+    "PTS_SHARE_3PT_LAST_5",
+    "PTS_SHARE_PAINT_LAST_5",
+    "FG3_REGRESSION_DELTA"
+  ],
+  "away_off_rtg_features": [
+    "OFF_RTG_LAST_5",
+    "OFF_RTG_LAST_10",
+    "PACE_LAST_5",
+    "WINRATE_LAST_5",
+    "OPP_DEF_RTG_LAST_5",
+    "OPP_DEF_RTG_LAST_10",
+    "OPP_PACE_LAST_5",
+    "TEAM_CORE_TOP3_AVAILABLE_RATE",
+    "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
+    "DAYS_REST",
+    "OPP_DAYS_REST",
+    "IS_ELIMINATION_GAME",
+    "CAN_CLINCH_SERIES",
+    "TEAM_V3_PROJ_PTS_SUM",
+    "OPP_V3_PROJ_PTS_SUM",
+    "TEAM_V3_PROJ_PRA_SUM",
+    "EFG_PCT_LAST_5",
+    "EFG_PCT_LAST_10",
+    "DEF_EFG_PCT_LAST_5",
+    "FT_RATE_LAST_5",
+    "TOV_PCT_LAST_5",
+    "FG3A_RATE_LAST_5",
+    "FG3A_RATE_LAST_10",
+    "ORB_PCT_LAST_5",
+    "DEF_TOV_PCT_LAST_5",
+    "DEF_ORB_PCT_LAST_5",
+    "AST_TO_TOV_LAST_5",
+    "AST_TO_FGM_LAST_5",
+    "HAVOC_RATE_LAST_5",
+    "PTS_SHARE_3PT_LAST_5",
+    "PTS_SHARE_PAINT_LAST_5",
+    "FG3_REGRESSION_DELTA",
+    "TRAVEL_DISTANCE",
+    "TIMEZONE_DIFF"
+  ],
+  "margin_features": [
+    "OFF_RTG_LAST_5",
+    "OFF_RTG_LAST_10",
+    "PACE_LAST_5",
+    "WINRATE_LAST_5",
+    "OPP_DEF_RTG_LAST_5",
+    "OPP_DEF_RTG_LAST_10",
+    "OPP_PACE_LAST_5",
+    "TEAM_CORE_TOP3_AVAILABLE_RATE",
+    "TEAM_CORE_TOP3_PTS_LAST_5_SUM",
+    "DAYS_REST",
+    "OPP_DAYS_REST",
+    "IS_ELIMINATION_GAME",
+    "CAN_CLINCH_SERIES",
+    "TEAM_V3_PROJ_PTS_SUM",
+    "OPP_V3_PROJ_PTS_SUM",
+    "TEAM_V3_PROJ_PRA_SUM",
+    "EFG_PCT_LAST_5",
+    "EFG_PCT_LAST_10",
+    "DEF_EFG_PCT_LAST_5",
+    "FT_RATE_LAST_5",
+    "TOV_PCT_LAST_5",
+    "FG3A_RATE_LAST_5",
+    "FG3A_RATE_LAST_10",
+    "ORB_PCT_LAST_5",
+    "DEF_TOV_PCT_LAST_5",
+    "DEF_ORB_PCT_LAST_5",
+    "AST_TO_TOV_LAST_5",
+    "AST_TO_FGM_LAST_5",
+    "HAVOC_RATE_LAST_5",
+    "PTS_SHARE_3PT_LAST_5",
+    "PTS_SHARE_PAINT_LAST_5",
+    "FG3_REGRESSION_DELTA",
+    "DEF_RTG_LAST_5",
+    "DEF_RTG_LAST_10",
+    "OPP_OFF_RTG_LAST_5",
+    "NET_RTG_LAST_5",
+    "NET_RTG_LAST_10",
+    "OPP_NET_RTG_LAST_5",
+    "NET_RTG_DIFF_LAST_10",
+    "EFG_DIFF_LAST_10",
+    "THREE_POINT_RATE_DIFF",
+    "FT_MARGIN_LAST_5",
+    "OPP_HAVOC_RATE_LAST_5",
+    "ELO_DIFF",
+    "PRE_GAME_ELO",
+    "OPP_PRE_GAME_ELO"
+  ],
+  "notes": "Promoted v10.1 score models with box-score leakage removed from margin/off_rtg features."
 }

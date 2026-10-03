@@ -9,7 +9,8 @@ if str(ROOT) not in sys.path:
 sys.path.append(str(ROOT / "ml-service"))
 
 from app.schemas import GameFullRequest
-from app.service import predict_game_full, init_model
+from app.service import init_model
+from app.services.game_full import predict_game_full
 
 def main():
     print("Loading models...")

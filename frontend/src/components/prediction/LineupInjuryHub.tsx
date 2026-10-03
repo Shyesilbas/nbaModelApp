@@ -1,5 +1,5 @@
-import React from "react";
-import { AlertCircle, CheckCircle2, Clock, UserX, Users, RotateCcw, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { AlertCircle, CheckCircle2, Clock, UserX, Users, RotateCcw, Sparkles, Search } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { TeamInfo } from "./types";
 import type { PlayerStatusOverride } from "../../api/predictions";
@@ -37,6 +37,9 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
   onApplyChanges,
   loading = false,
 }) => {
+  const [homeQuery, setHomeQuery] = useState("");
+  const [awayQuery, setAwayQuery] = useState("");
+
   const getPlayerStatus = (p: RotationPlayer): "ACTIVE" | "RESTRICTED" | "OUT" => {
     const key = String(p.player_id ?? p.player_name);
     if (overrides[key]) return overrides[key].status;
@@ -61,6 +64,10 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
   const renderRosterColumn = (team: TeamInfo, players: RotationPlayer[], isHome: boolean) => {
     const outCount = players.filter((p) => getPlayerStatus(p) === "OUT").length;
     const restCount = players.filter((p) => getPlayerStatus(p) === "RESTRICTED").length;
+    const query = (isHome ? homeQuery : awayQuery).toLowerCase().trim();
+    const displayedPlayers = query
+      ? players.filter((p) => p.player_name.toLowerCase().includes(query))
+      : players;
 
     return (
       <div className="flex-1 bg-slate-900/60 rounded-2xl border border-slate-800/80 p-4 flex flex-col gap-3">
@@ -75,7 +82,9 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
                   {isHome ? "HOME" : "AWAY"}
                 </span>
               </div>
-              <p className="text-[10px] font-medium text-slate-400">Core Rotation & Availability</p>
+              <p className="text-[10px] font-medium text-slate-400">
+                {players.length} Players Available · Rotation &amp; Injury
+              </p>
             </div>
           </div>
 
@@ -98,12 +107,28 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
           </div>
         </div>
 
+        {/* Quick Search Filter */}
+        {players.length > 8 && (
+          <div className="relative">
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder={`Search ${team.name} roster (${players.length} players)...`}
+              value={isHome ? homeQuery : awayQuery}
+              onChange={(e) => (isHome ? setHomeQuery(e.target.value) : setAwayQuery(e.target.value))}
+              className="w-full rounded-xl border border-slate-800 bg-slate-950/70 py-1.5 pl-8 pr-3 text-[11px] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50"
+            />
+          </div>
+        )}
+
         {/* Players List */}
-        <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-          {players.length === 0 ? (
-            <div className="p-4 text-center text-xs text-slate-500">No rotation players listed</div>
+        <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+          {displayedPlayers.length === 0 ? (
+            <div className="p-4 text-center text-xs text-slate-500">
+              {query ? `No players matching "${query}"` : "No rotation players listed"}
+            </div>
           ) : (
-            players.map((p) => {
+            displayedPlayers.map((p) => {
               const currentStatus = getPlayerStatus(p);
               const isOut = currentStatus === "OUT";
               const isRestricted = currentStatus === "RESTRICTED";

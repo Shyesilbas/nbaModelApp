@@ -166,6 +166,10 @@ export default function GameResults({
   }
 
   if (selectedGame) {
+    const isCompletedGame =
+      selectedGame.GAME_STATUS === "Final" ||
+      selectedGame.GAME_STATUS === "FINAL" ||
+      ((Number(selectedGame.HOME_SCORE) || 0) > 0 && (Number(selectedGame.AWAY_SCORE) || 0) > 0);
     const gid = normGid(selectedGame.GAME_ID);
     const teamRows = selectedDetail?.team_boxscores ?? [];
     const gamePlayers = selectedDetail?.player_boxscores ?? [];
@@ -181,7 +185,7 @@ export default function GameResults({
           <ArrowLeft size={11} />
           Back to games
         </button>
-        {detailLoading || !selectedDetail ? (
+        {isCompletedGame && (detailLoading || !selectedDetail) ? (
           <div className="flex h-32 items-center justify-center gap-2">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#1d428a] border-t-transparent" />
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading box scores...</span>
@@ -190,13 +194,22 @@ export default function GameResults({
           <GameCardDetail
             key={selectedGame.GAME_ID}
             game={selectedGame}
-            gameDetail={selectedDetail.game_detail}
+            gameDetail={selectedDetail?.game_detail ?? null}
             homeBS={homeBS}
             awayBS={awayBS}
             homePlayers={playerTeamFilter(gamePlayers, selectedGame.HOME_TEAM_ABBREVIATION)}
             awayPlayers={playerTeamFilter(gamePlayers, selectedGame.AWAY_TEAM_ABBREVIATION)}
             initialTab={initialDetailTab}
             season={selectedSeason}
+            onPredict={() => {
+              if (onNavigateToPrediction) {
+                onNavigateToPrediction({
+                  HOME_TEAM_ABBREVIATION: selectedGame.HOME_TEAM_ABBREVIATION,
+                  AWAY_TEAM_ABBREVIATION: selectedGame.AWAY_TEAM_ABBREVIATION,
+                  GAME_DATE: selectedGame.GAME_DATE,
+                });
+              }
+            }}
           />
         )}
       </div>
@@ -204,9 +217,25 @@ export default function GameResults({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <section className="border-y-[3px] border-[#c8102e] bg-[#101820] px-5 py-5 text-white sm:px-7">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.28em] text-white/55">NBA · Scores &amp; Schedule</p>
+            <h2 className="mt-1 text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Game Results</h2>
+            <p className="mt-2 text-xs text-white/65">Every matchup. Every final. Full box scores.</p>
+          </div>
+          <div className="flex items-center gap-2 border-l border-white/20 pl-4">
+            <span className="h-2 w-2 bg-[#c8102e]" />
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">Selected slate</p>
+              <p className="text-sm font-bold">{selectedDateGames.length} {selectedDateGames.length === 1 ? "game" : "games"}</p>
+            </div>
+          </div>
+        </div>
+      </section>
       {/* ── Filters & Controls Bar ── */}
-      <section className="rounded-[1.75rem] border border-slate-200/80 bg-white p-4 lg:p-5 shadow-xs">
+      <section className="border border-slate-200 bg-white p-4 shadow-sm lg:p-5">
         <div className="flex flex-col gap-4">
           
           {/* Top Row: Season Selector & Season Types */}
@@ -214,16 +243,16 @@ export default function GameResults({
             {/* Season Selector */}
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Season:</span>
-              <div className="flex flex-wrap gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
+              <div className="flex flex-wrap gap-1 border-b border-slate-200">
                 {seasonsList.map((s) => (
                   <button
                     key={s}
                     onClick={() => { setSelectedSeason(s); setSelectedGameId(null); }}
                     className={[
-                      "rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] transition-all duration-150 cursor-pointer",
+                      "border-b-2 px-2.5 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all duration-150 cursor-pointer",
                       selectedSeason === s
-                        ? "bg-slate-900 text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-white/80",
+                        ? "border-[#c8102e] text-slate-900"
+                        : "border-transparent text-slate-500 hover:text-slate-900",
                     ].join(" ")}
                   >
                     {s}
@@ -247,8 +276,8 @@ export default function GameResults({
                     className={[
                       "rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer flex items-center gap-1",
                       seasonTypeFilter === filter.id
-                        ? "bg-indigo-600 text-white shadow-xs"
-                        : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800",
+                        ? "border-[#c8102e] bg-[#c8102e] text-white"
+                        : "border border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-900",
                     ].join(" ")}
                   >
                     {filter.label}
@@ -274,8 +303,8 @@ export default function GameResults({
                 <ChevronLeft size={14} />
               </button>
 
-              <div className="min-w-[130px] text-center px-3 py-1 rounded-xl bg-slate-50 border border-slate-100">
-                <p className="text-xs font-black text-slate-900 leading-tight">
+              <div className="min-w-[150px] border-x-2 border-[#c8102e] px-4 py-1 text-center">
+                <p className="text-sm font-black uppercase text-slate-900 leading-tight">
                   {selectedDate ? fmtDate(selectedDate) : "No date"}
                 </p>
                 <p className="text-[9px] font-bold text-slate-400 leading-none mt-0.5">
@@ -299,7 +328,7 @@ export default function GameResults({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search team (e.g. LAL, BOS)..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition"
+                className="w-full border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#c8102e] transition"
               />
               {search && (
                 <button
@@ -325,7 +354,7 @@ export default function GameResults({
           <p className="text-xs text-slate-400 mt-1">Try selecting a different match day, category, or clear search filters.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {selectedDateGames.map((game) => (
             <GameCard
               key={game.GAME_ID}

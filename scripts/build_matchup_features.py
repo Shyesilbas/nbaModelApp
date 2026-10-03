@@ -374,7 +374,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     out["TRAVEL_DISTANCE"] = 0.0
     out["TIMEZONE_DIFF"] = 0.0
 
-    elo_state = compute_current_elo_state(team_df)
+    elo_state = compute_current_elo_state(team_df, season=season)
     out.update(build_matchup_strength_features(
         home_team=home_team,
         away_team=away_team,
@@ -569,7 +569,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     res["OPP_CORE_TOP3_PLAYED_COUNT"] = res.get("AWAY_TOP3_AVAILABLE", 0.0)
     res["TEAM_CORE_TOP3_AVAILABLE_RATE"] = res.get("HOME_TOP3_AVAILABLE", 0.0) / 3.0
 
-    # Early Season Dynamic Decay & Roster-Adjusted Baseline Adapter (0-5 games transition)
+    # Early Season Bayesian Dynamic Shrinkage & Roster-Adjusted Baseline Adapter (0-20 games transition)
     try:
         season_start_year = int(season.split("-")[0])
         season_start_dt = pd.Timestamp(f"{season_start_year}-09-01")
@@ -582,18 +582,29 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
             n_home = 0
             n_away = 0
 
-        w_home = min(n_home / 5.0, 1.0)
-        w_away = min(n_away / 5.0, 1.0)
+        # Bayesian shrinkage: w = n / (n + 10.0), smoothly weights sample size vs franchise prior
+        w_home = float(n_home / (n_home + 10.0))
+        w_away = float(n_away / (n_away + 10.0))
+        n_min = min(n_home, n_away)
         w_min = min(w_home, w_away)
 
-        if w_min < 1.0:
-            # Elo mean reversion towards 1500 based on weight
-            home_base_elo = 1500.0 + (0.67 + 0.33 * w_home) * (float(res.get("PRE_GAME_ELO", 1500.0)) - 1500.0)
-            away_base_elo = 1500.0 + (0.67 + 0.33 * w_away) * (float(res.get("OPP_PRE_GAME_ELO", 1500.0)) - 1500.0)
+        res["GAMES_PLAYED_HOME_SEASON"] = n_home
+        res["GAMES_PLAYED_AWAY_SEASON"] = n_away
+
+        # Prediction-level Pure Elo blend weight for early season (< 12 games)
+        if n_min < 12:
+            res["EARLY_SEASON_ELO_BLEND_WEIGHT"] = float(max(0.0, 1.0 - (n_min / 12.0)) * 0.40)
+        else:
+            res["EARLY_SEASON_ELO_BLEND_WEIGHT"] = 0.0
+
+        if n_min < 20:
+            # Elo prior adjustment based on Bayesian shrinkage
+            home_base_elo = 1500.0 + (0.75 + 0.25 * w_home) * (float(res.get("PRE_GAME_ELO", 1500.0)) - 1500.0)
+            away_base_elo = 1500.0 + (0.75 + 0.25 * w_away) * (float(res.get("OPP_PRE_GAME_ELO", 1500.0)) - 1500.0)
 
             # Roster quality adjustment derived from active player projections
             roster_delta = float(res.get("TEAM_V3_PROJ_PTS_SUM", 112.0) - res.get("OPP_V3_PROJ_PTS_SUM", 112.0))
-            roster_shift = float(np.clip(roster_delta * 2.0, -120.0, 120.0)) * (1.0 - w_min)
+            roster_shift = float(np.clip(roster_delta * 2.0, -100.0, 100.0)) * (1.0 - w_min)
 
             home_elo = home_base_elo + (roster_shift / 2.0)
             away_elo = away_base_elo - (roster_shift / 2.0)
@@ -603,7 +614,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
             res["ELO_DIFF"] = home_elo - away_elo
             res["ABS_ELO_DIFF"] = abs(home_elo - away_elo)
 
-            # Smoothly blend recency and venue features
+            # Smoothly blend recency and venue features towards league baseline
             res["WINRATE_LAST_10"] = w_home * float(res.get("WINRATE_LAST_10", 0.5)) + (1.0 - w_home) * 0.50
             res["OPP_WINRATE_LAST_10"] = w_away * float(res.get("OPP_WINRATE_LAST_10", 0.5)) + (1.0 - w_away) * 0.50
             res["WINRATE_LAST_5"] = w_home * float(res.get("WINRATE_LAST_5", 0.5)) + (1.0 - w_home) * 0.50

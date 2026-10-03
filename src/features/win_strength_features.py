@@ -14,8 +14,45 @@ K_FACTOR = BASE_K_FACTOR
 
 def add_pre_game_elo(df: pd.DataFrame) -> pd.DataFrame:
     """Compute leakage-safe pre-game Elo from chronological completed games using ContinuousEloEngine."""
+    df_copy = df.copy()
+    added_pts = False
+    added_wl = False
+    
+    if "PTS" not in df_copy.columns and "GAME_ID" in df_copy.columns and "TEAM_ABBREVIATION" in df_copy.columns:
+        try:
+            from scripts.season_utils import discover_seasons
+            from scripts.data_paths import get_data_paths
+            
+            pts_map = {}
+            for s in discover_seasons():
+                dp = get_data_paths(s)
+                try:
+                    tg = pd.read_csv(dp.team_games_raw, usecols=["GAME_ID", "TEAM_ABBREVIATION", "PTS", "WL"])
+                    for _, r in tg.iterrows():
+                        gid = str(r["GAME_ID"]).split(".")[0].zfill(10)
+                        pts_map[(gid, str(r["TEAM_ABBREVIATION"]))] = (r["PTS"], r["WL"])
+                except Exception:
+                    pass
+            
+            gids = df_copy["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+            teams = df_copy["TEAM_ABBREVIATION"].astype(str)
+            mapped = [pts_map.get((g, t), (None, None)) for g, t in zip(gids, teams)]
+            df_copy["PTS"] = [m[0] for m in mapped]
+            df_copy["WL"] = [m[1] for m in mapped]
+            added_pts = True
+            added_wl = True
+        except Exception:
+            pass
+
     engine = ContinuousEloEngine()
-    return engine.transform_games(df)
+    res = engine.transform_games(df_copy)
+    
+    if added_pts and "PTS" in res.columns:
+        res = res.drop(columns=["PTS"])
+    if added_wl and "WL" in res.columns:
+        res = res.drop(columns=["WL"])
+        
+    return res
 
 
 def add_win_strength_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -80,12 +117,42 @@ def add_win_strength_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def compute_current_elo_state(team_games: pd.DataFrame) -> dict[str, float]:
+def compute_current_elo_state(team_games: pd.DataFrame, season: str = None) -> dict[str, float]:
+    initial_ratings = None
+    from pathlib import Path
+    import json
+
+    root = Path(__file__).resolve().parents[2]
+
+    if not season and not team_games.empty and "GAME_DATE" in team_games.columns:
+        try:
+            sample_dt = pd.to_datetime(team_games["GAME_DATE"].dropna().iloc[-1])
+            yr = sample_dt.year
+            mo = sample_dt.month
+            start_yr = yr if mo >= 10 else yr - 1
+            season = f"{start_yr}-{str(start_yr + 1)[-2:]}"
+        except Exception:
+            season = None
+
+    if season:
+        season_token = season.replace("-", "_")
+        init_path = root / f"data/production/team_elo_initial_{season_token}.json"
+        if not init_path.exists():
+            init_path = root / f"data/season={season}/analysis/team_elo_initial.json"
+        if init_path.exists():
+            try:
+                with open(init_path, "r") as f:
+                    initial_ratings = json.load(f)
+            except Exception:
+                initial_ratings = None
+
     if team_games.empty:
-        return {}
-    engine = ContinuousEloEngine()
+        return initial_ratings or {}
+
+    engine = ContinuousEloEngine(initial_ratings=initial_ratings)
     engine.transform_games(team_games)
     return dict(engine.ratings)
+
 
 
 def build_matchup_strength_features(

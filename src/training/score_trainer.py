@@ -351,7 +351,13 @@ class ScoreModelTrainer:
         ridge_margin = Ridge(alpha=1.0)
         ridge_margin.fit(X_ind, df_full_eval["MARGIN_RESIDUAL"])
 
+        df_oof_export = pd.DataFrame({
+            "GAME_ID": df_full_eval["GAME_ID"].astype(str).apply(lambda x: x.split(".")[0].zfill(10)),
+            "SCORE_PRED_MARGIN_OOF": df_full_eval["PRED_MARGIN_MODEL"] - ridge_margin.predict(X_ind)
+        })
+
         os.makedirs(self.output_dir, exist_ok=True)
+        df_oof_export.to_parquet(self.output_dir / f"score_model_{self.version}_oof_margins.parquet", index=False)
         joblib.dump(pace_model, self.output_dir / f"score_model_{self.version}_pace.pkl")
         joblib.dump(home_model, self.output_dir / f"score_model_{self.version}_home_rtg.pkl")
         joblib.dump(away_model, self.output_dir / f"score_model_{self.version}_away_rtg.pkl")
@@ -359,6 +365,7 @@ class ScoreModelTrainer:
         joblib.dump(ridge_total, self.output_dir / f"score_model_{self.version}_ridge_total.pkl")
         joblib.dump(ridge_margin, self.output_dir / f"score_model_{self.version}_ridge_margin.pkl")
         if self.version == "v10":
+            df_oof_export.to_parquet(self.output_dir / "score_model_v9_oof_margins.parquet", index=False)
             joblib.dump(pace_model, self.output_dir / "score_model_v9_pace.pkl")
             joblib.dump(home_model, self.output_dir / "score_model_v9_home_rtg.pkl")
             joblib.dump(away_model, self.output_dir / "score_model_v9_away_rtg.pkl")

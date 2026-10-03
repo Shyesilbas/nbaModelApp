@@ -107,6 +107,13 @@ def predict_single_game(home, away, date, model_ver):
         row = [features[c] for c in win_features]
         X = pd.DataFrame([row], columns=win_features)
         win_prob = float(win_model.predict_proba(X)[0][1])
+
+        blend_weight = float(features.get("EARLY_SEASON_ELO_BLEND_WEIGHT", 0.0))
+        if blend_weight > 0.0:
+            home_elo = float(features.get("PRE_GAME_ELO", 1500.0))
+            away_elo = float(features.get("OPP_PRE_GAME_ELO", 1500.0))
+            elo_prob_home = 1.0 / (1.0 + 10.0 ** (-((home_elo + 100.0) - away_elo) / 400.0))
+            win_prob = (1.0 - blend_weight) * win_prob + blend_weight * elo_prob_home
         
     # 3. Predict Component Scores
     score_meta_path = ROOT / f"models/production/score_model_{model_ver}_metadata.json"
