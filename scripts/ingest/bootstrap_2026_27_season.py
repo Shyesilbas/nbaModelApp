@@ -3,6 +3,7 @@ import json
 import pandas as pd
 from pathlib import Path
 from nba_api.stats.endpoints import scheduleleaguev2, commonallplayers
+from src.ingestion.nba_api_client import call_nba_api
 from scripts.season_utils import normalize_season
 from scripts.data_paths import get_data_paths
 
@@ -23,7 +24,7 @@ print(f"=== Onboarding Season {SEASON} ===")
 
 # 1. Fetch Schedule from NBA API
 print("\n[1/5] Fetching ScheduleLeagueV2 for 2026-27...")
-sl = scheduleleaguev2.ScheduleLeagueV2(season=SEASON, timeout=20)
+sl = call_nba_api(scheduleleaguev2.ScheduleLeagueV2, season=SEASON, timeout=20)
 sl_df = sl.get_data_frames()[0]
 
 # Filter out all-star games (003), keep preseason (001), regular (002), playin (005), playoffs (004)
@@ -64,7 +65,7 @@ print(f"  -> Saved schedule: {len(sched)} games to {raw_sched_path}")
 
 # 2. Fetch Active Players and Rosters
 print("\n[2/5] Fetching CommonAllPlayers for 2026-27...")
-cap = commonallplayers.CommonAllPlayers(season=SEASON, is_only_current_season=1, timeout=20)
+cap = call_nba_api(commonallplayers.CommonAllPlayers, season=SEASON, is_only_current_season=1, timeout=20)
 cap_df = cap.get_data_frames()[0]
 
 active_players = cap_df[cap_df["ROSTERSTATUS"] == 1].copy()
@@ -208,6 +209,19 @@ multi_team_df = pd.DataFrame(multi_team_rows)
 if multi_team_df.empty:
     # Fallback to general list
     multi_team_df = pd.DataFrame(columns=["PLAYER_ID", "PLAYER_NAME", "TEAMS_PLAYED_FOR", "NUM_TEAMS", "GP", "AVG_MIN", "AVG_PTS", "AVG_REB", "AVG_AST", "IMPORTANCE_SCORE"])
+else:
+    # Preserve existing TRADE_DATE and HOW_ACQUIRED if already mapped
+    existing_multi_path = SEASON_DIR / "analysis/multi_team_players.csv"
+    if existing_multi_path.exists():
+        try:
+            df_ex = pd.read_csv(existing_multi_path)
+            if "TRADE_DATE" in df_ex.columns:
+                date_map = df_ex.set_index("PLAYER_ID")["TRADE_DATE"].to_dict()
+                how_map = df_ex.set_index("PLAYER_ID")["HOW_ACQUIRED"].to_dict() if "HOW_ACQUIRED" in df_ex.columns else {}
+                multi_team_df["TRADE_DATE"] = multi_team_df["PLAYER_ID"].map(date_map).fillna("2026-07-06")
+                multi_team_df["HOW_ACQUIRED"] = multi_team_df["PLAYER_ID"].map(how_map).fillna("")
+        except Exception:
+            pass
 
 # 4. Save Core Data and JSONs
 print("\n[4/5] Saving Canonical Datasets and Frontend Public Cache...")
@@ -225,9 +239,77 @@ star_df.to_parquet(analysis_dir / "star_candidates.parquet", index=False)
 multi_team_df.to_csv(analysis_dir / "multi_team_players.csv", index=False)
 multi_team_df.to_parquet(analysis_dir / "multi_team_players.parquet", index=False)
 
+# Player name lookup
+lookup_rows = []
+for _, r in roster_df.iterrows():
+    lookup_rows.append({
+        "PLAYER_ID": r["PLAYER_ID"],
+        "RAW_PLAYER_NAME": r["PLAYER_NAME"],
+        "NORMALIZED_PLAYER_NAME": str(r["PLAYER_NAME"]).strip().lower()
+    })
+lookup_df = pd.DataFrame(lookup_rows).drop_duplicates(subset=["PLAYER_ID"]).reset_index(drop=True)
+lookup_df.to_csv(analysis_dir / "player_name_lookup.csv", index=False)
+lookup_df.to_parquet(analysis_dir / "player_name_lookup.parquet", index=False)
+
 roster_df.to_csv(ROOT / "data" / "canonical" / "team_rosters.csv", index=False)
 core_df.to_csv(ROOT / "data" / "canonical" / "core_players.csv", index=False)
 core_df.to_csv(ROOT / "data" / "production" / "core_players.csv", index=False)
+
+# Synchronize 2026-27 player_features for all roster players so they can be predicted
+feat_path_csv = FEATURES_DIR / "player_features.csv"
+feat_path_parquet = FEATURES_DIR / "player_features.parquet"
+if feat_path_parquet.exists():
+    df_feat = pd.read_parquet(feat_path_parquet)
+    id_col = "PLAYER_ID" if "PLAYER_ID" in df_feat.columns else "Player_ID"
+    existing_pids = set(df_feat[id_col])
+    missing_roster_players = roster_df[~roster_df["PLAYER_ID"].isin(existing_pids)]
+    if len(missing_roster_players) > 0:
+        print(f"  -> Adding {len(missing_roster_players)} missing roster players to 2026-27 player_features baseline...")
+        template_row = df_feat.iloc[0].to_dict()
+        new_feature_rows = []
+        for _, p in missing_roster_players.iterrows():
+            row_dict = template_row.copy()
+            row_dict.update({
+                "Player_ID": int(p["PLAYER_ID"]),
+                "PLAYER_ID": int(p["PLAYER_ID"]),
+                "GAME_DATE": pd.Timestamp("2026-06-01"),
+                "MATCHUP": f"{p['TEAM_ABBREVIATION']} vs OPP",
+                "TEAM_ABBREVIATION": p["TEAM_ABBREVIATION"],
+                "PLAYER_NAME": str(p["PLAYER_NAME"]),
+                "SEASON_TYPE": "Regular Season",
+                "IS_HOME": 1,
+                "OPPONENT_ABBREVIATION": "OPP",
+                "IS_PLAYOFF": 0,
+                "DAYS_REST": 3,
+                "IS_B2B": 0,
+                "MIN": float(p["AVG_MIN"]),
+                "MIN_LAST_5": float(p["AVG_MIN"]),
+                "MIN_EMA_10": float(p["AVG_MIN"]),
+                "PTS": float(p["AVG_PTS"]),
+                "PTS_LAST_5": float(p["AVG_PTS"]),
+                "PTS_LAST_10": float(p["AVG_PTS"]),
+                "REB": float(p["AVG_REB"]),
+                "REB_LAST_5": float(p["AVG_REB"]),
+                "AST": float(p["AVG_AST"]),
+                "AST_LAST_5": float(p["AVG_AST"]),
+                "PLUS_MINUS_LAST_5": 0.0,
+                "POSITION_GROUP": "WING",
+                "PLAYER_POSITION_GROUP": "WING",
+                "USG_PCT_LAST_3": 18.0,
+                "USG_PCT_LAST_10": 18.0
+            })
+            new_feature_rows.append(row_dict)
+        df_new_feat = pd.DataFrame(new_feature_rows)
+        for col in df_feat.columns:
+            if col in df_new_feat.columns:
+                try:
+                    df_new_feat[col] = df_new_feat[col].astype(df_feat[col].dtype)
+                except Exception:
+                    pass
+        df_combined_feat = pd.concat([df_feat, df_new_feat], ignore_index=True)
+        df_combined_feat.to_parquet(feat_path_parquet, index=False)
+        df_combined_feat.to_csv(feat_path_csv, index=False)
+        print("  -> Updated 2026-27 player_features with all current active roster members.")
 
 # Frontend Public JSONs
 public_data = ROOT / "frontend" / "public" / "data"
@@ -245,6 +327,9 @@ with open(public_data / "star_candidates.json", "w", encoding="utf-8") as f:
 with open(public_data / "multi_team_players.json", "w", encoding="utf-8") as f:
     json.dump(multi_team_df.to_dict(orient="records"), f, indent=2)
 
+with open(public_data / "player_name_lookup.json", "w", encoding="utf-8") as f:
+    json.dump(lookup_df.to_dict(orient="records"), f, indent=2)
+
 # Copy to root data/ also for fallback
 with open(ROOT / "data" / "team_rosters.json", "w", encoding="utf-8") as f:
     json.dump(roster_df.to_dict(orient="records"), f, indent=2)
@@ -254,6 +339,8 @@ with open(ROOT / "data" / "star_candidates.json", "w", encoding="utf-8") as f:
     json.dump(star_df.to_dict(orient="records"), f, indent=2)
 with open(ROOT / "data" / "multi_team_players.json", "w", encoding="utf-8") as f:
     json.dump(multi_team_df.to_dict(orient="records"), f, indent=2)
+with open(ROOT / "data" / "player_name_lookup.json", "w", encoding="utf-8") as f:
+    json.dump(lookup_df.to_dict(orient="records"), f, indent=2)
 
 # 5. Update Seasons list and all_seasons_games.json
 print("\n[5/5] Updating all_seasons_games and seasons.json...")

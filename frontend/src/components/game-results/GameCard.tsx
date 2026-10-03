@@ -28,31 +28,21 @@ export function GameCard({
   const winnerTheme = awayWon ? awayTheme : homeWon ? homeTheme : null;
 
   const handleClick = () => {
-    if (isCompleted) {
-      onOpen();
-    } else if (onPredict) {
-      onPredict();
-    }
+    onOpen();
   };
 
   return (
     <div
       onClick={handleClick}
-      className="group relative w-full overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white shadow-xs transition-all duration-300 hover:shadow-xl hover:-translate-y-1 text-left cursor-pointer flex flex-col justify-between"
-      style={{
-        background: `linear-gradient(180deg, #ffffff 60%, ${winnerTheme ? winnerTheme.primary + '06' : '#f8fafc'} 100%)`,
-      }}
+      className="group relative w-full overflow-hidden border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-slate-400 hover:shadow-md text-left cursor-pointer flex flex-col justify-between"
     >
       {/* Dual-Team Gradient Header Line */}
       <div
-        className="h-1.5 w-full shrink-0"
-        style={{
-          background: `linear-gradient(90deg, ${awayTheme.primary} 0%, ${awayTheme.primary} 48%, #ffffff 48%, #ffffff 52%, ${homeTheme.primary} 52%, ${homeTheme.primary} 100%)`,
-        }}
+        className="h-1 w-full shrink-0 bg-[#c8102e]"
       />
 
       {/* Top Meta Bar */}
-      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 bg-slate-50/40">
+      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 bg-white">
         <div className="flex items-center gap-1.5">
           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{seasonLabel}</span>
           {game.SERIES_GAME_NUMBER != null && (
@@ -86,7 +76,7 @@ export function GameCard({
           {/* Away Team */}
           <div className="flex items-center gap-2.5 min-w-0">
             <div 
-              className="relative p-1 rounded-xl shrink-0 transition-transform group-hover:scale-105"
+              className="relative shrink-0 transition-transform group-hover:scale-105"
               style={{ 
                 backgroundColor: `${awayTheme.primary}10`,
                 boxShadow: awayWon ? `0 0 0 1.5px ${awayTheme.primary}40` : undefined
@@ -156,7 +146,7 @@ export function GameCard({
               <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Home</p>
             </div>
             <div 
-              className="relative p-1 rounded-xl shrink-0 transition-transform group-hover:scale-105"
+              className="relative shrink-0 transition-transform group-hover:scale-105"
               style={{ 
                 backgroundColor: `${homeTheme.primary}10`,
                 boxShadow: homeWon ? `0 0 0 1.5px ${homeTheme.primary}40` : undefined
@@ -173,25 +163,28 @@ export function GameCard({
             <Calendar size={11} />
             <span>{fmtDate(game.GAME_DATE)}</span>
           </div>
-          {isCompleted ? (
+          <div className="flex items-center gap-2">
+            {!isCompleted && onPredict && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPredict();
+                }}
+                className="inline-flex items-center gap-1.5 bg-[#c8102e] px-2.5 py-1 text-white font-black uppercase tracking-[0.16em] hover:bg-[#a10d25] transition-colors text-[9px]"
+              >
+                <Sparkles size={10} />
+                Predict
+              </button>
+            )}
             <span 
-              className="inline-flex items-center gap-1 font-black uppercase tracking-[0.2em] transition-colors"
-              style={{ color: winnerTheme?.primary || "#1d428a" }}
+              className="inline-flex items-center gap-1 font-black uppercase tracking-[0.18em] transition-colors text-slate-600 hover:text-slate-900"
+              style={{ color: isCompleted ? (winnerTheme?.primary || "#1d428a") : undefined }}
             >
-              Box Score <ChevronRight size={12} className="transition-transform group-hover:translate-x-0.5" />
+              {isCompleted ? "Box Score" : "Match Details"}{" "}
+              <ChevronRight size={12} className="transition-transform group-hover:translate-x-0.5" />
             </span>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onPredict) onPredict();
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-black uppercase tracking-[0.18em] shadow-xs hover:shadow-md hover:from-indigo-700 hover:to-indigo-800 transition-all text-[9px]"
-            >
-              <Sparkles size={10} />
-              Predict Matchup
-            </button>
-          )}
+          </div>
         </div>
       </div>
     </div>

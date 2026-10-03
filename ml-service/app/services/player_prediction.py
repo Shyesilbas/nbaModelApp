@@ -21,20 +21,23 @@ def predict_players(request: ScorePredictionRequest) -> PlayerPredictionResponse
     raw_home_pts = home_players_df["RAW_PROJ_PTS"].sum()
     raw_away_pts = away_players_df["RAW_PROJ_PTS"].sum()
 
-    home_scale = score_resp.predicted_home_score / raw_home_pts if raw_home_pts > 0 else 1.0
-    away_scale = score_resp.predicted_away_score / raw_away_pts if raw_away_pts > 0 else 1.0
+    home_scale = max(0.80, min(1.20, score_resp.predicted_home_score / raw_home_pts)) if raw_home_pts > 0 else 1.0
+    away_scale = max(0.80, min(1.20, score_resp.predicted_away_score / raw_away_pts)) if raw_away_pts > 0 else 1.0
 
     def parse_players(df, scale):
         players = []
         for _, r in df.iterrows():
+            s_pts = round(float(r["RAW_PROJ_PTS"]) * scale, 1)
+            s_reb = round(float(r["RAW_PROJ_REB"]) * scale, 1)
+            s_ast = round(float(r["RAW_PROJ_AST"]) * scale, 1)
             players.append(PlayerPrediction(
                 player_id=int(r["PLAYER_ID"]),
                 player_name=str(r.get("PLAYER_NAME", f"Player {r['PLAYER_ID']}")),
                 position_group=svc.CANONICAL_POSITIONS.get(int(r["PLAYER_ID"]), str(r.get("PLAYER_POSITION_GROUP", "UNKNOWN"))),
-                predicted_pts=round(r["RAW_PROJ_PTS"] * scale, 1),
-                predicted_reb=round(r["RAW_PROJ_REB"], 1),
-                predicted_ast=round(r["RAW_PROJ_AST"], 1),
-                predicted_pra=round((r["RAW_PROJ_PTS"] * scale) + r["RAW_PROJ_REB"] + r["RAW_PROJ_AST"], 1)
+                predicted_pts=s_pts,
+                predicted_reb=s_reb,
+                predicted_ast=s_ast,
+                predicted_pra=round(s_pts + s_reb + s_ast, 1)
             ))
         return players
 

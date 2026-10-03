@@ -67,6 +67,14 @@ def predict(request: WinProbRequest, features: Optional[Dict[str, Any]] = None) 
     p_home = float(probs[1])
     p_away = float(probs[0])
 
+    blend_weight = float(feats.get("EARLY_SEASON_ELO_BLEND_WEIGHT", 0.0))
+    if blend_weight > 0.0:
+        home_elo = float(feats.get("PRE_GAME_ELO", 1500.0))
+        away_elo = float(feats.get("OPP_PRE_GAME_ELO", 1500.0))
+        elo_prob_home = 1.0 / (1.0 + 10.0 ** (-((home_elo + 100.0) - away_elo) / 400.0))
+        p_home = (1.0 - blend_weight) * p_home + blend_weight * elo_prob_home
+        p_away = 1.0 - p_home
+
     model_version = loader.get_version()
 
     return WinProbResponse(

@@ -1,7 +1,7 @@
 {
-  "season": "multi",
-  "generated_at": "2026-09-15T13:03:39.682690+00:00",
-  "version": "37730e1d1b7c2d78",
+  "season": "2026-27",
+  "generated_at": "2026-09-29T18:20:54.129933+00:00",
+  "version": "5d6bdc02ec8ce129",
   "files": {
     "all_seasons_games.json": {
       "path": "/data/all_seasons_games.json",
@@ -10,13 +10,13 @@
     },
     "core_players.json": {
       "path": "/data/core_players.json",
-      "size_bytes": 123528,
-      "sha256": "0467dcdb6f3f53b8450a3bd35a23a481a3f0cc6c5835c5a936cd71b4c350e006"
+      "size_bytes": 98907,
+      "sha256": "39a53b6321de8095e19796543085cef2ff04574efb8d37e9b9e9af213cfe3a0d"
     },
     "dataset_summary.json": {
       "path": "/data/dataset_summary.json",
-      "size_bytes": 3112,
-      "sha256": "6344888da5e7cdd3c6242e2e5dee73a51f2ed6d6840c16fa1f4a6df940585841"
+      "size_bytes": 3044,
+      "sha256": "e194904d07e6350b374437fbd675aaa77f5b712238dab5997c26a198b001f8da"
     },
     "game_details.json": {
       "path": "/data/game_details.json",
@@ -55,8 +55,8 @@
     },
     "games.json": {
       "path": "/data/games.json",
-      "size_bytes": 30801336,
-      "sha256": "9daa77a40cf1408d5056b71a3bc16889497b933d0b86d5186f6e087354b67fbd"
+      "size_bytes": 975226,
+      "sha256": "08c8caf1d552afee301edb94e6f0ba41c48ee986243cc84d9670edd78aa81f0b"
     },
     "highlights.json": {
       "path": "/data/highlights.json",
@@ -65,13 +65,13 @@
     },
     "model_ready_v2_summary.json": {
       "path": "/data/model_ready_v2_summary.json",
-      "size_bytes": 1987,
-      "sha256": "a8286d579ef41a7e9009820cc171d715c6d722f1e6bdaa4e5e3ea6e98753a834"
+      "size_bytes": 30,
+      "sha256": "b6015310035df95f616484e61e6fdc60243115536dbcc7faa5e44fa85b4e474e"
     },
     "multi_team_players.json": {
       "path": "/data/multi_team_players.json",
-      "size_bytes": 40972,
-      "sha256": "23a42031726dd9badfaeca24d5375b3cd8110b97f516603274f9de61cb580dde"
+      "size_bytes": 45055,
+      "sha256": "375d02fab5c2450c7ff4b7edd1fcf388c3990a7e087653689adbd9bf393e5baf"
     },
     "player_boxscores.json": {
       "path": "/data/player_boxscores.json",
@@ -105,8 +105,8 @@
     },
     "player_name_lookup.json": {
       "path": "/data/player_name_lookup.json",
-      "size_bytes": 56731,
-      "sha256": "1f9564ca88179471a7427965d7ef1f6939ccfdf8f330d0ce9bcc4d7e2053a68f"
+      "size_bytes": 60579,
+      "sha256": "ecdf2fd854954cda0390b3fab85662904178d51e0cfbdfc49781e5378545d072"
     },
     "player_profiles.json": {
       "path": "/data/player_profiles.json",
@@ -125,8 +125,8 @@
     },
     "schedule.json": {
       "path": "/data/schedule.json",
-      "size_bytes": 646846,
-      "sha256": "2b8cfe3b5168580c04e284f925a1c070ab6e6b57219bdd5781596faaf6a539e1"
+      "size_bytes": 455127,
+      "sha256": "aef505c54b50664ca8507df25c8431accaa4bbbed524296dcbe596984cbcb47b"
     },
     "schedule_details_2025_26.json": {
       "path": "/data/schedule_details_2025_26.json",
@@ -135,13 +135,13 @@
     },
     "seasons.json": {
       "path": "/data/seasons.json",
-      "size_bytes": 93,
-      "sha256": "00729830dd8e2bbde1dbd75fb1b597b12dc61c9b6b58b3c61d270302e5b2cce0"
+      "size_bytes": 119,
+      "sha256": "4c243d756373ead511124204d51548886cd5039ffe45602a6d8b9197738007d6"
     },
     "star_candidates.json": {
       "path": "/data/star_candidates.json",
-      "size_bytes": 43096,
-      "sha256": "e4100809ddb4247956c0687b02aa69067a024930a2a50b8eb725a7c21baf013a"
+      "size_bytes": 32290,
+      "sha256": "5d99c0edd966ba1bdac46dd594b77dc89b5c5833b2a3c04e96f182ad11ded064"
     },
     "team_boxscores.json": {
       "path": "/data/team_boxscores.json",
@@ -175,8 +175,8 @@
     },
     "team_rosters.json": {
       "path": "/data/team_rosters.json",
-      "size_bytes": 150730,
-      "sha256": "df76891ee478618db55918b6e94d7f5d5bfe95609e898ab3e4ee60a8b2ef5ad8"
+      "size_bytes": 116063,
+      "sha256": "9f2b18067cf973c260b0c5d8a7c0cd99a32a337267656acaff6c0b0596f025af"
     },
     "upcoming_games_context.json": {
       "path": "/data/upcoming_games_context.json",

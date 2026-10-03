@@ -28,16 +28,69 @@ def is_playoff_date(dt) -> int:
 def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
-    rename_map = {}
-    if "Player_ID" in df.columns and "PLAYER_ID" not in df.columns:
-        rename_map["Player_ID"] = "PLAYER_ID"
-    if "Game_ID" in df.columns and "GAME_ID" not in df.columns:
-        rename_map["Game_ID"] = "GAME_ID"
-    if rename_map:
-        df = df.rename(columns=rename_map)
+    # Consolidate Player_ID / PLAYER_ID
+    if "Player_ID" in df.columns:
+        if "PLAYER_ID" in df.columns:
+            df["PLAYER_ID"] = df["PLAYER_ID"].fillna(df["Player_ID"])
+            df = df.drop(columns=["Player_ID"])
+        else:
+            df = df.rename(columns={"Player_ID": "PLAYER_ID"})
 
-    if "TEAM_ABBREVIATION" not in df.columns and "MATCHUP" in df.columns:
-        df["TEAM_ABBREVIATION"] = df["MATCHUP"].astype(str).str.split(" ").str[0]
+    # Consolidate Game_ID / GAME_ID
+    if "Game_ID" in df.columns:
+        if "GAME_ID" in df.columns:
+            df["GAME_ID"] = df["GAME_ID"].fillna(df["Game_ID"])
+            df = df.drop(columns=["Game_ID"])
+        else:
+            df = df.rename(columns={"Game_ID": "GAME_ID"})
+
+    # Ensure TEAM_ABBREVIATION is populated
+    if "MATCHUP" in df.columns:
+        derived_team = df["MATCHUP"].astype(str).str.split(" ").str[0]
+        if "TEAM_ABBREVIATION" in df.columns:
+            missing_team = (
+                df["TEAM_ABBREVIATION"].isna()
+                | (df["TEAM_ABBREVIATION"] == "")
+                | (df["TEAM_ABBREVIATION"].astype(str) == "None")
+                | (df["TEAM_ABBREVIATION"].astype(str) == "nan")
+            )
+            df.loc[missing_team, "TEAM_ABBREVIATION"] = derived_team[missing_team]
+        else:
+            df["TEAM_ABBREVIATION"] = derived_team
+
+    # Ensure MIN columns are populated
+    min_col = df["MIN"] if "MIN" in df.columns else 15.0
+    min_l5 = df["MIN_LAST_5"] if "MIN_LAST_5" in df.columns else min_col
+    if "MIN_EMA_10" in df.columns:
+        df["MIN_EMA_10"] = df["MIN_EMA_10"].fillna(min_l5).fillna(min_col).fillna(15.0)
+    else:
+        df["MIN_EMA_10"] = min_l5
+
+    if "MIN_LAST_5" in df.columns:
+        df["MIN_LAST_5"] = df["MIN_LAST_5"].fillna(min_col).fillna(15.0)
+    else:
+        df["MIN_LAST_5"] = min_col
+
+    # Ensure USG_PCT is populated
+    if "USG_PCT_LAST_10" in df.columns:
+        df["USG_PCT_LAST_10"] = df["USG_PCT_LAST_10"].fillna(18.0)
+    else:
+        df["USG_PCT_LAST_10"] = 18.0
+
+    if "USG_PCT_LAST_3" in df.columns:
+        df["USG_PCT_LAST_3"] = df["USG_PCT_LAST_3"].fillna(18.0)
+    else:
+        df["USG_PCT_LAST_3"] = 18.0
+
+    # Ensure POSITION_GROUP / PLAYER_POSITION_GROUP
+    if "PLAYER_POSITION_GROUP" not in df.columns and "POSITION_GROUP" in df.columns:
+        df["PLAYER_POSITION_GROUP"] = df["POSITION_GROUP"]
+    if "POSITION_GROUP" not in df.columns and "PLAYER_POSITION_GROUP" in df.columns:
+        df["POSITION_GROUP"] = df["PLAYER_POSITION_GROUP"]
+    if "POSITION_GROUP" in df.columns:
+        df["POSITION_GROUP"] = df["POSITION_GROUP"].fillna("WING")
+    if "PLAYER_POSITION_GROUP" in df.columns:
+        df["PLAYER_POSITION_GROUP"] = df["PLAYER_POSITION_GROUP"].fillna("WING")
 
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
     return df
@@ -46,17 +99,30 @@ def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
 def _load_player_dataset(season: str = None):
     global _player_df_cache
 
-    season_path = ROOT / f"data/season={season}/features/player_features.csv" if season else None
+    season_path_parquet = ROOT / f"data/season={season}/features/player_features.parquet" if season else None
+    season_path_csv = ROOT / f"data/season={season}/features/player_features.csv" if season else None
     v4_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
     v3_path = ROOT / "data/experimental/player_model_ready_v3_matchups.csv"
-    selected_path = season_path if season_path and season_path.exists() else (v4_path if v4_path.exists() else v3_path)
+
+    if season_path_parquet and season_path_parquet.exists():
+        selected_path = season_path_parquet
+    elif season_path_csv and season_path_csv.exists():
+        selected_path = season_path_csv
+    elif v4_path.exists():
+        selected_path = v4_path
+    else:
+        selected_path = v3_path
 
     if not selected_path.exists():
         raise FileNotFoundError("Player dataset (V3 or V4) missing for player inference.")
 
     cache_key = str(selected_path)
     if cache_key not in _player_df_cache:
-        _player_df_cache[cache_key] = _normalize_player_dataset(pd.read_csv(selected_path))
+        if str(selected_path).endswith(".parquet"):
+            df = pd.read_parquet(selected_path)
+        else:
+            df = pd.read_csv(selected_path)
+        _player_df_cache[cache_key] = _normalize_player_dataset(df)
 
     return _player_df_cache[cache_key]
 
@@ -64,19 +130,60 @@ def _load_player_dataset(season: str = None):
 def _active_roster_ids(team: str, season: str):
     roster_path = ROOT / f"data/season={season}/analysis/team_rosters.csv"
     if not roster_path.exists():
-        return None
+        roster_path = ROOT / "data/canonical/team_rosters.csv"
+    if not roster_path.exists():
+        return None, None
 
     try:
         roster_df = pd.read_csv(roster_path)
-        return set(roster_df[roster_df["TEAM_ABBREVIATION"] == team]["PLAYER_ID"].unique())
+        team_roster = roster_df[roster_df["TEAM_ABBREVIATION"] == team]
+        return set(team_roster["PLAYER_ID"].unique()), team_roster
     except Exception:
-        return None
+        return None, None
 
 
-def _roster_candidates(last_games, team: str, active_ids):
+def _roster_candidates(last_games, team: str, active_ids, team_roster_df=None):
     if active_ids:
         candidates = last_games[last_games["PLAYER_ID"].isin(active_ids)].copy()
         candidates["TEAM_ABBREVIATION"] = team
+
+        # Synthesize baseline candidate row for any official roster player not yet observed in last_games
+        missing_ids = set(active_ids) - set(candidates["PLAYER_ID"])
+        if missing_ids and team_roster_df is not None and not last_games.empty:
+            template_row = last_games.iloc[0].to_dict()
+            missing_rows = team_roster_df[team_roster_df["PLAYER_ID"].isin(missing_ids)]
+            new_rows = []
+            for _, r in missing_rows.iterrows():
+                row_copy = template_row.copy()
+                pid = r["PLAYER_ID"]
+                pname = r.get("PLAYER_NAME", f"Player {pid}")
+                avg_min = float(r.get("AVG_MIN", 15.0))
+                avg_pts = float(r.get("AVG_PTS", 8.0))
+                avg_reb = float(r.get("AVG_REB", 3.0))
+                avg_ast = float(r.get("AVG_AST", 2.0))
+                row_copy.update({
+                    "PLAYER_ID": pid,
+                    "PLAYER_NAME": pname,
+                    "TEAM_ABBREVIATION": team,
+                    "MIN_EMA_10": avg_min,
+                    "MIN_LAST_5": avg_min,
+                    "MIN": avg_min,
+                    "PTS_LAST_5": avg_pts,
+                    "PTS_LAST_10": avg_pts,
+                    "PTS": avg_pts,
+                    "REB_LAST_5": avg_reb,
+                    "REB": avg_reb,
+                    "AST_LAST_5": avg_ast,
+                    "AST": avg_ast,
+                    "USG_PCT_LAST_10": 18.0,
+                    "USG_PCT_LAST_3": 18.0,
+                    "POSITION_GROUP": "WING",
+                    "PLAYER_POSITION_GROUP": "WING",
+                })
+                new_rows.append(row_copy)
+            if new_rows:
+                candidates = pd.concat([candidates, pd.DataFrame(new_rows)], ignore_index=True)
+
         if len(candidates) > 0:
             return candidates
 
@@ -85,7 +192,7 @@ def _roster_candidates(last_games, team: str, active_ids):
 
 def _filter_recent_active(candidates, past_df, team: str, active_ids=None):
     if active_ids:
-        # If an official roster is defined for this season/matchup, respect it and preserve traded additions
+        # If an official roster is defined for this season/matchup, respect it and preserve all roster members
         return candidates
 
     team_dates = sorted(past_df[past_df["TEAM_ABBREVIATION"] == team]["GAME_DATE"].unique())
@@ -128,18 +235,25 @@ def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, predictio
     last_games = past_df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
     season = date_to_season(pred_dt)
 
-    home_active = _active_roster_ids(home_team, season)
-    away_active = _active_roster_ids(away_team, season)
+    home_active, home_roster_df = _active_roster_ids(home_team, season)
+    away_active, away_roster_df = _active_roster_ids(away_team, season)
 
-    home_candidates = _roster_candidates(last_games, home_team, home_active)
-    away_candidates = _roster_candidates(last_games, away_team, away_active)
+    home_candidates = _roster_candidates(last_games, home_team, home_active, home_roster_df)
+    away_candidates = _roster_candidates(last_games, away_team, away_active, away_roster_df)
 
     home_candidates = _filter_recent_active(home_candidates, past_df, home_team, home_active)
     away_candidates = _filter_recent_active(away_candidates, past_df, away_team, away_active)
 
     minutes_col = "MIN_EMA_10" if "MIN_EMA_10" in df.columns else ("MIN_LAST_5" if "MIN_LAST_5" in df.columns else "MIN")
-    home_roster = home_candidates.sort_values(minutes_col, ascending=False).head(11)
-    away_roster = away_candidates.sort_values(minutes_col, ascending=False).head(11)
+
+    # Provide all active roster members (without arbitrary truncation) so the complete rotation is available for status overrides
+    home_roster = home_candidates.sort_values(minutes_col, ascending=False)
+    away_roster = away_candidates.sort_values(minutes_col, ascending=False)
+
+    if not home_active:
+        home_roster = home_roster.head(18)
+    if not away_active:
+        away_roster = away_roster.head(18)
 
     if len(home_roster) == 0 or len(away_roster) == 0:
         raise ValueError(f"No active players found for {home_team} or {away_team} before {prediction_date}")

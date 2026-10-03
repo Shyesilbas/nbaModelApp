@@ -318,6 +318,22 @@ class WinModelTrainer:
             df["SCORE_PRED_MARGIN"] = 0.0
             return df
 
+        oof_candidates = [
+            self.score_models_dir / f"score_model_{self.version}_oof_margins.parquet",
+            self.output_dir / f"score_model_{self.version}_oof_margins.parquet",
+            self.score_models_dir / "score_model_v10_oof_margins.parquet",
+            self.output_dir / "score_model_v10_oof_margins.parquet",
+            root_prod / "score_model_v10_oof_margins.parquet",
+        ]
+        oof_path = next((p for p in oof_candidates if p.exists()), None)
+        oof_map = {}
+        if oof_path is not None:
+            try:
+                df_oof = pd.read_parquet(oof_path)
+                oof_map = dict(zip(df_oof["GAME_ID"].astype(str).apply(lambda x: x.split(".")[0].zfill(10)), df_oof["SCORE_PRED_MARGIN_OOF"].astype(float)))
+            except Exception:
+                oof_map = {}
+
         try:
             margin_model = joblib.load(margin_model_path)
             meta = json.loads(meta_path.read_text())
@@ -345,13 +361,18 @@ class WinModelTrainer:
 
                 game_ids = home_df["GAME_ID"].astype(str).values
                 for gid, m in zip(game_ids, final_margins):
-                    game_margins[gid] = float(m)
+                    clean_gid = gid.split(".")[0].zfill(10)
+                    if clean_gid in oof_map:
+                        game_margins[gid] = float(oof_map[clean_gid])
+                    else:
+                        game_margins[gid] = float(m)
 
             df_game_ids = df["GAME_ID"].astype(str).values
             df_is_home = df["IS_HOME"].astype(bool).values
             margins = np.zeros(len(df), dtype=float)
             for i, (gid, is_h) in enumerate(zip(df_game_ids, df_is_home)):
-                m = game_margins.get(gid, 0.0)
+                clean_gid = gid.split(".")[0].zfill(10)
+                m = game_margins.get(gid, oof_map.get(clean_gid, 0.0))
                 margins[i] = m if is_h else -m
             df["SCORE_PRED_MARGIN"] = margins
         except Exception:

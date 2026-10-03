@@ -11,7 +11,8 @@ import {
   Table as TableIcon,
   ArrowUpDown,
   Filter,
-  Activity
+  Activity,
+  Calendar
 } from "lucide-react";
 import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
@@ -30,13 +31,15 @@ export interface MultiTeamPlayer {
   AVG_REB?: number;
   AVG_AST?: number;
   IMPORTANCE_SCORE?: number;
+  TRADE_DATE?: string;
+  HOW_ACQUIRED?: string;
 }
 
 interface MultiTeamPlayersProps {
   players: MultiTeamPlayer[];
 }
 
-type SortField = "IMPORTANCE_SCORE" | "AVG_PTS" | "AVG_REB" | "AVG_AST" | "AVG_MIN" | "NUM_TEAMS" | "GP";
+type SortField = "TRADE_DATE" | "IMPORTANCE_SCORE" | "AVG_PTS" | "AVG_REB" | "AVG_AST" | "AVG_MIN" | "NUM_TEAMS" | "GP";
 type TierFilter = "ALL" | "BLOCKBUSTER" | "STARTER" | "ROTATION" | "DEPTH";
 
 const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPlayers }) => {
@@ -113,7 +116,9 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
         IMPORTANCE_SCORE: Number(score.toFixed(1)),
         NUM_TEAMS: teamCount,
         TEAM_COUNT: teamCount,
-        GP: p.GP ?? 10
+        GP: p.GP ?? 10,
+        TRADE_DATE: p.TRADE_DATE,
+        HOW_ACQUIRED: p.HOW_ACQUIRED,
       };
     });
   }, [rawPlayers]);
@@ -129,7 +134,9 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
         (p) =>
           p.PLAYER_NAME.toLowerCase().includes(q) ||
           p.TEAMS_PLAYED_FOR.toLowerCase().includes(q) ||
-          String(p.PLAYER_ID).includes(q)
+          String(p.PLAYER_ID).includes(q) ||
+          (p.TRADE_DATE && p.TRADE_DATE.includes(q)) ||
+          (p.HOW_ACQUIRED && p.HOW_ACQUIRED.toLowerCase().includes(q))
       );
     }
 
@@ -153,8 +160,17 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
       }
     }
 
-    // Sorting (Default: High to Low by IMPORTANCE_SCORE)
+    // Sorting
     list.sort((a, b) => {
+      if (sortBy === "TRADE_DATE") {
+        const dateA = a.TRADE_DATE || "1970-01-01";
+        const dateB = b.TRADE_DATE || "1970-01-01";
+        const cmp = dateB.localeCompare(dateA);
+        if (cmp !== 0) {
+          return sortOrder === "desc" ? cmp : -cmp;
+        }
+        return (b.IMPORTANCE_SCORE ?? 0) - (a.IMPORTANCE_SCORE ?? 0);
+      }
       const valA = a[sortBy] ?? 0;
       const valB = b[sortBy] ?? 0;
       if (sortOrder === "desc") {
@@ -179,6 +195,19 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
     } else {
       setSortBy(field);
       setSortOrder("desc");
+    }
+  };
+
+  const formatTradeDate = (dateStr?: string) => {
+    if (!dateStr) return null;
+    try {
+      const parts = dateStr.split("-");
+      if (parts.length !== 3) return dateStr;
+      const [y, m, d] = parts;
+      const dt = new Date(Number(y), Number(m) - 1, Number(d));
+      return dt.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" });
+    } catch {
+      return dateStr;
     }
   };
 
@@ -343,7 +372,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 </div>
 
                 {/* Trade Path Route */}
-                <div className="mb-3 flex items-center justify-between bg-slate-50 border border-slate-100 rounded-xl p-2 text-xs">
+                <div className="mb-2 flex items-center justify-between bg-slate-50 border border-slate-100 rounded-xl p-2 text-xs">
                   <div className="flex items-center gap-1.5">
                     <span
                       className="px-2 py-0.5 rounded font-black text-white text-[11px] shadow-xs"
@@ -372,6 +401,20 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                     </span>
                   </div>
                 </div>
+
+                {player.TRADE_DATE && (
+                  <div className="mb-3 flex items-center justify-between text-[11px] font-mono text-slate-500 px-1">
+                    <span className="flex items-center gap-1 text-indigo-600 font-bold">
+                      <Calendar size={11} className="text-indigo-500" />
+                      {formatTradeDate(player.TRADE_DATE)}
+                    </span>
+                    {player.HOW_ACQUIRED && (
+                      <span className="truncate max-w-[130px] text-[10px] text-slate-400" title={player.HOW_ACQUIRED}>
+                        {player.HOW_ACQUIRED}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-4 gap-1 text-center bg-slate-50/80 rounded-lg p-2 border border-slate-100 text-slate-700">
@@ -490,33 +533,38 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
           </div>
 
           {/* Quick Sort Options */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-bold text-slate-400 text-[11px] uppercase mr-1">Sort:</span>
             {[
+              { id: "TRADE_DATE" as SortField, label: "Tarih", icon: Calendar },
               { id: "IMPORTANCE_SCORE" as SortField, label: "Impact Score" },
               { id: "AVG_PTS" as SortField, label: "PTS" },
               { id: "AVG_REB" as SortField, label: "REB" },
               { id: "AVG_AST" as SortField, label: "AST" },
               { id: "AVG_MIN" as SortField, label: "MIN" },
               { id: "NUM_TEAMS" as SortField, label: "Teams" },
-            ].map((s) => (
-              <button
-                key={s.id}
-                onClick={() => toggleSort(s.id)}
-                className={`px-2.5 py-1 rounded-lg font-mono font-bold flex items-center gap-1 transition-all ${
-                  sortBy === s.id
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {s.label}
-                {sortBy === s.id && (
-                  <span className="text-[10px] text-amber-300">
-                    {sortOrder === "desc" ? "↓" : "↑"}
-                  </span>
-                )}
-              </button>
-            ))}
+            ].map((s) => {
+              const Icon = s.icon;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => toggleSort(s.id)}
+                  className={`px-2.5 py-1 rounded-lg font-mono font-bold flex items-center gap-1.5 transition-all text-xs ${
+                    sortBy === s.id
+                      ? "bg-slate-900 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  {Icon && <Icon size={12} className={sortBy === s.id ? "text-amber-400" : "text-slate-400"} />}
+                  {s.label}
+                  {sortBy === s.id && (
+                    <span className="text-[10px] text-amber-300">
+                      {sortOrder === "desc" ? "↓" : "↑"}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -591,9 +639,17 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
 
                   {/* Transfer Flow Route */}
                   <div className="mb-4 bg-slate-50 border border-slate-100 rounded-xl p-2.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-                      Franchise Movements ({teams.length} Stints)
-                    </span>
+                    <div className="flex items-center justify-between gap-1 mb-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        Franchise Movements ({teams.length} Stints)
+                      </span>
+                      {player.TRADE_DATE && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-100/80 px-2 py-0.5 rounded-md shadow-2xs">
+                          <Calendar size={11} className="text-indigo-600" />
+                          {formatTradeDate(player.TRADE_DATE)}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex flex-wrap items-center gap-1.5">
                       {teams.map((t, i) => {
                         const tTheme = getTeamTheme(t);
@@ -616,6 +672,11 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                         );
                       })}
                     </div>
+                    {player.HOW_ACQUIRED && (
+                      <div className="mt-2 pt-1.5 border-t border-slate-200/60 text-[10px] font-medium text-slate-500 truncate" title={player.HOW_ACQUIRED}>
+                        {player.HOW_ACQUIRED}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -651,10 +712,27 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 <tr>
                   <th className="p-4">Rank</th>
                   <th className="p-4">Player</th>
+                  <th className="p-4 cursor-pointer hover:text-slate-900" onClick={() => toggleSort("TRADE_DATE")}>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={12} className={sortBy === "TRADE_DATE" ? "text-indigo-600" : "text-slate-400"} />
+                      <span>Tarih</span>
+                      <ArrowUpDown size={12} />
+                      {sortBy === "TRADE_DATE" && (
+                        <span className="text-indigo-600 font-mono text-[10px] ml-0.5">
+                          {sortOrder === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
+                    </div>
+                  </th>
                   <th className="p-4 cursor-pointer hover:text-slate-900" onClick={() => toggleSort("IMPORTANCE_SCORE")}>
                     <div className="flex items-center gap-1">
-                      Impact Score
+                      <span>Impact Score</span>
                       <ArrowUpDown size={12} />
+                      {sortBy === "IMPORTANCE_SCORE" && (
+                        <span className="text-indigo-600 font-mono text-[10px] ml-0.5">
+                          {sortOrder === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
                     </div>
                   </th>
                   <th className="p-4">Trade Route</th>
@@ -699,6 +777,19 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                               {tier.label}
                             </span>
                           </div>
+                        </div>
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-slate-800">
+                            <Calendar size={12} className="text-indigo-500" />
+                            <span>{formatTradeDate(player.TRADE_DATE) || "—"}</span>
+                          </div>
+                          {player.HOW_ACQUIRED && (
+                            <span className="text-[10px] text-slate-400 font-medium truncate max-w-[170px]" title={player.HOW_ACQUIRED}>
+                              {player.HOW_ACQUIRED}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="p-4">

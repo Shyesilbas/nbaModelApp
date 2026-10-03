@@ -50,12 +50,16 @@ class ContinuousEloEngine:
         k_factor: float = BASE_K_FACTOR,
         home_advantage: float = HOME_COURT_ADVANTAGE,
         season_regression: float = SEASON_REGRESSION,
+        initial_ratings: Optional[Dict[str, float]] = None,
     ):
         self.initial_elo = initial_elo
         self.k_factor = k_factor
         self.home_advantage = home_advantage
         self.season_regression = season_regression
-        self.ratings: Dict[str, float] = defaultdict(lambda: self.initial_elo)
+        if initial_ratings:
+            self.ratings: Dict[str, float] = defaultdict(lambda: self.initial_elo, initial_ratings)
+        else:
+            self.ratings: Dict[str, float] = defaultdict(lambda: self.initial_elo)
         self.current_season: Optional[str] = None
 
     def apply_season_regression(self):
@@ -197,3 +201,73 @@ def build_continuous_elo_dataset(seasons: List[str]) -> Tuple[pd.DataFrame, Dict
     engine = ContinuousEloEngine()
     enriched_df = engine.transform_games(full_df)
     return enriched_df, dict(engine.ratings)
+
+
+def compute_offseason_roster_adjustment(
+    prev_roster_df: pd.DataFrame,
+    curr_roster_df: pd.DataFrame,
+    max_shift: float = 45.0,
+) -> Dict[str, float]:
+    """
+    Computes zero-sum Elo adjustment for offseason roster turnover based on
+    top-8 players' importance score delta between previous and current season rosters.
+    """
+    if prev_roster_df.empty or curr_roster_df.empty:
+        return {}
+
+    score_col = "IMPORTANCE_SCORE" if "IMPORTANCE_SCORE" in curr_roster_df.columns else "AVG_PTS"
+    if score_col not in prev_roster_df.columns or score_col not in curr_roster_df.columns:
+        return {}
+
+    def get_top8_sum(df: pd.DataFrame) -> pd.Series:
+        teams = df["TEAM_ABBREVIATION"].unique()
+        res = {}
+        for t in teams:
+            t_sub = df[df["TEAM_ABBREVIATION"] == t]
+            res[t] = float(t_sub.nlargest(8, score_col)[score_col].sum())
+        return pd.Series(res)
+
+    prev_scores = get_top8_sum(prev_roster_df)
+    curr_scores = get_top8_sum(curr_roster_df)
+
+    deltas = (curr_scores - prev_scores).dropna()
+    if deltas.empty or float(deltas.std()) == 0:
+        return {}
+
+    mean_delta = float(deltas.mean())
+    std_delta = float(deltas.std())
+
+    adj_dict = {}
+    for team, delta in deltas.items():
+        z = (float(delta) - mean_delta) / (std_delta if std_delta > 0 else 1.0)
+        shift = float(np.clip(z * 15.0, -max_shift, max_shift))
+        adj_dict[str(team)] = shift
+
+    return adj_dict
+
+
+def build_season_opening_elo(
+    prev_seasons: List[str],
+    prev_roster_df: Optional[pd.DataFrame] = None,
+    curr_roster_df: Optional[pd.DataFrame] = None,
+    season_regression: float = SEASON_REGRESSION,
+) -> Dict[str, float]:
+    """
+    Calculates season opening Elo ratings by chaining historical seasons,
+    applying offseason mean-reversion (0.75 * Elo + 0.25 * 1500),
+    and applying offseason roster turnover adjustments if roster data is provided.
+    """
+    _, end_ratings = build_continuous_elo_dataset(prev_seasons)
+
+    opening_ratings = {}
+    for team, r in end_ratings.items():
+        opening_ratings[team] = round(season_regression * r + (1.0 - season_regression) * INITIAL_ELO, 2)
+
+    if prev_roster_df is not None and curr_roster_df is not None:
+        roster_adj = compute_offseason_roster_adjustment(prev_roster_df, curr_roster_df)
+        for team, adj in roster_adj.items():
+            if team in opening_ratings:
+                opening_ratings[team] = round(opening_ratings[team] + adj, 2)
+
+    return opening_ratings
+
