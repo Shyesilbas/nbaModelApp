@@ -182,8 +182,12 @@ To avoid confusion between different metric values cited across codebase reports
 | Evaluation Scope | Sample Size | Primary Role | Accuracy | ROC-AUC | Brier Score | Source / Registry |
 | :--- | :---: | :--- | :---: | :---: | :---: | :--- |
 | **Chronological Quantile Split** | 2,042 rows (split: 2025-04-08) | Hyperparameter tuning & candidate selection during initial training | 66.45% | 0.7354 | 0.2065 | `model_metadata.json` (`split` block) |
-| **2025-26 Unseen Season Validation** | 1,772 rows (2025-26 season) | Diagnostic validation against complete unseen season ground truth | **71.73%** | **0.7918** | **0.1869** | `model_metadata.json` (`selected_metrics`) |
-| **Full Cross-Season Production Evaluation** | 10,280 rows (2020-21 through 2025-26) | Active production model served in `ml-service` (`models/production/win_probability_model_v10.pkl`) | **70.26%** | **0.7772** | **0.1933** | `model_metadata.json` (`overall_metrics`) |
+| **Pure Out-of-Sample Unseen Season** | 1,772 rows (2025-26 season) | Model trained ONLY on 2020-21 through 2024-25; evaluated on completely unseen 2025-26 | **66.59%** | **0.7391** | **0.2057** | `model_metadata.json` (`selected_metrics`) |
+| **Post-Refit Full Dataset Evaluation** | 10,280 rows (2020-21 through 2025-26) | Active production model served in `ml-service` (`win_probability_model_v10.pkl`) refit across all rows for 2026-27 | **70.26%** | **0.7772** | **0.1933** | `model_metadata.json` (`refit_artifact_metrics`) |
 
-- **Conclusion:** The active model artifact incorporates all 6 completed historical seasons (10,280 games) without feature leakage or train-serve scale distortion, delivering **71.73% accuracy (0.7918 AUC, 0.1869 Brier)** on the latest completed season and **70.26% accuracy** cross-season, providing maximum probabilistic accuracy for the 2026-27 season and beyond.
+- **Conclusion on Leakage & Generalization:**
+  1. **Feature/Look-ahead Leakage:** None. All rolling averages strictly use `shift(1)`, Elo ratings use historical games, and Four Factors are calculated pre-game.
+  2. **Out-of-Sample Generalization:** When the model has **strictly never seen** the 2025-26 season, it achieves **66.59% accuracy (0.7391 AUC, 0.2057 Brier)**, perfectly matching the 66.45% baseline.
+  3. **Production Deployment:** For live 2026-27 inference, the model is refit on all 10,280 available historical rows, resulting in 71.73% on 2025-26 and 70.26% overall post-refit accuracy.
+
 
