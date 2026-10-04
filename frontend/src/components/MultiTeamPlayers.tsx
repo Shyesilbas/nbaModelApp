@@ -17,7 +17,7 @@ import {
 import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
 import { loadJson, loadPrivateApi } from "../lib/dataCache";
-import { TEAM_NAME_BY_ABBR, getTeamTheme, type NbaTeamAbbr, NBA_TEAM_ABBRS } from "../lib/nbaTeams";
+import { TEAM_NAME_BY_ABBR, type NbaTeamAbbr, NBA_TEAM_ABBRS } from "../lib/nbaTeams";
 
 export interface MultiTeamPlayer {
   PLAYER_ID: number;
@@ -215,7 +215,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
     if (score >= 45.0) {
       return {
         label: "Franchise Cornerstone",
-        bg: "bg-amber-500/10 border-amber-500/30 text-amber-600",
+        bg: "bg-slate-100 border-slate-200 text-slate-600",
         icon: Crown,
         color: "#d97706"
       };
@@ -223,7 +223,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
     if (score >= 32.0) {
       return {
         label: "All-Star / Co-Star",
-        bg: "bg-indigo-500/10 border-indigo-500/30 text-indigo-600",
+        bg: "bg-slate-100 border-slate-200 text-slate-600",
         icon: Flame,
         color: "#4f46e5"
       };
@@ -231,66 +231,63 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
     if (score >= 22.0) {
       return {
         label: "Key Starter",
-        bg: "bg-blue-500/10 border-blue-500/30 text-blue-600",
+        bg: "bg-slate-100 border-slate-200 text-slate-600",
         icon: ShieldCheck,
         color: "#2563eb"
       };
     }
     return {
       label: "Rotation Piece",
-      bg: "bg-slate-500/10 border-slate-500/30 text-slate-600",
+      bg: "bg-slate-100 border-slate-200 text-slate-600",
       icon: Sparkles,
       color: "#64748b"
     };
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7 pb-8">
       {/* 1. Header Banner */}
-      <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 p-6 md:p-8 text-white shadow-xl">
-        <div className="absolute right-0 top-0 -mt-8 -mr-8 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute left-1/3 bottom-0 -mb-8 h-56 w-56 rounded-full bg-rose-500/10 blur-3xl pointer-events-none" />
-
+      <section className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white px-6 py-6 md:px-8 md:py-7 shadow-sm">
+        <div className="absolute inset-y-0 left-0 w-1 bg-slate-300" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/20 px-3.5 py-1 text-[11px] font-black uppercase tracking-[0.25em] text-indigo-200 backdrop-blur-md">
-              <ArrowRightLeft size={13} className="text-indigo-300" />
-              NBA Mobility Engine · {selectedSeason}
+            <div className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              <ArrowRightLeft size={13} /> Season {selectedSeason} <span className="text-slate-300">/</span> Player movement
             </div>
-            <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-white m-0" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Trade & Player Mobility Discovery
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 m-0 leading-none">
+              Trade Discovery
             </h1>
-            <p className="text-slate-300 text-sm md:text-base max-w-2xl font-medium">
-              Rank and analyze mid-season transfers, multi-franchise stints, and blockbuster trades sorted by calibrated overall player impact score.
+            <p className="text-slate-500 text-sm max-w-xl font-medium">
+              Explore player moves, team journeys and the impact behind every trade.
             </p>
           </div>
 
           {/* Season Selector & Quick Stats */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/15 px-3 py-1.5 rounded-xl">
-              <span className="text-xs font-semibold text-slate-300">Season:</span>
+            <div className="flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Season</span>
               <select
                 value={selectedSeason}
                 onChange={(e) => setSelectedSeason(e.target.value)}
-                className="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer"
+                className="bg-transparent text-sm font-bold text-slate-800 focus:outline-none cursor-pointer"
               >
                 {seasonsList.map((s) => (
-                  <option key={s} value={s} className="bg-slate-900 text-white">
+                  <option key={s} value={s} className="bg-white text-slate-900">
                     {s} Season
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/15 px-4 py-2 rounded-xl text-xs font-mono">
+            <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs">
               <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-sans">Traded Players</span>
-                <span className="text-base font-bold text-amber-300">{normalizedPlayers.length}</span>
+                <span className="text-slate-400 block text-[9px] uppercase font-sans font-black tracking-wider">Players</span>
+                <span className="text-lg font-black text-slate-900">{normalizedPlayers.length}</span>
               </div>
-              <div className="h-6 w-[1px] bg-white/20" />
+              <div className="h-8 w-px bg-slate-200" />
               <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-sans">Top Rating</span>
-                <span className="text-base font-bold text-emerald-300">
+                <span className="text-slate-400 block text-[9px] uppercase font-sans font-black tracking-wider">Top impact</span>
+                <span className="text-lg font-bold text-slate-800">
                   {topBlockbusters[0]?.IMPORTANCE_SCORE ?? 0}
                 </span>
               </div>
@@ -300,41 +297,33 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
       </section>
 
       {/* 2. Blockbuster Deals Spotlight (Top Rated Trades) */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
+      <section className="space-y-3.5">
+        <div className="flex items-end justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Flame className="text-amber-500 fill-amber-500" size={18} />
-            <h2 className="text-lg font-black uppercase tracking-wider text-slate-900 m-0" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Blockbuster Trade Spotlight · Top Impact Deals
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><Activity size={16} /></div>
+            <h2 className="text-lg font-semibold tracking-tight text-slate-900 m-0">
+              Top impact moves
             </h2>
           </div>
-          <span className="text-xs font-semibold text-slate-400">Ranked by Core Importance Score</span>
+          <span className="hidden sm:block text-[10px] font-bold uppercase tracking-wider text-slate-400">Ranked by player impact</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           {topBlockbusters.map((player, idx) => {
             const teams = (player.TEAMS_PLAYED_FOR || "").split(",").map(t => t.trim() as NbaTeamAbbr);
             const primaryTeam = teams[teams.length - 1] || "MIA";
             const fromTeam = teams[0] || "MIL";
-            const theme = getTeamTheme(primaryTeam);
-            const fromTheme = getTeamTheme(fromTeam);
             const tier = getTierBadge(player.IMPORTANCE_SCORE ?? 0);
             const TierIcon = tier.icon;
 
             return (
               <div
                 key={player.PLAYER_ID}
-                className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-200"
+                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300 hover:shadow-md transition-all duration-200"
               >
-                {/* Top background glow */}
-                <div
-                  className="absolute -top-12 -right-12 h-24 w-24 rounded-full blur-2xl opacity-20 transition-opacity group-hover:opacity-40 pointer-events-none"
-                  style={{ backgroundColor: theme.primary }}
-                />
-
                 {/* Rank & Tier Pill */}
                 <div className="flex items-center justify-between mb-3">
-                  <span className="inline-flex items-center gap-1 font-mono text-xs font-black text-slate-400">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-slate-400">
                     #{idx + 1}
                   </span>
                   <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${tier.bg}`}>
@@ -357,14 +346,14 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-base font-black text-slate-900 truncate m-0" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                    <h3 className="text-sm font-semibold text-slate-900 truncate m-0">
                       {player.PLAYER_NAME}
                     </h3>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-[11px] font-mono font-bold text-slate-500">
-                        Score:
+                      <span className="text-[11px] font-medium text-slate-500">
+                        Impact
                       </span>
-                      <span className="text-xs font-black font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
+                      <span className="text-xs font-semibold tabular-nums text-slate-800">
                         {player.IMPORTANCE_SCORE}
                       </span>
                     </div>
@@ -372,11 +361,10 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 </div>
 
                 {/* Trade Path Route */}
-                <div className="mb-2 flex items-center justify-between bg-slate-50 border border-slate-100 rounded-xl p-2 text-xs">
+                <div className="mb-2 flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs">
                   <div className="flex items-center gap-1.5">
                     <span
-                      className="px-2 py-0.5 rounded font-black text-white text-[11px] shadow-xs"
-                      style={{ backgroundColor: fromTheme.primary }}
+                      className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-semibold"
                     >
                       {fromTeam}
                     </span>
@@ -391,8 +379,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
 
                   <div className="flex items-center gap-1.5">
                     <span
-                      className="px-2 py-0.5 rounded font-black text-white text-[11px] shadow-xs"
-                      style={{ backgroundColor: theme.primary }}
+                      className="px-2 py-0.5 rounded-md bg-slate-800 text-white text-[10px] font-semibold"
                     >
                       {primaryTeam}
                     </span>
@@ -403,9 +390,9 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 </div>
 
                 {player.TRADE_DATE && (
-                  <div className="mb-3 flex items-center justify-between text-[11px] font-mono text-slate-500 px-1">
-                    <span className="flex items-center gap-1 text-indigo-600 font-bold">
-                      <Calendar size={11} className="text-indigo-500" />
+                  <div className="mb-3 flex items-center justify-between text-[11px] text-slate-500 px-1">
+                    <span className="flex items-center gap-1 text-slate-600 font-medium">
+                      <Calendar size={11} className="text-slate-400" />
                       {formatTradeDate(player.TRADE_DATE)}
                     </span>
                     {player.HOW_ACQUIRED && (
@@ -417,22 +404,22 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 )}
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-4 gap-1 text-center bg-slate-50/80 rounded-lg p-2 border border-slate-100 text-slate-700">
+                <div className="grid grid-cols-4 gap-1 text-center bg-slate-50 rounded-lg p-2 border border-slate-100 text-slate-700">
                   <div>
                     <span className="block text-[9px] font-bold text-slate-400 uppercase">PTS</span>
-                    <span className="text-xs font-black font-mono">{player.AVG_PTS}</span>
+                    <span className="text-xs font-semibold tabular-nums">{player.AVG_PTS}</span>
                   </div>
                   <div>
                     <span className="block text-[9px] font-bold text-slate-400 uppercase">REB</span>
-                    <span className="text-xs font-black font-mono">{player.AVG_REB}</span>
+                    <span className="text-xs font-semibold tabular-nums">{player.AVG_REB}</span>
                   </div>
                   <div>
                     <span className="block text-[9px] font-bold text-slate-400 uppercase">AST</span>
-                    <span className="text-xs font-black font-mono">{player.AVG_AST}</span>
+                    <span className="text-xs font-semibold tabular-nums">{player.AVG_AST}</span>
                   </div>
                   <div>
                     <span className="block text-[9px] font-bold text-slate-400 uppercase">MIN</span>
-                    <span className="text-xs font-black font-mono">{player.AVG_MIN}m</span>
+                    <span className="text-xs font-semibold tabular-nums">{player.AVG_MIN}m</span>
                   </div>
                 </div>
               </div>
@@ -442,24 +429,24 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
       </section>
 
       {/* 3. Filter & Sort Toolbar */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Search Bar */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-xl">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search traded player, franchise, or ID..."
-              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
+              placeholder="Search player, team or ID..."
+              className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-400/20 focus:border-slate-400 font-medium placeholder:text-slate-400"
             />
           </div>
 
           {/* Franchise & View Controls */}
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Franchise Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-600">
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-600">
               <Filter size={13} className="text-slate-400" />
               <span>Team:</span>
               <select
@@ -482,7 +469,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 onClick={() => setViewMode("grid")}
                 className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
                   viewMode === "grid"
-                    ? "bg-white text-indigo-600 shadow-xs"
+                    ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-500 hover:text-slate-900"
                 }`}
                 title="Grid Cards"
@@ -493,7 +480,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 onClick={() => setViewMode("table")}
                 className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
                   viewMode === "table"
-                    ? "bg-white text-indigo-600 shadow-xs"
+                    ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-500 hover:text-slate-900"
                 }`}
                 title="Table Registry"
@@ -523,8 +510,8 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 onClick={() => setSelectedTier(tier.id)}
                 className={`px-3 py-1 rounded-lg font-bold transition-all ${
                   selectedTier === tier.id
-                    ? "bg-indigo-600 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "bg-slate-50 text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 {tier.label}
@@ -549,16 +536,16 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 <button
                   key={s.id}
                   onClick={() => toggleSort(s.id)}
-                  className={`px-2.5 py-1 rounded-lg font-mono font-bold flex items-center gap-1.5 transition-all text-xs ${
+                  className={`px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-all text-xs ${
                     sortBy === s.id
-                      ? "bg-slate-900 text-white shadow-xs"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      ? "bg-slate-800 text-white shadow-sm"
+                      : "bg-slate-50 text-slate-600 hover:bg-slate-100"
                   }`}
                 >
-                  {Icon && <Icon size={12} className={sortBy === s.id ? "text-amber-400" : "text-slate-400"} />}
+                  {Icon && <Icon size={12} className="text-slate-400" />}
                   {s.label}
                   {sortBy === s.id && (
-                    <span className="text-[10px] text-amber-300">
+                    <span className="text-[10px] text-slate-300">
                       {sortOrder === "desc" ? "↓" : "↑"}
                     </span>
                   )}
@@ -572,7 +559,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
       {/* 4. Traded Players Main Display */}
       {loadingSeason ? (
         <div className="py-16 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent align-[-0.125em]" />
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-slate-700 border-r-transparent align-[-0.125em]" />
           <p className="mt-3 text-xs font-semibold text-slate-400">Loading {selectedSeason} mobility data...</p>
         </div>
       ) : processedPlayers.length === 0 ? (
@@ -585,21 +572,14 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
           {processedPlayers.map((player) => {
             const teams = (player.TEAMS_PLAYED_FOR || "").split(",").map((t) => t.trim() as NbaTeamAbbr);
             const primaryTeam = teams[teams.length - 1] || "MIA";
-            const theme = getTeamTheme(primaryTeam);
             const tier = getTierBadge(player.IMPORTANCE_SCORE ?? 0);
             const TierIcon = tier.icon;
 
             return (
               <div
                 key={player.PLAYER_ID}
-                className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
               >
-                {/* Background glow */}
-                <div
-                  className="absolute -top-12 -right-12 h-24 w-24 rounded-full blur-2xl opacity-15 transition-opacity group-hover:opacity-30 pointer-events-none"
-                  style={{ backgroundColor: theme.primary }}
-                />
-
                 {/* Header Profile Row */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -607,7 +587,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                       <TierIcon size={10} />
                       {tier.label}
                     </span>
-                    <span className="font-mono text-xs font-bold text-slate-400">
+                    <span className="text-xs font-medium tabular-nums text-slate-400">
                       ID: {player.PLAYER_ID}
                     </span>
                   </div>
@@ -625,12 +605,12 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                       </div>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-lg font-black text-slate-900 truncate m-0" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                      <h3 className="text-base font-semibold text-slate-900 truncate m-0">
                         {player.PLAYER_NAME}
                       </h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs font-bold text-slate-500">Impact Score:</span>
-                        <span className="text-sm font-black font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                        <span className="text-xs font-medium text-slate-500">Impact</span>
+                        <span className="text-sm font-semibold tabular-nums text-slate-800">
                           {player.IMPORTANCE_SCORE}
                         </span>
                       </div>
@@ -640,30 +620,28 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                   {/* Transfer Flow Route */}
                   <div className="mb-4 bg-slate-50 border border-slate-100 rounded-xl p-2.5">
                     <div className="flex items-center justify-between gap-1 mb-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        Franchise Movements ({teams.length} Stints)
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                        Team journey · {teams.length} stops
                       </span>
                       {player.TRADE_DATE && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-100/80 px-2 py-0.5 rounded-md shadow-2xs">
-                          <Calendar size={11} className="text-indigo-600" />
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium tabular-nums text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                          <Calendar size={11} className="text-slate-400" />
                           {formatTradeDate(player.TRADE_DATE)}
                         </span>
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
                       {teams.map((t, i) => {
-                        const tTheme = getTeamTheme(t);
                         const isCurrent = i === teams.length - 1;
                         return (
                           <React.Fragment key={t + i}>
                             <span
-                              className={`px-2.5 py-1 rounded-lg text-xs font-black text-white shadow-xs flex items-center gap-1 ${
-                                isCurrent ? "ring-2 ring-indigo-500/40" : "opacity-85"
+                              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 ${
+                                isCurrent ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-600"
                               }`}
-                              style={{ backgroundColor: tTheme.primary }}
                             >
                               {t}
-                              {isCurrent && <span className="text-[9px] text-amber-300 font-sans">★</span>}
+                                {isCurrent && <span className="text-[9px] text-slate-300 font-sans">•</span>}
                             </span>
                             {i < teams.length - 1 && (
                               <ArrowRightLeft size={11} className="text-slate-400" />
@@ -681,22 +659,22 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 </div>
 
                 {/* Box Score Stats Bar */}
-                <div className="grid grid-cols-4 gap-1.5 text-center bg-slate-50 rounded-xl p-2 border border-slate-100 text-slate-700">
+                <div className="grid grid-cols-4 gap-1.5 text-center bg-slate-50 rounded-lg p-2 border border-slate-100 text-slate-700">
                   <div>
                     <span className="block text-[9px] font-bold text-slate-400 uppercase">PTS</span>
-                    <span className="text-xs font-black font-mono">{player.AVG_PTS}</span>
+                    <span className="text-xs font-semibold tabular-nums">{player.AVG_PTS}</span>
                   </div>
                   <div>
                     <span className="block text-[9px] font-bold text-slate-400 uppercase">REB</span>
-                    <span className="text-xs font-black font-mono">{player.AVG_REB}</span>
+                    <span className="text-xs font-semibold tabular-nums">{player.AVG_REB}</span>
                   </div>
                   <div>
                     <span className="block text-[9px] font-bold text-slate-400 uppercase">AST</span>
-                    <span className="text-xs font-black font-mono">{player.AVG_AST}</span>
+                    <span className="text-xs font-semibold tabular-nums">{player.AVG_AST}</span>
                   </div>
                   <div>
                     <span className="block text-[9px] font-bold text-slate-400 uppercase">MIN</span>
-                    <span className="text-xs font-black font-mono">{player.AVG_MIN}m</span>
+                    <span className="text-xs font-semibold tabular-nums">{player.AVG_MIN}m</span>
                   </div>
                 </div>
               </div>
@@ -714,11 +692,11 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                   <th className="p-4">Player</th>
                   <th className="p-4 cursor-pointer hover:text-slate-900" onClick={() => toggleSort("TRADE_DATE")}>
                     <div className="flex items-center gap-1.5">
-                      <Calendar size={12} className={sortBy === "TRADE_DATE" ? "text-indigo-600" : "text-slate-400"} />
+                      <Calendar size={12} className="text-slate-400" />
                       <span>Tarih</span>
                       <ArrowUpDown size={12} />
                       {sortBy === "TRADE_DATE" && (
-                        <span className="text-indigo-600 font-mono text-[10px] ml-0.5">
+                        <span className="text-slate-600 text-[10px] ml-0.5">
                           {sortOrder === "desc" ? "↓" : "↑"}
                         </span>
                       )}
@@ -729,7 +707,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                       <span>Impact Score</span>
                       <ArrowUpDown size={12} />
                       {sortBy === "IMPORTANCE_SCORE" && (
-                        <span className="text-indigo-600 font-mono text-[10px] ml-0.5">
+                        <span className="text-slate-600 text-[10px] ml-0.5">
                           {sortOrder === "desc" ? "↓" : "↑"}
                         </span>
                       )}
@@ -759,7 +737,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
 
                   return (
                     <tr key={player.PLAYER_ID} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-4 font-mono font-bold text-slate-400 text-xs">
+                      <td className="p-4 font-medium tabular-nums text-slate-400 text-xs">
                         #{idx + 1}
                       </td>
                       <td className="p-4">
@@ -781,8 +759,8 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                       </td>
                       <td className="p-4 whitespace-nowrap">
                         <div className="flex flex-col">
-                          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-slate-800">
-                            <Calendar size={12} className="text-indigo-500" />
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+                            <Calendar size={12} className="text-slate-400" />
                             <span>{formatTradeDate(player.TRADE_DATE) || "—"}</span>
                           </div>
                           {player.HOW_ACQUIRED && (
@@ -793,19 +771,17 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="font-mono font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100 text-sm">
+                        <span className="font-semibold tabular-nums text-slate-800 text-sm">
                           {player.IMPORTANCE_SCORE}
                         </span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-1.5">
                           {teams.map((t, i) => {
-                            const tTheme = getTeamTheme(t);
                             return (
                               <React.Fragment key={t + i}>
                                 <span
-                                  className="px-2 py-0.5 rounded font-black text-white text-xs shadow-xs"
-                                  style={{ backgroundColor: tTheme.primary }}
+                                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${i === teams.length - 1 ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-600"}`}
                                 >
                                   {t}
                                 </span>
@@ -817,13 +793,13 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                           })}
                         </div>
                       </td>
-                      <td className="p-4 text-center font-mono font-bold text-slate-800">{player.AVG_PTS}</td>
-                      <td className="p-4 text-center font-mono font-bold text-slate-800">{player.AVG_REB}</td>
-                      <td className="p-4 text-center font-mono font-bold text-slate-800">{player.AVG_AST}</td>
-                      <td className="p-4 text-center font-mono text-slate-600">{player.AVG_MIN}m</td>
+                      <td className="p-4 text-center tabular-nums font-semibold text-slate-800">{player.AVG_PTS}</td>
+                      <td className="p-4 text-center tabular-nums font-semibold text-slate-800">{player.AVG_REB}</td>
+                      <td className="p-4 text-center tabular-nums font-semibold text-slate-800">{player.AVG_AST}</td>
+                      <td className="p-4 text-center tabular-nums text-slate-600">{player.AVG_MIN}m</td>
                       <td className="p-4 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
-                          (player.NUM_TEAMS ?? 1) >= 3 ? "bg-rose-50 text-rose-600 border border-rose-200" : "bg-slate-100 text-slate-600"
+                          (player.NUM_TEAMS ?? 1) >= 3 ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-600"
                         }`}>
                           {player.NUM_TEAMS ?? 2}
                         </span>
@@ -840,9 +816,9 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
       {/* 5. Educational Insights Section */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-2.5">
-          <div className="flex items-center gap-2 text-indigo-600 font-bold">
+          <div className="flex items-center gap-2 text-slate-500 font-bold">
             <Info size={18} />
-            <h3 className="text-base font-black uppercase tracking-wider text-slate-900 m-0" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <h3 className="text-sm font-semibold tracking-tight text-slate-900 m-0">
               Why Impact Scores Matter for Trades
             </h3>
           </div>
@@ -855,7 +831,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-2.5">
           <div className="flex items-center gap-2 text-rose-600 font-bold">
             <Activity size={18} />
-            <h3 className="text-base font-black uppercase tracking-wider text-slate-900 m-0" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <h3 className="text-sm font-semibold tracking-tight text-slate-900 m-0">
               Stint-Specific Calibration
             </h3>
           </div>
