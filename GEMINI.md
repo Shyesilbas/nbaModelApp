@@ -43,6 +43,7 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 ### Daily Operations & Data Freshness
 - Daily Data Update (fetches latest completed game logs): `PYTHONPATH=. python3 main.py --update-data`
 - Package Frontend Schedule Context: `PYTHONPATH=. python3 main.py --build-schedule-context`
+- Compile Frontend SQLite Store: `PYTHONPATH=. python3 scripts/build_frontend_db.py`
 - Roster & Core Player Analysis: `PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis`
 - Daily Schedule Matchups Predictor: `PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY --model {v8, v9}`
 

@@ -25,12 +25,14 @@ if command -v python3 >/dev/null 2>&1; then
     cd ml-service
     # create venv if missing
     if [ ! -d ".venv" ]; then
+      echo "Creating .venv for ml-service..."
       python3 -m venv .venv
+      . .venv/bin/activate
+      pip install --upgrade pip >/dev/null
+      pip install -r requirements.txt >/dev/null
+    else
+      . .venv/bin/activate
     fi
-    # shellcheck disable=SC1091
-    . .venv/bin/activate
-    pip install --upgrade pip >/dev/null
-    pip install -r requirements.txt >/dev/null
 
     # start uvicorn using the venv's python
     python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 &

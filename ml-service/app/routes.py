@@ -19,7 +19,16 @@ from .service import (
     predict,
 )
 from .services.game_full import predict_game_full
-from .services.frontend_data import get_frontend_json, get_game_detail, get_game_index, get_manifest, get_play_by_play, get_player_history, get_team_rosters
+from .services.frontend_data import (
+    get_frontend_json,
+    get_game_detail,
+    get_game_index,
+    get_manifest,
+    get_play_by_play,
+    get_player_history,
+    get_season_weeks,
+    get_team_rosters,
+)
 from .services.player_prediction import predict_players
 from .services.score_prediction import predict_score
 from .services.status import get_model_status
@@ -69,8 +78,18 @@ def frontend_data_file(filename: str, request: Request):
 
 
 @router.get("/frontend-data-api/games")
-def frontend_game_index(request: Request, season: str = None):
-    return _run_endpoint(lambda: get_game_index(request, season))
+def frontend_game_index(
+    request: Request,
+    season: str = None,
+    start_date: str = None,
+    end_date: str = None,
+):
+    return _run_endpoint(lambda: get_game_index(request, season, start_date, end_date))
+
+
+@router.get("/frontend-data-api/weeks")
+def frontend_season_weeks(request: Request, season: str = None):
+    return _run_endpoint(lambda: get_season_weeks(request, season))
 
 
 @router.get("/frontend-data-api/games/{game_id}")
@@ -156,7 +175,12 @@ def rosters_preview_endpoint(home_team: str, away_team: str, prediction_date: st
 def explain_game_endpoint(req: ShapExplanationRequest):
     def _explain():
         pred_date_str = req.prediction_date.isoformat() if hasattr(req.prediction_date, 'isoformat') else str(req.prediction_date)
-        feats = build_features(req.home_team.upper(), req.away_team.upper(), pred_date_str)
+        feats = build_features(
+            req.home_team.upper(),
+            req.away_team.upper(),
+            pred_date_str,
+            player_status_overrides=req.player_status_overrides,
+        )
         
         win_exp = explain_win_probability(req.home_team, req.away_team, feats, req.model_version)
         score_exp = explain_score_prediction(req.home_team, req.away_team, feats, req.model_version)

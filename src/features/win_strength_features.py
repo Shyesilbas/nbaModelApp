@@ -117,6 +117,9 @@ def add_win_strength_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+_elo_state_cache: dict[tuple, dict[str, float]] = {}
+
+
 def compute_current_elo_state(team_games: pd.DataFrame, season: str = None) -> dict[str, float]:
     initial_ratings = None
     from pathlib import Path
@@ -134,6 +137,30 @@ def compute_current_elo_state(team_games: pd.DataFrame, season: str = None) -> d
         except Exception:
             season = None
 
+    if team_games.empty:
+        if season:
+            season_token = season.replace("-", "_")
+            init_path = root / f"data/production/team_elo_initial_{season_token}.json"
+            if not init_path.exists():
+                init_path = root / f"data/season={season}/analysis/team_elo_initial.json"
+            if init_path.exists():
+                try:
+                    with open(init_path, "r") as f:
+                        return json.load(f)
+                except Exception:
+                    pass
+        return {}
+
+    last_game_token = None
+    if "GAME_DATE" in team_games.columns:
+        valid_dates = team_games["GAME_DATE"].dropna()
+        if not valid_dates.empty:
+            last_game_token = str(valid_dates.iloc[-1])
+
+    cache_key = (season, len(team_games), last_game_token)
+    if cache_key in _elo_state_cache:
+        return dict(_elo_state_cache[cache_key])
+
     if season:
         season_token = season.replace("-", "_")
         init_path = root / f"data/production/team_elo_initial_{season_token}.json"
@@ -146,12 +173,11 @@ def compute_current_elo_state(team_games: pd.DataFrame, season: str = None) -> d
             except Exception:
                 initial_ratings = None
 
-    if team_games.empty:
-        return initial_ratings or {}
-
     engine = ContinuousEloEngine(initial_ratings=initial_ratings)
     engine.transform_games(team_games)
-    return dict(engine.ratings)
+    ratings = dict(engine.ratings)
+    _elo_state_cache[cache_key] = ratings
+    return dict(ratings)
 
 
 

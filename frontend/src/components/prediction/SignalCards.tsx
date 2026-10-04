@@ -11,7 +11,6 @@ interface SignalCardsProps {
 export function SignalCards({
   result,
   homeInfo,
-  awayInfo: _awayInfo,
   winnerInfo,
 }: SignalCardsProps) {
   const win = result.win_probability;
