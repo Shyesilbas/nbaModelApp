@@ -37,6 +37,7 @@ export function MatchupHeroCard({
   const awayRange = score.away_score_range || [0, 0];
 
   const margin = score.predicted_margin ? Math.abs(score.predicted_margin).toFixed(1) : "0.0";
+  const scoreWinnerInfo = (score.predicted_margin ?? 0) >= 0 ? homeInfo : awayInfo;
   const total = score.predicted_total_points ? score.predicted_total_points.toFixed(1) : "--";
   const totalRange = score.total_points_range || [0, 0];
   const pace = score.predicted_pace ? score.predicted_pace.toFixed(1) : "99.5";
@@ -194,7 +195,7 @@ export function MatchupHeroCard({
             <span>
               {isHighConfidence ? "YÜKSEK GÜVENİLİRLİK" : isModerateConfidence ? "ORTA GÜVENİLİRLİK" : "DENGELİ MAÇ"}
               {" · "}
-              {winnerInfo.abbr} +{margin} PTS
+              {scoreWinnerInfo.abbr} +{margin} PTS · SKOR TAHMİNİ
             </span>
           </div>
 
@@ -234,7 +235,7 @@ export function MatchupHeroCard({
           <div className="flex items-center gap-2 px-3.5 py-1 rounded-xl bg-white/[0.04] border border-white/[0.08] text-center">
             <Award size={13} className="text-amber-400" />
             <span className="text-[11px] font-bold text-white/80">
-              Model Öngörüsü: <strong className="text-white font-black">{winnerInfo.name}</strong> galibiyeti
+              Kazanma olasılığı favorisi: <strong className="text-white font-black">{winnerInfo.name}</strong>
             </span>
           </div>
         </div>
