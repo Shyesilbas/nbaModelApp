@@ -37,10 +37,10 @@ def _parse_path_list(raw: str | None) -> tuple[str, ...]:
 
 
 def default_rate_limit_rules() -> list[RateLimitRule]:
-    predict_max = _parse_int_env("RATE_LIMIT_PREDICT_MAX", 30)
-    data_api_max = _parse_int_env("RATE_LIMIT_DATA_API_MAX", 120)
-    frontend_data_max = _parse_int_env("RATE_LIMIT_FRONTEND_DATA_MAX", 300)
-    default_max = _parse_int_env("RATE_LIMIT_DEFAULT_MAX", 600)
+    predict_max = _parse_int_env("RATE_LIMIT_PREDICT_MAX", 180)
+    data_api_max = _parse_int_env("RATE_LIMIT_DATA_API_MAX", 300)
+    frontend_data_max = _parse_int_env("RATE_LIMIT_FRONTEND_DATA_MAX", 600)
+    default_max = _parse_int_env("RATE_LIMIT_DEFAULT_MAX", 1200)
     window_seconds = _parse_int_env("RATE_LIMIT_WINDOW_SECONDS", 60)
 
     return [

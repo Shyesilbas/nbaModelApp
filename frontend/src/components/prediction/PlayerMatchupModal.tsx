@@ -185,10 +185,9 @@ export function PlayerMatchupModal({
     };
   }, [games, gameDate]);
 
-  if (!player) return null;
-
   // Build automated data-driven insights narrative
   const narrative = useMemo(() => {
+    if (!player) return [];
     const parts: string[] = [];
 
     const ptsProj = player.predicted_pts;
@@ -244,6 +243,8 @@ export function PlayerMatchupModal({
 
     return parts;
   }, [player, stats5, seasonAverages, teamInfo, opponentInfo]);
+
+  if (!player) return null;
 
   return (
     <div 

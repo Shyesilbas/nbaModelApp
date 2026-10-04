@@ -1,9 +1,12 @@
 from datetime import date
+import logging
 from typing import Any, Dict, List, Tuple
 import pandas as pd
 
 from scripts.build_matchup_features import build_features
 from scripts.inference.top_down_scaling import apply_top_down_scaling
+
+logger = logging.getLogger(__name__)
 
 from .. import service as svc
 from ..player_service import get_player_predictions
@@ -212,7 +215,7 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
             player_status_overrides=request.player_status_overrides,
         )
     except Exception as e:
-        print("Player inference failed in /predict/game_full:", e)
+        logger.warning("Player inference failed in /predict/game_full: %s", e)
 
     if win_resp is None:
         win_req = WinProbRequest(
@@ -227,7 +230,7 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
     try:
         explanation = _build_game_explanation(get_features_home(), get_features_away())
     except Exception as e:
-        print("XAI generation failed:", e)
+        logger.warning("XAI generation failed: %s", e)
 
     return GameFullResponse(
         game_id=request.game_id or "unknown",

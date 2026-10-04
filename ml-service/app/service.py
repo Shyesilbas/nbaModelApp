@@ -4,9 +4,12 @@ from .schemas import (
 )
 from scripts.build_matchup_features import build_features
 from typing import Any, Dict, Optional
+import logging
 import pandas as pd
 from pathlib import Path
 import sys
+
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -24,7 +27,7 @@ def init_model():
     try:
         player_loader.load()
     except Exception as e:
-        print("Player models could not be loaded:", e)
+        logger.warning("Player models could not be loaded: %s", e)
         
     try:
         canonical_path = ROOT / "data" / "canonical" / "player_metadata.csv"
@@ -32,12 +35,14 @@ def init_model():
             df_can = pd.read_csv(canonical_path)
             for _, r in df_can.iterrows():
                 CANONICAL_POSITIONS[int(r["PLAYER_ID"])] = str(r["POSITION_GROUP"]).upper()
-            print(f"Loaded {len(CANONICAL_POSITIONS)} canonical player positions.")
+            logger.info("Loaded %d canonical player positions.", len(CANONICAL_POSITIONS))
     except Exception as e:
-        print("Canonical positions could not be loaded:", e)
+        logger.warning("Canonical positions could not be loaded: %s", e)
 
 
 def predict(request: WinProbRequest, features: Optional[Dict[str, Any]] = None) -> WinProbResponse:
+    if loader.model is None or loader.feature_cols is None:
+        init_model()
     # Normalize and validate prediction_date (pydantic date ensures valid YYYY-MM-DD)
     pred_date_str = request.prediction_date.isoformat() if hasattr(request.prediction_date, 'isoformat') else str(request.prediction_date)
 

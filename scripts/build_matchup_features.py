@@ -161,10 +161,16 @@ def _load_v3_matchups():
 
 @lru_cache(maxsize=4)
 def _load_v4_matchups():
-    p = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
-    if p.exists():
-        df = pd.read_csv(p)
-        df['GAME_DATE'] = pd.to_datetime(df['GAME_DATE'])
+    p_parq = ROOT / "data/experimental/player_model_ready_v4_usg.parquet"
+    if p_parq.exists():
+        df = pd.read_parquet(p_parq)
+        if not pd.api.types.is_datetime64_any_dtype(df["GAME_DATE"]):
+            df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
+        return df
+    p_csv = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
+    if p_csv.exists():
+        df = pd.read_csv(p_csv)
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
         return df
     return pd.DataFrame()
 
@@ -178,6 +184,72 @@ def _load_combined_schedule(season: str = None):
     for p in [p_parq, p_csv]:
         if p.exists():
             return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+    return pd.DataFrame()
+
+
+@lru_cache(maxsize=32)
+def _load_joblib_cached(path_str: str, mtime_ns: int):
+    import joblib
+    return joblib.load(path_str)
+
+
+def load_cached_joblib(path: Path):
+    if not path or not path.exists():
+        return None
+    return _load_joblib_cached(str(path.resolve()), path.stat().st_mtime_ns)
+
+
+@lru_cache(maxsize=32)
+def _load_json_cached(path_str: str, mtime_ns: int):
+    with open(path_str, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_cached_json(path: Path):
+    if not path or not path.exists():
+        return None
+    return _load_json_cached(str(path.resolve()), path.stat().st_mtime_ns)
+
+
+@lru_cache(maxsize=16)
+def _get_latest_player_snapshots(pred_date_str: str) -> pd.DataFrame:
+    p_parq = ROOT / "data/experimental/player_model_ready_v4_usg.parquet"
+    if p_parq.exists():
+        try:
+            import duckdb
+            query = f"""
+                WITH ranked AS (
+                    SELECT *,
+                           ROW_NUMBER() OVER (PARTITION BY PLAYER_ID ORDER BY GAME_DATE DESC) as rn
+                    FROM '{p_parq.resolve()}'
+                    WHERE GAME_DATE < '{pred_date_str}'
+                )
+                SELECT * EXCLUDE (rn)
+                FROM ranked
+                WHERE rn = 1
+            """
+            return duckdb.query(query).df()
+        except Exception:
+            pass
+
+    df = _load_v4_matchups()
+    if df.empty:
+        return pd.DataFrame()
+    pred_dt = pd.to_datetime(pred_date_str)
+    sub = df[df["GAME_DATE"] < pred_dt]
+    if sub.empty:
+        return pd.DataFrame()
+    return sub.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
+
+
+@lru_cache(maxsize=8)
+def _load_team_rosters(season_str: str) -> pd.DataFrame:
+    roster_path = ROOT / f"data/season={season_str}/analysis/team_rosters.csv"
+    if roster_path.exists():
+        try:
+            return pd.read_csv(roster_path)
+        except Exception:
+            pass
     return pd.DataFrame()
 
 
@@ -640,17 +712,16 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
 
     # Compute SCORE_PRED_MARGIN from active Score Model to link Score and Win models
     try:
-        import joblib
         score_candidates = [
             (ROOT / "models/production/score_model_v10_margin.pkl", ROOT / "models/production/score_model_v10_metadata.json", ROOT / "models/production/score_model_v10_ridge_margin.pkl"),
             (ROOT / "models/production/score_model_v9_margin.pkl", ROOT / "models/production/score_model_v9_metadata.json", ROOT / "models/production/score_model_v9_ridge_margin.pkl"),
         ]
         s_margin_path, s_meta_path, s_ridge_path = next(((m, meta, r) for m, meta, r in score_candidates if m.exists() and meta.exists()), (None, None, None))
         if s_margin_path is not None:
-            s_margin_model = joblib.load(s_margin_path)
-            s_meta = json.loads(s_meta_path.read_text())
-            s_ridge_margin = joblib.load(s_ridge_path) if s_ridge_path and s_ridge_path.exists() else None
-            req_margin_cols = s_meta.get("margin_features", [])
+            s_margin_model = load_cached_joblib(s_margin_path)
+            s_meta = load_cached_json(s_meta_path)
+            s_ridge_margin = load_cached_joblib(s_ridge_path) if s_ridge_path and s_ridge_path.exists() else None
+            req_margin_cols = s_meta.get("margin_features", []) if s_meta else []
 
             margin_input = {c: res.get(c, 0.0) for c in req_margin_cols}
             df_margin_input = pd.DataFrame([margin_input])
@@ -738,32 +809,27 @@ def compute_ridge_player_features_for_inference(
     if features_path is None or model_prefix is None:
         return {}
         
-    try:
-        player_features = joblib.load(features_path)
-    except Exception:
+    player_features = load_cached_joblib(features_path)
+    if player_features is None:
         return {}
         
     targets = ["pts", "reb", "ast"]
     models = {}
     for t in targets:
         m_path = ROOT / f"models/production/{model_prefix}{t}.pkl"
-        if m_path.exists():
-            models[t] = joblib.load(m_path)
+        m = load_cached_joblib(m_path)
+        if m is not None:
+            models[t] = m
             
-    if len(models) != 3:
-        return {}
-
     df = _load_v4_matchups()
     if df.empty:
         return {}
-        
-    pred_dt = pd.to_datetime(prediction_date)
-    df = df[df['GAME_DATE'] < pred_dt]
-    
-    if df.empty:
-        return {}
 
-    last_games = df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
+    last_games = _get_latest_player_snapshots(prediction_date)
+    if last_games.empty:
+        return {}
+    
+    pred_dt = pd.to_datetime(prediction_date)
     
     # Roster-aware filtering using the team_rosters.csv dataset
     year = pred_dt.year
@@ -774,12 +840,11 @@ def compute_ridge_player_features_for_inference(
         start_year = year
     season_str = f"{start_year}-{str(start_year+1)[-2:]}"
     
-    roster_path = ROOT / f"data/season={season_str}/analysis/team_rosters.csv"
     home_active = None
     away_active = None
-    if roster_path.exists():
+    roster_df = _load_team_rosters(season_str)
+    if not roster_df.empty:
         try:
-            roster_df = pd.read_csv(roster_path)
             home_active = set(roster_df[roster_df["TEAM_ABBREVIATION"] == home_team]["PLAYER_ID"].unique())
             away_active = set(roster_df[roster_df["TEAM_ABBREVIATION"] == away_team]["PLAYER_ID"].unique())
         except Exception:
@@ -1179,16 +1244,15 @@ def compute_player_features_for_inference(
     pred_margin = 0.0
     if margin_model_path.exists() and score_meta_path.exists():
         try:
-            import joblib
-            meta = json.loads(score_meta_path.read_text())
-            margin_model = joblib.load(margin_model_path)
-            margin_features = meta.get("margin_features", [])
+            meta = load_cached_json(score_meta_path)
+            margin_model = load_cached_joblib(margin_model_path)
+            margin_features = meta.get("margin_features", []) if meta else []
             if all(k in features for k in margin_features):
                 row_margin = [features[k] for k in margin_features]
                 X_margin = pd.DataFrame([row_margin], columns=margin_features)
                 pred_margin = float(margin_model.predict(X_margin)[0])
                 if ridge_margin_path.exists():
-                    ridge_margin = joblib.load(ridge_margin_path)
+                    ridge_margin = load_cached_joblib(ridge_margin_path)
                     ind_df = pd.DataFrame([{
                         "is_playoff": float(features.get("IS_PLAYOFF", 0.0)),
                         "home_b2b": float(features.get("IS_B2B", 0.0)),

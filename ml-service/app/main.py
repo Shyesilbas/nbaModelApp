@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+import logging
 import os
 import sys
 from pathlib import Path
@@ -13,7 +15,26 @@ from .rate_limit import RateLimitMiddleware
 from .service import init_model
 import uvicorn
 
-app = FastAPI(title="NBA Win Probability ML Service")
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        init_model()
+    except Exception as e:
+        logger.warning("Model load failed on startup: %s", e)
+
+    try:
+        from .services.frontend_data import warm_up_cache
+        warm_up_cache()
+    except Exception as e:
+        logger.warning("Frontend cache warmup failed on startup: %s", e)
+
+    yield
+
+
+app = FastAPI(title="NBA Win Probability ML Service", lifespan=lifespan)
 
 def _parse_allowed_origins() -> list[str]:
     raw = os.environ.get("ALLOWED_ORIGINS", "").strip()
@@ -37,21 +58,6 @@ app.add_middleware(
 )
 app.add_middleware(RateLimitMiddleware)
 app.include_router(router)
-
-
-@app.on_event("startup")
-def startup_event():
-    try:
-        init_model()
-    except Exception as e:
-        # Log but keep service up; predict will return 503 if model missing
-        print("Model load failed on startup:", e)
-
-    try:
-        from .services.frontend_data import warm_up_cache
-        warm_up_cache()
-    except Exception as e:
-        print("Frontend cache warmup failed on startup:", e)
 
 
 if __name__ == '__main__':

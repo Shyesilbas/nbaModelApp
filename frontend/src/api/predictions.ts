@@ -1,4 +1,5 @@
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8001").replace(/\/$/, "");
+import { API_BASE_URL } from "../lib/constants";
+export { API_BASE_URL };
 
 export type PlayerStatusOverride = {
   player_id?: number | string;

@@ -6,6 +6,8 @@ import {
   Activity,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Calendar,
 } from "lucide-react";
 
@@ -19,6 +21,7 @@ import {
 } from "../api/predictions";
 import { loadPrivateApi } from "../lib/dataCache";
 import { NBA_TEAMS } from "../lib/nbaTeams";
+import { CURRENT_SEASON, MIN_PREDICTION_DATE } from "../lib/constants";
 
 import {
   MatchupHeroCard,
@@ -51,6 +54,17 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  interface SeasonWeek {
+    week_number: number;
+    start_date: string;
+    end_date: string;
+    label: string;
+    game_count: number;
+  }
+
+  const [weeks, setWeeks] = useState<SeasonWeek[]>([]);
+  const [selectedWeekNum, setSelectedWeekNum] = useState<number>(1);
+  const [loadingWeek, setLoadingWeek] = useState(false);
   const [upcomingGames, setUpcomingGames] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -61,7 +75,6 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [modelStatus, setModelStatus] = useState<any>(null);
   const [selectorOpen, setSelectorOpen] = useState(!initialGame);
 
-  const [allResults, setAllResults] = useState<any[]>([]);
   const [playerOverrides, setPlayerOverrides] = useState<Record<string, PlayerStatusOverride>>({});
   const [previewRosters, setPreviewRosters] = useState<{
     home_players?: any[];
@@ -70,51 +83,101 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchWeeks = async () => {
       try {
         setLoadingData(true);
         setDataError(null);
-        let data: any[] = [];
+        let weekList: SeasonWeek[] = [];
         try {
-          data = await loadPrivateApi<any[]>("/frontend-data-api/games?season=2026-27");
+          weekList = await loadPrivateApi<SeasonWeek[]>(`/frontend-data-api/weeks?season=${encodeURIComponent(CURRENT_SEASON)}`);
         } catch {
-          data = await loadPrivateApi<any[]>("/frontend-data/game_results.json").catch(() => []);
+          weekList = [];
         }
-        setAllResults(data || []);
+
+        if (!weekList || weekList.length === 0) {
+          const startDt = new Date("2026-09-28");
+          const fallbackWeeks: SeasonWeek[] = [];
+          for (let i = 1; i <= 28; i++) {
+            const wStart = new Date(startDt.getTime() + (i - 1) * 7 * 86400000);
+            const wEnd = new Date(wStart.getTime() + 6 * 86400000);
+            const sStr = wStart.toISOString().slice(0, 10);
+            const eStr = wEnd.toISOString().slice(0, 10);
+            fallbackWeeks.push({
+              week_number: i,
+              start_date: sStr,
+              end_date: eStr,
+              label: `Week ${i} (${sStr.slice(5)} to ${eStr.slice(5)})`,
+              game_count: 45,
+            });
+          }
+          weekList = fallbackWeeks;
+        }
+
+        setWeeks(weekList);
+
+        let targetWeek = 1;
+        const todayStr = new Date().toISOString().slice(0, 10);
+        if (initialGame?.date) {
+          const match = weekList.find((w) => initialGame.date >= w.start_date && initialGame.date <= w.end_date);
+          if (match) targetWeek = match.week_number;
+        } else {
+          const upcoming = weekList.find((w) => w.end_date >= todayStr);
+          if (upcoming) targetWeek = upcoming.week_number;
+        }
+        setSelectedWeekNum(targetWeek);
       } catch (err: any) {
-        console.error("Error loading schedule data:", err);
-        setDataError("Failed to load upcoming schedule data.");
+        console.error("Error loading schedule weeks:", err);
+        setDataError("Failed to initialize schedule weeks.");
       } finally {
         setLoadingData(false);
       }
     };
-    fetchInitialData();
-  }, []);
+    fetchWeeks();
+  }, [initialGame?.date]);
 
   useEffect(() => {
-    if (!allResults.length) return;
+    if (!weeks.length) return;
+    const currentWeek = weeks.find((w) => w.week_number === selectedWeekNum) || weeks[0];
+    if (!currentWeek) return;
 
-    // Deduplicate games by GAME_ID
-    const uniqueMap = new Map();
-    allResults.forEach((g: any) => {
-      if (g.GAME_ID && !uniqueMap.has(g.GAME_ID)) {
-        uniqueMap.set(g.GAME_ID, g);
+    let isMounted = true;
+    const fetchWeekGames = async () => {
+      setLoadingWeek(true);
+      try {
+        const data = await loadPrivateApi<any[]>(
+          `/frontend-data-api/games?season=${encodeURIComponent(CURRENT_SEASON)}&start_date=${encodeURIComponent(currentWeek.start_date)}&end_date=${encodeURIComponent(currentWeek.end_date)}`
+        );
+        if (!isMounted) return;
+
+        const isCompletedGame = (g: any) => {
+          const homeScore = Number(g.HOME_SCORE);
+          const awayScore = Number(g.AWAY_SCORE);
+          return !isNaN(homeScore) && !isNaN(awayScore) && (homeScore > 0 || awayScore > 0);
+        };
+
+        const uniqueMap = new Map();
+        (data || []).forEach((g: any) => {
+          if (g.GAME_ID && !uniqueMap.has(g.GAME_ID)) {
+            uniqueMap.set(g.GAME_ID, g);
+          }
+        });
+        const unplayed = Array.from(uniqueMap.values())
+          .filter((g: any) => !isCompletedGame(g))
+          .sort((a: any, b: any) => a.GAME_DATE.localeCompare(b.GAME_DATE));
+
+        setUpcomingGames(unplayed);
+      } catch (err) {
+        console.error("Failed to load week games:", err);
+      } finally {
+        if (isMounted) setLoadingWeek(false);
       }
-    });
-    const uniqueGames = Array.from(uniqueMap.values());
-
-    const isCompletedGame = (g: any) => {
-      const homeScore = Number(g.HOME_SCORE);
-      const awayScore = Number(g.AWAY_SCORE);
-      return !isNaN(homeScore) && !isNaN(awayScore) && (homeScore > 0 || awayScore > 0);
     };
 
-    const unplayed = uniqueGames
-      .filter((g: any) => !isCompletedGame(g))
-      .sort((a: any, b: any) => a.GAME_DATE.localeCompare(b.GAME_DATE));
-
-    setUpcomingGames(unplayed);
-  }, [allResults]);
+    fetchWeekGames();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedWeekNum, weeks]);
 
   // Load preview rosters whenever home, away, date are chosen
   useEffect(() => {
@@ -156,8 +219,8 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         if (h === a) throw new Error("Home and away teams cannot be the same.");
         if (!d) throw new Error("Please select a date for the matchup.");
         if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error("Invalid date format. Please use YYYY-MM-DD.");
-        if (d < "2026-10-01") {
-          throw new Error("Predictions are only enabled for unplayed upcoming games (2026-27 season and onward). Past completed games cannot be predicted.");
+        if (d < MIN_PREDICTION_DATE) {
+          throw new Error(`Predictions are only enabled for unplayed upcoming games (${CURRENT_SEASON} season and onward). Past completed games cannot be predicted.`);
         }
 
         const overridesList = Object.values(overridesMap);
@@ -211,9 +274,15 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
       setResult(null);
       setError(null);
       setSelectorOpen(true);
+      if (weeks.length > 0) {
+        const found = weeks.find((w) => initialGame.date >= w.start_date && initialGame.date <= w.end_date);
+        if (found) {
+          setSelectedWeekNum(found.week_number);
+        }
+      }
       onClearInitialGame?.();
     }
-  }, [initialGame, onClearInitialGame]);
+  }, [initialGame, onClearInitialGame, weeks]);
 
   useEffect(() => {
     const fetchModelStatus = async () => {
@@ -362,91 +431,157 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
             {/* Scheduled mode */}
             {mode === "scheduled" && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Upcoming games quick list */}
-                {upcomingGames.length > 0 && (
+              <div className="space-y-4">
+                {/* Week Selector Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-slate-50 p-2.5 sm:p-3 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedWeekNum((w) => Math.max(1, w - 1))}
+                      disabled={selectedWeekNum <= 1 || loadingWeek}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-xs transition-all hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-white"
+                      title="Previous Week"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+
+                    <select
+                      value={selectedWeekNum}
+                      onChange={(e) => setSelectedWeekNum(Number(e.target.value))}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-800 shadow-xs focus:border-indigo-500 focus:outline-none"
+                    >
+                      {weeks.map((w) => (
+                        <option key={w.week_number} value={w.week_number}>
+                          {w.label} ({w.game_count} games)
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedWeekNum((w) => Math.min(weeks.length, w + 1))}
+                      disabled={selectedWeekNum >= weeks.length || loadingWeek}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-xs transition-all hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-white"
+                      title="Next Week"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                    {loadingWeek ? (
+                      <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-600">
+                        <RefreshCw size={12} className="animate-spin" /> Fetching games...
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        {upcomingGames.length} Matchups in Week {selectedWeekNum}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Upcoming games quick list */}
                   <div className="space-y-2">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Upcoming Games</p>
-                    <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
-                      {upcomingGames.map((g: any) => {
-                        const isSelected = home === g.HOME_TEAM_ABBREVIATION && away === g.AWAY_TEAM_ABBREVIATION && date === g.GAME_DATE;
-                        return (
-                          <button
-                            key={g.GAME_ID}
-                            onClick={() => handleSelectGame(g)}
-                            className={`w-full text-left p-3 rounded-xl border transition-all duration-200 flex items-center justify-between gap-3 ${
-                              isSelected
-                                ? "bg-indigo-50/60 border-indigo-400 shadow-xs"
-                                : "bg-white border-slate-200/80 hover:border-slate-300"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <div className="flex items-center -space-x-1">
-                                <TeamLogo abbr={teamAbbr(g.HOME_TEAM_ABBREVIATION)} name={g.HOME_TEAM_ABBREVIATION} size={20} />
-                                <TeamLogo abbr={teamAbbr(g.AWAY_TEAM_ABBREVIATION)} name={g.AWAY_TEAM_ABBREVIATION} size={20} />
+                    <div className="flex items-center justify-between">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                        Week {selectedWeekNum} Schedule
+                      </p>
+                      {loadingWeek && <RefreshCw size={12} className="animate-spin text-slate-400" />}
+                    </div>
+
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                      {loadingWeek ? (
+                        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 p-8 text-center text-xs font-semibold text-slate-400">
+                          <RefreshCw size={16} className="animate-spin text-indigo-500" />
+                          <span>Loading week fixtures...</span>
+                        </div>
+                      ) : upcomingGames.length === 0 ? (
+                        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-6 text-center text-xs font-semibold text-slate-400">
+                          No upcoming matches found for Week {selectedWeekNum}.
+                        </div>
+                      ) : (
+                        upcomingGames.map((g: any) => {
+                          const isSelected = home === g.HOME_TEAM_ABBREVIATION && away === g.AWAY_TEAM_ABBREVIATION && date === g.GAME_DATE;
+                          return (
+                            <button
+                              key={g.GAME_ID}
+                              onClick={() => handleSelectGame(g)}
+                              className={`w-full text-left p-2.5 rounded-xl border transition-all duration-200 flex items-center justify-between gap-3 ${
+                                isSelected
+                                  ? "bg-indigo-50/60 border-indigo-400 shadow-xs"
+                                  : "bg-white border-slate-200/80 hover:border-slate-300"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className="flex items-center -space-x-1">
+                                  <TeamLogo abbr={teamAbbr(g.HOME_TEAM_ABBREVIATION)} name={g.HOME_TEAM_ABBREVIATION} size={20} />
+                                  <TeamLogo abbr={teamAbbr(g.AWAY_TEAM_ABBREVIATION)} name={g.AWAY_TEAM_ABBREVIATION} size={20} />
+                                </div>
+                                <span className="text-xs font-black text-slate-800">
+                                  {g.HOME_TEAM_ABBREVIATION} vs {g.AWAY_TEAM_ABBREVIATION}
+                                </span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">{g.SEASON_TYPE}</span>
                               </div>
-                              <span className="text-xs font-black text-slate-800">
-                                {g.HOME_TEAM_ABBREVIATION} vs {g.AWAY_TEAM_ABBREVIATION}
-                              </span>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase">{g.SEASON_TYPE}</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-slate-400 font-bold">{g.GAME_DATE}</span>
-                          </button>
-                        );
-                      })}
+                              <span className="text-[10px] font-mono text-slate-400 font-bold">{g.GAME_DATE}</span>
+                            </button>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
-                )}
 
-                {/* Filter by team */}
-                <div className="space-y-2">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Filter by Team</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-xs"
-                      value={filterTeam1}
-                      onChange={(e) => { setFilterTeam1(e.target.value); if (!e.target.value) setFilterTeam2(""); }}
-                    >
-                      <option value="">Team 1</option>
-                      {NBA_TEAMS.map((t) => <option key={t.abbr} value={t.abbr}>{t.abbr} — {t.name}</option>)}
-                    </select>
-                    <select
-                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-xs disabled:opacity-50"
-                      value={filterTeam2}
-                      onChange={(e) => setFilterTeam2(e.target.value)}
-                      disabled={!filterTeam1}
-                    >
-                      <option value="">Team 2 (optional)</option>
-                      {NBA_TEAMS.map((t) => <option key={t.abbr} value={t.abbr} disabled={t.abbr === filterTeam1}>{t.abbr} — {t.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-xs max-h-44 overflow-y-auto divide-y divide-slate-100">
-                    {!filterTeam1 ? (
-                      <div className="p-4 text-center text-xs text-slate-400 font-semibold">Select a team to filter games</div>
-                    ) : filteredSchedule.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-slate-400 font-semibold">No matchups found</div>
-                    ) : (
-                      filteredSchedule.map((g: any) => {
-                        const isSelected = home === g.HOME_TEAM_ABBREVIATION && away === g.AWAY_TEAM_ABBREVIATION && date === g.GAME_DATE;
-                        return (
-                          <button
-                            key={g.GAME_ID}
-                            onClick={() => handleSelectGame(g)}
-                            className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 transition-colors flex items-center justify-between text-xs ${isSelected ? "bg-indigo-50/30 text-indigo-900 font-bold" : "text-slate-600 font-medium"}`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-extrabold">{g.HOME_TEAM_ABBREVIATION}</span>
-                              <span className="text-slate-300">vs</span>
-                              <span className="font-extrabold">{g.AWAY_TEAM_ABBREVIATION}</span>
-                              <span className="text-[8px] uppercase font-black tracking-wider text-slate-400 px-1 py-0.5 bg-slate-50 border border-slate-150 rounded">
-                                {g.SEASON_TYPE === "NBA Finals" ? "Finals" : "Regular"}
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-slate-400 font-bold font-mono">{g.GAME_DATE}</span>
-                          </button>
-                        );
-                      })
-                    )}
+                  {/* Filter by team */}
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Filter Week by Team</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select
+                        className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-xs"
+                        value={filterTeam1}
+                        onChange={(e) => { setFilterTeam1(e.target.value); if (!e.target.value) setFilterTeam2(""); }}
+                      >
+                        <option value="">Team 1</option>
+                        {NBA_TEAMS.map((t) => <option key={t.abbr} value={t.abbr}>{t.abbr} — {t.name}</option>)}
+                      </select>
+                      <select
+                        className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-xs disabled:opacity-50"
+                        value={filterTeam2}
+                        onChange={(e) => setFilterTeam2(e.target.value)}
+                        disabled={!filterTeam1}
+                      >
+                        <option value="">Team 2 (optional)</option>
+                        {NBA_TEAMS.map((t) => <option key={t.abbr} value={t.abbr} disabled={t.abbr === filterTeam1}>{t.abbr} — {t.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-xs max-h-56 overflow-y-auto divide-y divide-slate-100">
+                      {!filterTeam1 ? (
+                        <div className="p-4 text-center text-xs text-slate-400 font-semibold">Select a team to filter Week {selectedWeekNum} matches</div>
+                      ) : filteredSchedule.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-slate-400 font-semibold">No matchups for {filterTeam1} in Week {selectedWeekNum}</div>
+                      ) : (
+                        filteredSchedule.map((g: any) => {
+                          const isSelected = home === g.HOME_TEAM_ABBREVIATION && away === g.AWAY_TEAM_ABBREVIATION && date === g.GAME_DATE;
+                          return (
+                            <button
+                              key={g.GAME_ID}
+                              onClick={() => handleSelectGame(g)}
+                              className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 transition-colors flex items-center justify-between text-xs ${isSelected ? "bg-indigo-50/30 text-indigo-900 font-bold" : "text-slate-600 font-medium"}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-extrabold">{g.HOME_TEAM_ABBREVIATION}</span>
+                                <span className="text-slate-300">vs</span>
+                                <span className="font-extrabold">{g.AWAY_TEAM_ABBREVIATION}</span>
+                                <span className="text-[8px] uppercase font-black tracking-wider text-slate-400 px-1 py-0.5 bg-slate-50 border border-slate-150 rounded">
+                                  {g.SEASON_TYPE === "NBA Finals" ? "Finals" : "Regular"}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-bold font-mono">{g.GAME_DATE}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

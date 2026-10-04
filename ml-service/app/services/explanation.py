@@ -8,6 +8,13 @@ from ..schemas import ExplanationFeature, WinProbabilityExplanation
 from .feature_metadata import FEATURE_METADATA
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+_tree_explainers: dict = {}
+
+
 def _playoff_influence(raw_val: float, feats: dict) -> str:
     home_wins = feats.get("HOME_SERIES_WINS", 0)
     away_wins = feats.get("AWAY_SERIES_WINS", 0)
@@ -55,7 +62,10 @@ def explain_win_probability(feats: dict) -> WinProbabilityExplanation:
         contribs = coefs * np.asarray(X_scaled)[0]
     else:
         import shap
-        expl = shap.TreeExplainer(clf)
+        clf_id = id(clf)
+        if clf_id not in _tree_explainers:
+            _tree_explainers[clf_id] = shap.TreeExplainer(clf)
+        expl = _tree_explainers[clf_id]
         shap_vals = expl.shap_values(X_scaled)
         if isinstance(shap_vals, list) and len(shap_vals) > 1:
             contribs = np.asarray(shap_vals[1])[0]
@@ -134,5 +144,5 @@ def explain_xgboost_model(model, features_list, feats_dict, perspective: str = "
         explanations.sort(key=lambda x: abs(x.contribution), reverse=True)
         return explanations
     except Exception as e:
-        print("XGBoost explanation failed:", e)
+        logger.warning("XGBoost explanation failed: %s", e)
         return []

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import {
   Search,
   Layers,
@@ -8,11 +8,13 @@ import {
   UserCircle,
 } from "lucide-react";
 import GameResults from "./components/GameResults";
-import TeamExplorer from "./components/TeamExplorer";
-import CorePlayers from "./components/CorePlayers";
-import MultiTeamPlayers from "./components/MultiTeamPlayers";
-import NbaPrediction from "./components/NbaPrediction";
-import PlayerPage from "./components/PlayerPage";
+
+const TeamExplorer = lazy(() => import("./components/TeamExplorer"));
+const CorePlayers = lazy(() => import("./components/CorePlayers"));
+const MultiTeamPlayers = lazy(() => import("./components/MultiTeamPlayers"));
+const NbaPrediction = lazy(() => import("./components/NbaPrediction"));
+const PlayerPage = lazy(() => import("./components/PlayerPage"));
+
 import TeamLogo from "./components/TeamLogo";
 import { loadJson, prefetchManifestFiles } from "./lib/dataCache";
 import { TEAM_NAME_BY_ABBR } from "./lib/nbaTeams";
@@ -163,16 +165,25 @@ export default function App() {
                     }}
                   />
                 )}
-                {activeTab === "player-profile" && <PlayerPage />}
-                {activeTab === "team-explorer"  && <TeamExplorer rosters={rosters} />}
-                {activeTab === "core-players"   && <CorePlayers corePlayers={corePlayers} rosters={rosters} />}
-                {activeTab === "multi-team"     && <MultiTeamPlayers players={multiTeamPlayers} />}
-                {activeTab === "nba-prediction" && (
-                  <NbaPrediction
-                    initialGame={predictionTarget}
-                    onClearInitialGame={() => setPredictionTarget(null)}
-                  />
-                )}
+                <Suspense
+                  fallback={
+                    <div className="flex h-64 flex-col items-center justify-center gap-3">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Loading module...</p>
+                    </div>
+                  }
+                >
+                  {activeTab === "player-profile" && <PlayerPage />}
+                  {activeTab === "team-explorer" && <TeamExplorer rosters={rosters} />}
+                  {activeTab === "core-players" && <CorePlayers corePlayers={corePlayers} rosters={rosters} />}
+                  {activeTab === "multi-team" && <MultiTeamPlayers players={multiTeamPlayers} />}
+                  {activeTab === "nba-prediction" && (
+                    <NbaPrediction
+                      initialGame={predictionTarget}
+                      onClearInitialGame={() => setPredictionTarget(null)}
+                    />
+                  )}
+                </Suspense>
               </div>
             )}
           </div>

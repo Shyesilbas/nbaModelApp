@@ -3,8 +3,10 @@ type DataManifest = {
   generated_at?: string;
 };
 
-const DATA_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8001").replace(/\/$/, "");
-const DATA_API_TOKEN = import.meta.env.VITE_DATA_API_TOKEN;
+import { API_BASE_URL, API_DATA_TOKEN } from "./constants";
+
+const DATA_API_BASE_URL = API_BASE_URL;
+const DATA_API_TOKEN = API_DATA_TOKEN;
 const CACHE_PREFIX = "nba-static-data";
 const VERSION_KEY = "nba-static-data-version";
 

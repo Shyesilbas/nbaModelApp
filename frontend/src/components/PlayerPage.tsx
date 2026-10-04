@@ -1200,9 +1200,6 @@ export default function PlayerPage() {
             <>
               {/* Season selector */}
               {(() => {
-                const primaryTeamAbbr = currentAvgs?.teams?.[currentAvgs.teams.length - 1] || null;
-                const playerTheme = getTeamTheme(primaryTeamAbbr);
-
                 return (
                   <div className="rounded-sm border border-slate-200/80 bg-white p-5 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-3">

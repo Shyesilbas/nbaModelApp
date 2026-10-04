@@ -6,13 +6,22 @@ from ..schemas import PlayerPrediction, PlayerPredictionResponse, ScorePredictio
 
 def predict_players(request: ScorePredictionRequest) -> PlayerPredictionResponse:
     if svc.player_loader.pts_model is None:
+        svc.init_model()
+    if svc.player_loader.pts_model is None:
         raise FileNotFoundError("Player models not loaded.")
 
     home_team = request.home_team.upper()
     away_team = request.away_team.upper()
     pred_date_str = request.prediction_date.isoformat() if hasattr(request.prediction_date, "isoformat") else str(request.prediction_date)
 
-    players_df = get_player_predictions(home_team, away_team, pred_date_str, svc.player_loader, svc.score_loader)
+    players_df = get_player_predictions(
+        home_team,
+        away_team,
+        pred_date_str,
+        svc.player_loader,
+        svc.score_loader,
+        player_status_overrides=request.player_status_overrides,
+    )
     score_resp = predict_score(request)
 
     home_players_df = players_df[players_df["IS_HOME"] == 1]

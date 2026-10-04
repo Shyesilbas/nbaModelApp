@@ -24,7 +24,16 @@ def predict_score(
         or svc.score_loader.margin_model is None
         or svc.score_loader.metadata is None
     ):
-        raise FileNotFoundError("Score V3 models not fully loaded. Check service logs.")
+        svc.init_model()
+
+    if (
+        svc.score_loader.pace_model is None
+        or svc.score_loader.home_rtg_model is None
+        or svc.score_loader.away_rtg_model is None
+        or svc.score_loader.margin_model is None
+        or svc.score_loader.metadata is None
+    ):
+        raise FileNotFoundError("Score models not fully loaded. Check service logs.")
 
     pred_date_str = request.prediction_date.isoformat() if hasattr(request.prediction_date, "isoformat") else str(request.prediction_date)
     home_team = request.home_team.upper()
@@ -98,7 +107,11 @@ def predict_score(
             win_req = WinProbRequest(home_team=home_team, away_team=away_team, prediction_date=pred_date_str)
             win_resp = svc.predict(win_req, features=features)
         if (win_resp.predicted_winner == home_team and pred_margin < 0) or (win_resp.predicted_winner == away_team and pred_margin > 0):
-            pred_margin = -pred_margin
+            score_favored = home_team if pred_margin > 0 else away_team
+            confidence_warning = (
+                f"Winner divergence: win model favors {win_resp.predicted_winner}, "
+                f"while score margin favors {score_favored} (margin: {pred_margin:+.1f})"
+            )
     except Exception as e:
         logger.warning(
             f"Failed to check win/margin consistency for {home_team} vs {away_team} on {pred_date_str}. Error: {str(e)}"

@@ -27,6 +27,19 @@ class DataPaths:
     team_model_ready_v2: str
     season_dir: str
 
+    @property
+    def player_features_parquet(self) -> Path:
+        return Path(self.player_features.replace(".csv", ".parquet"))
+
+    @property
+    def team_features_parquet(self) -> Path:
+        return Path(self.team_features.replace(".csv", ".parquet"))
+
+    @property
+    def schedule_combined_parquet(self) -> Path:
+        return Path(self.schedule_combined.replace(".csv", ".parquet"))
+
+
 def get_data_paths(season: str = None) -> DataPaths:
     # 1. Load config
     config_path = ROOT / "config" / "data_sources.yaml"
