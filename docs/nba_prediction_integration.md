@@ -1,38 +1,95 @@
-NBA Prediction Integration
+# NBA Prediction & Service Integration
 
-Architecture
-- Frontend (React) -> FastAPI ML service
-- The ML service hosts production model artifacts and reuses the shared matchup feature builder.
+This document outlines the API contracts, client integration patterns, and operational configurations for the FastAPI ML inference service and React dashboard.
 
-Local run
-1. Start ML service (recommended using Docker):
-   PYTHONPATH=. python3 scripts/export_backend_runtime_bundle.py --out-dir .deploy/backend-runtime
-   docker build -f ml-service/Dockerfile -t nba-ml-service .
-   docker run -p 8001:8001 nba-ml-service
+---
 
-2. Start frontend:
-   cd frontend
-   npm install
-   npm run dev
+## 1. System Architecture
 
-API contracts
-- POST /predict/win-probability (ML service)
-  Request: { home_team, away_team, prediction_date }
-  Response: { home_team, away_team, predicted_winner, home_win_probability, away_win_probability, confidence_bucket, model_version, prediction_date }
+```text
+React 19 Frontend (Vite)
+       │
+       ▼ (HTTP / REST)
+FastAPI ML Service (Port 8001)
+       │
+       ├──► SQLite Store (`data/frontend/nba_frontend.db` - Sub-1ms Box Scores & Logs)
+       ├──► Model Predictors (WIN v10.1, SCORE v10, PLAYER v9 - Sub-20ms Inference)
+       └──► Continuous Elo & Roster Snapshot Caches
+```
 
-- POST /predict/game_full (ML service)
-  Request: { game_id?, home_team_id, away_team_id, prediction_date, home_score_prediction?, away_score_prediction? }
-  Response: score prediction, win probability, player projections, scale factors, and optional explanation payload.
+---
 
-- GET /model-status (ML service)
-  Response: active win and score model metadata.
+## 2. Launching Services
 
-Error scenarios
-- 400 Invalid request: invalid/missing fields.
-- 503 Missing model file: ML service returns 503 if model artifact missing.
-- 400 Not enough historical games: ML service returns 400 with message.
+### Quick Start (Recommended)
+Use the single-command startup script to launch both the FastAPI backend and the Vite frontend:
+```bash
+./scripts/start_all.sh
+```
+- **ML Service**: `http://127.0.0.1:8001` (Interactive Swagger at `/docs`)
+- **Frontend Dashboard**: `http://localhost:5173`
 
-Deployment notes
-- Keep model inference in the Python/FastAPI service.
-- Version and metadata stored in models/model_metadata.json; include in responses.
-- Add monitoring: health endpoint /health on ML service, readiness probe for deployments.
+### Manual Execution
+```bash
+# ML Service
+cd ml-service
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+
+# Frontend Dashboard
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 3. API Endpoints & Contracts
+
+### Production & Governance
+- `GET /health`: Liveness and readiness probe.
+- `GET /model-status`: Returns metadata for active production models:
+  - **WIN Probability**: `LightGBM Isotonic (v10.1)` (ROC-AUC `0.7391` unseen, `0.7918` refit).
+  - **SCORE Model**: `XGBoost + Ridge (v10)` (Total Points MAE `14.75`).
+  - **PLAYER Model**: `LightGBM + Ridge (v9)` (PTS $R^2$ `0.50`, AST $R^2$ `0.46`).
+
+### Schedule & Frontend Data APIs
+- `GET /frontend-data-api/weeks?season=YYYY-YY`:
+  - Returns deterministically partitioned 28-week calendar slices with `start_date`, `end_date`, and `game_count`.
+- `GET /frontend-data-api/games?season=YYYY-YY&start_date=...&end_date=...`:
+  - Date-bounded game indexing for week-by-week lazy fetching (~25 KB payload).
+- `GET /frontend-data-api/games/{game_id}`:
+  - Fetches complete box score, quarter lines, and individual player stats from `nba_frontend.db`.
+- `GET /frontend-data-api/players/{player_id}/history?season=YYYY-YY`:
+  - Sub-millisecond player game logs retrieved directly from SQLite.
+
+### Matchup & Prediction APIs
+- `POST /predict/win-probability`:
+  - Request: `{"home_team": "LAL", "away_team": "BOS", "prediction_date": "2026-10-15"}`
+  - Response: Predicted winner, home/away probabilities, confidence tier, and model version.
+- `POST /predict/score`:
+  - Request: `{"home_team": "LAL", "away_team": "BOS", "prediction_date": "2026-10-15"}`
+  - Response: Predicted pace, offensive ratings, expected total, margin, and projected score.
+- `POST /predict/players`:
+  - Request: `{"game_id": "0012600001", "home_team": "LAL", "away_team": "BOS", "prediction_date": "2026-10-15"}`
+  - Response: Individual PTS, REB, AST projections for active rotation players.
+- `POST /predict/game_full`:
+  - Unified endpoint returning combined win probability, score projections, player projections, and key match-up signal attributions.
+
+---
+
+## 4. Production Hardening & Security
+
+The service includes built-in sliding-window rate limiting and CORS configuration:
+```bash
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+RATE_LIMIT_PREDICT_MAX=30
+RATE_LIMIT_DATA_API_MAX=120
+RATE_LIMIT_FRONTEND_DATA_MAX=300
+RATE_LIMIT_WINDOW_SECONDS=60
+RATE_LIMIT_TRUST_X_FORWARDED_FOR=true
+```
+
+- Public endpoints (`/health`, `/docs`, `/openapi.json`) are exempt from rate limiting.
+- Prediction endpoints and data queries are bucketed separately to prevent denial-of-service.

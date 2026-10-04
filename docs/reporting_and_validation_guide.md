@@ -1,120 +1,102 @@
-# Reporting and Validation Guide
+# Reporting, Auditing and Validation Guide
 
-This document describes the unified reporting, validation, and model comparison CLI tool available in the workspace.
-
-## Overview
-
-The reporting CLI (`scripts/generate_report.py`) provides a single interface to:
-1. Audit season raw data freshness and file completeness.
-2. Inspect active production model structures and metadata.
-3. Dynamically evaluate and test models against a specified season.
-4. Compare performance metrics of different model versions side-by-side.
+This document describes the validation suites, reporting CLIs, and drift detection tools used to audit data integrity and model performance across seasons.
 
 ---
 
 ## 1. Season Data Freshness Audits
 
-To check if all raw and processed files exist for a specific season, run:
-
+To audit file completeness, row counts, and date spans for a specific NBA season:
 ```bash
 PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY
 ```
 
-### Key Checks Performed:
+### Checks Performed:
 - Existence and size of `team_games.csv`, `player_games.csv`, and `schedule.csv`.
-- Benzersiz (unique) game counts and date ranges in raw files.
-- Existence and row counts of V2/V3 datasets and the score model ready dataset.
+- Unique game ID counts, null checks, and date range validity.
+- Row counts and feature completeness for `team_model_ready_v3_{YYYY_YY}.parquet` and `player_model_ready_v4_usg.parquet`.
 
 ---
 
 ## 2. Model Structure Summaries
 
-To inspect active model configurations, feature counts, and validation baselines for a specific model version, run:
-
+To inspect active model architectures, feature contracts, and empirical benchmark parameters:
 ```bash
-PYTHONPATH=. python3 scripts/generate_report.py --model {v8, v9}
+PYTHONPATH=. python3 scripts/generate_report.py --model {v9, v10}
 ```
 
-### Key Information Displayed:
-- Version strings and training timestamps.
-- Regression coefficients (e.g., Ridge total/margin coefficients for SCORE v9).
-- Feature lists expected by the model.
-- Base validation metrics from model metadata.
+### Information Inspected:
+- Model family (`lightgbm_isotonic`, `xgboost_regressor`).
+- Feature contracts from `config/features/` (e.g. `win_v10.yaml`, `score_v9.yaml`).
+- Calibration parameters (Isotonic calibration, Ridge residual coefficients for Pace/Total/Margin).
+- Base holdout metrics recorded in `models/production/model_metadata.json`.
 
 ---
 
 ## 3. Dynamic Model Evaluation on a Season
 
-To test a model version against the actual outcomes of any season, run:
-
+To test a model artifact dynamically against the completed outcomes of any target season:
 ```bash
-PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY --model {v8, v9}
+PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY --model {v9, v10}
 ```
 
-### Process:
-1. Loads the season's V3 team dataset.
-2. If win projection features are missing (such as ELO difference and player projection averages), it automatically loads the model-ready player statistics and active player models to compute them dynamically.
-3. Runs predictions and calculates:
-   - **Win Probability**: Accuracy, ROC-AUC, Brier score.
-   - **Score Component**: Total points MAE/Bias and margin MAE/Bias.
-4. Saves a Markdown evaluation report to `reports/evaluation/season_{season}_model_{model}_evaluation_report.md`.
+### Execution Flow:
+1. Loads the season's V3 team dataset from Parquet/CSV.
+2. Injects rolling feature states (Continuous Elo, Dean Oliver Four Factors, schedule fatigue).
+3. If win projection aggregates are required, calculates player projection averages dynamically.
+4. Generates performance evaluation reports saved to `reports/evaluation/season_{season}_model_{model}_evaluation_report.md`:
+   - **Win Probability**: Accuracy, ROC-AUC, Brier score, Log-Loss.
+   - **Score Component**: Total points MAE/Bias and Margin MAE/Bias.
 
 ---
 
-## 4. Side-by-Side Model Comparisons
+## 4. Side-by-Side Model Comparisons (Champion vs Challenger)
 
-To compare the performance of two model versions on a target season, run:
-
+To compare two model versions on a specific season:
 ```bash
-PYTHONPATH=. python3 scripts/generate_report.py --compare-models v8 v9 --season YYYY-YY
+PYTHONPATH=. python3 scripts/generate_report.py --compare-models v9 v10 --season YYYY-YY
 ```
 
 ### Output:
-Generates a side-by-side performance breakdown table comparing Accuracy, ROC-AUC, Brier Score, and MAE/Bias metrics for both models, along with the delta difference. Saves the report to `reports/evaluation/compare_{model1}_vs_{model2}_season_{season}.md`.
+Generates a side-by-side comparative markdown table detailing accuracy deltas, Brier score reductions, calibration curves, and score errors, saved to `reports/evaluation/compare_{model1}_vs_{model2}_season_{season}.md`.
 
 ---
 
-## 5. Daily Schedule Matchups Predictor
+## 5. Daily Schedule Matchups Predictor CLI
 
-To predict win probabilities and scores for all games scheduled on a given date in a season, run:
-
+To predict game outcomes, win probabilities, and projected scores for an entire scheduled date:
 ```bash
-PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY --model {v8, v9}
+PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY [--model v10]
 ```
 
-### Key Features:
-- Filters games for the target date from `schedule_combined.csv`.
-- Dynamically constructs rolling feature states for both teams.
-- Runs the active Win model and SCORE component models (with Ridge regression corrections if V9).
-- Outputs a cleanly formatted ASCII table to the console.
-- Automatically saves a detailed markdown forecast to `reports/predictions/schedule_{date}_model_{model}.md`.
+### Features:
+- Filters games for the target date from `schedule_combined.csv` or `.parquet`.
+- Automatically queries rolling team features, rest days, and roster availability.
+- Evaluates the active Win model (LightGBM Isotonic) and Score models (XGBoost + Ridge).
+- Outputs a formatted ASCII table to the console and exports a markdown forecast to `reports/predictions/schedule_{date}_model_{model}.md`.
 
 ---
 
-## 6. Safe Model Retraining and Promotion Pipeline
+## 6. Structural & Path Refactor Audits
 
-To retrain all predictive models (Player, Score, and Win Probability) in sequence and compare their performance against the current production models, run:
-
+Run these commands after any path refactoring or pipeline update:
 ```bash
-PYTHONPATH=. python3 scripts/retrain_pipeline.py --season YYYY-YY [--dry-run]
+PYTHONPATH=. python3 scripts/audit/validate_project_structure.py
+PYTHONPATH=. python3 scripts/audit/validate_season_path_refactor.py
 ```
-
-### Key Workflow:
-1. **Retraining**: Automatically invokes the trainer classes (`PlayerModelTrainer`, `ScoreModelTrainer`, and `WinModelTrainer`) and saves outputs to `models/experimental/`.
-2. **Evaluation**: Evaluates the candidate challenger models vs active production models on the specified validation season.
-3. **Secure Promotion**: If not running with `--dry-run`, prompts for interactive confirmation `[y/N]` to promote models by copying files from `models/experimental/` to `models/production/`.
+- Validates the single source of truth in `scripts/data_paths.py`.
+- Checks production artifact manifests and verifies season-scoped path isolation.
 
 ---
 
-## 7. Data Drift and Feature Leakage Detector
+## 7. Data Drift and Feature Leakage Detection
 
-To analyze feature distribution shifts across seasons and check for data leakage in model-ready datasets, run:
-
+To detect distribution drift or lookahead leakage between seasons:
 ```bash
-PYTHONPATH=. python3 scripts/detect_drift_and_leakage.py --reference-season YYYY-YY --target-season YYYY-YY [--threshold 0.95]
+PYTHONPATH=. python3 scripts/detect_drift_and_leakage.py --reference-season 2024-25 --target-season 2025-26 [--threshold 0.95]
 ```
 
-### Key Analysis:
-- **Feature Leakage Check**: Flags zero-variance columns, high missingness rate, or pre-game features showing a correlation greater than the specified threshold (default `0.95`) with `WIN`.
-- **Distribution Drift Scan**: Runs a Kolmogorov-Smirnov (KS) test to evaluate whether feature values have shifted significantly between the reference and target seasons.
-- **Audit Logging**: Prints a summary to the console and outputs a markdown audit log to `reports/audits/drift_and_leakage_{reference}_vs_{target}.md`.
+### Analysis:
+- **Feature Leakage Check**: Identifies pre-game features exhibiting Pearson correlation $> 0.95$ with target `WIN`.
+- **Distribution Drift Scan**: Executes Kolmogorov-Smirnov (KS) tests to detect feature distribution shifts.
+- **Audit Logging**: Outputs an audit ledger to `reports/audits/drift_and_leakage_{reference}_vs_{target}.md`.
