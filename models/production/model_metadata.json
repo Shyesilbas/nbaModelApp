@@ -227,14 +227,31 @@
   "selected_model": "lightgbm_isotonic",
   "selected_family": "lightgbm",
   "selected_calibration": "isotonic",
+  "accuracy": 0.7172686230248307,
+  "roc_auc": 0.7918460731010094,
+  "brier_score": 0.1868957156018671,
   "selected_metrics": {
-    "accuracy": 0.6645445641527914,
-    "precision": 0.66600790513834,
-    "recall": 0.6601371204701273,
-    "f1": 0.663059517953763,
-    "roc_auc": 0.735433947820548,
-    "brier_score": 0.20645619748422292
+    "accuracy": 0.7172686230248307,
+    "precision": 0.7155655095184771,
+    "recall": 0.7212189616252822,
+    "f1": 0.718381112984823,
+    "roc_auc": 0.7918460731010094,
+    "brier_score": 0.1868957156018671,
+    "log_loss": 0.5491431702068211,
+    "evaluation_scope": "2025-26_unseen_season_validation",
+    "number_of_rows": 1772
+  },
+  "overall_metrics": {
+    "accuracy": 0.7026264591439688,
+    "precision": 0.7029818748781914,
+    "recall": 0.7017509727626459,
+    "f1": 0.7023658845292571,
+    "roc_auc": 0.777171796696392,
+    "brier_score": 0.19326006366609125,
+    "log_loss": 0.5654866795315242,
+    "evaluation_scope": "cross_season_full_dataset",
+    "number_of_rows": 10280
   },
   "target_column": "WIN",
-  "notes": "Promoted v10.1 model with fixed ContinuousElo scaling and OOF score margin integration."
+  "notes": "Promoted v10.1 model with fixed ContinuousElo scaling, OOF score margin integration, and empirical validation metrics."
 }

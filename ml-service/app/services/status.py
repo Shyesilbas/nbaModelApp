@@ -13,11 +13,12 @@ def _extract_win_metrics(metadata):
     metrics = ModelMetrics()
     if not metadata:
         return metrics
+    selected = metadata.get("selected_metrics", {})
     flat = metadata.get("metrics", {})
     uncal = flat.get("uncalibrated", {}) if isinstance(flat.get("uncalibrated", {}), dict) else {}
-    metrics.roc_auc = flat.get("roc_auc", uncal.get("roc_auc"))
-    metrics.brier = flat.get("brier", uncal.get("brier_score"))
-    metrics.accuracy = flat.get("accuracy", uncal.get("accuracy"))
+    metrics.roc_auc = selected.get("roc_auc") or metadata.get("roc_auc") or flat.get("roc_auc", uncal.get("roc_auc"))
+    metrics.brier = selected.get("brier_score") or selected.get("brier") or metadata.get("brier_score") or flat.get("brier", uncal.get("brier_score"))
+    metrics.accuracy = selected.get("accuracy") or metadata.get("accuracy") or flat.get("accuracy", uncal.get("accuracy"))
     return metrics
 
 
