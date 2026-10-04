@@ -12,7 +12,8 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import lightgbm as lgb
 from src.training.feature_contract import load_feature_contract
-from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split
+from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split, expanding_window_date_splits
+from src.training.provenance import build_training_provenance
 
 warnings.filterwarnings("ignore")
 
@@ -63,6 +64,15 @@ class PlayerModelTrainer:
             c for c in df.columns 
             if c.lower() not in exclude_lower and c not in self.targets_map.keys()
         ]
+        postgame_columns = {
+            "PTS", "MIN", "REB", "AST", "PLUS_MINUS", "WL", "WIN",
+            "FGM", "FGA", "FG_PCT", "FG3M", "FG3A", "FG3_PCT",
+            "FTM", "FTA", "FT_PCT", "OREB", "DREB", "STL", "BLK",
+            "TOV", "PF", "TARGET_PTS", "TARGET_REB", "TARGET_AST",
+        }
+        leaked = sorted(set(features) & postgame_columns)
+        if leaked:
+            raise ValueError(f"Player feature contract includes same-game outcome fields: {leaked}")
         if not features:
             raise ValueError("Player feature contract resolved zero feature columns.")
         X = df[features].copy()
@@ -83,6 +93,10 @@ class PlayerModelTrainer:
         df = self.load_dataset()
         self.validate_dataset_contract(df)
         train_df = self.filter_training_rows(df)
+        if "GAME_DATE" not in train_df.columns:
+            raise ValueError("Player model training requires GAME_DATE for time-safe validation.")
+        train_df["GAME_DATE"] = pd.to_datetime(train_df["GAME_DATE"], errors="coerce")
+        train_df = train_df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE"], kind="stable").reset_index(drop=True)
         X, features = self.build_feature_matrix(train_df)
         os.makedirs(self.output_dir, exist_ok=True)
         
@@ -92,7 +106,11 @@ class PlayerModelTrainer:
         metadata_metrics = {}
         
         for target, short_name in self.targets_map.items():
-            y = train_df[target].fillna(0)
+            target_df = train_df[train_df[target].notna()].copy()
+            if target_df.empty:
+                raise ValueError(f"Player target {target} has no observed values.")
+            X_target = X.loc[target_df.index]
+            y = pd.to_numeric(target_df[target], errors="coerce")
             
             pipeline = Pipeline([
                 ('imputer', SimpleImputer(strategy='mean')),
@@ -108,17 +126,17 @@ class PlayerModelTrainer:
             
             if self.holdout_config.get("strategy") == "season_holdout":
                 X_train, X_test, y_train, y_test, split_meta = season_holdout_train_test_split(
-                    X,
+                    X_target,
                     y,
-                    train_df,
+                    target_df,
                     calibration_season=self.holdout_config["calibration_season"],
                     date_col=self.holdout_config.get("date_col", "GAME_DATE"),
                 )
             else:
                 X_train, X_test, y_train, y_test, split_meta = chronological_train_test_split(
-                    X,
+                    X_target,
                     y,
-                    train_df,
+                    target_df,
                     date_col=self.holdout_config.get("date_col", "GAME_DATE"),
                     test_size=float(self.holdout_config.get("test_size", 0.2)),
                 )
@@ -130,30 +148,33 @@ class PlayerModelTrainer:
             rmse = np.sqrt(mean_squared_error(y_test, preds))
             r2 = r2_score(y_test, preds)
 
-            # Export a final model trained on all available historical rows after holdout evaluation.
-            pipeline.fit(X, y)
+            final_X = X_train if self.holdout_config.get("final_refit_scope") == "train_only" else X
+            final_y = y_train if self.holdout_config.get("final_refit_scope") == "train_only" else y
+            fit_df = target_df.loc[final_X.index].copy()
+            pipeline.fit(final_X, final_y)
 
             model_name = f"player_{self.version}_lgb_{short_name}.pkl"
             model_path = self.output_dir / model_name
             joblib.dump(pipeline, model_path)
 
             # Build Ridge calibration features
-            X_ind = pd.DataFrame(index=train_df.index)
-            X_ind["is_playoff"] = (train_df["IS_PLAYOFF"].astype(int) == 1).astype(float)
-            X_ind["is_home"] = (train_df["IS_HOME"].astype(int) == 1).astype(float)
-            X_ind["pos_guard"] = (train_df["PLAYER_POSITION_GROUP"] == "GUARD").astype(float)
-            X_ind["pos_wing"] = (train_df["PLAYER_POSITION_GROUP"] == "WING").astype(float)
-            X_ind["pos_big"] = (train_df["PLAYER_POSITION_GROUP"] == "BIG").astype(float)
-            X_ind["high_usage"] = (train_df["USG_PCT_LAST_10"] >= 25.0).astype(float)
-            X_ind["low_usage"] = (train_df["USG_PCT_LAST_10"] < 15.0).astype(float)
-            X_ind["heavy_minutes"] = (train_df["MIN_EMA_10"] >= 30.0).astype(float)
-            X_ind["light_minutes"] = (train_df["MIN_EMA_10"] < 15.0).astype(float)
+            X_fit = X_target.loc[final_X.index]
+            y_fit = y.loc[final_y.index]
+            X_ind = pd.DataFrame(index=fit_df.index)
+            X_ind["is_playoff"] = (fit_df["IS_PLAYOFF"].astype(int) == 1).astype(float)
+            X_ind["is_home"] = (fit_df["IS_HOME"].astype(int) == 1).astype(float)
+            X_ind["pos_guard"] = (fit_df["PLAYER_POSITION_GROUP"] == "GUARD").astype(float)
+            X_ind["pos_wing"] = (fit_df["PLAYER_POSITION_GROUP"] == "WING").astype(float)
+            X_ind["pos_big"] = (fit_df["PLAYER_POSITION_GROUP"] == "BIG").astype(float)
+            X_ind["high_usage"] = (fit_df["USG_PCT_LAST_10"] >= 25.0).astype(float)
+            X_ind["low_usage"] = (fit_df["USG_PCT_LAST_10"] < 15.0).astype(float)
+            X_ind["heavy_minutes"] = (fit_df["MIN_EMA_10"] >= 30.0).astype(float)
+            X_ind["light_minutes"] = (fit_df["MIN_EMA_10"] < 15.0).astype(float)
 
             # Out-Of-Fold residual calculation for Ridge calibration to prevent in-sample overfitting
-            from sklearn.model_selection import KFold
-            kf = KFold(n_splits=5, shuffle=True, random_state=42)
-            oof_preds = pd.Series(index=train_df.index, dtype=float)
-            for f_tr, f_val in kf.split(X):
+            temporal_splits = expanding_window_date_splits(fit_df, date_col="GAME_DATE", n_splits=3)
+            oof_preds = pd.Series(index=fit_df.index, dtype=float)
+            for f_tr, f_val in temporal_splits:
                 fold_pipe = Pipeline([
                     ('imputer', SimpleImputer(strategy='mean')),
                     ('lgb', lgb.LGBMRegressor(
@@ -165,13 +186,14 @@ class PlayerModelTrainer:
                         verbose=-1
                     ))
                 ])
-                fold_pipe.fit(X.iloc[f_tr], y.iloc[f_tr])
-                oof_preds.iloc[f_val] = fold_pipe.predict(X.iloc[f_val])
+                fold_pipe.fit(X_fit.iloc[f_tr], y_fit.iloc[f_tr])
+                oof_preds.iloc[f_val] = fold_pipe.predict(X_fit.iloc[f_val])
 
-            residuals = oof_preds - y
+            valid_oof = oof_preds.notna()
+            residuals = oof_preds.loc[valid_oof] - y_fit.loc[valid_oof]
 
             ridge = Ridge(alpha=10.0)
-            ridge.fit(X_ind, residuals)
+            ridge.fit(X_ind.loc[valid_oof], residuals)
 
             ridge_name = f"player_{self.version}_ridge_{short_name}.pkl"
             ridge_path = self.output_dir / ridge_name
@@ -179,6 +201,8 @@ class PlayerModelTrainer:
 
             metadata_metrics[short_name] = {
                 "mae": float(mae),
+                "ridge_training_rows": int(valid_oof.sum()),
+                "ridge_oof_strategy": "expanding_window_by_game_date",
                 "rmse": float(rmse),
                 "r2": float(r2),
                 "split": split_meta.__dict__,
@@ -187,20 +211,34 @@ class PlayerModelTrainer:
                 "ridge_features": X_ind.columns.tolist()
             }
             
+        player_artifacts = [
+            self.output_dir / f"player_{self.version}_{kind}_{target}.pkl"
+            for target in ["pts", "reb", "ast"] for kind in ["lgb", "ridge"]
+        ] + [self.output_dir / f"player_{self.version}_features.pkl"]
         metadata = {
-            "version": f"{self.version}_LightGBM_Ridge",
+            "version": f"{self.version}_temporal_Ridge_candidate",
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "training_manifest": self.manifest_metadata,
             "feature_contract": self.feature_contract.snapshot,
+            "provenance": build_training_provenance(
+                root=Path(__file__).resolve().parents[2],
+                input_files=[self.data_path],
+                feature_contract_path=self.feature_contract.path,
+                manifest_path=self.manifest_metadata.get("path"),
+                trainer_path=Path(__file__),
+                artifact_paths=player_artifacts,
+            ),
             "input_file": str(self.data_path),
             "number_of_rows": int(len(df)),
             "training_rows": int(len(train_df)),
+            "evaluation_training_rows": int(len(final_X)),
             "training_season_ids": self.training_season_ids,
             "season_coverage": sorted(pd.to_numeric(df["SEASON_ID"], errors="coerce").dropna().astype(int).unique().tolist()) if "SEASON_ID" in df.columns else [],
             "final_refit": {
                 "enabled": True,
-                "rows": int(len(train_df)),
-                "note": "Holdout metrics are computed before each final target model is refit on all eligible rows."
+                "rows": int(len(final_X)),
+                "scope": self.holdout_config.get("final_refit_scope", "all_eligible_rows"),
+                "note": "Final target models and Ridge corrections use only the configured pre-holdout fit scope."
             },
             "features_count": len(features),
             "targets": list(self.targets_map.keys()),

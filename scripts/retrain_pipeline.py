@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from pathlib import Path
-from sklearn.metrics import accuracy_score, roc_auc_score, brier_score_loss, mean_absolute_error
+from sklearn.metrics import accuracy_score, roc_auc_score, brier_score_loss, mean_absolute_error, log_loss
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -163,6 +163,22 @@ def evaluate_model_files(model_dir, season, segments=None):
                 score_results = dict(score_segments.get("overall", {}))
                 score_results["segments"] = score_segments
 
+                baseline_predictions = {}
+                if all(c in eval_df.columns for c in ["PACE_LAST_5", "OFF_RTG_LAST_5", "OPP_OFF_RTG_LAST_5"]):
+                    baseline_predictions["rolling_team_ratings"] = {
+                        "home": eval_df["PACE_LAST_5"] * eval_df["OFF_RTG_LAST_5"] / 100.0,
+                        "away": eval_df["PACE_LAST_5"] * eval_df["OPP_OFF_RTG_LAST_5"] / 100.0,
+                    }
+                    baseline = baseline_predictions["rolling_team_ratings"]
+                    base_total = baseline["home"] + baseline["away"]
+                    base_margin = baseline["home"] - baseline["away"]
+                    score_results["baseline_rolling_team_ratings"] = {
+                        "total_mae": float(mean_absolute_error(eval_df["ACTUAL_TOTAL"], base_total)),
+                        "margin_mae": float(mean_absolute_error(eval_df["ACTUAL_MARGIN"], base_margin)),
+                        "samples": int(len(eval_df)),
+                        "definition": "pregame PACE_LAST_5 × each side's rolling offensive rating",
+                    }
+
                 # Attach PRED_MARGIN to full df as SCORE_PRED_MARGIN (positive for home, negative for away)
                 home_margins = dict(zip(eval_df["GAME_ID"].astype(str), eval_df["PRED_MARGIN"]))
                 df["SCORE_PRED_MARGIN"] = [home_margins.get(str(gid), 0.0) if is_h else -home_margins.get(str(gid), 0.0) for gid, is_h in zip(df["GAME_ID"], df["IS_HOME"].astype(bool))]
@@ -195,6 +211,21 @@ def evaluate_model_files(model_dir, season, segments=None):
             win_segments = evaluate_segments(win_eval, segments, win_metrics)
             win_results = dict(win_segments.get("overall", {}))
             win_results["segments"] = win_segments
+            baseline_probabilities = {"league_coin_flip": np.full(len(eval_df), 0.5)}
+            if "ELO_DIFF" in eval_df.columns:
+                baseline_probabilities["pregame_elo"] = 1.0 / (1.0 + np.power(10.0, -eval_df["ELO_DIFF"].astype(float) / 400.0))
+            if "WINRATE_LAST_10" in eval_df.columns:
+                baseline_probabilities["last_10_win_rate"] = eval_df["WINRATE_LAST_10"].astype(float).clip(0.0, 1.0)
+            win_results["baselines"] = {
+                name: {
+                    "brier": float(brier_score_loss(y, probabilities)),
+                    "log_loss": float(log_loss(y, np.clip(probabilities, 1e-6, 1.0 - 1e-6))),
+                    "roc_auc": float(roc_auc_score(y, probabilities)) if y.nunique() > 1 else None,
+                    "accuracy": float(accuracy_score(y, probabilities >= 0.5)),
+                    "samples": int(len(y)),
+                }
+                for name, probabilities in baseline_probabilities.items()
+            }
     player_results = {}
     player_data_path = ROOT / "data" / "experimental" / "player_model_ready_v4_usg.csv"
     player_features_path = model_dir / "player_v9_features.pkl"
@@ -210,12 +241,16 @@ def evaluate_model_files(model_dir, season, segments=None):
                 model_path = model_dir / f"player_v9_lgb_{short_name}.pkl"
                 if model_path.exists() and target_col in player_df.columns:
                     model = joblib.load(model_path)
-                    eval_df = player_df.copy()
-                    eval_df[f"actual_{short_name}"] = eval_df[target_col].fillna(0)
+                    eval_df = player_df[player_df[target_col].notna()].copy()
+                    eval_df[f"actual_{short_name}"] = pd.to_numeric(eval_df[target_col], errors="coerce")
                     eval_df[f"pred_{short_name}"] = model.predict(eval_df[features])
                     target_segments = evaluate_segments(eval_df, segments, player_metrics(short_name))
                     player_results[short_name] = dict(target_segments.get("overall", {}))
                     player_results[short_name]["segments"] = target_segments
+                    rolling_feature = {"pts": "PTS_LAST_5", "reb": "REB_LAST_5", "ast": "AST_LAST_5"}[short_name]
+                    if rolling_feature in eval_df.columns:
+                        baseline_error = eval_df[rolling_feature].astype(float) - eval_df[f"actual_{short_name}"].astype(float)
+                        player_results[short_name]["baseline_last_5_mae"] = float(baseline_error.abs().mean())
                 
     return {
         "win": win_results,
@@ -239,6 +274,58 @@ def _threshold_pass(metrics, thresholds):
             checks.append((f"player.{target}.max_mae", target_metrics.get("mae", float("inf")) <= target_thresholds.get("max_mae", float("inf"))))
             checks.append((f"player.{target}.min_r2", target_metrics.get("r2", -float("inf")) >= target_thresholds.get("min_r2", -float("inf"))))
     return {"eligible": all(ok for _, ok in checks) if checks else False, "checks": [{"name": name, "passed": ok} for name, ok in checks]}
+
+
+def _champion_challenger_gate(champion, challenger, tolerance=0.0):
+    """Require non-inferiority on every primary metric and one strict gain."""
+    checks = []
+    strict_gain = False
+
+    def compare(name, old, new, lower_is_better):
+        nonlocal strict_gain
+        if old is None or new is None:
+            checks.append({"name": name, "passed": False, "reason": "metric missing"})
+            return
+        delta = float(new) - float(old)
+        passed = delta <= tolerance if lower_is_better else delta >= -tolerance
+        improved = delta < -tolerance if lower_is_better else delta > tolerance
+        strict_gain = strict_gain or improved
+        checks.append({"name": name, "passed": bool(passed), "champion": float(old), "challenger": float(new)})
+
+    old_win, new_win = champion.get("win", {}), challenger.get("win", {})
+    if old_win:
+        compare("win.brier", old_win.get("brier"), new_win.get("brier"), True)
+        compare("win.roc_auc", old_win.get("roc_auc"), new_win.get("roc_auc"), False)
+    old_score, new_score = champion.get("score", {}), challenger.get("score", {})
+    if old_score:
+        compare("score.total_mae", old_score.get("total_mae"), new_score.get("total_mae"), True)
+        compare("score.margin_mae", old_score.get("margin_mae"), new_score.get("margin_mae"), True)
+    old_player, new_player = champion.get("player", {}), challenger.get("player", {})
+    for target in ("pts", "reb", "ast"):
+        if target in old_player:
+            compare(f"player.{target}.mae", old_player[target].get("mae"), new_player.get(target, {}).get("mae"), True)
+
+    return {"passed": bool(checks and all(item["passed"] for item in checks) and strict_gain), "checks": checks}
+
+
+def _baseline_gate(metrics):
+    """Require each leak-free candidate to beat an interpretable pregame baseline."""
+    checks = []
+    win = metrics.get("win", {})
+    baselines = win.get("baselines", {})
+    elo = baselines.get("pregame_elo", {})
+    if win:
+        checks.append({"name": "win.brier_better_than_elo", "passed": bool(elo) and win.get("brier", float("inf")) < elo.get("brier", float("inf"))})
+        checks.append({"name": "win.auc_at_least_elo", "passed": bool(elo) and win.get("roc_auc", 0) >= elo.get("roc_auc", 0)})
+    score = metrics.get("score", {})
+    score_base = score.get("baseline_rolling_team_ratings", {})
+    if score:
+        checks.append({"name": "score.total_mae_better_than_rolling", "passed": bool(score_base) and score.get("total_mae", float("inf")) < score_base.get("total_mae", float("inf"))})
+        checks.append({"name": "score.margin_mae_better_than_rolling", "passed": bool(score_base) and score.get("margin_mae", float("inf")) < score_base.get("margin_mae", float("inf"))})
+    for target, values in metrics.get("player", {}).items():
+        baseline = values.get("baseline_last_5_mae")
+        checks.append({"name": f"player.{target}.mae_better_than_last5", "passed": baseline is not None and values.get("mae", float("inf")) < baseline})
+    return {"passed": bool(checks and all(item["passed"] for item in checks)), "checks": checks}
 
 def write_training_report(run_id, manifest, trainer_metadata, champ_metrics, chall_metrics, eligibility):
     report_dir = ROOT / "reports" / "evaluation"
@@ -271,6 +358,7 @@ def write_training_report(run_id, manifest, trainer_metadata, champ_metrics, cha
         f"- Threshold eligibility: `{eligibility['eligible']}`",
         f"- Champion/challenger gate passed: `{eligibility.get('champion_challenger_gate_passed')}`",
         f"- Promotion allowed: `{eligibility.get('promotion_allowed')}`",
+        f"- Promotion policy: `{eligibility.get('promotion_policy', 'champion_challenger')}`",
         "```json",
         json.dumps(eligibility["checks"], indent=2),
         "```",
@@ -284,6 +372,7 @@ def main():
     parser.add_argument("--manifest", type=str, default=str(ROOT / "config" / "training_manifest.yaml"), help="Training manifest path")
     parser.add_argument("--dry-run", action="store_true", help="Run training and evaluation but do not promote artifacts to production")
     parser.add_argument("--promote", action="store_true", help="Automatically promote models to production if eligible without prompting")
+    parser.add_argument("--replace-leaky-champion", action="store_true", help="Replace a known leakage-tainted production champion when all clean candidates beat their pregame baselines")
     parser.add_argument("--models", nargs="+", choices=["win", "score", "player"], default=None, help="Optionally override which models to train")
     args = parser.parse_args()
     
@@ -400,18 +489,23 @@ def main():
         print(f"{'Margin MAE':<25} | {s_champ['margin_mae']:<15.4f} | {s_chall['margin_mae']:<16.4f} | {margin_diff:<+10.4f}")
         
     print("--------------------------------------------------")
-    # Check if challenger is better (lower Brier/MAE, higher Accuracy)
-    is_better = False
-    if w_champ and w_chall:
-        if w_chall["accuracy"] >= w_champ["accuracy"] or w_chall["brier"] <= w_champ["brier"]:
-            is_better = True
-    if s_champ and s_chall:
-        if s_chall["total_mae"] <= s_champ["total_mae"] or s_chall["margin_mae"] <= s_champ["margin_mae"]:
-            is_better = True
+    challenger_gate = _champion_challenger_gate(champ_metrics, chall_metrics)
+    is_better = challenger_gate["passed"]
+    baseline_gate = _baseline_gate(chall_metrics)
 
     eligibility = _threshold_pass(chall_metrics, manifest.promotion_thresholds)
-    promotion_allowed = bool(eligibility["eligible"] and is_better)
+    replace_policy = bool(args.replace_leaky_champion)
+    all_models_selected = args.models is None or set(args.models) == {"win", "score", "player"}
+    if replace_policy and not all_models_selected:
+        parser.error("--replace-leaky-champion requires training win, score, and player models together")
+    if replace_policy and args.dry_run:
+        parser.error("--replace-leaky-champion cannot be combined with --dry-run")
+    promotion_allowed = bool(eligibility["eligible"] and (is_better or (replace_policy and baseline_gate["passed"])))
     eligibility["champion_challenger_gate_passed"] = bool(is_better)
+    eligibility["baseline_gate_passed"] = baseline_gate["passed"]
+    eligibility["baseline_checks"] = baseline_gate["checks"]
+    eligibility["promotion_policy"] = "replace_known_leaky_champion" if replace_policy else "champion_challenger"
+    eligibility["champion_challenger_checks"] = challenger_gate["checks"]
     eligibility["promotion_allowed"] = promotion_allowed
     report_path = write_training_report(run_id, manifest, trainer_metadata, champ_metrics, chall_metrics, eligibility)
     print(f"Training report: {report_path}")
@@ -420,6 +514,8 @@ def main():
             
     if is_better and eligibility["eligible"]:
         print("\nResult: Challenger models show improved or competitive performance.")
+    elif replace_policy and baseline_gate["passed"] and eligibility["eligible"]:
+        print("\nResult: Leak-free challengers beat every primary pregame baseline; replacing the leakage-tainted production artifacts is allowed.")
     else:
         print("\nResult: Challenger is not eligible for promotion under current champion/challenger metrics and thresholds.")
         
@@ -438,6 +534,9 @@ def main():
     
     if decision in ["y", "yes"]:
         print("Promoting models to production...")
+        if replace_policy:
+            backup_dir = production_dir / "replaced_leaky" / run_id
+            backup_dir.mkdir(parents=True, exist_ok=True)
         # Copy files to production_dir
         os.makedirs(production_dir, exist_ok=True)
         files_to_copy = [
@@ -474,11 +573,25 @@ def main():
             src_file = experimental_dir / f
             dest_file = production_dir / f
             if src_file.exists():
+                if replace_policy and dest_file.exists():
+                    shutil.copy2(dest_file, backup_dir / f)
                 shutil.copy2(src_file, dest_file)
                 print(f"-> Copied {f} to production.")
             else:
                 print(f"Warning: {f} not found in experimental output directory.")
                 
+        if replace_policy:
+            release = {
+                "release_id": run_id,
+                "policy": "replace_known_leaky_champion",
+                "validation_season": validation_season,
+                "legacy_champion_metrics": champ_metrics,
+                "clean_candidate_metrics": chall_metrics,
+                "baseline_checks": baseline_gate["checks"],
+                "backup_directory": str(backup_dir),
+                "training_report": str(report_path),
+            }
+            (production_dir / "leakage_clean_release.json").write_text(json.dumps(release, indent=2))
         print("Model promotion complete. Production artifacts updated successfully.")
     else:
         print("Promotion cancelled. Experimental models left under models/experimental/.")

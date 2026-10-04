@@ -8,10 +8,12 @@ import numpy as np
 import xgboost as xgb
 from datetime import datetime
 from pathlib import Path
-from sklearn.model_selection import train_test_split, RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
+from sklearn.base import clone
 from sklearn.metrics import mean_absolute_error, r2_score
 from src.training.feature_contract import load_feature_contract
 from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split
+from src.training.provenance import build_training_provenance
 
 NBA_TEAMS_LOCATIONS = {
     "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
@@ -174,7 +176,7 @@ class ScoreModelTrainer:
         from src.features.win_strength_features import add_win_strength_features
         return add_win_strength_features(df)
 
-    def tune_and_train(self, X_train, y_train, random_state=42):
+    def tune_and_train(self, X_train, y_train, game_dates=None, random_state=42):
         base_model = xgb.XGBRegressor(random_state=random_state)
         param_grid = {
             'n_estimators': [100, 150, 200, 300],
@@ -183,12 +185,29 @@ class ScoreModelTrainer:
             'subsample': [0.8, 0.9, 1.0],
             'colsample_bytree': [0.8, 0.9, 1.0]
         }
+        # Split on unique dates so games from the same day never land on both
+        # sides of a validation fold.
+        if game_dates is None:
+            raise ValueError("Time-aware hyperparameter tuning requires game dates.")
+        dates = pd.to_datetime(pd.Series(game_dates, index=X_train.index), errors="coerce")
+        if dates.isna().any():
+            raise ValueError("Hyperparameter tuning received invalid game dates.")
+        unique_dates = pd.DatetimeIndex(dates.drop_duplicates().sort_values())
+        if len(unique_dates) < 4:
+            raise ValueError("At least four distinct game dates are required for time-series tuning.")
+        cv = []
+        for train_date_idx, val_date_idx in TimeSeriesSplit(n_splits=3).split(unique_dates):
+            train_dates = unique_dates[train_date_idx]
+            val_dates = unique_dates[val_date_idx]
+            train_rows = np.flatnonzero(dates.isin(train_dates).to_numpy())
+            val_rows = np.flatnonzero(dates.isin(val_dates).to_numpy())
+            cv.append((train_rows, val_rows))
         search = RandomizedSearchCV(
             base_model, 
             param_distributions=param_grid, 
-            n_iter=10, 
+            n_iter=5,
             scoring='neg_mean_absolute_error', 
-            cv=3, 
+            cv=cv,
             random_state=random_state, 
             n_jobs=1
         )
@@ -214,10 +233,41 @@ class ScoreModelTrainer:
                 date_col=self.holdout_config.get("date_col", "GAME_DATE"),
                 test_size=float(self.holdout_config.get("test_size", 0.2)),
             )
-        eval_model = self.tune_and_train(X_train, y_train)
+        eval_model = self.tune_and_train(
+            X_train, y_train, game_dates=df.loc[X_train.index, "GAME_DATE"]
+        )
         mae = mean_absolute_error(y_test, eval_model.predict(X_test))
-        final_model = self.tune_and_train(X, y)
-        return final_model, float(mae), split_meta, X_test.index.tolist()
+        # Keep the holdout estimator separate from the production refit. The
+        # former is the only model allowed to produce evaluation predictions.
+        final_model = clone(eval_model)
+        final_model.fit(X, y)
+        return eval_model, final_model, float(mae), split_meta, X_test.index.tolist()
+
+    @staticmethod
+    def _temporal_oof_predictions(frame, features, target, model_template, date_col="GAME_DATE", block_days=120):
+        """Expanding-window predictions; every validation block follows its training data."""
+        dates = pd.to_datetime(frame[date_col], errors="coerce")
+        if dates.isna().any():
+            raise ValueError(f"Temporal OOF requires valid {date_col} values for every row.")
+        ordered = frame.assign(_oof_date=dates).sort_values(["_oof_date", "GAME_ID"], kind="stable")
+        predictions = pd.Series(index=frame.index, dtype=float)
+        unique_dates = pd.DatetimeIndex(ordered["_oof_date"].drop_duplicates().sort_values())
+        if len(unique_dates) < 2:
+            raise ValueError("Temporal OOF requires at least two distinct game dates.")
+        start_pos = max(1, int(len(unique_dates) * 0.35))
+        first_validation_date = unique_dates[start_pos]
+        validation_dates = unique_dates[unique_dates >= first_validation_date]
+        block_ids = ((validation_dates - first_validation_date).days // block_days)
+        for block_id in np.unique(block_ids):
+            block_dates = validation_dates[block_ids == block_id]
+            train_mask = ordered["_oof_date"] < block_dates.min()
+            val_mask = ordered["_oof_date"].isin(block_dates)
+            if not train_mask.any() or not val_mask.any():
+                continue
+            model = clone(model_template)
+            model.fit(ordered.loc[train_mask, features], ordered.loc[train_mask, target])
+            predictions.loc[ordered.loc[val_mask].index] = model.predict(ordered.loc[val_mask, features])
+        return predictions
 
     def resolve_dataset_files(self):
         files = self.data_files if self.data_files is not None else [Path(p) for p in glob.glob(self.data_pattern)]
@@ -247,7 +297,8 @@ class ScoreModelTrainer:
             
         files = self.resolve_dataset_files()
         df, row_counts_by_file = self.load_training_dataset(files)
-        df = self.apply_player_projection_enrichment(df)
+        # The saved player model was fit on overlapping game outcomes. Until
+        # temporal player OOF projections exist, exclude this entire family.
         df = self.apply_strength_features(df)
         self.validate_dataset_contract(df)
         
@@ -256,6 +307,10 @@ class ScoreModelTrainer:
         loc_feats = df.apply(get_location_features, axis=1)
         df = pd.concat([df, loc_feats], axis=1)
         
+        if "GAME_DATE" not in df.columns:
+            raise ValueError("Score training requires GAME_DATE for time-safe evaluation.")
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
+        df = df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable")
         df_home = df[df["IS_HOME"] == True].copy()
         df_away = df[df["IS_HOME"] == False].copy()
         
@@ -264,24 +319,24 @@ class ScoreModelTrainer:
         df_away["TARGET_AWAY_OFF_RTG"] = df_away["OFF_RTG"]
         df_home["TARGET_MARGIN"] = df_home["PACE"] * df_home["NET_RTG"] / 100.0
         
-        pace_model, pace_mae, pace_split, pace_test_idx = self._train_eval_final(df_home, self.pace_features, "TARGET_PACE")
-        home_model, home_mae, home_split, home_test_idx = self._train_eval_final(df_home, self.home_off_rtg_features, "TARGET_HOME_OFF_RTG")
-        away_model, away_mae, away_split, away_test_idx = self._train_eval_final(df_away, self.away_off_rtg_features, "TARGET_AWAY_OFF_RTG")
-        margin_model, margin_mae, margin_split, margin_test_idx = self._train_eval_final(df_home, self.margin_features, "TARGET_MARGIN")
+        pace_eval_model, pace_model, pace_mae, pace_split, pace_test_idx = self._train_eval_final(df_home, self.pace_features, "TARGET_PACE")
+        home_eval_model, home_model, home_mae, home_split, home_test_idx = self._train_eval_final(df_home, self.home_off_rtg_features, "TARGET_HOME_OFF_RTG")
+        away_eval_model, away_model, away_mae, away_split, away_test_idx = self._train_eval_final(df_away, self.away_off_rtg_features, "TARGET_AWAY_OFF_RTG")
+        margin_eval_model, margin_model, margin_mae, margin_split, margin_test_idx = self._train_eval_final(df_home, self.margin_features, "TARGET_MARGIN")
 
         eval_home_idx = sorted(set(pace_test_idx).intersection(home_test_idx))
         eval_away_games = set(df_away.loc[away_test_idx, "GAME_ID"].astype(str))
 
         df_home_eval = df_home.loc[eval_home_idx].copy()
-        pred_pace = pace_model.predict(df_home_eval[self.pace_features])
-        pred_home_rtg = home_model.predict(df_home_eval[self.home_off_rtg_features])
+        pred_pace = pace_eval_model.predict(df_home_eval[self.pace_features])
+        pred_home_rtg = home_eval_model.predict(df_home_eval[self.home_off_rtg_features])
         df_home_eval["PRED_PACE"] = pred_pace
         df_home_eval["PRED_HOME_RTG"] = pred_home_rtg
         df_home_eval["ACTUAL_HOME_PTS"] = df_home_eval["PACE"] * df_home_eval["OFF_RTG"] / 100.0
         df_home_eval["ACTUAL_AWAY_PTS"] = df_home_eval["PACE"] * df_home_eval["DEF_RTG"] / 100.0
         
         df_away_eval = df_away[df_away["GAME_ID"].astype(str).isin(eval_away_games)][["GAME_ID"] + self.away_off_rtg_features].copy()
-        df_away_eval["PRED_AWAY_RTG"] = away_model.predict(df_away_eval[self.away_off_rtg_features])
+        df_away_eval["PRED_AWAY_RTG"] = away_eval_model.predict(df_away_eval[self.away_off_rtg_features])
         df_away_eval = df_away_eval[["GAME_ID", "PRED_AWAY_RTG"]]
         
         df_eval = df_home_eval.merge(df_away_eval, on="GAME_ID", how="inner")
@@ -292,31 +347,10 @@ class ScoreModelTrainer:
         away_score_mae = mean_absolute_error(df_eval["ACTUAL_AWAY_PTS"], df_eval["EXPECTED_AWAY_SCORE"])
         
         # Out-Of-Fold (OOF) prediction generation to train Ridge calibration without in-sample overfitting
-        from sklearn.model_selection import KFold
-        kf = KFold(n_splits=5, shuffle=True, random_state=42)
-
-        pred_pace_oof = pd.Series(index=df_home.index, dtype=float)
-        pred_home_rtg_oof = pd.Series(index=df_home.index, dtype=float)
-        pred_margin_oof = pd.Series(index=df_home.index, dtype=float)
-
-        for train_idx, val_idx in kf.split(df_home):
-            fold_pace = xgb.XGBRegressor(**pace_model.get_params())
-            fold_pace.fit(df_home.iloc[train_idx][self.pace_features], df_home.iloc[train_idx]["TARGET_PACE"])
-            pred_pace_oof.iloc[val_idx] = fold_pace.predict(df_home.iloc[val_idx][self.pace_features])
-
-            fold_home = xgb.XGBRegressor(**home_model.get_params())
-            fold_home.fit(df_home.iloc[train_idx][self.home_off_rtg_features], df_home.iloc[train_idx]["TARGET_HOME_OFF_RTG"])
-            pred_home_rtg_oof.iloc[val_idx] = fold_home.predict(df_home.iloc[val_idx][self.home_off_rtg_features])
-
-            fold_margin = xgb.XGBRegressor(**margin_model.get_params())
-            fold_margin.fit(df_home.iloc[train_idx][self.margin_features], df_home.iloc[train_idx]["TARGET_MARGIN"])
-            pred_margin_oof.iloc[val_idx] = fold_margin.predict(df_home.iloc[val_idx][self.margin_features])
-
-        pred_away_rtg_oof = pd.Series(index=df_away.index, dtype=float)
-        for train_idx, val_idx in kf.split(df_away):
-            fold_away = xgb.XGBRegressor(**away_model.get_params())
-            fold_away.fit(df_away.iloc[train_idx][self.away_off_rtg_features], df_away.iloc[train_idx]["TARGET_AWAY_OFF_RTG"])
-            pred_away_rtg_oof.iloc[val_idx] = fold_away.predict(df_away.iloc[val_idx][self.away_off_rtg_features])
+        pred_pace_oof = self._temporal_oof_predictions(df_home, self.pace_features, "TARGET_PACE", pace_eval_model)
+        pred_home_rtg_oof = self._temporal_oof_predictions(df_home, self.home_off_rtg_features, "TARGET_HOME_OFF_RTG", home_eval_model)
+        pred_margin_oof = self._temporal_oof_predictions(df_home, self.margin_features, "TARGET_MARGIN", margin_eval_model)
+        pred_away_rtg_oof = self._temporal_oof_predictions(df_away, self.away_off_rtg_features, "TARGET_AWAY_OFF_RTG", away_eval_model)
 
         df_home_full_eval = df_home.copy()
         df_home_full_eval["PRED_PACE"] = pred_pace_oof
@@ -327,6 +361,7 @@ class ScoreModelTrainer:
         df_away_full_eval["PRED_AWAY_RTG"] = pred_away_rtg_oof
 
         df_full_eval = df_home_full_eval.merge(df_away_full_eval, on="GAME_ID", how="inner")
+        df_full_eval = df_full_eval.dropna(subset=["PRED_PACE", "PRED_HOME_RTG", "PRED_MARGIN_MODEL", "PRED_AWAY_RTG"]).copy()
         df_full_eval["ACTUAL_HOME_PTS"] = df_full_eval["PACE"] * df_full_eval["OFF_RTG"] / 100.0
         df_full_eval["ACTUAL_AWAY_PTS"] = df_full_eval["PACE"] * df_full_eval["DEF_RTG"] / 100.0
         df_full_eval["ACTUAL_TOTAL"] = df_full_eval["ACTUAL_HOME_PTS"] + df_full_eval["ACTUAL_AWAY_PTS"]
@@ -345,15 +380,37 @@ class ScoreModelTrainer:
         X_ind["home_rest_advantage"] = (df_full_eval["DAYS_REST"] > df_full_eval["OPP_DAYS_REST"]).astype(float)
         X_ind["away_rest_advantage"] = (df_full_eval["OPP_DAYS_REST"] > df_full_eval["DAYS_REST"]).astype(float)
 
-        ridge_total = Ridge(alpha=1.0)
-        ridge_total.fit(X_ind, df_full_eval["TOTAL_RESIDUAL"])
+        # Export a historically valid score margin for WIN training. A row's
+        # correction may only use residuals from earlier game dates.
+        oof_dates = pd.to_datetime(df_full_eval["GAME_DATE"], errors="coerce")
+        corrected_oof_margin = pd.Series(index=df_full_eval.index, dtype=float)
+        for date in oof_dates.dropna().sort_values().unique():
+            earlier = oof_dates < date
+            current = oof_dates == date
+            if earlier.sum() >= 30:
+                fold_ridge = Ridge(alpha=1.0).fit(X_ind.loc[earlier], df_full_eval.loc[earlier, "MARGIN_RESIDUAL"])
+                correction = fold_ridge.predict(X_ind.loc[current])
+            else:
+                correction = np.zeros(int(current.sum()))
+            corrected_oof_margin.loc[oof_dates.index[current.to_numpy()]] = (
+                df_full_eval.loc[current, "PRED_MARGIN_MODEL"].to_numpy() - correction
+            )
 
-        ridge_margin = Ridge(alpha=1.0)
-        ridge_margin.fit(X_ind, df_full_eval["MARGIN_RESIDUAL"])
+        ridge_total = Ridge(alpha=1.0).fit(X_ind, df_full_eval["TOTAL_RESIDUAL"])
+        ridge_margin = Ridge(alpha=1.0).fit(X_ind, df_full_eval["MARGIN_RESIDUAL"])
+
+        pred_total_oof = df_full_eval["PRED_TOTAL_RAW"] - ridge_total.predict(X_ind)
+        pred_margin_oof = df_full_eval["PRED_MARGIN_MODEL"] - ridge_margin.predict(X_ind)
+        pred_home_oof = (pred_total_oof + pred_margin_oof) / 2.0
+        pred_away_oof = (pred_total_oof - pred_margin_oof) / 2.0
+
+        conformal_stats = self._compute_conformal_intervals(
+            df_full_eval, pred_total_oof, pred_margin_oof, pred_home_oof, pred_away_oof
+        )
 
         df_oof_export = pd.DataFrame({
             "GAME_ID": df_full_eval["GAME_ID"].astype(str).apply(lambda x: x.split(".")[0].zfill(10)),
-            "SCORE_PRED_MARGIN_OOF": df_full_eval["PRED_MARGIN_MODEL"] - ridge_margin.predict(X_ind)
+            "SCORE_PRED_MARGIN_OOF": corrected_oof_margin
         })
 
         os.makedirs(self.output_dir, exist_ok=True)
@@ -373,11 +430,23 @@ class ScoreModelTrainer:
             joblib.dump(ridge_total, self.output_dir / "score_model_v9_ridge_total.pkl")
             joblib.dump(ridge_margin, self.output_dir / "score_model_v9_ridge_margin.pkl")
         
+        score_artifacts = [
+            self.output_dir / f"score_model_{self.version}_{name}.pkl"
+            for name in ["pace", "home_rtg", "away_rtg", "margin", "ridge_total", "ridge_margin"]
+        ] + [self.output_dir / f"score_model_{self.version}_oof_margins.parquet"]
         metadata = {
-            "version": f"{self.version}_Ridge",
+            "version": f"{self.version}_temporal_Ridge_candidate",
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "training_manifest": self.manifest_metadata,
             "feature_contract": self.feature_contract.snapshot,
+            "provenance": build_training_provenance(
+                root=Path(__file__).resolve().parents[2],
+                input_files=files,
+                feature_contract_path=self.feature_contract.path,
+                manifest_path=self.manifest_metadata.get("path"),
+                trainer_path=Path(__file__),
+                artifact_paths=score_artifacts,
+            ),
             "input_files": [str(p) for p in files],
             "row_counts_by_file": row_counts_by_file,
             "final_refit": {
@@ -385,7 +454,10 @@ class ScoreModelTrainer:
                 "rows": int(len(df)),
                 "note": "Holdout metrics are computed before final submodels are refit on all eligible rows."
             },
-            "evaluation": "chronological_holdout",
+            "evaluation": "time_ordered_inner_search_and_season_holdout",
+            "evaluation_scope": "independent_holdout_predictions_from_pre_holdout_models",
+            "training_date_min": df["GAME_DATE"].min().date().isoformat(),
+            "training_date_max": df["GAME_DATE"].max().date().isoformat(),
             "pace_mae": float(pace_mae),
             "home_rtg_mae": float(home_mae),
             "away_rtg_mae": float(away_mae),
@@ -409,7 +481,11 @@ class ScoreModelTrainer:
             "pace_features": self.pace_features,
             "home_off_rtg_features": self.home_off_rtg_features,
             "away_off_rtg_features": self.away_off_rtg_features,
-            "margin_features": self.margin_features
+            "margin_features": self.margin_features,
+            "prediction_interval_offsets_80pct": conformal_stats.get("offsets_80pct", {}),
+            "prediction_interval_offsets_90pct": conformal_stats.get("offsets_90pct", {}),
+            "prediction_interval_offsets_50pct": conformal_stats.get("offsets_50pct", {}),
+            "conformal_prediction_intervals": conformal_stats,
         }
         
         metadata_path = self.output_dir / f"score_model_{self.version}_metadata.json"
@@ -420,3 +496,72 @@ class ScoreModelTrainer:
                 json.dump(metadata, f, indent=4)
             
         return metadata
+
+    @staticmethod
+    def _compute_conformal_intervals(df_full_eval, pred_total, pred_margin, pred_home, pred_away):
+        n = len(df_full_eval)
+        if n < 50:
+            return {}
+
+        targets = {
+            "total": (df_full_eval["ACTUAL_TOTAL"] - pred_total).dropna(),
+            "margin": (df_full_eval["ACTUAL_MARGIN"] - pred_margin).dropna(),
+            "home": (df_full_eval["ACTUAL_HOME_PTS"] - pred_home).dropna(),
+            "away": (df_full_eval["ACTUAL_AWAY_PTS"] - pred_away).dropna(),
+        }
+
+        offsets_80 = {}
+        offsets_90 = {}
+        offsets_50 = {}
+        empirical_80 = {}
+        empirical_90 = {}
+        coverage_report = {}
+
+        q_level_80 = min(1.0, np.ceil((n + 1) * 0.80) / n)
+        q_level_90 = min(1.0, np.ceil((n + 1) * 0.90) / n)
+        q_level_50 = min(1.0, np.ceil((n + 1) * 0.50) / n)
+
+        for key, err in targets.items():
+            abs_err = err.abs()
+            q80 = float(np.quantile(abs_err, q_level_80))
+            q90 = float(np.quantile(abs_err, q_level_90))
+            q50 = float(np.quantile(abs_err, q_level_50))
+
+            offsets_80[key] = [round(-q80, 1), round(q80, 1)]
+            offsets_90[key] = [round(-q90, 1), round(q90, 1)]
+            offsets_50[key] = [round(-q50, 1), round(q50, 1)]
+
+            emp_low_80 = float(np.quantile(err, 0.10))
+            emp_high_80 = float(np.quantile(err, 0.90))
+            empirical_80[key] = [round(emp_low_80, 1), round(emp_high_80, 1)]
+
+            emp_low_90 = float(np.quantile(err, 0.05))
+            emp_high_90 = float(np.quantile(err, 0.95))
+            empirical_90[key] = [round(emp_low_90, 1), round(emp_high_90, 1)]
+
+            cov_80 = float((abs_err <= q80).mean())
+            cov_90 = float((abs_err <= q90).mean())
+            cov_50 = float((abs_err <= q50).mean())
+
+            coverage_report[key] = {
+                "std_dev": round(float(err.std()), 2),
+                "mae": round(float(abs_err.mean()), 2),
+                "bias": round(float(err.mean()), 2),
+                "conformal_80_radius": round(q80, 1),
+                "conformal_80_empirical_coverage": round(cov_80 * 100, 1),
+                "conformal_90_radius": round(q90, 1),
+                "conformal_90_empirical_coverage": round(cov_90 * 100, 1),
+                "conformal_50_radius": round(q50, 1),
+                "conformal_50_empirical_coverage": round(cov_50 * 100, 1),
+            }
+
+        return {
+            "offsets_80pct": offsets_80,
+            "offsets_90pct": offsets_90,
+            "offsets_50pct": offsets_50,
+            "empirical_quantiles_80pct": empirical_80,
+            "empirical_quantiles_90pct": empirical_90,
+            "coverage_report": coverage_report,
+            "calibration_samples": n,
+        }
+

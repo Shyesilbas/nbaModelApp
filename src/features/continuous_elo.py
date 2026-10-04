@@ -91,74 +91,77 @@ class ContinuousEloEngine:
         df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
         df["_TEMP_GID"] = df["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
 
-        # Sort strictly chronologically: Date, Game ID, and ensure Home team is evaluated consistently
+        # A date-only schedule does not tell us tipoff order. Every game on a
+        # date must therefore see the same start-of-day ratings.
         df = df.sort_values(["GAME_DATE", "_TEMP_GID", "IS_HOME"], ascending=[True, True, False]).reset_index(drop=True)
 
         pre_elos: Dict[int, float] = {}
         opp_pre_elos: Dict[int, float] = {}
 
-        unique_games = df.groupby("_TEMP_GID", sort=False)
+        for game_date, date_rows in df.groupby("GAME_DATE", sort=True):
+            self.process_season_transition_if_needed(_calc_season_key(game_date))
+            # First compute features and outcomes against an unchanged rating
+            # state, then apply that day's results simultaneously.
+            daily_updates = []
+            for gid, game_rows in date_rows.groupby("_TEMP_GID", sort=False):
 
-        for gid, game_rows in unique_games:
-            game_date = game_rows["GAME_DATE"].iloc[0]
-            season_key = _calc_season_key(game_date)
-            self.process_season_transition_if_needed(season_key)
-
-            if len(game_rows) != 2:
+                if len(game_rows) != 2:
                 # Fallback for solitary records
-                for idx, row in game_rows.iterrows():
-                    team = row["TEAM_ABBREVIATION"]
-                    opp = row["OPPONENT_ABBREVIATION"]
-                    pre_elos[idx] = self.ratings[team]
-                    opp_pre_elos[idx] = self.ratings[opp]
-                continue
+                    for idx, row in game_rows.iterrows():
+                        team = row["TEAM_ABBREVIATION"]
+                        opp = row["OPPONENT_ABBREVIATION"]
+                        pre_elos[idx] = self.ratings[team]
+                        opp_pre_elos[idx] = self.ratings[opp]
+                    continue
 
-            home_sub = game_rows[game_rows["IS_HOME"].astype(bool)]
-            away_sub = game_rows[~game_rows["IS_HOME"].astype(bool)]
+                home_sub = game_rows[game_rows["IS_HOME"].astype(bool)]
+                away_sub = game_rows[~game_rows["IS_HOME"].astype(bool)]
 
-            if home_sub.empty or away_sub.empty:
-                home_sub = game_rows.iloc[[0]]
-                away_sub = game_rows.iloc[[1]]
+                if home_sub.empty or away_sub.empty:
+                    home_sub = game_rows.iloc[[0]]
+                    away_sub = game_rows.iloc[[1]]
 
-            home_idx = int(home_sub.index[0])
-            away_idx = int(away_sub.index[0])
+                home_idx = int(home_sub.index[0])
+                away_idx = int(away_sub.index[0])
 
-            home_team = home_sub["TEAM_ABBREVIATION"].iloc[0]
-            away_team = away_sub["TEAM_ABBREVIATION"].iloc[0]
+                home_team = home_sub["TEAM_ABBREVIATION"].iloc[0]
+                away_team = away_sub["TEAM_ABBREVIATION"].iloc[0]
 
-            home_elo = self.ratings[home_team]
-            away_elo = self.ratings[away_team]
+                home_elo = self.ratings[home_team]
+                away_elo = self.ratings[away_team]
 
             # Save PRE-GAME ratings (Strictly before game outcome update)
-            pre_elos[home_idx] = home_elo
-            opp_pre_elos[home_idx] = away_elo
+                pre_elos[home_idx] = home_elo
+                opp_pre_elos[home_idx] = away_elo
 
-            pre_elos[away_idx] = away_elo
-            opp_pre_elos[away_idx] = home_elo
+                pre_elos[away_idx] = away_elo
+                opp_pre_elos[away_idx] = home_elo
 
             # Check if game outcome exists
-            if "WL" in home_sub.columns and pd.notna(home_sub["WL"].iloc[0]):
-                home_won = 1.0 if home_sub["WL"].iloc[0] == "W" else 0.0
-            elif "WIN" in home_sub.columns and pd.notna(home_sub["WIN"].iloc[0]):
-                home_won = float(home_sub["WIN"].iloc[0])
-            else:
-                continue
+                if "WL" in home_sub.columns and pd.notna(home_sub["WL"].iloc[0]):
+                    home_won = 1.0 if home_sub["WL"].iloc[0] == "W" else 0.0
+                elif "WIN" in home_sub.columns and pd.notna(home_sub["WIN"].iloc[0]):
+                    home_won = float(home_sub["WIN"].iloc[0])
+                else:
+                    continue
 
-            home_pts = float(home_sub["PTS"].iloc[0]) if "PTS" in home_sub.columns and pd.notna(home_sub["PTS"].iloc[0]) else 100.0
-            away_pts = float(away_sub["PTS"].iloc[0]) if "PTS" in away_sub.columns and pd.notna(away_sub["PTS"].iloc[0]) else 100.0
-            margin = home_pts - away_pts
+                home_pts = float(home_sub["PTS"].iloc[0]) if "PTS" in home_sub.columns and pd.notna(home_sub["PTS"].iloc[0]) else 100.0
+                away_pts = float(away_sub["PTS"].iloc[0]) if "PTS" in away_sub.columns and pd.notna(away_sub["PTS"].iloc[0]) else 100.0
+                margin = home_pts - away_pts
 
             # Effective home Elo with home court advantage boost
-            home_effective = home_elo + self.home_advantage
-            elo_diff = abs(home_effective - away_elo)
+                home_effective = home_elo + self.home_advantage
+                elo_diff = abs(home_effective - away_elo)
 
-            expected_home = 1.0 / (1.0 + 10.0 ** ((away_elo - home_effective) / 400.0))
-            mov_mult = compute_mov_multiplier(margin, elo_diff)
+                expected_home = 1.0 / (1.0 + 10.0 ** ((away_elo - home_effective) / 400.0))
+                mov_mult = compute_mov_multiplier(margin, elo_diff)
 
-            shift = self.k_factor * mov_mult * (home_won - expected_home)
+                shift = self.k_factor * mov_mult * (home_won - expected_home)
 
-            self.ratings[home_team] = home_elo + shift
-            self.ratings[away_team] = away_elo - shift
+                daily_updates.append((home_team, away_team, shift))
+            for home_team, away_team, shift in daily_updates:
+                self.ratings[home_team] += shift
+                self.ratings[away_team] -= shift
 
         df["PRE_GAME_ELO"] = df.index.map(pre_elos)
         df["OPP_PRE_GAME_ELO"] = df.index.map(opp_pre_elos)
@@ -270,4 +273,3 @@ def build_season_opening_elo(
                 opening_ratings[team] = round(opening_ratings[team] + adj, 2)
 
     return opening_ratings
-

@@ -113,7 +113,7 @@ export function GameCardDetail({
         />
 
         {/* Top bar: competition + date */}
-        <div className="relative flex items-center justify-between border-b border-slate-100 px-6 py-3 bg-slate-50/40">
+        <div className="relative flex items-center justify-between border-b border-slate-100 px-5 py-2.5 bg-slate-50/40">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-slate-900 text-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] shadow-2xs">
               {seasonLabel}
@@ -145,34 +145,34 @@ export function GameCardDetail({
         </div>
 
         {/* Main score area */}
-        <div className="relative px-6 py-8">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 lg:gap-8">
+        <div className="relative px-4 py-4 sm:px-6 sm:py-5">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4 lg:gap-8">
 
             {/* Away Team */}
-            <div className={`flex flex-col items-center gap-3 ${awayWon ? "" : isCompleted ? "opacity-60" : ""}`}>
+            <div className={`flex flex-col items-center gap-1.5 ${awayWon ? "" : isCompleted ? "opacity-60" : ""}`}>
               <div 
-                className="relative p-2 rounded-2xl transition-transform hover:scale-105 shadow-xs"
+                className="relative rounded-xl p-1.5 transition-transform hover:scale-105 shadow-xs"
                 style={{ 
                   backgroundColor: `${awayTheme.primary}12`,
                   boxShadow: awayWon ? `0 0 0 2px ${awayTheme.primary}40, 0 8px 24px ${awayTheme.glow}` : undefined 
                 }}
               >
-                <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={64} />
+                <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={44} />
               </div>
               <div className="text-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
                   {teamCity(game.AWAY_TEAM_ABBREVIATION)}
                 </p>
-                <p className="text-xl font-black leading-tight text-slate-900 mt-0.5" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                <p className="mt-0.5 text-base font-black leading-tight text-slate-900 sm:text-lg" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
                   {teamFull(game.AWAY_TEAM_ABBREVIATION, game.AWAY_TEAM_NAME)}
                 </p>
-                <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-slate-100 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                <span className="mt-0.5 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-slate-500">
                   Away
                 </span>
               </div>
               {awayWon && (
                 <span 
-                  className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1 shadow-xs"
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest shadow-xs"
                   style={{ backgroundColor: `${awayTheme.primary}15`, color: awayTheme.primary }}
                 >
                   <Trophy size={11} /> Winner
@@ -181,24 +181,24 @@ export function GameCardDetail({
             </div>
 
             {/* Score / Status block */}
-            <div className="flex flex-col items-center gap-2 min-w-[180px]">
+            <div className="flex min-w-[112px] flex-col items-center gap-1.5 sm:min-w-[150px]">
               {isCompleted ? (
                 <>
                   {/* Scores */}
-                  <div className="flex items-center gap-4" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                  <div className="flex items-center gap-2 sm:gap-4" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
                     <span
-                      className={`text-6xl lg:text-7xl font-black leading-none tabular-nums ${awayWon ? "text-slate-900" : "text-slate-300"}`}
+                      className={`text-4xl font-black leading-none tabular-nums sm:text-5xl lg:text-6xl ${awayWon ? "text-slate-900" : "text-slate-300"}`}
                       style={{ color: awayWon ? awayTheme.primary : undefined }}
                     >
                       {awayScore ?? "—"}
                     </span>
-                    <div className="flex flex-col items-center gap-1.5 px-2">
-                      <div className="h-px w-6 bg-slate-200" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">FINAL</span>
-                      <div className="h-px w-6 bg-slate-200" />
+                    <div className="flex flex-col items-center gap-1 px-1 sm:px-2">
+                      <div className="h-px w-4 bg-slate-200 sm:w-6" />
+                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400">FINAL</span>
+                      <div className="h-px w-4 bg-slate-200 sm:w-6" />
                     </div>
                     <span
-                      className={`text-6xl lg:text-7xl font-black leading-none tabular-nums ${homeWon ? "text-slate-900" : "text-slate-300"}`}
+                      className={`text-4xl font-black leading-none tabular-nums sm:text-5xl lg:text-6xl ${homeWon ? "text-slate-900" : "text-slate-300"}`}
                       style={{ color: homeWon ? homeTheme.primary : undefined }}
                     >
                       {homeScore ?? "—"}
@@ -208,13 +208,13 @@ export function GameCardDetail({
                   {/* Margin tag */}
                   {game.WINNER_TEAM_ABBREVIATION && winnerTheme && (
                     <div 
-                      className="rounded-full border px-4 py-1 text-center mt-1"
+                      className="mt-1 rounded-full border px-3 py-0.5 text-center"
                       style={{ 
                         borderColor: `${winnerTheme.primary}25`,
                         backgroundColor: `${winnerTheme.primary}08`
                       }}
                     >
-                      <p className="text-xs font-bold text-slate-600">
+                      <p className="text-[10px] font-bold text-slate-600">
                         <span className="font-black" style={{ color: winnerTheme.primary }}>{teamFull(game.WINNER_TEAM_ABBREVIATION)}</span> won by{" "}
                         <span className="font-black text-slate-900">{margin} pts</span>
                       </p>
@@ -244,30 +244,30 @@ export function GameCardDetail({
             </div>
 
             {/* Home Team */}
-            <div className={`flex flex-col items-center gap-3 ${homeWon ? "" : isCompleted ? "opacity-60" : ""}`}>
+            <div className={`flex flex-col items-center gap-1.5 ${homeWon ? "" : isCompleted ? "opacity-60" : ""}`}>
               <div 
-                className="relative p-2 rounded-2xl transition-transform hover:scale-105 shadow-xs"
+                className="relative rounded-xl p-1.5 transition-transform hover:scale-105 shadow-xs"
                 style={{ 
                   backgroundColor: `${homeTheme.primary}12`,
                   boxShadow: homeWon ? `0 0 0 2px ${homeTheme.primary}40, 0 8px 24px ${homeTheme.glow}` : undefined 
                 }}
               >
-                <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={64} />
+                <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={44} />
               </div>
               <div className="text-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
                   {teamCity(game.HOME_TEAM_ABBREVIATION)}
                 </p>
-                <p className="text-xl font-black leading-tight text-slate-900 mt-0.5" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                <p className="mt-0.5 text-base font-black leading-tight text-slate-900 sm:text-lg" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
                   {teamFull(game.HOME_TEAM_ABBREVIATION, game.HOME_TEAM_NAME)}
                 </p>
-                <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-slate-100 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                <span className="mt-0.5 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-slate-500">
                   Home
                 </span>
               </div>
               {homeWon && (
                 <span 
-                  className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1 shadow-xs"
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest shadow-xs"
                   style={{ backgroundColor: `${homeTheme.primary}15`, color: homeTheme.primary }}
                 >
                   <Trophy size={11} /> Winner
@@ -328,33 +328,23 @@ export function GameCardDetail({
         <div className="space-y-4 animate-fade-in">
           {isCompleted ? (
             <>
-              {/* 1. Game Summary */}
-              <GameSummaryBlock
-                game={game}
-                home={homeBS}
-                away={awayBS}
-                topPlayers={topGame}
-              />
+              <div className="grid items-stretch gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+                <GameSummaryBlock game={game} home={homeBS} away={awayBS} topPlayers={topGame} />
+                <QuarterScores
+                  homeAbbr={game.HOME_TEAM_ABBREVIATION}
+                  awayAbbr={game.AWAY_TEAM_ABBREVIATION}
+                  homeQS={homeQS}
+                  awayQS={awayQS}
+                />
+              </div>
 
-              {/* 2. Team Comparison Bars */}
-              <TeamComparisonBars home={homeBS} away={awayBS} />
+              <div className="grid items-start gap-4 xl:grid-cols-2">
+                <TeamComparisonBars home={homeBS} away={awayBS} />
+                <ShootingSummary home={teamStatHome as TeamBoxScore | null} away={teamStatAway as TeamBoxScore | null} />
+              </div>
 
-              {/* 3. Shooting Summary */}
-              <ShootingSummary home={teamStatHome as TeamBoxScore | null} away={teamStatAway as TeamBoxScore | null} />
-
-              {/* 4. Top Performers */}
               <TopPerformers topGame={topGame} />
-
-              {/* 5. Game Leaders (only if data exists) */}
               <GameLeaders leaders={gameDetail?.game_leaders} />
-
-              {/* 6. Quarter Scores (only if data exists) */}
-              <QuarterScores
-                homeAbbr={game.HOME_TEAM_ABBREVIATION}
-                awayAbbr={game.AWAY_TEAM_ABBREVIATION}
-                homeQS={homeQS}
-                awayQS={awayQS}
-              />
 
               {/* 7. Officials (only if data exists) */}
               {officials.length > 0 && (
@@ -663,10 +653,11 @@ function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season
   }));
   const scoringEvents = data.events.filter((e) => e.points_scored > 0).length;
   const highlightEvents = data.events.filter((e) => (e.badges?.length ?? 0) > 0).length;
+  const filterLabels = { all: "All plays", q1: "Q1", q2: "Q2", q3: "Q3", q4: "Q4", scoring: "Scoring plays" };
 
   return (
     <div className="animate-fade-in overflow-hidden rounded-[2rem] border border-slate-900/10 bg-[#08111f] shadow-[0_28px_80px_rgba(2,6,23,0.24)]">
-      <div className="relative p-5 sm:p-6">
+      <div className="relative p-4 sm:p-6">
         <div
           className="pointer-events-none absolute inset-0 opacity-95"
           style={{
@@ -677,56 +668,57 @@ function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season
           }}
         />
         <div className="relative">
-          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.42em] text-white/45">Possession Log</p>
-              <h3 className="mt-1 text-3xl font-black uppercase leading-none tracking-tight text-white sm:text-4xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+              <p className="text-[9px] font-black uppercase tracking-[0.36em] text-sky-200/70">Game flow · Play-by-play</p>
+              <h3 className="mt-2 text-3xl font-black uppercase leading-none tracking-tight text-white sm:text-4xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
                 {data.away_team} at {data.home_team}
               </h3>
-              <p className="mt-2 max-w-xl text-xs font-medium text-slate-300">
-                Quarter-by-quarter game flow with live running totals, shot context, assists, and milestone badges.
+              <p className="mt-2 max-w-xl text-xs leading-relaxed text-slate-300/80">
+                Follow every possession, scoring play, and running score by quarter.
               </p>
             </div>
 
             <div className="grid grid-cols-3 gap-2 sm:min-w-[25rem]">
-              <div className="rounded-2xl border border-white/10 bg-white/8 px-3 py-2 backdrop-blur">
-                <p className="text-[8px] font-black uppercase tracking-widest text-white/40">Events</p>
-                <p className="text-2xl font-black text-white">{data.events.length}</p>
+              <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-3.5 py-3 backdrop-blur">
+                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/45">Total plays</p>
+                <p className="mt-1 text-2xl font-black leading-none text-white">{data.events.length}</p>
               </div>
-              <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 backdrop-blur">
-                <p className="text-[8px] font-black uppercase tracking-widest text-emerald-100/60">Scoring</p>
-                <p className="text-2xl font-black text-emerald-100">{scoringEvents}</p>
+              <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3.5 py-3 backdrop-blur">
+                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-emerald-100/60">Scoring plays</p>
+                <p className="mt-1 text-2xl font-black leading-none text-emerald-100">{scoringEvents}</p>
               </div>
-              <div className="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-3 py-2 backdrop-blur">
-                <p className="text-[8px] font-black uppercase tracking-widest text-rose-100/60">Crowned</p>
-                <p className="text-2xl font-black text-rose-100">{highlightEvents}</p>
+              <div className="rounded-2xl border border-rose-300/20 bg-rose-300/10 px-3.5 py-3 backdrop-blur">
+                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-rose-100/60">Highlights</p>
+                <p className="mt-1 text-2xl font-black leading-none text-rose-100">{highlightEvents}</p>
               </div>
             </div>
           </div>
 
-          <div className="mb-5 flex flex-wrap gap-1.5">
+          <div className="mb-5 flex flex-wrap items-center gap-2">
             {(["all", "q1", "q2", "q3", "q4", "scoring"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
+                aria-pressed={filter === f}
                 className={[
-                  "rounded-full px-3.5 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] transition-all",
+                  "rounded-lg px-3.5 py-2 text-[10px] font-bold transition-all",
                   filter === f
-                    ? "bg-white text-slate-950 shadow-[0_10px_28px_rgba(255,255,255,0.18)]"
-                    : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white",
+                    ? "bg-white text-slate-950 shadow-lg shadow-black/20"
+                    : "border border-white/10 bg-slate-950/20 text-slate-300 hover:bg-white/10 hover:text-white",
                 ].join(" ")}
               >
-                {f}
+                {filterLabels[f]}
               </button>
             ))}
           </div>
 
           <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {data.quarter_scores.map((qs) => (
-            <div key={qs.quarter} className="rounded-2xl border border-white/10 bg-white/[0.07] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur">
+            <div key={qs.quarter} className="rounded-2xl border border-white/10 bg-slate-950/25 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-[9px] font-black uppercase tracking-widest text-white/45">{qs.quarter}</p>
-                <p className="text-[9px] font-black uppercase tracking-widest text-white/35">{Math.abs(qs.away - qs.home) || "Even"}</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">{qs.quarter}</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">{Math.abs(qs.away - qs.home) === 0 ? "Even" : `${Math.abs(qs.away - qs.home)} pt diff`}</p>
               </div>
               <div className="flex items-end justify-between gap-2">
                 <p className="text-xl font-black text-white">{qs.away}</p>
@@ -745,13 +737,14 @@ function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season
 
           <div className="space-y-3">
           {eventsByQuarter.map(({ period, events, score }) => (
-            <div key={period} className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.06] backdrop-blur">
+            <div key={period} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] backdrop-blur">
               <button
                 onClick={() => setOpenQuarter((current) => current === period ? 0 : period)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left transition hover:bg-white/[0.06]"
+                aria-expanded={openQuarter === period}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-white/[0.07]"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl font-black text-slate-950" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl font-black text-slate-950" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
                     Q{period}
                   </div>
                   <div>
@@ -762,13 +755,13 @@ function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-white/45">{events.length} events</p>
-                  <p className="text-[9px] font-semibold text-white">{openQuarter === period ? "Collapse" : "Open feed"}</p>
+                  <p className="text-[10px] font-bold text-white/65">{events.length} {events.length === 1 ? "play" : "plays"}</p>
+                  <p className="mt-0.5 text-[9px] font-semibold text-sky-200/80">{openQuarter === period ? "Hide plays" : "Show plays"}</p>
                 </div>
               </button>
 
               {openQuarter === period && (
-                <div className="max-h-[680px] space-y-3 overflow-y-auto border-t border-white/10 bg-slate-950/45 p-3 pr-2">
+                <div className="max-h-[680px] space-y-2 overflow-y-auto border-t border-white/10 bg-slate-950/35 p-3 sm:p-4">
                   {events.map((e, idx) => (
                     <PbpEventCard key={`${e.period}-${e.clock}-${idx}`} event={e} />
                   ))}
@@ -828,44 +821,45 @@ function PbpEventCard({ event: e }: { event: PbpEvent }) {
   const isScoring = e.points_scored > 0;
 
   return (
-    <div className={`group relative overflow-hidden rounded-[1.35rem] border p-3 shadow-[0_14px_34px_rgba(2,6,23,0.18)] transition duration-200 hover:-translate-y-0.5 hover:border-white/25 ${actionTone(e.action_type, e.points_scored)}`}>
-      {isScoring && <div className="absolute left-0 top-0 h-full w-1 bg-emerald-300" />}
-      <div className="grid gap-3 sm:grid-cols-[64px_1fr_128px] sm:items-center">
-        <div className="flex items-center gap-3 sm:block">
+    <div className={`group relative overflow-hidden rounded-xl border p-3 transition-colors hover:border-white/25 ${actionTone(e.action_type, e.points_scored)}`}>
+      {isScoring && <div className="absolute inset-y-0 left-0 w-1 bg-emerald-300" />}
+      <div className="grid gap-3 sm:grid-cols-[minmax(130px,0.32fr)_1fr_112px] sm:items-center">
+        <div className="flex min-w-0 items-center gap-2.5">
           {hasPlayer ? (
-            <div className="relative h-[58px] w-[58px]">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/50 to-white/5 blur-sm" />
-              <PlayerPhoto playerId={e.player_id ?? 0} name={playerName} size={58} className="relative shrink-0 ring-2 ring-white/25" />
+            <div className="relative h-9 w-9 shrink-0">
+              <PlayerPhoto playerId={e.player_id ?? 0} name={playerName} size={36} className="relative shrink-0 ring-1 ring-white/25" />
             </div>
           ) : (
-            <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10">
-              <Clock size={18} className="text-white/60" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.07]">
+              <Clock size={15} className="text-white/60" />
             </div>
           )}
-          <div className="sm:hidden">
-            <p className="text-[10px] font-black uppercase tracking-widest text-white/45">Q{e.period} {e.clock}</p>
-            <p className="text-sm font-black text-white">{playerName}</p>
+          <div className="min-w-0 sm:hidden">
+            <p className="truncate text-xs font-bold text-white">{playerName}</p>
+            <p className="text-[10px] font-semibold tabular-nums text-white/45">Q{e.period} · {e.clock}</p>
+          </div>
+          <div className="hidden min-w-0 sm:block">
+            <p className="truncate text-xs font-bold text-white">{playerName}</p>
+            <p className="mt-0.5 text-[10px] font-semibold tabular-nums text-white/45">Q{e.period} · {e.clock}</p>
           </div>
         </div>
 
         <div className="min-w-0">
-          <div className="hidden items-center gap-2 sm:flex">
-            <p className="text-[10px] font-black uppercase tracking-widest text-white/45">Q{e.period} {e.clock}</p>
-            {e.team && <span className="rounded-full bg-white px-2 py-0.5 text-[8px] font-black text-slate-950">{e.team}</span>}
-            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-white/55">{actionPill(e)}</span>
-            <p className="truncate text-sm font-black text-white">{playerName}</p>
+          <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+            {e.team && <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-black text-white/85">{e.team}</span>}
+            <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${isScoring ? "bg-emerald-300/15 text-emerald-100" : "bg-white/[0.07] text-white/60"}`}>{actionPill(e)}</span>
           </div>
-          <p className="mt-1 text-sm font-semibold leading-snug text-slate-100">{e.description || e.action_type}</p>
-          {statLine && <p className="mt-1 text-[11px] font-black uppercase tracking-widest text-cyan-200">{statLine}</p>}
+          <p className="text-[13px] font-medium leading-snug text-slate-100">{e.description || e.action_type}</p>
+          {statLine && <p className="mt-1 text-[10px] font-bold text-cyan-200/90">{statLine}</p>}
           {(e.assist_player_name || (e.badges && e.badges.length > 0)) && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {e.assist_player_name && (
-                <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-cyan-100">
+                <span className="rounded-md border border-cyan-200/20 bg-cyan-200/10 px-2 py-0.5 text-[9px] font-bold text-cyan-100">
                   Assist: {e.assist_player_name}{e.assist_total != null ? ` · ${e.assist_total} AST` : ""}
                 </span>
               )}
               {e.badges?.map((badge) => (
-                <span key={badge} className="rounded-full border border-rose-200/20 bg-rose-300/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-rose-100">
+                <span key={badge} className="rounded-md border border-rose-200/20 bg-rose-300/15 px-2 py-0.5 text-[9px] font-bold text-rose-100">
                   {badge}
                 </span>
               ))}
@@ -873,11 +867,11 @@ function PbpEventCard({ event: e }: { event: PbpEvent }) {
           )}
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-slate-950/35 px-3 py-2 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-          <p className="text-[9px] font-black uppercase tracking-widest text-white/35">Score</p>
-          <p className="text-xl font-black tabular-nums text-white" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>{e.score_away} - {e.score_home}</p>
+        <div className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/30 px-3 py-2 sm:block sm:text-right">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 sm:mb-0.5">Score · {e.team || "Game"}</p>
+          <p className="text-lg font-black tabular-nums leading-none text-white" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>{e.score_away} <span className="text-white/35">–</span> {e.score_home}</p>
           {e.points_scored > 0 && (
-            <p className="text-[10px] font-black text-emerald-200">+{e.points_scored} PTS</p>
+            <p className="text-[9px] font-bold text-emerald-200">+{e.points_scored} PTS</p>
           )}
         </div>
       </div>

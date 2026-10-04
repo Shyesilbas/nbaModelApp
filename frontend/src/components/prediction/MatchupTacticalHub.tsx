@@ -21,8 +21,9 @@ export function MatchupTacticalHub({
   const prob = Math.max(win?.home_win_probability ?? 0.5, win?.away_win_probability ?? 0.5);
   const probPct = (prob * 100).toFixed(1);
   const margin = score?.predicted_margin ? Math.abs(score.predicted_margin).toFixed(1) : "0.0";
-  const loserInfo = winnerInfo.abbr === homeInfo.abbr ? awayInfo : homeInfo;
   const isHomeWinner = winnerInfo.abbr === homeInfo.abbr;
+  const scoreWinnerInfo = (score?.predicted_margin ?? 0) >= 0 ? homeInfo : awayInfo;
+  const scoreLoserInfo = scoreWinnerInfo.abbr === homeInfo.abbr ? awayInfo : homeInfo;
 
   // Extract key features if available
   const winFeatures = expl?.win_probability?.features || [];
@@ -46,10 +47,10 @@ export function MatchupTacticalHub({
       : "dengeli ve kontrollü bir tempo temposu";
 
     const marginDesc = parseFloat(margin) >= 10.0
-      ? `Maçın genelinde ${winnerInfo.name} (${winnerInfo.abbr}) takımının skoru ve tempoyu domine etmesi, ribaund ve şut yüzdesi avantajıyla çift haneli farkı koruması bekleniyor.`
+      ? `Skor modeli ${scoreWinnerInfo.name} (${scoreWinnerInfo.abbr}) takımını yaklaşık ${margin} sayı farkla önde öngörüyor.`
       : parseFloat(margin) <= 4.0
-      ? `Karşılaşmanın son çeyreğin son dakikalarına kadar tek pozisyonluk farklarla çok çekişmeli geçmesi ve clutch anlardaki karar kalitesinin belirleyici olması öngörülüyor.`
-      : `${winnerInfo.abbr}, hücum verimliliğindeki istikrarı sayesinde farkı 5-9 sayı bandında tutarak maçı kontrol etmeye yakın taraf.`;
+      ? `Skor modeli iki takım arasında yaklaşık ${margin} sayılık dar bir fark öngörüyor; bu skor tahmini kazanma olasılığı tahmininden ayrı hesaplanır.`
+      : `Skor modeli ${scoreWinnerInfo.abbr} takımını yaklaşık ${margin} sayı farkla önde öngörüyor.`;
 
     const edgeFactor = isHomeWinner
       ? `Saha avantajı ve ev sahibi seyirci desteği, modelin ${homeInfo.abbr} lehine verdiği %${probPct}'lik ağırlıkta ana katalizör görevi görüyor.`
@@ -107,7 +108,7 @@ export function MatchupTacticalHub({
             </p>
 
             <p className="text-xs text-slate-700 leading-relaxed font-normal">
-              {script.edge} Karşılaşmada rakip <strong className="font-semibold text-slate-900">{loserInfo.name}</strong> ekibinin maçta kalabilmesi için dış şut yüzdesini lig ortalamasının üzerine çekmesi ve geçiş hücumlarını sınırlaması gerekecek.
+              {script.edge} Skor tahmininde geride görünen taraf: <strong className="font-semibold text-slate-900">{scoreLoserInfo.name}</strong>.
             </p>
           </div>
 

@@ -43,8 +43,12 @@ This file tracks the overall status of the project.
 - [X] Remove box-score `PLAYED_COUNT` leakage from score model contract (`score_v10.yaml`)
 - [X] Export and integrate 5-Fold OOF score margins into WIN probability model
 - [X] Promote V10.1 production models (WIN & SCORE) upon explicit user approval
+- [X] Multi-season expanding-window walk-forward backtest (WIN LightGBM, SCORE XGBoost, PLAYER LightGBM across 5 unseen seasons: 2021-22 to 2025-26)
+- [X] Multi-season feature ablation study across 4,407 test games
+- [X] Live shadow prediction logging store (`shadow_logger.py`) and KS-test drift monitor (`monitor_shadow_and_drift.py`)
 
 ## Next Steps
 
-1. Monitor live WIN v10.1 and SCORE v10.1 predictions in ml-service.
+1. Monitor live WIN v10.1 and SCORE v10.1 shadow predictions and feature drift in ml-service.
 2. Phase 7 efficiency/strength feature work remains parked until explicitly resumed.
+

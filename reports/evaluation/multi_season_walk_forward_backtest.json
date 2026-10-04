@@ -1,0 +1,471 @@
+{
+  "timestamp": "2026-10-04T14:15:30.097171Z",
+  "total_unseen_games": 4407,
+  "folds_evaluated": 5,
+  "aggregate_win": {
+    "lightgbm_production_brier": 0.2263,
+    "lightgbm_production_auc": 0.6716,
+    "lightgbm_production_accuracy": 0.6317,
+    "logistic_benchmark_brier": 0.222,
+    "logistic_benchmark_auc": 0.6843,
+    "logistic_benchmark_accuracy": 0.6406,
+    "elo_brier": 0.2258,
+    "elo_auc": 0.6913,
+    "elo_accuracy": 0.639,
+    "lgb_brier_improvement_vs_elo": -0.0005
+  },
+  "aggregate_score": {
+    "model_total_mae": 14.8272,
+    "baseline_total_mae": 16.1793,
+    "total_mae_reduction": 1.3521,
+    "model_margin_mae": 11.925,
+    "baseline_margin_mae": 12.627,
+    "margin_mae_reduction": 0.702,
+    "average_conformal_80_coverage": 79.5
+  },
+  "aggregate_player": {
+    "pts": {
+      "model_mae": 4.5944,
+      "baseline_mae": 4.7982,
+      "mae_reduction": 0.2038,
+      "model_rmse": 6.0011,
+      "total_samples": 137540
+    },
+    "reb": {
+      "model_mae": 1.966,
+      "baseline_mae": 2.0008,
+      "mae_reduction": 0.0348,
+      "model_rmse": 2.5894,
+      "total_samples": 137540
+    },
+    "ast": {
+      "model_mae": 1.3538,
+      "baseline_mae": 1.378,
+      "mae_reduction": 0.0242,
+      "model_rmse": 1.8453,
+      "total_samples": 137540
+    }
+  },
+  "folds": [
+    {
+      "fold": 1,
+      "test_season": "2021-22",
+      "train_seasons": [
+        "2020-21"
+      ],
+      "train_rows": 728,
+      "test_games": 883,
+      "win": {
+        "lightgbm_production": {
+          "accuracy": 0.5696489241223103,
+          "roc_auc": 0.6333653141860873,
+          "brier": 0.23907905898231382,
+          "log_loss": 0.6708432812779186,
+          "samples": 883
+        },
+        "logistic_benchmark": {
+          "accuracy": 0.6138165345413363,
+          "roc_auc": 0.6501191544675187,
+          "brier": 0.2334823323671893,
+          "log_loss": 0.6594253809135935,
+          "samples": 883
+        },
+        "pregame_elo": {
+          "accuracy": 0.6342015855039638,
+          "roc_auc": 0.679335210918882,
+          "brier": 0.23000693882822718,
+          "log_loss": 0.6575669322015855,
+          "samples": 883
+        },
+        "last10_winrate": {
+          "accuracy": 0.5753114382785957,
+          "roc_auc": 0.6107259653575151,
+          "brier": 0.2515046962373044,
+          "log_loss": 0.7678591278719019,
+          "samples": 883
+        },
+        "beats_elo": false
+      },
+      "score": {
+        "model": {
+          "total_mae": 14.8015,
+          "total_bias": -0.5637,
+          "margin_mae": 12.0596,
+          "margin_bias": 0.4925,
+          "samples": 883,
+          "conformal_80_total_coverage": 81.1,
+          "conformal_80_margin_coverage": 78.8
+        },
+        "rolling_baseline": {
+          "total_mae": 15.7059,
+          "total_bias": -0.8322,
+          "margin_mae": 12.5324,
+          "margin_bias": 1.196,
+          "samples": 883
+        },
+        "beats_baseline": true
+      },
+      "player": {
+        "pts": {
+          "model_mae": 4.6115,
+          "baseline_mae": 4.7923,
+          "mae_reduction": 0.1808,
+          "model_rmse": 5.9842,
+          "samples": 27304
+        },
+        "reb": {
+          "model_mae": 1.9854,
+          "baseline_mae": 2.0226,
+          "mae_reduction": 0.0372,
+          "model_rmse": 2.6103,
+          "samples": 27304
+        },
+        "ast": {
+          "model_mae": 1.3333,
+          "baseline_mae": 1.3474,
+          "mae_reduction": 0.0141,
+          "model_rmse": 1.8157,
+          "samples": 27304
+        }
+      }
+    },
+    {
+      "fold": 2,
+      "test_season": "2022-23",
+      "train_seasons": [
+        "2020-21",
+        "2021-22"
+      ],
+      "train_rows": 1611,
+      "test_games": 880,
+      "win": {
+        "lightgbm_production": {
+          "accuracy": 0.6329545454545454,
+          "roc_auc": 0.639403300330033,
+          "brier": 0.23170378012946607,
+          "log_loss": 0.6556333606954429,
+          "samples": 880
+        },
+        "logistic_benchmark": {
+          "accuracy": 0.6306818181818182,
+          "roc_auc": 0.6396145214521451,
+          "brier": 0.23162179675273925,
+          "log_loss": 0.6561775405213673,
+          "samples": 880
+        },
+        "pregame_elo": {
+          "accuracy": 0.6147727272727272,
+          "roc_auc": 0.651960396039604,
+          "brier": 0.2396107791735152,
+          "log_loss": 0.6769533426124323,
+          "samples": 880
+        },
+        "last10_winrate": {
+          "accuracy": 0.5818181818181818,
+          "roc_auc": 0.576216501650165,
+          "brier": 0.2590972092481057,
+          "log_loss": 0.7838083212808284,
+          "samples": 880
+        },
+        "beats_elo": false
+      },
+      "score": {
+        "model": {
+          "total_mae": 14.789,
+          "total_bias": 0.5239,
+          "margin_mae": 11.1001,
+          "margin_bias": 0.7608,
+          "samples": 880,
+          "conformal_80_total_coverage": 78.9,
+          "conformal_80_margin_coverage": 83.1
+        },
+        "rolling_baseline": {
+          "total_mae": 16.2087,
+          "total_bias": -0.726,
+          "margin_mae": 11.5559,
+          "margin_bias": 2.0835,
+          "samples": 880
+        },
+        "beats_baseline": true
+      },
+      "player": {
+        "pts": {
+          "model_mae": 4.6506,
+          "baseline_mae": 4.8577,
+          "mae_reduction": 0.207,
+          "model_rmse": 6.1006,
+          "samples": 27116
+        },
+        "reb": {
+          "model_mae": 1.9783,
+          "baseline_mae": 2.014,
+          "mae_reduction": 0.0357,
+          "model_rmse": 2.6152,
+          "samples": 27116
+        },
+        "ast": {
+          "model_mae": 1.3359,
+          "baseline_mae": 1.3555,
+          "mae_reduction": 0.0196,
+          "model_rmse": 1.8239,
+          "samples": 27116
+        }
+      }
+    },
+    {
+      "fold": 3,
+      "test_season": "2023-24",
+      "train_seasons": [
+        "2020-21",
+        "2021-22",
+        "2022-23"
+      ],
+      "train_rows": 2491,
+      "test_games": 883,
+      "win": {
+        "lightgbm_production": {
+          "accuracy": 0.6432616081540203,
+          "roc_auc": 0.6832428303016539,
+          "brier": 0.22487848595265736,
+          "log_loss": 0.6413297255194086,
+          "samples": 883
+        },
+        "logistic_benchmark": {
+          "accuracy": 0.636466591166478,
+          "roc_auc": 0.697386079739021,
+          "brier": 0.22011717531191596,
+          "log_loss": 0.6305166619946789,
+          "samples": 883
+        },
+        "pregame_elo": {
+          "accuracy": 0.638731596828992,
+          "roc_auc": 0.6953213717919601,
+          "brier": 0.22364514329617302,
+          "log_loss": 0.6392479685814985,
+          "samples": 883
+        },
+        "last10_winrate": {
+          "accuracy": 0.609286523216308,
+          "roc_auc": 0.6293823426176368,
+          "brier": 0.24742305543416618,
+          "log_loss": 0.7746896115271795,
+          "samples": 883
+        },
+        "beats_elo": false
+      },
+      "score": {
+        "model": {
+          "total_mae": 14.2758,
+          "total_bias": -0.1257,
+          "margin_mae": 12.1151,
+          "margin_bias": 0.8412,
+          "samples": 883,
+          "conformal_80_total_coverage": 81.7,
+          "conformal_80_margin_coverage": 78.1
+        },
+        "rolling_baseline": {
+          "total_mae": 15.5528,
+          "total_bias": -1.024,
+          "margin_mae": 12.8793,
+          "margin_bias": 1.8898,
+          "samples": 883
+        },
+        "beats_baseline": true
+      },
+      "player": {
+        "pts": {
+          "model_mae": 4.5497,
+          "baseline_mae": 4.7336,
+          "mae_reduction": 0.1839,
+          "model_rmse": 5.9509,
+          "samples": 27539
+        },
+        "reb": {
+          "model_mae": 1.9428,
+          "baseline_mae": 1.9725,
+          "mae_reduction": 0.0296,
+          "model_rmse": 2.5618,
+          "samples": 27539
+        },
+        "ast": {
+          "model_mae": 1.3691,
+          "baseline_mae": 1.3968,
+          "mae_reduction": 0.0278,
+          "model_rmse": 1.867,
+          "samples": 27539
+        }
+      }
+    },
+    {
+      "fold": 4,
+      "test_season": "2024-25",
+      "train_seasons": [
+        "2020-21",
+        "2021-22",
+        "2022-23",
+        "2023-24"
+      ],
+      "train_rows": 3374,
+      "test_games": 877,
+      "win": {
+        "lightgbm_production": {
+          "accuracy": 0.6476624857468644,
+          "roc_auc": 0.7017054995801848,
+          "brier": 0.2190517860704171,
+          "log_loss": 0.6284945527911965,
+          "samples": 877
+        },
+        "logistic_benchmark": {
+          "accuracy": 0.6647662485746865,
+          "roc_auc": 0.7261439966414778,
+          "brier": 0.21146089543756846,
+          "log_loss": 0.6115600989522945,
+          "samples": 877
+        },
+        "pregame_elo": {
+          "accuracy": 0.6647662485746865,
+          "roc_auc": 0.7198152812762385,
+          "brier": 0.2161775205831512,
+          "log_loss": 0.6234823089413678,
+          "samples": 877
+        },
+        "last10_winrate": {
+          "accuracy": 0.5997719498289624,
+          "roc_auc": 0.6381926952141058,
+          "brier": 0.24376448862235794,
+          "log_loss": 0.751299090773055,
+          "samples": 877
+        },
+        "beats_elo": false
+      },
+      "score": {
+        "model": {
+          "total_mae": 14.7887,
+          "total_bias": -0.105,
+          "margin_mae": 11.8926,
+          "margin_bias": -0.1186,
+          "samples": 877,
+          "conformal_80_total_coverage": 80.0,
+          "conformal_80_margin_coverage": 79.2
+        },
+        "rolling_baseline": {
+          "total_mae": 15.9625,
+          "total_bias": -0.5842,
+          "margin_mae": 12.734,
+          "margin_bias": 1.6366,
+          "samples": 877
+        },
+        "beats_baseline": true
+      },
+      "player": {
+        "pts": {
+          "model_mae": 4.617,
+          "baseline_mae": 4.8319,
+          "mae_reduction": 0.2149,
+          "model_rmse": 6.0291,
+          "samples": 27567
+        },
+        "reb": {
+          "model_mae": 1.9712,
+          "baseline_mae": 2.0117,
+          "mae_reduction": 0.0405,
+          "model_rmse": 2.5964,
+          "samples": 27567
+        },
+        "ast": {
+          "model_mae": 1.3662,
+          "baseline_mae": 1.3973,
+          "mae_reduction": 0.0311,
+          "model_rmse": 1.866,
+          "samples": 27567
+        }
+      }
+    },
+    {
+      "fold": 5,
+      "test_season": "2025-26",
+      "train_seasons": [
+        "2020-21",
+        "2021-22",
+        "2022-23",
+        "2023-24",
+        "2024-25"
+      ],
+      "train_rows": 4251,
+      "test_games": 884,
+      "win": {
+        "lightgbm_production": {
+          "accuracy": 0.665158371040724,
+          "roc_auc": 0.7005234407017945,
+          "brier": 0.21676518650137672,
+          "log_loss": 0.6238198112858335,
+          "samples": 884
+        },
+        "logistic_benchmark": {
+          "accuracy": 0.6572398190045249,
+          "roc_auc": 0.7084710240035692,
+          "brier": 0.2132024640900419,
+          "log_loss": 0.6147446974079797,
+          "samples": 884
+        },
+        "pregame_elo": {
+          "accuracy": 0.6425339366515838,
+          "roc_auc": 0.7101414690578587,
+          "brier": 0.21936901788607652,
+          "log_loss": 0.6286063780704539,
+          "samples": 884
+        },
+        "last10_winrate": {
+          "accuracy": 0.6131221719457014,
+          "roc_auc": 0.638556154448727,
+          "brier": 0.24326299657956613,
+          "log_loss": 0.7622115901640409,
+          "samples": 884
+        },
+        "beats_elo": false
+      },
+      "score": {
+        "model": {
+          "total_mae": 15.4797,
+          "total_bias": -0.2919,
+          "margin_mae": 12.4542,
+          "margin_bias": -0.1461,
+          "samples": 884,
+          "conformal_80_total_coverage": 76.0,
+          "conformal_80_margin_coverage": 75.6
+        },
+        "rolling_baseline": {
+          "total_mae": 17.4638,
+          "total_bias": -1.3641,
+          "margin_mae": 13.4296,
+          "margin_bias": 1.4173,
+          "samples": 884
+        },
+        "beats_baseline": true
+      },
+      "player": {
+        "pts": {
+          "model_mae": 4.5451,
+          "baseline_mae": 4.7768,
+          "mae_reduction": 0.2317,
+          "model_rmse": 5.9432,
+          "samples": 28014
+        },
+        "reb": {
+          "model_mae": 1.9529,
+          "baseline_mae": 1.9838,
+          "mae_reduction": 0.0309,
+          "model_rmse": 2.5643,
+          "samples": 28014
+        },
+        "ast": {
+          "model_mae": 1.3637,
+          "baseline_mae": 1.3919,
+          "mae_reduction": 0.0282,
+          "model_rmse": 1.8531,
+          "samples": 28014
+        }
+      }
+    }
+  ]
+}

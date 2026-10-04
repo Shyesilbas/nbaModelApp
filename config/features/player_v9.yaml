@@ -11,6 +11,17 @@ exclude_columns:
   - GAME_DATE
   - MATCHUP
   - VIDEO_AVAILABLE
+  # Same-game box score/outcome fields are targets or postgame information.
+  - PTS
+  - MIN
+  - REB
+  - AST
+  - PLUS_MINUS
+  - WL
+  - WIN
+  - TARGET_PTS
+  - TARGET_REB
+  - TARGET_AST
   - PLAYER_NAME
   - player_name
   - SEASON_TYPE
@@ -22,6 +33,16 @@ exclude_columns:
   - PLAYER_POSITION_GROUP
   - PLAYOFF_ROUND
   - SERIES_GAME_NUMBER
+  # Zero-importance, dead regular season, and cross-positional noise columns:
+  - CAN_CLINCH_SERIES
+  - IS_ELIMINATION_GAME
+  - IS_B2B
+  - OPP_GUARD_REB_ALLOWED_LAST_10
+  - OPP_WING_REB_ALLOWED_LAST_10
+  - OPP_BIG_AST_ALLOWED_LAST_10
+  - OPP_WING_PTS_ALLOWED_LAST_10
+  - TEAM_ELO
+  - OPP_ELO
 required_context_columns:
   - SEASON_ID
   - GAME_DATE

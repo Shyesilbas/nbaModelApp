@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from pathlib import Path
-from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
@@ -15,7 +14,8 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
                              roc_auc_score, brier_score_loss)
 from src.training.feature_contract import load_feature_contract, resolve_feature_list
-from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split
+from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split, expanding_window_date_splits
+from src.training.provenance import build_training_provenance
 
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import get_default_season
@@ -299,7 +299,9 @@ class WinModelTrainer:
 
     def apply_score_prediction_enrichment(self, df):
         if "SCORE_PRED_MARGIN" in df.columns:
-            return df
+            # Never trust a precomputed margin column whose generation cutoff
+            # and model snapshot are not recorded alongside the rows.
+            df = df.drop(columns=["SCORE_PRED_MARGIN"])
 
         root_prod = Path(__file__).resolve().parents[2] / "models/production"
         candidates = [
@@ -326,65 +328,76 @@ class WinModelTrainer:
             root_prod / "score_model_v10_oof_margins.parquet",
         ]
         oof_path = next((p for p in oof_candidates if p.exists()), None)
-        oof_map = {}
-        if oof_path is not None:
-            try:
-                df_oof = pd.read_parquet(oof_path)
-                oof_map = dict(zip(df_oof["GAME_ID"].astype(str).apply(lambda x: x.split(".")[0].zfill(10)), df_oof["SCORE_PRED_MARGIN_OOF"].astype(float)))
-            except Exception:
-                oof_map = {}
+        if oof_path is None:
+            raise RuntimeError("WIN training requires the time-safe SCORE OOF margin artifact; train SCORE first.")
+        try:
+            df_oof = pd.read_parquet(oof_path)
+            oof_map = dict(zip(
+                df_oof["GAME_ID"].astype(str).apply(lambda x: x.split(".")[0].zfill(10)),
+                pd.to_numeric(df_oof["SCORE_PRED_MARGIN_OOF"], errors="coerce"),
+            ))
+        except Exception as exc:
+            raise RuntimeError(f"Could not read SCORE OOF margins from {oof_path}") from exc
 
         try:
-            margin_model = joblib.load(margin_model_path)
-            meta = json.loads(meta_path.read_text())
-            ridge_margin = joblib.load(ridge_path) if ridge_path and ridge_path.exists() else None
-            req_cols = meta.get("margin_features", [])
-
-            from scripts.generate_report import add_location_features, get_indicator_df
-            enriched_df = add_location_features(df.copy())
-
-            for c in req_cols:
-                if c not in enriched_df.columns:
-                    enriched_df[c] = 0.0
-
-            home_mask = enriched_df["IS_HOME"].astype(bool)
-            game_margins = {}
-            if home_mask.any():
-                home_df = enriched_df[home_mask].copy()
-                raw_margins = margin_model.predict(home_df[req_cols])
-                if ridge_margin is not None:
-                    X_ind = get_indicator_df(home_df)
-                    ridge_adj = ridge_margin.predict(X_ind)
-                    final_margins = raw_margins - ridge_adj
-                else:
-                    final_margins = raw_margins
-
-                game_ids = home_df["GAME_ID"].astype(str).values
-                for gid, m in zip(game_ids, final_margins):
-                    clean_gid = gid.split(".")[0].zfill(10)
-                    if clean_gid in oof_map:
-                        game_margins[gid] = float(oof_map[clean_gid])
-                    else:
-                        game_margins[gid] = float(m)
-
             df_game_ids = df["GAME_ID"].astype(str).values
             df_is_home = df["IS_HOME"].astype(bool).values
-            margins = np.zeros(len(df), dtype=float)
+            margins = np.full(len(df), np.nan, dtype=float)
             for i, (gid, is_h) in enumerate(zip(df_game_ids, df_is_home)):
                 clean_gid = gid.split(".")[0].zfill(10)
-                m = game_margins.get(gid, oof_map.get(clean_gid, 0.0))
-                margins[i] = m if is_h else -m
+                margin = oof_map.get(clean_gid, np.nan)
+                if pd.notna(margin):
+                    margins[i] = float(margin) if is_h else -float(margin)
+
+            # A final SCORE model may supply predictions only for a genuinely
+            # later holdout season. Never use it to fill missing historical OOF rows.
+            score_meta = json.loads(meta_path.read_text())
+            cutoff = pd.Timestamp(score_meta["training_date_max"])
+            row_dates = pd.to_datetime(df["GAME_DATE"], errors="coerce")
+            future_mask = row_dates > cutoff
+            if future_mask.any():
+                margin_model = joblib.load(margin_model_path)
+                ridge_margin = joblib.load(ridge_path) if ridge_path and ridge_path.exists() else None
+                from scripts.generate_report import add_location_features, get_indicator_df
+                enriched = add_location_features(df.copy())
+                enriched = add_win_strength_features(enriched)
+                enriched = enriched.loc[future_mask].copy()
+                req_cols = score_meta.get("margin_features", [])
+                missing = [column for column in req_cols if column not in enriched.columns]
+                if missing:
+                    raise ValueError(f"Future holdout rows are missing SCORE features: {missing}")
+                future_home = enriched[enriched["IS_HOME"].astype(bool)]
+                raw = margin_model.predict(future_home[req_cols])
+                if ridge_margin is not None:
+                    raw = raw - ridge_margin.predict(get_indicator_df(future_home))
+                by_game = dict(zip(future_home["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10), raw))
+                for idx in df.index[future_mask]:
+                    clean_gid = str(df.loc[idx, "GAME_ID"]).split(".")[0].zfill(10)
+                    if clean_gid in by_game:
+                        value = float(by_game[clean_gid])
+                        margins[df.index.get_loc(idx)] = value if bool(df.loc[idx, "IS_HOME"]) else -value
             df["SCORE_PRED_MARGIN"] = margins
-        except Exception:
-            df["SCORE_PRED_MARGIN"] = 0.0
+        except Exception as exc:
+            raise RuntimeError("Failed to attach time-safe SCORE OOF margins to WIN training rows") from exc
         return df
 
     def train_and_export(self):
         files = self.resolve_dataset_files()
         df, row_counts_by_file = self.load_training_dataset(files)
         self.validate_dataset_contract(df)
-        df, projection_enrichment = self.apply_player_projection_enrichment(df)
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
+        df = df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable").reset_index(drop=True)
+        # Historical predictions from a player model trained on overlapping
+        # outcomes are target leakage. Date-safe player OOF features are not
+        # available yet, so keep this feature family out of WIN inputs.
+        projection_enrichment = {
+            "applied": False,
+            "reason": "disabled_until_date_safe_player_oof_predictions_exist",
+        }
         df = self.apply_score_prediction_enrichment(df)
+
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
+        df = df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable").reset_index(drop=True)
 
         df_features, df_meta = self.separate_metadata(df)
         df_features = df_features.reset_index(drop=True)
@@ -429,6 +442,8 @@ class WinModelTrainer:
 
         imputed_missing_required_features = []
         required_feature_cols = resolve_feature_list(self.feature_contract)
+        excluded_feature_cols = set(self.feature_contract.list_value("excluded_features"))
+        required_feature_cols = [c for c in required_feature_cols if c not in excluded_feature_cols]
         missing_allowed = [c for c in required_feature_cols if c not in X.columns]
         non_defaultable_missing = [c for c in missing_allowed if c not in self.defaultable_required_features]
         if non_defaultable_missing:
@@ -437,6 +452,17 @@ class WinModelTrainer:
             X[col] = self.defaultable_required_features[col]
         imputed_missing_required_features = missing_allowed
         X = X[required_feature_cols]
+
+        if "SCORE_PRED_MARGIN" in X.columns:
+            valid_oof = np.isfinite(pd.to_numeric(X["SCORE_PRED_MARGIN"], errors="coerce"))
+            dropped_without_historical_score_oof = int((~valid_oof).sum())
+            X = X.loc[valid_oof].copy()
+            y = y.loc[valid_oof].copy()
+            df_meta = df_meta.loc[valid_oof].copy()
+            if X.empty:
+                raise ValueError("No WIN rows have a valid historical SCORE OOF margin.")
+        else:
+            dropped_without_historical_score_oof = 0
         
         if self.holdout_config.get("strategy") in {"season_holdout", "external_season_holdout"}:
             X_train_full, X_test, y_train_full, y_test, split_meta = season_holdout_train_test_split(
@@ -479,39 +505,51 @@ class WinModelTrainer:
             ))
         ])
 
+        # Select model family/calibration only on an inner, past-only block.
+        train_meta = df_meta.loc[X_train_full.index]
+        train_dates = pd.to_datetime(train_meta[self.holdout_config.get("date_col", "GAME_DATE")])
+        unique_train_dates = pd.DatetimeIndex(train_dates.drop_duplicates().sort_values())
+        if len(unique_train_dates) < 10:
+            raise ValueError("WIN model selection needs at least ten distinct training dates.")
+        inner_cutoff = unique_train_dates[int(len(unique_train_dates) * 0.8)]
+        inner_train_mask = train_dates < inner_cutoff
+        inner_val_mask = train_dates >= inner_cutoff
+        X_inner_train, y_inner_train = X_train_full.loc[inner_train_mask], y_train_full.loc[inner_train_mask]
+        X_inner_val, y_inner_val = X_train_full.loc[inner_val_mask], y_train_full.loc[inner_val_mask]
+        inner_meta = train_meta.loc[inner_train_mask]
+        calibration_splits = expanding_window_date_splits(
+            inner_meta,
+            date_col=self.holdout_config.get("date_col", "GAME_DATE"),
+            n_splits=3,
+        )
+
         candidates = []
-        metrics_dict = {}
-
+        selection_metrics = {}
         for family_name, base_pipe in [("logistic_regression", lr_pipeline), ("lightgbm", lgb_pipeline)]:
-            pipe = clone(base_pipe)
-            pipe.fit(X_train_full, y_train_full)
-            try:
-                p_uncal = pipe.predict_proba(X_test)[:, 1]
-            except Exception:
-                p_uncal = pipe.decision_function(X_test)
-            m_uncal = self.eval_metrics(y_test, p_uncal)
-            candidates.append((f"{family_name}_uncalibrated", family_name, "uncalibrated", base_pipe, pipe, m_uncal))
-            metrics_dict[f"{family_name}_uncalibrated"] = m_uncal
+            uncalibrated = clone(base_pipe).fit(X_inner_train, y_inner_train)
+            p_uncal = uncalibrated.predict_proba(X_inner_val)[:, 1]
+            m_uncal = self.eval_metrics(y_inner_val, p_uncal)
+            candidates.append((f"{family_name}_uncalibrated", family_name, "uncalibrated", base_pipe, m_uncal))
+            selection_metrics[f"{family_name}_uncalibrated"] = m_uncal
 
-            cal_sig = CalibratedClassifierCV(estimator=clone(base_pipe), method="sigmoid", cv=3)
-            cal_sig.fit(X_train_full, y_train_full)
-            p_sig = cal_sig.predict_proba(X_test)[:, 1]
-            m_sig = self.eval_metrics(y_test, p_sig)
-            candidates.append((f"{family_name}_sigmoid", family_name, "sigmoid", base_pipe, cal_sig, m_sig))
-            metrics_dict[f"{family_name}_sigmoid"] = m_sig
+            for method in ["sigmoid", "isotonic"]:
+                try:
+                    calibrated = CalibratedClassifierCV(
+                        estimator=clone(base_pipe), method=method, cv=calibration_splits
+                    ).fit(X_inner_train, y_inner_train)
+                    probabilities = calibrated.predict_proba(X_inner_val)[:, 1]
+                    metrics = self.eval_metrics(y_inner_val, probabilities)
+                    key = f"{family_name}_{method}"
+                    candidates.append((key, family_name, method, base_pipe, metrics))
+                    selection_metrics[key] = metrics
+                except Exception:
+                    continue
 
-            try:
-                cal_iso = CalibratedClassifierCV(estimator=clone(base_pipe), method="isotonic", cv=3)
-                cal_iso.fit(X_train_full, y_train_full)
-                p_iso = cal_iso.predict_proba(X_test)[:, 1]
-                m_iso = self.eval_metrics(y_test, p_iso)
-                candidates.append((f"{family_name}_isotonic", family_name, "isotonic", base_pipe, cal_iso, m_iso))
-                metrics_dict[f"{family_name}_isotonic"] = m_iso
-            except Exception:
-                pass
-
-        candidates_sorted = sorted(candidates, key=lambda item: (item[5]["brier_score"], -item[5]["roc_auc"]))
-        best_cand_name, best_family, best_calib, best_base_pipe, _, best_metrics = candidates_sorted[0]
+        if not candidates:
+            raise ValueError("No WIN candidate could be evaluated on the inner time holdout.")
+        best_cand_name, best_family, best_calib, best_base_pipe, best_metrics = min(
+            candidates, key=lambda item: (item[4]["brier_score"], -item[4]["roc_auc"])
+        )
 
         os.makedirs(self.output_dir, exist_ok=True)
         final_X = X_train_full if self.holdout_config.get("final_refit_scope") == "train_only" else X
@@ -521,8 +559,17 @@ class WinModelTrainer:
         if best_calib == "uncalibrated":
             final_model = final_base.fit(final_X, final_y)
         else:
-            final_model = CalibratedClassifierCV(estimator=final_base, method=best_calib, cv=3)
+            final_meta = df_meta.loc[final_X.index]
+            final_splits = expanding_window_date_splits(
+                final_meta,
+                date_col=self.holdout_config.get("date_col", "GAME_DATE"),
+                n_splits=3,
+            )
+            final_model = CalibratedClassifierCV(estimator=final_base, method=best_calib, cv=final_splits)
             final_model.fit(final_X, final_y)
+
+        holdout_probabilities = final_model.predict_proba(X_test)[:, 1]
+        holdout_metrics = self.eval_metrics(y_test, holdout_probabilities)
 
         model_path = self.output_dir / f"win_probability_model_{self.version}.pkl"
         joblib.dump(final_model, model_path)
@@ -537,32 +584,43 @@ class WinModelTrainer:
             with open(self.output_dir / "feature_columns_v9.json", "w") as f:
                 json.dump(feature_cols, f, indent=2)
             
+        win_artifacts = [model_path, feat_path]
         metadata = {
             "model_name": best_family,
-            "version": "10.1" if self.version == "v10" else "9.1",
+            "version": "10.2-temporal-candidate" if self.version == "v10" else "9.2-temporal-candidate",
             "training_date": datetime.utcnow().isoformat() + "Z",
             "number_of_rows": int(df.shape[0]),
             "number_of_features": int(X.shape[1]),
             "training_manifest": self.manifest_metadata,
             "feature_contract": self.feature_contract.snapshot,
+            "provenance": build_training_provenance(
+                root=Path(__file__).resolve().parents[2],
+                input_files=files,
+                feature_contract_path=self.feature_contract.path,
+                manifest_path=self.manifest_metadata.get("path"),
+                trainer_path=Path(__file__),
+                artifact_paths=win_artifacts,
+            ),
             "input_files": [str(p) for p in files],
             "row_counts_by_file": row_counts_by_file,
             "player_projection_enrichment": projection_enrichment,
             "imputed_missing_required_features": imputed_missing_required_features,
+            "dropped_without_historical_score_oof": dropped_without_historical_score_oof,
             "final_refit": {
                 "enabled": True,
                 "rows": int(len(final_X)),
                 "scope": self.holdout_config.get("final_refit_scope", "all_eligible_rows"),
                 "note": "Holdout metrics are computed before the final model is fit according to the configured refit scope."
             },
-            "evaluation": "chronological_holdout",
+            "evaluation": "inner_temporal_model_selection_then_locked_season_holdout",
             "split": split_meta.__dict__,
             "dropped_static_venue_split_features": sorted(drop_static),
-            "metrics": metrics_dict,
+            "model_selection_metrics_inner_holdout": selection_metrics,
+            "holdout_metrics": holdout_metrics,
             "selected_model": best_cand_name,
             "selected_family": best_family,
             "selected_calibration": best_calib,
-            "selected_metrics": best_metrics,
+            "selected_metrics": holdout_metrics,
             "target_column": self.target_col
         }
         

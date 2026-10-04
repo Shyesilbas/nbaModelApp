@@ -119,6 +119,8 @@ models/**/*.pkl
 models/**/*.joblib
 models/**/*.h5
 models/**/*.pt
+models/**/*.parquet
+models/**/replaced_leaky/
 outputs/
 outputs/analysis/
 

@@ -33,7 +33,7 @@ export function PlayerBoxTable({
             <th className="sticky left-0 z-10 min-w-[190px] bg-slate-50 px-3 py-3 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
               Player
             </th>
-            {["MIN", "PTS", "FG", "3P", "FT", "REB", "AST", "STL", "BLK", "TOV", "+/-"].map((h) => (
+            {["MIN", "PTS", "REB", "AST", "TOV", "STL", "BLK", "+/-", "FG", "3P", "FT"].map((h) => (
               <th key={h} className={HEAD}>{h}</th>
             ))}
           </tr>
@@ -68,23 +68,11 @@ export function PlayerBoxTable({
                       <span className="w-6 text-right text-[13px] font-black tabular-nums text-slate-900">{fmtInt(p.PTS)}</span>
                     </div>
                   </td>
-                  <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">
-                    {fmtPair(p.FGM ?? null, p.FGA ?? null)}
-                    <span className="ml-1 text-[9px] text-slate-400">{fmtPct(p.FG_PCT)}</span>
-                  </td>
-                  <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">
-                    {fmtPair(p.FG3M ?? null, p.FG3A ?? null)}
-                    <span className="ml-1 text-[9px] text-slate-400">{fmtPct(p.FG3_PCT)}</span>
-                  </td>
-                  <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">
-                    {fmtPair(p.FTM ?? null, p.FTA ?? null)}
-                    <span className="ml-1 text-[9px] text-slate-400">{fmtPct(p.FT_PCT)}</span>
-                  </td>
                   <td className={cell(p.REB, maxReb)}>{fmtInt(p.REB)}</td>
                   <td className={cell(p.AST, maxAst)}>{fmtInt(p.AST)}</td>
+                  <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">{fmtInt(p.TOV)}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">{fmtInt(p.STL)}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">{fmtInt(p.BLK)}</td>
-                  <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">{fmtInt(p.TOV)}</td>
                   <td className="px-2 py-2.5 text-right">
                     <span
                       className={`inline-block min-w-[2.2rem] rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${
@@ -99,6 +87,18 @@ export function PlayerBoxTable({
                     >
                       {pm == null ? "—" : pm > 0 ? `+${pm}` : pm}
                     </span>
+                  </td>
+                  <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">
+                    {fmtPair(p.FGM ?? null, p.FGA ?? null)}
+                    <span className="ml-1 text-[9px] text-slate-400">{fmtPct(p.FG_PCT)}</span>
+                  </td>
+                  <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">
+                    {fmtPair(p.FG3M ?? null, p.FG3A ?? null)}
+                    <span className="ml-1 text-[9px] text-slate-400">{fmtPct(p.FG3_PCT)}</span>
+                  </td>
+                  <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">
+                    {fmtPair(p.FTM ?? null, p.FTA ?? null)}
+                    <span className="ml-1 text-[9px] text-slate-400">{fmtPct(p.FT_PCT)}</span>
                   </td>
                 </tr>
               );
@@ -117,15 +117,15 @@ export function PlayerBoxTable({
               <td className="sticky left-0 z-10 bg-slate-50 px-3 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Team totals</td>
               <td />
               <td className="px-2 py-3 text-right text-[13px] font-black tabular-nums text-slate-900">{sum("PTS")}</td>
+              <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("REB")}</td>
+              <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("AST")}</td>
+              <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("TOV")}</td>
+              <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("STL")}</td>
+              <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("BLK")}</td>
+              <td />
               <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("FGM")}-{sum("FGA")}</td>
               <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("FG3M")}-{sum("FG3A")}</td>
               <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("FTM")}-{sum("FTA")}</td>
-              <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("REB")}</td>
-              <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("AST")}</td>
-              <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("STL")}</td>
-              <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("BLK")}</td>
-              <td className="px-2 py-3 text-right text-[11px] font-bold tabular-nums text-slate-700">{sum("TOV")}</td>
-              <td />
             </tr>
           </tfoot>
         )}
