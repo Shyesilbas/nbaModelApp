@@ -344,7 +344,7 @@ def main():
         trainer_metadata["score"] = score_trainer.train_and_export()
     
     if is_model_enabled("win"):
-        print("-> Training Win Probability Model (Calibrated Logistic Regression)...")
+        print("-> Training Win Probability Model (Calibrated Classifier)...")
         win_validation_file = ROOT / "data" / "processed" / f"team_model_ready_v3_{validation_season.replace('-', '_')}.csv"
         win_data_files = list(manifest.team_dataset_files)
         if win_validation_file.exists() and win_validation_file not in win_data_files:
