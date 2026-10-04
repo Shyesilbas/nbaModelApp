@@ -10,9 +10,9 @@ The platform is trained across **6 full NBA seasons (2020-21 through 2025-26)** 
 
 | Layer | Architecture | Key Features | Pure Unseen Holdout (2025-26) | Full Production Refit (Live 2026-27) |
 | :--- | :--- | :--- | :--- | :--- |
-| **WIN Probability** | Calibrated LightGBM (Isotonic) | Continuous Elo, Dean Oliver Four Factors, 3PT regression delta, Havoc rate, Out-of-fold score margins, Player PRA projections | **ROC-AUC: 0.7391**<br>Brier: `0.2057`<br>Accuracy: `66.6%`<br>Log-Loss: `0.5938` | **ROC-AUC: 0.7918** (2025-26)<br>Cross-Season ROC-AUC: `0.7772`<br>Live Accuracy: **71.7%**<br>Cross-Season Acc: `70.3%` |
-| **SCORE Prediction** | 4-way XGBoost + Ridge Residual Correction | Team pace, Home/Away Off_Rtg, Rest advantage, Travel distance, Playoff elimination context | **Total Points MAE: ~14.75 pts**<br>Pace MAE: `3.15`<br>Margin MAE: `9.82` | Continuous residual correction for playoff intensity & back-to-backs |
-| **PLAYER Projection** | LightGBM Regressors + Ridge Calibration | Rolling 5/10/20 game form, Usage rate trends, Defense vs Position, Minutes projections | **PTS $R^2$: 0.50** (MAE 4.12)<br>**AST $R^2$: 0.46** (MAE 1.34)<br>**REB $R^2$: 0.43** (MAE 1.86) | Calibrated for 165K+ player logs with position & usage buckets |
+| **WIN Probability (v10.1)** | Calibrated LightGBM (Isotonic) | Continuous Elo, Dean Oliver Four Factors, 3PT regression delta, Havoc rate, Out-of-fold score margins, Player PRA projections | **ROC-AUC: 0.7391**<br>Brier: `0.2057`<br>Accuracy: `66.6%`<br>Log-Loss: `0.5938` | **ROC-AUC: 0.7918** (2025-26)<br>Cross-Season ROC-AUC: `0.7772`<br>Live Accuracy: **71.7%**<br>Cross-Season Acc: `70.3%` |
+| **SCORE Prediction (v10)** | 4-way XGBoost + Ridge Residual Correction | Team pace, Home/Away Off_Rtg, Rest advantage, Travel distance, Playoff elimination context | **Total Points MAE: ~14.75 pts**<br>Pace MAE: `3.15`<br>Margin MAE: `9.82` | Continuous residual correction for playoff intensity & back-to-backs |
+| **PLAYER Projection (v9)** | LightGBM Regressors + Ridge Calibration | Rolling 5/10/20 game form, Usage rate trends, Defense vs Position, Minutes projections | **PTS $R^2$: 0.50** (MAE 4.12)<br>**AST $R^2$: 0.46** (MAE 1.34)<br>**REB $R^2$: 0.43** (MAE 1.86) | Calibrated for 165K+ player logs with position & usage buckets |
 
 > **Validation Rigor**: Metrics are split into **Pure Out-of-Sample Holdout** (model strictly fitted on 2020-21 through 2024-25 and evaluated on completely unseen 2025-26) and **Full Refit** (retrained on all 10,280 rows for live production deployment). Zero future data leakage.
 
@@ -108,5 +108,7 @@ PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date 2026-10-08 --seaso
 
 - [ARTIFACT_REGISTRY.md](ARTIFACT_REGISTRY.md) — Single source of truth for all active models, datasets, and paths.
 - [PROJECT_STATUS.md](PROJECT_STATUS.md) — Current development phase, active production configurations, and backlog.
-- [reports/production/v8_vs_v9_model_comparisons.md](reports/production/v8_vs_v9_model_comparisons.md) — Mathematical calibration methods and benchmark comparisons.
+- [reports/production/model_performance_and_architecture_report.md](reports/production/model_performance_and_architecture_report.md) — Active V10/V10.1 model architecture, empirical 6-season benchmarks, and calibration methods.
+- [reports/audits/model_quality_leakage_and_governance_audit.md](reports/audits/model_quality_leakage_and_governance_audit.md) — Comprehensive audit of V10.1 out-of-sample performance, leakage prevention, and metric verification.
 - [docs/season_onboarding_guide.md](docs/season_onboarding_guide.md) — Step-by-step workflow for ingesting new NBA seasons.
+- [reports/production/v8_vs_v9_model_comparisons.md](reports/production/v8_vs_v9_model_comparisons.md) — Historical model evolution and calibration notes.

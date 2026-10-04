@@ -7,7 +7,7 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 1. `ARTIFACT_REGISTRY.md` — Single source of truth for all data, model, and report paths. Never overwrite production paths listed here without explicit user approval.
 2. `PROJECT_STATUS.md` — Tracks the current active phases, production model configurations, and next steps.
 3. `README.md` — Core architecture overview and quick-start pipeline commands.
-4. `reports/production/v8_vs_v9_model_comparisons.md` — Key mathematical calibration methods and model parameters for WIN, SCORE, and PLAYER predictions.
+4. `reports/production/model_performance_and_architecture_report.md` — Production V10/V10.1 model architecture, calibration methods, and benchmark parameters.
 5. `docs/season_onboarding_guide.md` — Sequence of CLI commands to ingest and bootstrap new seasons.
 6. `docs/reporting_and_validation_guide.md` — How to run season freshness audits, model evaluations, and comparisons.
 7. `config/production_artifacts.yaml` — Production configurations, paths, and metadata.
@@ -45,7 +45,7 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 - Package Frontend Schedule Context: `PYTHONPATH=. python3 main.py --build-schedule-context`
 - Compile Frontend SQLite Store: `PYTHONPATH=. python3 scripts/build_frontend_db.py`
 - Roster & Core Player Analysis: `PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis`
-- Daily Schedule Matchups Predictor: `PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY --model {v8, v9}`
+- Daily Schedule Matchups Predictor: `PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY [--model v10]`
 
 ### Quality Control & Audits
 - Verify Project Structure: `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py`
