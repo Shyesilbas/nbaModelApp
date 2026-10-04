@@ -11,6 +11,7 @@ const CACHE_PREFIX = "nba-static-data";
 const VERSION_KEY = "nba-static-data-version";
 
 const jsonCache = new Map<string, Promise<unknown>>();
+const privateApiCache = new Map<string, Promise<unknown>>();
 let manifestVersion: string | null = null;
 let manifestPromise: Promise<DataManifest | null> | null = null;
 
@@ -58,7 +59,15 @@ async function fetchCachedApi(path: string): Promise<unknown> {
 }
 
 export async function loadPrivateApi<T>(path: string): Promise<T> {
-  return (await fetchCachedApi(path)) as T;
+  if (!privateApiCache.has(path)) {
+    const request = fetchCachedApi(path).catch((error) => {
+      // Allow a later retry if the request failed.
+      privateApiCache.delete(path);
+      throw error;
+    });
+    privateApiCache.set(path, request);
+  }
+  return (await privateApiCache.get(path)) as T;
 }
 
 export async function postPrivateApi<T>(path: string, body?: unknown): Promise<T> {
@@ -203,6 +212,7 @@ export function clearDataCache() {
   manifestPromise = null;
   manifestVersion = null;
   jsonCache.clear();
+  privateApiCache.clear();
   localStorage.removeItem(VERSION_KEY);
   if (canUsePersistentCache()) {
     window.caches

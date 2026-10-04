@@ -13,7 +13,7 @@ const MultiTeamPlayers = lazy(() => import("./components/MultiTeamPlayers"));
 const NbaPrediction = lazy(() => import("./components/NbaPrediction"));
 const PlayerPage = lazy(() => import("./components/PlayerPage"));
 
-import { loadJson, prefetchManifestFiles } from "./lib/dataCache";
+import { loadJson } from "./lib/dataCache";
 
 const MENU = [
   { id: "game-results",   label: "Game Results",   icon: <Trophy size={15} />,      section: null },
@@ -44,8 +44,6 @@ export default function App() {
         setRosters(rostersData);
         setMultiTeamPlayers(multiData);
         setLoading(false);
-        // Start background prefetching of all files in the manifest
-        prefetchManifestFiles().catch((err) => console.error("Prefetch error:", err));
       } catch (e: any) {
         setError(e.message);
         setLoading(false);

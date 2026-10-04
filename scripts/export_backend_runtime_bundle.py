@@ -29,6 +29,7 @@ RUNTIME_FILES = (
     "data/canonical/player_metadata.csv",
     "data/season={season}/analysis/team_rosters.csv",
     "data/season={season}/analysis/core_players.csv",
+    "data/season={season}/analysis/team_elo_initial.json",
     "data/season={season}/features/team_features.csv",
     "data/season={season}/features/player_features.csv",
     "data/season={season}/processed/game_results.csv",
@@ -36,6 +37,11 @@ RUNTIME_FILES = (
     "data/season={season}/processed/upcoming_games_context.csv",
     "data/season={season}/raw/team_games.csv",
     "data/season={season}/raw/player_games.csv",
+)
+
+HISTORICAL_FEATURE_FILES = (
+    "data/season={season}/features/team_features.csv",
+    "data/season={season}/processed/game_results.csv",
 )
 
 
@@ -132,6 +138,20 @@ def build_backend_runtime_bundle(
         source = REPO_ROOT / rel_path.format(season=active_season)
         if source.exists():
             _copy_file(source, out_dir / rel_path.format(season=active_season))
+
+    # Upcoming-season predictions need prior-season team history until current
+    # season samples are sufficient, and the opening Elo ratings carry prior
+    # franchise strength into the active season.
+    active_start_year = int(active_season.split("-")[0])
+    historical_season = f"{active_start_year - 1}-{str(active_start_year)[-2:]}"
+    for rel_path in HISTORICAL_FEATURE_FILES:
+        source = REPO_ROOT / rel_path.format(season=historical_season)
+        if source.exists():
+            _copy_file(source, out_dir / rel_path.format(season=historical_season))
+
+    opening_elo = REPO_ROOT / "data" / "production" / f"team_elo_initial_{active_season.replace('-', '_')}.json"
+    if opening_elo.exists():
+        _copy_file(opening_elo, out_dir / "data" / "production" / opening_elo.name)
 
     if include_play_by_play:
         pbp_src = REPO_ROOT / f"data/season={active_season}/raw/play_by_play"
