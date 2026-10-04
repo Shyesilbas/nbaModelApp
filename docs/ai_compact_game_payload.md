@@ -13,10 +13,10 @@ Use this shape when sending full boxscore/game context to an LLM.
 
 ```json
 {
-  "gid": "20251225-LAL-BOS-001",
-  "s": "2025-2026",
+  "gid": "0012600001",
+  "s": "2026-2027",
   "st": "Regular Season",
-  "dt": "2025-12-25",
+  "dt": "2026-10-15",
   "tm": "20:00 EST",
   "status": "Final",
   "arena": { "n": "Crypto.com Arena", "c": "Los Angeles", "s": "CA" },

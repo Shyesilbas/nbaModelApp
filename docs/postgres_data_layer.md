@@ -1,49 +1,49 @@
 # PostgreSQL Data Layer
 
-PostgreSQL is the query and analysis layer for the local NBA data lake. The root `data/` directory remains the source of truth; PostgreSQL stores selected, queryable datasets plus normalized play-by-play tables.
+PostgreSQL serves as the relational analysis, reporting, and SQL query layer for the NBA data lake. While the root `data/` directory and high-speed `nba_frontend.db` SQLite store serve real-time predictions and the web dashboard, PostgreSQL provides structured schemas for complex analytical joins and backtesting queries.
 
-## Start PostgreSQL
+---
+
+## 1. Start PostgreSQL Service
 
 ```bash
 docker compose up -d postgres
 ```
 
-Default connection:
-
+Default connection string:
 ```text
 postgresql://postgres:postgres@127.0.0.1:5432/secondhand
 ```
+(Override with the `DATABASE_URL` environment variable if needed).
 
-Override with `DATABASE_URL` when needed.
+---
 
-## Initialize Schema
+## 2. Initialize Schemas
 
 ```bash
 PYTHONPATH=. python3 scripts/db/init_db.py
 ```
 
-Schemas:
+### Schema Layers:
+- `raw`: Normalized play-by-play payloads, quarter lines, and individual possession events.
+- `mart`: Typed SQL views exposing Parquet datasets for statistical modeling.
+- `meta`: Ingestion logs, season manifests, and data coverage indicators.
 
-- `raw`: normalized play-by-play payloads, events, and quarter scores.
-- `mart`: selected Parquet datasets exposed through typed SQL views.
-- `meta`: manifests, import logs, and coverage metadata.
+---
 
-## Import Data
+## 3. Import Season Datasets
 
-Import selected Parquet datasets only:
-
+Import all available Parquet datasets across all seasons:
 ```bash
 PYTHONPATH=. python3 scripts/db/import_mart.py --all
 ```
 
-Import one season:
-
+Or import a specific season:
 ```bash
-PYTHONPATH=. python3 scripts/db/import_mart.py --season 2024-25
+PYTHONPATH=. python3 scripts/db/import_mart.py --season 2025-26
 ```
 
-Available mart datasets:
-
+### Available Mart Datasets:
 - `game_results`
 - `team_games`
 - `player_games`
@@ -51,45 +51,46 @@ Available mart datasets:
 - `player_boxscores`
 - `team_features`
 - `player_features`
-- `team_model_ready_v2`
+- `team_model_ready_v3`
 
-Play-by-play data is stored in:
+---
 
-- `raw.play_by_play_payloads`
-- `raw.play_by_play_events`
-- `raw.quarter_scores`
-
-## Validate Counts
+## 4. Validate Row Counts
 
 ```bash
 PYTHONPATH=. python3 scripts/db/validate_db_counts.py
 ```
 
-## Example Queries
+---
 
+## 5. Analytical SQL Queries
+
+### Recent Games & Scores
 ```sql
-select season, game_date, away_team, home_team, away_score, home_score
-from mart.games
-where season = '2024-25'
-order by game_date desc
-limit 10;
+SELECT season, game_date, away_team, home_team, away_score, home_score
+FROM mart.games
+WHERE season = '2025-26'
+ORDER BY game_date DESC
+LIMIT 10;
 ```
 
+### High-Scoring Player Performances
 ```sql
-select game_date, player_name, matchup, pts, reb, ast
-from mart.player_game_logs
-where season = '2024-25'
-order by pts desc
-limit 10;
+SELECT game_date, player_name, matchup, pts, reb, ast
+FROM mart.player_game_logs
+WHERE season = '2025-26'
+ORDER BY pts DESC
+LIMIT 10;
 ```
 
+### Clutch-Time Play-by-Play Events (4th Quarter Close Games)
 ```sql
-select game_id, period, clock, team, player_name, action_type, points_scored, score_margin, description
-from raw.play_by_play_events
-where season = '2024-25'
-  and period = 4
-  and abs(score_margin) <= 5
-  and points_scored > 0
-order by game_id, event_index
-limit 25;
+SELECT game_id, period, clock, team, player_name, action_type, points_scored, score_margin, description
+FROM raw.play_by_play_events
+WHERE season = '2025-26'
+  AND period = 4
+  AND abs(score_margin) <= 5
+  AND points_scored > 0
+ORDER BY game_id, event_index
+LIMIT 25;
 ```
