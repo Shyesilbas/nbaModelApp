@@ -11,7 +11,6 @@ const seasonSuffix = (season?: string | null) =>
 let gameDetailsPromise: Promise<GameDetail[]> | null = null;
 let currentGamesPromise: Promise<GameFeedRow[] | null> | null = null;
 let allSeasonGamesPromise: Promise<GameFeedRow[] | null> | null = null;
-let scheduleGamesPromise: Promise<GameFeedRow[] | null> | null = null;
 const pbpCache = new Map<string, Promise<any>>();
 
 async function loadGameDetails(): Promise<GameDetail[]> {
@@ -39,21 +38,16 @@ const inferSeasonFromGameId = (gameId?: string | number | null): string => {
 
 export async function loadArchivedGameIndex(season?: string | null): Promise<GameFeedRow[]> {
   const seasonParam = season ? `?season=${encodeURIComponent(season)}` : "";
-  currentGamesPromise ??= loadGameJson("/data/games.json");
-  allSeasonGamesPromise ??= loadGameJson("/data/all_seasons_games.json");
-  scheduleGamesPromise ??= loadGameJson("/data/schedule.json");
-  const [apiResult, archiveResult, scheduleResult, currentResult] = await Promise.allSettled([
-    loadPrivateApiFresh<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`),
-    allSeasonGamesPromise,
-    scheduleGamesPromise,
-    currentGamesPromise,
-  ]);
-  const sources = [
-    apiResult.status === "fulfilled" ? apiResult.value : [],
-    archiveResult.status === "fulfilled" ? archiveResult.value ?? [] : [],
-    scheduleResult.status === "fulfilled" ? scheduleResult.value ?? [] : [],
-    currentResult.status === "fulfilled" ? currentResult.value ?? [] : [],
-  ];
+  const isCurrentSeason = !season || season === "2026-27";
+  const sourceResults = isCurrentSeason
+    ? (currentGamesPromise ??= loadGameJson("/data/games.json"), await Promise.allSettled([
+        loadPrivateApiFresh<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`),
+        currentGamesPromise,
+      ]))
+    : (allSeasonGamesPromise ??= loadGameJson("/data/all_seasons_games.json"), await Promise.allSettled([
+        allSeasonGamesPromise,
+      ]));
+  const sources = sourceResults.map((result) => result.status === "fulfilled" ? result.value ?? [] : []);
   const byId = new Map<string, GameFeedRow>();
   for (const source of sources) {
     for (const raw of source) {

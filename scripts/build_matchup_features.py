@@ -77,7 +77,18 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
-@lru_cache(maxsize=8)
+@lru_cache(maxsize=64)
+def _read_frame_cached(path_str: str, mtime_ns: int, size_bytes: int):
+    del mtime_ns, size_bytes
+    path = Path(path_str)
+    return pd.read_parquet(path) if path.suffix == ".parquet" else pd.read_csv(path)
+
+
+def _read_frame(path: Path):
+    stat = path.stat()
+    return _read_frame_cached(str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+
+
 def _load_team_features(season: str = None):
     paths = get_data_paths(season)
     p_parq = Path(paths.team_features.replace(".csv", ".parquet"))
@@ -85,19 +96,23 @@ def _load_team_features(season: str = None):
     for p in [p_parq, p_csv]:
         if p.exists():
             if p.suffix == ".parquet":
-                return pd.read_parquet(p)
+                df = _read_frame(p)
             else:
-                return pd.read_csv(p)
+                df = _read_frame(p)
+            # New-season files can exist before that season has any completed games.
+            if not df.empty:
+                return df
     # Fallback to previous latest season if upcoming season features not yet generated
     if season and season != "2025-26":
         fallback_paths = get_data_paths("2025-26")
         for p in [Path(fallback_paths.team_features.replace(".csv", ".parquet")), Path(fallback_paths.team_features)]:
             if p.exists():
-                return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+                df = _read_frame(p)
+                if not df.empty:
+                    return df
     raise FileNotFoundError(f"team_games_features not found; expected at {p_parq} or {p_csv}")
 
 
-@lru_cache(maxsize=8)
 def _load_game_results(season: str = None):
     paths = get_data_paths(season)
     p_parq = Path(paths.game_results.replace(".csv", ".parquet"))
@@ -105,47 +120,50 @@ def _load_game_results(season: str = None):
     for p in [p_parq, p_csv]:
         if p.exists():
             if p.suffix == ".parquet":
-                return pd.read_parquet(p)
+                df = _read_frame(p)
             else:
-                return pd.read_csv(p)
+                df = _read_frame(p)
+            # Upcoming-season results files may be header-only until games are played.
+            if not df.empty:
+                return df
     # Fallback to previous latest season if upcoming season results not yet generated
     if season and season != "2025-26":
         fallback_paths = get_data_paths("2025-26")
         for p in [Path(fallback_paths.game_results.replace(".csv", ".parquet")), Path(fallback_paths.game_results)]:
             if p.exists():
-                return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+                df = _read_frame(p)
+                if not df.empty:
+                    return df
     raise FileNotFoundError(f"game_results not found; expected at {p_parq} or {p_csv}")
 
 
-@lru_cache(maxsize=8)
 def _load_player_games(season: str = None):
     paths = get_data_paths(season)
     p_parq = Path(paths.player_games_raw.replace(".csv", ".parquet"))
     p_csv = Path(paths.player_games_raw)
     for p in [p_parq, p_csv]:
         if p.exists():
-            return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+            return _read_frame(p)
     if season and season != "2025-26":
         fallback_paths = get_data_paths("2025-26")
         for p in [Path(fallback_paths.player_games_raw.replace(".csv", ".parquet")), Path(fallback_paths.player_games_raw)]:
             if p.exists():
-                return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+                return _read_frame(p)
     return pd.DataFrame()
 
 
-@lru_cache(maxsize=8)
 def _load_team_games(season: str = None):
     paths = get_data_paths(season)
     p_parq = Path(paths.team_games_raw.replace(".csv", ".parquet"))
     p_csv = Path(paths.team_games_raw)
     for p in [p_parq, p_csv]:
         if p.exists():
-            return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+            return _read_frame(p)
     if season and season != "2025-26":
         fallback_paths = get_data_paths("2025-26")
         for p in [Path(fallback_paths.team_games_raw.replace(".csv", ".parquet")), Path(fallback_paths.team_games_raw)]:
             if p.exists():
-                return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+                return _read_frame(p)
     return pd.DataFrame()
 
 
@@ -176,14 +194,13 @@ def _load_v4_matchups():
 
 
 
-@lru_cache(maxsize=4)
 def _load_combined_schedule(season: str = None):
     paths = get_data_paths(season)
     p_parq = Path(paths.schedule_combined.replace(".csv", ".parquet"))
     p_csv = Path(paths.schedule_combined)
     for p in [p_parq, p_csv]:
         if p.exists():
-            return pd.read_parquet(p) if p.suffix == ".parquet" else pd.read_csv(p)
+            return _read_frame(p)
     return pd.DataFrame()
 
 
@@ -279,6 +296,26 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     team_df = _load_team_features(season)
     games_df = _load_game_results(season)
     schedule_df = _load_combined_schedule(season)
+    current_season_team_df = team_df.copy()
+
+    # Early in a season the current-season files may only contain a few games.
+    # Carry forward the previous season's history so every team has pregame data,
+    # while retaining current-season rows for teams that have already played.
+    if season != "2025-26":
+        prior_team_df = _load_team_features("2025-26")
+        if not prior_team_df.empty:
+            team_df = pd.concat([prior_team_df, team_df], ignore_index=True)
+            if "GAME_ID" in team_df.columns:
+                team_df = team_df.drop_duplicates(
+                    subset=[c for c in ["GAME_ID", "TEAM_ABBREVIATION"] if c in team_df.columns],
+                    keep="last",
+                )
+
+        prior_games_df = _load_game_results("2025-26")
+        if not prior_games_df.empty:
+            games_df = pd.concat([prior_games_df, games_df], ignore_index=True)
+            if "GAME_ID" in games_df.columns:
+                games_df = games_df.drop_duplicates(subset=["GAME_ID"], keep="last")
 
     # Normalize datetimes
     _ensure_datetime(team_df, "GAME_DATE")
@@ -446,7 +483,11 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     out["TRAVEL_DISTANCE"] = 0.0
     out["TIMEZONE_DIFF"] = 0.0
 
-    elo_state = compute_current_elo_state(team_df, season=season)
+    # The opening ratings already carry forward franchise strength. Replay only
+    # this season's games on top of them; replaying prior-season rows would
+    # double-count history now that those rows are included for rolling features.
+    elo_input = current_season_team_df if season != "2025-26" and not current_season_team_df.empty else team_df
+    elo_state = compute_current_elo_state(elo_input, season=season)
     out.update(build_matchup_strength_features(
         home_team=home_team,
         away_team=away_team,
