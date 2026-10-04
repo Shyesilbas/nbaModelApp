@@ -538,8 +538,8 @@ class WinModelTrainer:
                 json.dump(feature_cols, f, indent=2)
             
         metadata = {
-            "model_name": "logistic_regression",
-            "version": "10.0" if self.version == "v10" else "9.0",
+            "model_name": best_family,
+            "version": "10.1" if self.version == "v10" else "9.1",
             "training_date": datetime.utcnow().isoformat() + "Z",
             "number_of_rows": int(df.shape[0]),
             "number_of_features": int(X.shape[1]),

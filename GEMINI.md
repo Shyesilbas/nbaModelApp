@@ -27,7 +27,7 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 - Experiment reports must be registered before they are treated as active outputs.
 
 ## Current Production Decision
-- Win Probability: Calibrated Cross-Season Logistic Regression with player projections is the active production model.
+- Win Probability: Calibrated Cross-Season LightGBM (Isotonic) with player projections is the active production model.
 - Score Prediction: Score Prediction V4 (XGBoost models for Pace, Home/Away Off_Rtg, Margin) is the active production model.
 - Player Prediction: Player Prediction V4 (LightGBM models for PTS, REB, AST) is the active production model.
 

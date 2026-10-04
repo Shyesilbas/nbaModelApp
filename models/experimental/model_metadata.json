@@ -1,5 +1,5 @@
 {
-  "model_name": "logistic_regression",
+  "model_name": "lightgbm",
   "version": "10.1",
   "training_date": "2026-10-03T20:05:25.378576Z",
   "number_of_rows": 10280,
