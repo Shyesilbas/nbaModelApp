@@ -1,0 +1,594 @@
+{
+    "version": "v10_temporal_Ridge_candidate",
+    "updated_at": "2026-10-04T14:13:48.112739Z",
+    "training_manifest": {
+        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
+        "train_seasons": [
+            "2020-21",
+            "2021-22",
+            "2022-23",
+            "2023-24"
+        ],
+        "calibration_season": "2024-25",
+        "validation_season": "2025-26",
+        "holdout": {
+            "strategy": "season_holdout",
+            "test_size": 0.2,
+            "date_col": "GAME_DATE",
+            "calibration_season": "2024-25"
+        }
+    },
+    "feature_contract": {
+        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/score_v10.yaml",
+        "schema_version": "score_v10",
+        "config": {
+            "schema_version": "score_v10",
+            "targets": {
+                "pace": "TARGET_PACE",
+                "home_off_rtg": "TARGET_HOME_OFF_RTG",
+                "away_off_rtg": "TARGET_AWAY_OFF_RTG",
+                "margin": "TARGET_MARGIN"
+            },
+            "pace_features": [
+                "PACE_LAST_5",
+                "PACE_LAST_10",
+                "OPP_PACE_LAST_5",
+                "OPP_PACE_LAST_10",
+                "OFF_RTG_LAST_5",
+                "DEF_RTG_LAST_5",
+                "OPP_OFF_RTG_LAST_5",
+                "OPP_DEF_RTG_LAST_5",
+                "DAYS_REST",
+                "OPP_DAYS_REST",
+                "IS_3_IN_4",
+                "OPP_IS_3_IN_4",
+                "PACE_COLLISION",
+                "FG3A_RATE_LAST_5",
+                "OPP_FG3A_RATE_LAST_5"
+            ],
+            "base_off_rtg_features": [
+                "OFF_RTG_LAST_5",
+                "OFF_RTG_LAST_10",
+                "PACE_LAST_5",
+                "WINRATE_LAST_5",
+                "OPP_DEF_RTG_LAST_5",
+                "OPP_DEF_RTG_LAST_10",
+                "OPP_PACE_LAST_5",
+                "DAYS_REST",
+                "OPP_DAYS_REST",
+                "EFG_PCT_LAST_5",
+                "EFG_PCT_LAST_10",
+                "DEF_EFG_PCT_LAST_5",
+                "FT_RATE_LAST_5",
+                "TOV_PCT_LAST_5",
+                "FG3A_RATE_LAST_5",
+                "FG3A_RATE_LAST_10",
+                "ORB_PCT_LAST_5",
+                "DEF_TOV_PCT_LAST_5",
+                "DEF_ORB_PCT_LAST_5",
+                "AST_TO_TOV_LAST_5",
+                "PTS_SHARE_3PT_LAST_5",
+                "PTS_SHARE_PAINT_LAST_5"
+            ],
+            "away_extra_features": [
+                "TRAVEL_DISTANCE",
+                "TIMEZONE_DIFF"
+            ],
+            "margin_extra_features": [
+                "DEF_RTG_LAST_5",
+                "DEF_RTG_LAST_10",
+                "OPP_OFF_RTG_LAST_5",
+                "NET_RTG_LAST_5",
+                "NET_RTG_LAST_10",
+                "OPP_NET_RTG_LAST_5",
+                "NET_RTG_DIFF_LAST_10",
+                "EFG_DIFF_LAST_10",
+                "THREE_POINT_RATE_DIFF",
+                "FT_MARGIN_LAST_5",
+                "ELO_DIFF"
+            ]
+        }
+    },
+    "provenance": {
+        "code_revision": "624a55c19ed13ee0e09634359efc9a0c6dcb3260",
+        "python_version": "3.12.4",
+        "packages": {
+            "numpy": "1.26.4",
+            "pandas": "2.2.3",
+            "scikit-learn": "1.5.2",
+            "xgboost": "3.2.0",
+            "lightgbm": "4.6.0"
+        },
+        "feature_contract": {
+            "path": "config/features/score_v10.yaml",
+            "sha256": "50b782775b6c7ffc9902f7e10434232f3706b5b831a0431d94d5b800c7d0087e",
+            "bytes": 1244
+        },
+        "input_snapshots": [
+            {
+                "path": "data/processed/team_model_ready_v3_2020_21.csv",
+                "sha256": "f32c37e1492d03794516b6ca5ac946d32ba108587dcde85f040f3b1e37d625c2",
+                "bytes": 3050434
+            },
+            {
+                "path": "data/processed/team_model_ready_v3_2021_22.csv",
+                "sha256": "e2e82b919cf025d0ef449baefc8c9b397695d550ec7b0c1e831a7d74ef63fa5f",
+                "bytes": 3707222
+            },
+            {
+                "path": "data/processed/team_model_ready_v3_2022_23.csv",
+                "sha256": "5a38b93dffa242c8bf774b54d643d531ee0db6bed09d5607a0a60946869c6bf8",
+                "bytes": 3704000
+            },
+            {
+                "path": "data/processed/team_model_ready_v3_2023_24.csv",
+                "sha256": "b1cd9306f20ca4bc6818e7ecb7a83848f8d522cf68f8430efda893d30107ff96",
+                "bytes": 3712056
+            },
+            {
+                "path": "data/processed/team_model_ready_v3_2024_25.csv",
+                "sha256": "6e1a4235126b1b64a3d48ea9e2d61aecdcd6dbae55baf1dcf3bb843b9d2e9224",
+                "bytes": 3699502
+            }
+        ],
+        "training_manifest": {
+            "path": "config/training_manifest.yaml",
+            "sha256": "099724d0253cc0a03395813133e1fd36d3315369ba65cd5d75ba2a8ec1fde69c",
+            "bytes": 1022
+        },
+        "trainer_source": {
+            "path": "src/training/score_trainer.py",
+            "sha256": "1bc52757b53b1967c7e2aa4ab9e0b705b1fc1bbfbd9b4692333a1159619289dc",
+            "bytes": 30840
+        },
+        "artifacts": [
+            {
+                "path": "models/experimental/score_model_v10_pace.pkl",
+                "sha256": "6ec3b2278570c5f0b2ce0cc2d0e166403a05b2f27a9d1641443fd9720d6a4944",
+                "bytes": 179766
+            },
+            {
+                "path": "models/experimental/score_model_v10_home_rtg.pkl",
+                "sha256": "c5c851c56c334afd22c0ed6be9db4d9e0b534cc68a3669727c41a7c6f7e41d1a",
+                "bytes": 179874
+            },
+            {
+                "path": "models/experimental/score_model_v10_away_rtg.pkl",
+                "sha256": "94d802c36b5f9fc7875395883deb21ffcd7ce4c371bb6dbea9a9e1d0fcfe9bd0",
+                "bytes": 179816
+            },
+            {
+                "path": "models/experimental/score_model_v10_margin.pkl",
+                "sha256": "04549cb700ec59bfaac57551e99bb609af5b4475e358afd1f4bfffb328da7bca",
+                "bytes": 179983
+            },
+            {
+                "path": "models/experimental/score_model_v10_ridge_total.pkl",
+                "sha256": "003a89b2faf6c68df04862b43f5177d2e0074e8af9b21213d93ed4c288db651a",
+                "bytes": 992
+            },
+            {
+                "path": "models/experimental/score_model_v10_ridge_margin.pkl",
+                "sha256": "9be746f222fe1b923b4b5d262192b51cf8d9e4c3aaa68823826b7a30c89ea9e6",
+                "bytes": 992
+            },
+            {
+                "path": "models/experimental/score_model_v10_oof_margins.parquet",
+                "sha256": "22e379ed2b4842e12dea15cccbe7d3b3d0b2582a474ce3b77f4492297631c447",
+                "bytes": 43499
+            }
+        ]
+    },
+    "input_files": [
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv",
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv",
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv",
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv",
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv"
+    ],
+    "row_counts_by_file": {
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv": 1456,
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv": 1766,
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv": 1760,
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv": 1766,
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv": 1760
+    },
+    "final_refit": {
+        "enabled": true,
+        "rows": 8508,
+        "note": "Holdout metrics are computed before final submodels are refit on all eligible rows."
+    },
+    "evaluation": "time_ordered_inner_search_and_season_holdout",
+    "evaluation_scope": "independent_holdout_predictions_from_pre_holdout_models",
+    "training_date_min": "2021-01-01",
+    "training_date_max": "2025-06-22",
+    "pace_mae": 3.558726153631436,
+    "home_rtg_mae": 9.352332188833142,
+    "away_rtg_mae": 8.97141449229475,
+    "margin_mae": 11.903295747727146,
+    "derived_home_score_mae": 9.71015826747162,
+    "derived_away_score_mae": 9.629723350989178,
+    "splits": {
+        "pace": {
+            "strategy": "season_holdout",
+            "split_date": null,
+            "train_rows": 3374,
+            "test_rows": 877,
+            "train_seasons": [
+                "2020-21",
+                "2021-22",
+                "2022-23",
+                "2023-24"
+            ],
+            "test_seasons": [
+                "2024-25"
+            ]
+        },
+        "home_rtg": {
+            "strategy": "season_holdout",
+            "split_date": null,
+            "train_rows": 3374,
+            "test_rows": 877,
+            "train_seasons": [
+                "2020-21",
+                "2021-22",
+                "2022-23",
+                "2023-24"
+            ],
+            "test_seasons": [
+                "2024-25"
+            ]
+        },
+        "away_rtg": {
+            "strategy": "season_holdout",
+            "split_date": null,
+            "train_rows": 3374,
+            "test_rows": 883,
+            "train_seasons": [
+                "2020-21",
+                "2021-22",
+                "2022-23",
+                "2023-24"
+            ],
+            "test_seasons": [
+                "2024-25"
+            ]
+        },
+        "margin": {
+            "strategy": "season_holdout",
+            "split_date": null,
+            "train_rows": 3374,
+            "test_rows": 877,
+            "train_seasons": [
+                "2020-21",
+                "2021-22",
+                "2022-23",
+                "2023-24"
+            ],
+            "test_seasons": [
+                "2024-25"
+            ]
+        },
+        "derived_score_eval_games": 877
+    },
+    "ridge_coefs": {
+        "total": [
+            5.5286241856224265,
+            1.5266849990512399,
+            0.2507573127453282,
+            0.4381519611101982,
+            -1.6370257954790781
+        ],
+        "total_intercept": -0.44916525909992683,
+        "margin": [
+            -1.5925116005387747,
+            1.994544451166187,
+            -1.8180728008618814,
+            -0.19540651720942448,
+            0.2812970117516472
+        ],
+        "margin_intercept": -0.22019337302520844,
+        "features": [
+            "is_playoff",
+            "home_b2b",
+            "away_b2b",
+            "home_rest_advantage",
+            "away_rest_advantage"
+        ]
+    },
+    "pace_features": [
+        "PACE_LAST_5",
+        "PACE_LAST_10",
+        "OPP_PACE_LAST_5",
+        "OPP_PACE_LAST_10",
+        "OFF_RTG_LAST_5",
+        "DEF_RTG_LAST_5",
+        "OPP_OFF_RTG_LAST_5",
+        "OPP_DEF_RTG_LAST_5",
+        "DAYS_REST",
+        "OPP_DAYS_REST",
+        "IS_3_IN_4",
+        "OPP_IS_3_IN_4",
+        "PACE_COLLISION",
+        "FG3A_RATE_LAST_5",
+        "OPP_FG3A_RATE_LAST_5"
+    ],
+    "home_off_rtg_features": [
+        "OFF_RTG_LAST_5",
+        "OFF_RTG_LAST_10",
+        "PACE_LAST_5",
+        "WINRATE_LAST_5",
+        "OPP_DEF_RTG_LAST_5",
+        "OPP_DEF_RTG_LAST_10",
+        "OPP_PACE_LAST_5",
+        "DAYS_REST",
+        "OPP_DAYS_REST",
+        "EFG_PCT_LAST_5",
+        "EFG_PCT_LAST_10",
+        "DEF_EFG_PCT_LAST_5",
+        "FT_RATE_LAST_5",
+        "TOV_PCT_LAST_5",
+        "FG3A_RATE_LAST_5",
+        "FG3A_RATE_LAST_10",
+        "ORB_PCT_LAST_5",
+        "DEF_TOV_PCT_LAST_5",
+        "DEF_ORB_PCT_LAST_5",
+        "AST_TO_TOV_LAST_5",
+        "PTS_SHARE_3PT_LAST_5",
+        "PTS_SHARE_PAINT_LAST_5"
+    ],
+    "away_off_rtg_features": [
+        "OFF_RTG_LAST_5",
+        "OFF_RTG_LAST_10",
+        "PACE_LAST_5",
+        "WINRATE_LAST_5",
+        "OPP_DEF_RTG_LAST_5",
+        "OPP_DEF_RTG_LAST_10",
+        "OPP_PACE_LAST_5",
+        "DAYS_REST",
+        "OPP_DAYS_REST",
+        "EFG_PCT_LAST_5",
+        "EFG_PCT_LAST_10",
+        "DEF_EFG_PCT_LAST_5",
+        "FT_RATE_LAST_5",
+        "TOV_PCT_LAST_5",
+        "FG3A_RATE_LAST_5",
+        "FG3A_RATE_LAST_10",
+        "ORB_PCT_LAST_5",
+        "DEF_TOV_PCT_LAST_5",
+        "DEF_ORB_PCT_LAST_5",
+        "AST_TO_TOV_LAST_5",
+        "PTS_SHARE_3PT_LAST_5",
+        "PTS_SHARE_PAINT_LAST_5",
+        "TRAVEL_DISTANCE",
+        "TIMEZONE_DIFF"
+    ],
+    "margin_features": [
+        "OFF_RTG_LAST_5",
+        "OFF_RTG_LAST_10",
+        "PACE_LAST_5",
+        "WINRATE_LAST_5",
+        "OPP_DEF_RTG_LAST_5",
+        "OPP_DEF_RTG_LAST_10",
+        "OPP_PACE_LAST_5",
+        "DAYS_REST",
+        "OPP_DAYS_REST",
+        "EFG_PCT_LAST_5",
+        "EFG_PCT_LAST_10",
+        "DEF_EFG_PCT_LAST_5",
+        "FT_RATE_LAST_5",
+        "TOV_PCT_LAST_5",
+        "FG3A_RATE_LAST_5",
+        "FG3A_RATE_LAST_10",
+        "ORB_PCT_LAST_5",
+        "DEF_TOV_PCT_LAST_5",
+        "DEF_ORB_PCT_LAST_5",
+        "AST_TO_TOV_LAST_5",
+        "PTS_SHARE_3PT_LAST_5",
+        "PTS_SHARE_PAINT_LAST_5",
+        "DEF_RTG_LAST_5",
+        "DEF_RTG_LAST_10",
+        "OPP_OFF_RTG_LAST_5",
+        "NET_RTG_LAST_5",
+        "NET_RTG_LAST_10",
+        "OPP_NET_RTG_LAST_5",
+        "NET_RTG_DIFF_LAST_10",
+        "EFG_DIFF_LAST_10",
+        "THREE_POINT_RATE_DIFF",
+        "FT_MARGIN_LAST_5",
+        "ELO_DIFF"
+    ],
+    "prediction_interval_offsets_80pct": {
+        "total": [
+            -23.6,
+            23.6
+        ],
+        "margin": [
+            -18.5,
+            18.5
+        ],
+        "home": [
+            -14.8,
+            14.8
+        ],
+        "away": [
+            -15.4,
+            15.4
+        ]
+    },
+    "prediction_interval_offsets_90pct": {
+        "total": [
+            -30.2,
+            30.2
+        ],
+        "margin": [
+            -24.0,
+            24.0
+        ],
+        "home": [
+            -19.4,
+            19.4
+        ],
+        "away": [
+            -19.6,
+            19.6
+        ]
+    },
+    "prediction_interval_offsets_50pct": {
+        "total": [
+            -12.2,
+            12.2
+        ],
+        "margin": [
+            -9.9,
+            9.9
+        ],
+        "home": [
+            -7.9,
+            7.9
+        ],
+        "away": [
+            -8.0,
+            8.0
+        ]
+    },
+    "conformal_prediction_intervals": {
+        "offsets_80pct": {
+            "total": [
+                -23.6,
+                23.6
+            ],
+            "margin": [
+                -18.5,
+                18.5
+            ],
+            "home": [
+                -14.8,
+                14.8
+            ],
+            "away": [
+                -15.4,
+                15.4
+            ]
+        },
+        "offsets_90pct": {
+            "total": [
+                -30.2,
+                30.2
+            ],
+            "margin": [
+                -24.0,
+                24.0
+            ],
+            "home": [
+                -19.4,
+                19.4
+            ],
+            "away": [
+                -19.6,
+                19.6
+            ]
+        },
+        "offsets_50pct": {
+            "total": [
+                -12.2,
+                12.2
+            ],
+            "margin": [
+                -9.9,
+                9.9
+            ],
+            "home": [
+                -7.9,
+                7.9
+            ],
+            "away": [
+                -8.0,
+                8.0
+            ]
+        },
+        "empirical_quantiles_80pct": {
+            "total": [
+                -23.3,
+                23.9
+            ],
+            "margin": [
+                -18.5,
+                18.4
+            ],
+            "home": [
+                -14.6,
+                14.9
+            ],
+            "away": [
+                -15.2,
+                15.6
+            ]
+        },
+        "empirical_quantiles_90pct": {
+            "total": [
+                -29.9,
+                30.3
+            ],
+            "margin": [
+                -23.9,
+                24.1
+            ],
+            "home": [
+                -19.4,
+                19.2
+            ],
+            "away": [
+                -19.2,
+                20.0
+            ]
+        },
+        "coverage_report": {
+            "total": {
+                "std_dev": 18.39,
+                "mae": 14.62,
+                "bias": 0.0,
+                "conformal_80_radius": 23.6,
+                "conformal_80_empirical_coverage": 80.1,
+                "conformal_90_radius": 30.2,
+                "conformal_90_empirical_coverage": 90.1,
+                "conformal_50_radius": 12.2,
+                "conformal_50_empirical_coverage": 50.0
+            },
+            "margin": {
+                "std_dev": 14.73,
+                "mae": 11.73,
+                "bias": -0.0,
+                "conformal_80_radius": 18.5,
+                "conformal_80_empirical_coverage": 80.1,
+                "conformal_90_radius": 24.0,
+                "conformal_90_empirical_coverage": 90.1,
+                "conformal_50_radius": 9.9,
+                "conformal_50_empirical_coverage": 50.0
+            },
+            "home": {
+                "std_dev": 11.61,
+                "mae": 9.29,
+                "bias": 0.0,
+                "conformal_80_radius": 14.8,
+                "conformal_80_empirical_coverage": 80.1,
+                "conformal_90_radius": 19.4,
+                "conformal_90_empirical_coverage": 90.1,
+                "conformal_50_radius": 7.9,
+                "conformal_50_empirical_coverage": 50.0
+            },
+            "away": {
+                "std_dev": 11.95,
+                "mae": 9.5,
+                "bias": 0.0,
+                "conformal_80_radius": 15.4,
+                "conformal_80_empirical_coverage": 80.1,
+                "conformal_90_radius": 19.6,
+                "conformal_90_empirical_coverage": 90.1,
+                "conformal_50_radius": 8.0,
+                "conformal_50_empirical_coverage": 50.0
+            }
+        },
+        "calibration_samples": 2707
+    }
+}

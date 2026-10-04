@@ -9,6 +9,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+  UsersRound,
+  Cpu,
+  LayoutDashboard,
 } from "lucide-react";
 
 import TeamLogo from "./TeamLogo";
@@ -76,6 +79,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [filterTeam2, setFilterTeam2] = useState("");
   const [modelStatus, setModelStatus] = useState<any>(null);
   const [selectorOpen, setSelectorOpen] = useState(!initialGame);
+  const [activeResultTab, setActiveResultTab] = useState<"overview" | "explanation" | "players" | "technical">("overview");
 
   const [playerOverrides, setPlayerOverrides] = useState<Record<string, PlayerStatusOverride>>({});
   const [previewRosters, setPreviewRosters] = useState<{
@@ -268,6 +272,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         });
         const normalized = normalizeGameFullPrediction(data, h, a, d);
         setResult(normalized);
+        setActiveResultTab("overview");
         setSelectorOpen(false);
       } catch (e: any) {
         setError(e.message || "Unknown error");
@@ -342,6 +347,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
     setDate(game.GAME_DATE);
     setPlayerOverrides({});
     setResult(null);
+    setActiveResultTab("overview");
     setError(null);
     setSelectorOpen(true);
   };
@@ -803,67 +809,95 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
             />
           )}
 
-          {/* ── SECTION 3: TACTICAL BLUEPRINT & GAME SCRIPT ── */}
-          {result.win_probability && !result.win_probability.error && winnerInfo && (
-            <MatchupTacticalHub
-              result={result}
-              homeInfo={homeInfo}
-              awayInfo={awayInfo}
-              winnerInfo={winnerInfo}
-            />
-          )}
-
-          {/* ── SECTION 4: EXPLAINABLE AI MODEL INSIGHTS (XAI) ── */}
-          {result.explanation && (
-            <div className="animate-fade-in-up stagger-3">
-              <ModelExplanationSection
-                result={result}
-                homeInfo={homeInfo}
-                awayInfo={awayInfo}
-              />
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div role="tablist" aria-label="Tahmin raporu bölümleri" className="grid grid-cols-2 border-b border-slate-200 bg-slate-50/80 sm:grid-cols-4">
+              {([
+                { id: "overview", label: "Genel Bakış", icon: LayoutDashboard, detail: "Maç senaryosu" },
+                { id: "explanation", label: "Modelin Gerekçesi", icon: Sparkles, detail: "Öne çıkan 5 neden" },
+                { id: "players", label: "Oyuncular ve Kadro", icon: UsersRound, detail: "Rotasyonlar" },
+                { id: "technical", label: "Teknik Detaylar", icon: Cpu, detail: "Model bilgisi" },
+              ] as const).map((tab) => {
+                const Icon = tab.icon;
+                const selected = activeResultTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setActiveResultTab(tab.id)}
+                    className={`flex min-h-16 items-center gap-2.5 border-b-2 px-3 py-3 text-left transition-colors sm:px-4 ${selected ? "border-indigo-600 bg-white text-indigo-700" : "border-transparent text-slate-500 hover:bg-white hover:text-slate-800"}`}
+                  >
+                    <Icon size={16} className={selected ? "shrink-0 text-indigo-600" : "shrink-0 text-slate-400"} />
+                    <span className="min-w-0">
+                      <span className="block text-[11px] font-black leading-tight">{tab.label}</span>
+                      <span className="mt-0.5 block text-[9px] font-medium text-slate-400">{tab.detail}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-          )}
 
-          {/* ── SECTION 4.5: INTERACTIVE LINEUP & INJURY HUB ── */}
-          {result.player_predictions && !result.player_predictions.error && (
-            <div className="animate-fade-in-up stagger-4">
-              <LineupInjuryHub
-                homeInfo={homeInfo}
-                awayInfo={awayInfo}
-                homePlayers={result.player_predictions.home_players || []}
-                awayPlayers={result.player_predictions.away_players || []}
-                overrides={playerOverrides}
-                onOverrideChange={handleOverrideChange}
-                onResetOverrides={handleResetOverrides}
-                onApplyChanges={handleApplyOverrides}
-                loading={loading}
-              />
+            <div role="tabpanel" className="space-y-5 p-4 sm:p-5 lg:p-6">
+              {activeResultTab === "overview" && (
+                <>
+                  {result.win_probability && !result.win_probability.error && winnerInfo && (
+                    <MatchupTacticalHub result={result} homeInfo={homeInfo} awayInfo={awayInfo} winnerInfo={winnerInfo} />
+                  )}
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-[11px] leading-relaxed text-slate-500">
+                    Tahminler istatistiksel model çıktılarıdır; kesin sonuç değildir. Skor tahminleri doğal olarak daha yüksek belirsizlik taşır.
+                    {result.final_display_recommendation?.warning && (
+                      <span className="mt-1 block font-semibold text-amber-700">{result.final_display_recommendation.warning}</span>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {activeResultTab === "explanation" && (
+                <ModelExplanationSection result={result} homeInfo={homeInfo} awayInfo={awayInfo} />
+              )}
+
+              {activeResultTab === "players" && (
+                result.player_predictions && !result.player_predictions.error ? (
+                  <div className="space-y-5">
+                    <LineupInjuryHub
+                      homeInfo={homeInfo}
+                      awayInfo={awayInfo}
+                      homePlayers={result.player_predictions.home_players || []}
+                      awayPlayers={result.player_predictions.away_players || []}
+                      overrides={playerOverrides}
+                      onOverrideChange={handleOverrideChange}
+                      onResetOverrides={handleResetOverrides}
+                      onApplyChanges={handleApplyOverrides}
+                      loading={loading}
+                    />
+                    <div className="surface rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm lg:p-7">
+                      <PlayerSpotlight
+                        players={result.player_predictions}
+                        homeInfo={homeInfo}
+                        awayInfo={awayInfo}
+                        gameDate={date}
+                        season={CURRENT_SEASON}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                    Bu tahminde oyuncu projeksiyonları oluşturulamadı.
+                  </div>
+                )
+              )}
+
+              {activeResultTab === "technical" && (
+                <div className="space-y-5">
+                  <ModelDiagnostics modelStatus={modelStatus} result={result} />
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-[11px] leading-relaxed text-slate-500">
+                    Kazanma olasılığı ve skor projeksiyonu ayrı modellerden gelir; yakın maçlarda favorileri farklı olabilir. SHAP açıklamaları model girdilerinin bu tek tahmine katkı yönünü gösterir, nedensellik veya garanti ifade etmez.
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-
-          {/* ── SECTION 5: PLAYER PROJECTION SPOTLIGHT & ROSTERS ── */}
-          {result.player_predictions && !result.player_predictions.error && (
-            <div className="surface rounded-[1.75rem] p-5 lg:p-7 border border-slate-200/80 bg-white shadow-sm animate-fade-in-up stagger-5">
-              <PlayerSpotlight
-                players={result.player_predictions}
-                homeInfo={homeInfo}
-                awayInfo={awayInfo}
-                gameDate={date}
-                season="2026-27"
-              />
-            </div>
-          )}
-
-          {/* ── SECTION 8: MODEL DIAGNOSTICS (collapsed) ── */}
-          <ModelDiagnostics modelStatus={modelStatus} result={result} />
-
-          {/* Disclaimer */}
-          <div className="p-4 rounded-xl border border-slate-200/50 bg-slate-50/60 text-[10px] text-slate-400 font-medium leading-relaxed animate-fade-in-up stagger-8">
-            <span className="font-black text-slate-500">Disclaimer:</span> Statistical model output — not a guaranteed result. Score predictions have high natural variance. Use win probability as your primary signal.
-            {result.final_display_recommendation?.warning && (
-              <span className="block mt-1 text-amber-600 font-semibold">{result.final_display_recommendation.warning}</span>
-            )}
-          </div>
+          </section>
         </div>
       )}
     </div>

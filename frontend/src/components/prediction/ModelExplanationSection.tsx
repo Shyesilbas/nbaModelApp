@@ -1,380 +1,483 @@
-import { useState } from "react";
-import { Cpu, Info, Sparkles, ArrowUpRight, ArrowDownRight, Compass } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  Activity,
+  ArrowDownRight,
+  ArrowUpRight,
+  Clock,
+  Eye,
+  EyeOff,
+  Home,
+  Info,
+  Scale,
+  Shield,
+  Sparkles,
+  Target,
+  Trophy,
+  Zap,
+} from "lucide-react";
 import type { TeamInfo } from "./types";
 import { formatFeatureInsight } from "./featureLabels";
 
+type FeatureImpact = {
+  feature_name: string;
+  display_name?: string;
+  category?: string;
+  value: number;
+  contribution: number;
+  influence?: "FAVORS_HOME" | "FAVORS_AWAY" | "NEUTRAL" | string;
+};
+
+// Kategoriye gore uygun ve sade ikon secer
+function CategoryIcon({ type }: { type?: string }) {
+  switch (type) {
+    case "trophy":
+      return <Trophy size={14} className="text-amber-500" />;
+    case "zap":
+      return <Zap size={14} className="text-indigo-500" />;
+    case "clock":
+      return <Clock size={14} className="text-emerald-500" />;
+    case "home":
+      return <Home size={14} className="text-sky-500" />;
+    case "target":
+      return <Target size={14} className="text-rose-500" />;
+    case "shield":
+      return <Shield size={14} className="text-blue-500" />;
+    case "scale":
+      return <Scale size={14} className="text-purple-500" />;
+    default:
+      return <Activity size={14} className="text-slate-500" />;
+  }
+}
+
+// Sıraya gore etki derecesi rozeti
+function RankBadge({ rank }: { rank: number }) {
+  if (rank === 1) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 text-[10px] font-black text-amber-700 uppercase tracking-wide">
+        En Belirleyici Faktör
+      </span>
+    );
+  }
+  if (rank === 2) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 text-[10px] font-bold text-indigo-700">
+        Çok Yüksek Etki
+      </span>
+    );
+  }
+  if (rank === 3) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200/80 px-2.5 py-0.5 text-[10px] font-bold text-sky-700">
+        Yüksek Etki
+      </span>
+    );
+  }
+  if (rank === 4) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+        Önemli Katkı
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
+      Destekleyici Faktör
+    </span>
+  );
+}
+
+// Takım lehine ibaresi
+function TeamAdvantageBadge({
+  influence,
+  homeInfo,
+  awayInfo,
+}: {
+  influence?: string;
+  homeInfo: TeamInfo;
+  awayInfo: TeamInfo;
+}) {
+  const isHome = influence === "FAVORS_HOME";
+  const isAway = influence === "FAVORS_AWAY";
+  const team = isHome ? homeInfo : isAway ? awayInfo : null;
+
+  if (!team) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500">
+        Dengeli / Nötr
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wider shadow-xs"
+      style={{
+        color: team.color,
+        backgroundColor: `${team.color}14`,
+        borderColor: `${team.color}33`,
+        borderWidth: "1px",
+      }}
+    >
+      {isHome ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+      {team.name} ({team.abbr}) Lehine
+    </span>
+  );
+}
+
+// Tek bir sebebi gosteren sade kart
+function ReasonCard({
+  feature,
+  rank,
+  maxImpact,
+  totalImpact,
+  homeInfo,
+  awayInfo,
+  showTech,
+}: {
+  feature: FeatureImpact;
+  rank: number;
+  maxImpact: number;
+  totalImpact: number;
+  homeInfo: TeamInfo;
+  awayInfo: TeamInfo;
+  showTech: boolean;
+}) {
+  const formatted = formatFeatureInsight(
+    feature.feature_name,
+    feature.value,
+    feature.influence ?? "NEUTRAL",
+    homeInfo,
+    awayInfo
+  );
+
+  const team =
+    feature.influence === "FAVORS_HOME"
+      ? homeInfo
+      : feature.influence === "FAVORS_AWAY"
+      ? awayInfo
+      : null;
+
+  const contributionAbs = Math.abs(feature.contribution);
+  const share = (contributionAbs / totalImpact) * 100;
+  const relativePercent = Math.max(12, Math.round((contributionAbs / maxImpact) * 100));
+
+  // Rank numara stilleri
+  const rankColors = [
+    "bg-amber-500 text-white shadow-amber-500/20",
+    "bg-indigo-600 text-white shadow-indigo-500/20",
+    "bg-sky-600 text-white shadow-sky-500/20",
+    "bg-emerald-600 text-white shadow-emerald-500/20",
+    "bg-slate-700 text-white shadow-slate-500/20",
+  ];
+
+  return (
+    <article className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:border-slate-300 hover:shadow-md">
+      {/* Sol kenar renk vurgusu */}
+      <div
+        className="absolute top-0 bottom-0 left-0 w-1.5"
+        style={{ backgroundColor: team?.color || "#6366f1" }}
+      />
+
+      {/* Kart Ust Baslik Alani */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
+        <div className="flex items-center gap-2.5">
+          <div
+            className={`flex h-7 w-7 items-center justify-center rounded-xl text-xs font-black shadow-sm ${
+              rankColors[rank - 1] || "bg-slate-700 text-white"
+            }`}
+          >
+            {rank}
+          </div>
+          <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
+            <CategoryIcon type={formatted.categoryIcon} />
+            <span>{formatted.category}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <RankBadge rank={rank} />
+          <TeamAdvantageBadge
+            influence={feature.influence}
+            homeInfo={homeInfo}
+            awayInfo={awayInfo}
+          />
+        </div>
+      </div>
+
+      {/* Aciklama Metni */}
+      <div className="pt-3">
+        <h4 className="m-0 text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
+          {formatted.title}
+        </h4>
+        <p className="mt-1.5 mb-0 text-xs sm:text-sm leading-relaxed text-slate-600">
+          {formatted.insight}
+        </p>
+      </div>
+
+      {/* Sade Gorsel Etki Cubugu ve Ozet Veri */}
+      <div className="mt-4 pt-3 border-t border-slate-100/80">
+        <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-500 mb-1.5">
+          <span>Model Ağırlık Seviyesi</span>
+          <span className="font-bold text-slate-700">
+            {formatted.simpleValue ? `Ölçülen: ${formatted.simpleValue}` : `%${share.toFixed(0)} Model Payı`}
+          </span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${relativePercent}%`,
+              backgroundColor: team?.color || "#4f46e5",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Teknik Detay Alani (Sadece acildiginda gorunur) */}
+      {showTech && (
+        <div className="mt-3 rounded-lg bg-slate-50 p-2.5 text-[10px] text-slate-500 flex flex-wrap items-center justify-between gap-2 font-mono">
+          <span>Değişken: <strong>{feature.feature_name}</strong></span>
+          <span>Ham Değer: <strong>{feature.value}</strong></span>
+          <span>SHAP Katkısı: <strong className={feature.contribution >= 0 ? "text-indigo-600" : "text-rose-600"}>{feature.contribution >= 0 ? "+" : ""}{feature.contribution.toFixed(4)}</strong></span>
+        </div>
+      )}
+    </article>
+  );
+}
+
+type PredictionResult = {
+  explanation?: {
+    win_probability?: {
+      features?: FeatureImpact[];
+      predicted_winner?: string;
+    };
+    score_prediction?: {
+      margin_features?: FeatureImpact[];
+      pace_features?: FeatureImpact[];
+      home_rtg_features?: FeatureImpact[];
+      away_rtg_features?: FeatureImpact[];
+    };
+  };
+  win_probability?: {
+    predicted_winner?: string;
+    home_win_probability?: number;
+    away_win_probability?: number;
+  };
+};
 
 export function ModelExplanationSection({
   result,
   homeInfo,
   awayInfo,
 }: {
-  result: any;
+  result: PredictionResult | null | undefined;
   homeInfo: TeamInfo;
   awayInfo: TeamInfo;
 }) {
   const [activeTab, setActiveTab] = useState<"win" | "score">("win");
-  const expl = result.explanation;
+  const [showTechDetails, setShowTechDetails] = useState(false);
 
-  if (!expl) {
+  const explanation = result?.explanation;
+
+  // Kazanma olasiligi modelinin one cikan en onemli 5 sebebi
+  const winTop5 = useMemo(() => {
+    const list: FeatureImpact[] = explanation?.win_probability?.features ?? [];
+    return [...list]
+      .filter((f) => Math.abs(f.contribution) > 0.0001)
+      .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+      .slice(0, 5);
+  }, [explanation]);
+
+  // Skor modelinin one cikan en onemli 5 sebebi
+  const scoreTop5 = useMemo(() => {
+    const score = explanation?.score_prediction;
+    if (!score) return [];
+    const combined: FeatureImpact[] = [
+      ...(score.margin_features ?? []),
+      ...(score.pace_features ?? []),
+      ...(score.home_rtg_features ?? []),
+      ...(score.away_rtg_features ?? []),
+    ];
+    return [...combined]
+      .filter((f) => Math.abs(f.contribution) > 0.0001)
+      .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+      .slice(0, 5);
+  }, [explanation]);
+
+  const activeFeatures = activeTab === "win" ? winTop5 : scoreTop5;
+
+  const totalImpact = useMemo(() => {
+    return activeFeatures.reduce((sum, f) => sum + Math.abs(f.contribution), 0) || 1;
+  }, [activeFeatures]);
+
+  const maxImpact = useMemo(() => {
+    return Math.max(...activeFeatures.map((f) => Math.abs(f.contribution)), 0.0001);
+  }, [activeFeatures]);
+
+  if (!explanation || (!winTop5.length && !scoreTop5.length)) {
     return (
-      <div className="surface rounded-[1.5rem] p-6 border border-slate-200/80 bg-white">
-        <div className="flex items-center gap-3">
-          <Info className="text-slate-400" size={16} />
-          <p className="text-xs text-slate-500 font-semibold m-0">
-            Açıklanabilir Yapay Zeka (XAI) detayları bu maç için oluşturulmadı.
-          </p>
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-3">
+          <Info size={22} />
         </div>
+        <h3 className="m-0 text-sm font-bold text-slate-800">Model açıklaması bulunamadı</h3>
+        <p className="mt-1 mb-0 text-xs leading-relaxed text-slate-500">
+          Bu maç için etken analizi verisi üretilmedi. Ana tahmin sonuçları geçerlidir.
+        </p>
       </div>
     );
   }
 
-  const winExpl = expl.win_probability;
-  const scoreExpl = expl.score_prediction;
+  // Ozet metni olustur
+  const winnerName = result?.win_probability?.predicted_winner;
+  const isHomeWinner = winnerName === homeInfo.name || winnerName === homeInfo.abbr;
+  const favoredTeam = isHomeWinner ? homeInfo : awayInfo;
 
-  // Filter features to get meaningful ones
-  const winFeatures = (winExpl?.features || []).filter(
-    (f: any) => Math.abs(f.contribution) > 0.0001
-  );
+  const top1Insight = activeFeatures[0]
+    ? formatFeatureInsight(
+        activeFeatures[0].feature_name,
+        activeFeatures[0].value,
+        activeFeatures[0].influence ?? "NEUTRAL",
+        homeInfo,
+        awayInfo
+      )
+    : null;
 
-  // Calculate total absolute contribution for percentage scaling
-  const totalWinContrib = winFeatures.reduce((sum: number, f: any) => sum + Math.abs(f.contribution), 0) || 1;
-
-  // Group win features by category
-  const categories: { [key: string]: any[] } = {};
-  winFeatures.forEach((f: any) => {
-    const formatted = formatFeatureInsight(f.feature_name, f.value, f.influence, homeInfo, awayInfo);
-    const cat = formatted.category || f.category || "Genel Metrik";
-    if (!categories[cat]) {
-      categories[cat] = [];
-    }
-    categories[cat].push({ ...f, formatted });
-  });
-
-  const winnerAbbr = result?.win_probability?.predicted_winner || result?.predicted_winner || (result?.win_probability?.home_win_prob >= 0.5 ? homeInfo.abbr : awayInfo.abbr);
-  const winnerInfo = winnerAbbr === homeInfo.abbr ? homeInfo : awayInfo;
-
-  const top4Drivers = winFeatures.slice(0, 4);
+  const top2Insight = activeFeatures[1]
+    ? formatFeatureInsight(
+        activeFeatures[1].feature_name,
+        activeFeatures[1].value,
+        activeFeatures[1].influence ?? "NEUTRAL",
+        homeInfo,
+        awayInfo
+      )
+    : null;
 
   return (
-    <div className="surface rounded-[1.5rem] p-5 lg:p-6 border border-slate-200/90 bg-white shadow-sm space-y-6">
-      
-      {/* ── TOP 4 PREDICTION DRIVERS (Hero Highlight) ── */}
-      {top4Drivers.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                <Sparkles size={16} />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider m-0">
-                  Modelin Kararını Belirleyen Temel Etkenler
-                </h4>
-                <p className="text-[10px] text-slate-400 font-medium m-0">
-                  Model neden {winnerInfo.name} ({winnerInfo.abbr}) galibiyetini öngörüyor?
-                </p>
-              </div>
-            </div>
-            <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-              SHAP Karar Ağırlıkları
+    <section className="space-y-4">
+      {/* ── 1. Sade ve Şık Başlık Banner'ı ── */}
+      <header className="rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 text-white shadow-sm border border-slate-800/80">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-indigo-300 ring-1 ring-white/20">
+              <Sparkles size={20} />
             </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {top4Drivers.map((f: any, i: number) => {
-              const formatted = formatFeatureInsight(f.feature_name, f.value, f.influence, homeInfo, awayInfo);
-              const favorsHome = f.influence === "FAVORS_HOME";
-              const favorsAway = f.influence === "FAVORS_AWAY";
-              const teamColor = favorsHome ? homeInfo.color : favorsAway ? awayInfo.color : "#64748b";
-              const teamAbbr = favorsHome ? homeInfo.abbr : favorsAway ? awayInfo.abbr : "NEUT";
-              const weightPct = ((Math.abs(f.contribution) / totalWinContrib) * 100).toFixed(1);
-              const isSupporting = (favorsHome && winnerAbbr === homeInfo.abbr) || (favorsAway && winnerAbbr === awayInfo.abbr);
-
-              return (
-                <div 
-                  key={i} 
-                  className="relative p-3.5 bg-gradient-to-br from-slate-50/70 to-white border border-slate-200/80 rounded-xl shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between gap-2.5 group"
-                  style={{ borderLeft: `4px solid ${teamColor}` }}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0 shadow-2xs"
-                        style={{ backgroundColor: teamColor }}
-                      >
-                        {i + 1}
-                      </span>
-                      <div>
-                        <h5 className="text-xs font-black text-slate-800 group-hover:text-indigo-600 transition-colors m-0 leading-tight">
-                          {formatted.title}
-                        </h5>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                          {formatted.category}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span 
-                        className="text-[9px] font-black px-1.5 py-0.5 rounded font-mono uppercase tracking-wider"
-                        style={{ backgroundColor: `${teamColor}15`, color: teamColor }}
-                      >
-                        {teamAbbr}
-                      </span>
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded font-mono ${
-                        isSupporting ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
-                      }`}>
-                        {isSupporting ? "+" : "-"}{weightPct}%
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-650 font-normal leading-relaxed m-0">
-                    {formatted.insight}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── XAI DEEP-DIVE TABS ── */}
-      <div className="pt-2 border-t border-slate-100 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Cpu className="text-indigo-600" size={16} />
             <div>
-              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider m-0">
-                Açıklanabilir Yapay Zeka (XAI) Model Dağılımı
-              </h4>
-              <p className="text-[10px] text-slate-400 font-medium m-0">
-                Oyun teorisine (Shapley Values) dayalı matematiksel karar faktörleri
+              <h3 className="m-0 text-base font-black tracking-tight text-white">
+                Modelin Karar Gerekçeleri
+              </h3>
+              <p className="mt-1 mb-0 text-xs leading-relaxed text-slate-300">
+                Yapay zekanın bu maçı değerlendirirken en çok ağırlık verdiği ve tercihi belirleyen <strong>5 temel neden</strong>:
               </p>
             </div>
           </div>
 
-          <div className="flex border border-slate-200 bg-slate-50 p-0.5 rounded-xl w-fit gap-0.5">
-            <button
-              onClick={() => setActiveTab("win")}
-              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
-                activeTab === "win"
-                  ? "bg-white text-indigo-600 shadow-xs border border-slate-200/50"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
+          {winnerName && (
+            <div
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-black uppercase tracking-wider shadow-sm"
+              style={{
+                backgroundColor: `${favoredTeam.color}22`,
+                color: "#ffffff",
+                border: `1px solid ${favoredTeam.color}55`,
+              }}
             >
-              Kazanma Olasılığı (Win Prob)
-            </button>
+              <span>Favori:</span>
+              <span className="text-white underline decoration-2 underline-offset-4">
+                {favoredTeam.name}
+              </span>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* ── 2. Sekme Seçici (Kazanma vs Skor) ── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div
+          role="tablist"
+          aria-label="Sebep kategorileri"
+          className="inline-flex rounded-xl border border-slate-200 bg-slate-100/90 p-1"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "win"}
+            onClick={() => setActiveTab("win")}
+            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+              activeTab === "win"
+                ? "bg-white text-indigo-700 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Trophy size={13} />
+            <span>Kazanma Tercihi (5 Sebep)</span>
+          </button>
+
+          {scoreTop5.length > 0 && (
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "score"}
               onClick={() => setActiveTab("score")}
-              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
                 activeTab === "score"
-                  ? "bg-white text-indigo-600 shadow-xs border border-slate-200/50"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-white text-indigo-700 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Skor & Tempo Faktörleri
+              <Zap size={13} />
+              <span>Skor ve Sayı Beklentisi (5 Sebep)</span>
             </button>
-          </div>
+          )}
         </div>
 
-        {activeTab === "win" && (
-          <div className="space-y-5 animate-fade-in">
-            {/* Tug-of-war visualization */}
-            <div className="bg-slate-50/60 border border-slate-200/70 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h5 className="text-[10px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-1.5 m-0">
-                  <Compass size={13} className="text-indigo-500" />
-                  Karar Çekişmesi (Feature Tug-of-War)
-                </h5>
-                <span className="text-[9px] font-bold text-slate-400">Merkez Noktası: Nötr Denge</span>
-              </div>
-
-              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                {winFeatures.slice(0, 8).map((f: any, idx: number) => {
-                  const formatted = formatFeatureInsight(f.feature_name, f.value, f.influence, homeInfo, awayInfo);
-                  const maxContrib = Math.max(...winFeatures.map((x: any) => Math.abs(x.contribution)), 0.1);
-                  const pct = Math.min(100, (Math.abs(f.contribution) / maxContrib) * 100);
-                  const isHomeFavored = f.contribution > 0;
-                  
-                  return (
-                    <div key={idx} className="flex items-center gap-3 text-xs">
-                      <div className="w-36 text-left font-bold text-slate-700 truncate text-[11px]" title={formatted.title}>
-                        {formatted.title}
-                      </div>
-                      <div className="flex-1 h-5 bg-slate-200/70 rounded-full relative overflow-hidden flex items-center">
-                        {isHomeFavored ? (
-                          <div className="absolute inset-y-0 left-1/2 flex items-center" style={{ width: "50%" }}>
-                            <div 
-                              className="h-full rounded-r-full transition-all duration-500 shadow-2xs" 
-                              style={{ 
-                                width: `${pct / 2}%`, 
-                                backgroundColor: homeInfo.color 
-                              }} 
-                            />
-                            <span className="text-[9px] font-bold ml-1.5 font-mono" style={{ color: homeInfo.color }}>
-                              +{f.contribution.toFixed(3)}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="absolute inset-y-0 right-1/2 flex items-center justify-end" style={{ width: "50%" }}>
-                            <span className="text-[9px] font-bold mr-1.5 font-mono" style={{ color: awayInfo.color }}>
-                              {f.contribution.toFixed(3)}
-                            </span>
-                            <div 
-                              className="h-full rounded-l-full transition-all duration-500 shadow-2xs" 
-                              style={{ 
-                                width: `${pct / 2}%`, 
-                                backgroundColor: awayInfo.color 
-                              }} 
-                            />
-                          </div>
-                        )}
-                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-400 z-10" />
-                      </div>
-                      <div className="w-16 text-right font-mono font-bold text-slate-500 text-[11px]">
-                        {typeof f.value === "number" ? f.value.toFixed(1) : f.value}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex justify-between text-[9px] font-black uppercase tracking-widest pt-2 border-t border-slate-200/70">
-                <span className="flex items-center gap-1" style={{ color: awayInfo.color }}>
-                  <ArrowDownRight size={12} /> {awayInfo.name} ({awayInfo.abbr}) Lehine
-                </span>
-                <span className="text-slate-400">Nötr</span>
-                <span className="flex items-center gap-1" style={{ color: homeInfo.color }}>
-                  {homeInfo.name} ({homeInfo.abbr}) Lehine <ArrowUpRight size={12} />
-                </span>
-              </div>
-            </div>
-
-            {/* Categorized detailed cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.keys(categories).map((catName, idx) => (
-                <div key={idx} className="bg-slate-50/50 border border-slate-200/70 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-200/70 pb-1.5">
-                    <h6 className="text-[10px] font-black text-slate-700 uppercase tracking-wider m-0">
-                      {catName}
-                    </h6>
-                    <span className="text-[9px] font-bold text-slate-400 font-mono">
-                      {categories[catName].length} Parametre
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {categories[catName].slice(0, 4).map((f: any, fIdx: number) => (
-                      <div key={fIdx} className="flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-slate-650 truncate max-w-[200px]" title={f.formatted.title}>
-                          {f.formatted.title}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-slate-700">
-                            {typeof f.value === "number" ? f.value.toFixed(1) : f.value}
-                          </span>
-                          <span 
-                            className="px-1.5 py-0.5 rounded font-mono font-black text-[9px]"
-                            style={{
-                              backgroundColor: f.influence === "FAVORS_HOME" ? `${homeInfo.color}15` : f.influence === "FAVORS_AWAY" ? `${awayInfo.color}15` : "#f1f5f9",
-                              color: f.influence === "FAVORS_HOME" ? homeInfo.color : f.influence === "FAVORS_AWAY" ? awayInfo.color : "#64748b"
-                            }}
-                          >
-                            {f.influence === "FAVORS_HOME" ? homeInfo.abbr : f.influence === "FAVORS_AWAY" ? awayInfo.abbr : "NÖTR"}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "score" && (
-          <div className="space-y-5 animate-fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Pace Adjustments */}
-              <div className="space-y-3 border border-slate-200/70 rounded-2xl p-4 bg-slate-50/50">
-                <div className="flex justify-between items-center border-b border-slate-200/70 pb-1.5">
-                  <h6 className="text-[10px] font-black text-slate-700 uppercase tracking-wider m-0">
-                    Maç Temposu & Pozisyon Sayısı (Pace)
-                  </h6>
-                  <span className="text-[10px] font-mono font-black text-indigo-600">
-                    Tempo Katkısı
-                  </span>
-                </div>
-                <div className="space-y-2.5">
-                  {(scoreExpl?.pace_features || []).slice(0, 5).map((f: any, idx: number) => {
-                    const formatted = formatFeatureInsight(f.feature_name, f.value, f.influence, homeInfo, awayInfo);
-                    return (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex justify-between text-[11px] font-semibold text-slate-650">
-                          <span>{formatted.title}</span>
-                          <span className="font-mono font-bold" style={{ color: f.contribution >= 0 ? "#10b981" : "#ef4444" }}>
-                            {f.contribution >= 0 ? `+${f.contribution.toFixed(2)}` : f.contribution.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full bg-slate-200/80 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full rounded-full transition-all duration-300"
-                            style={{ 
-                              width: `${Math.min(100, Math.abs(f.contribution) * 15)}%`,
-                              backgroundColor: f.contribution >= 0 ? "#10b981" : "#ef4444",
-                              marginLeft: f.contribution < 0 ? "auto" : "0"
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Margin Adjustments */}
-              <div className="space-y-3 border border-slate-200/70 rounded-2xl p-4 bg-slate-50/50">
-                <div className="flex justify-between items-center border-b border-slate-200/70 pb-1.5">
-                  <h6 className="text-[10px] font-black text-slate-700 uppercase tracking-wider m-0">
-                    Fark (Margin) & Hücum Verimliliği
-                  </h6>
-                  <span className="text-[10px] font-mono font-black text-indigo-600">
-                    Fark Katkısı
-                  </span>
-                </div>
-                <div className="space-y-2.5">
-                  {(scoreExpl?.margin_features || []).slice(0, 5).map((f: any, idx: number) => {
-                    const formatted = formatFeatureInsight(f.feature_name, f.value, f.influence, homeInfo, awayInfo);
-                    const favorsHome = f.contribution > 0;
-                    return (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex justify-between text-[11px] font-semibold text-slate-650">
-                          <span>{formatted.title}</span>
-                          <span className="font-mono font-bold" style={{ color: favorsHome ? homeInfo.color : awayInfo.color }}>
-                            {favorsHome ? `+${f.contribution.toFixed(1)} ${homeInfo.abbr}` : `${f.contribution.toFixed(1)} ${awayInfo.abbr}`}
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full bg-slate-200/80 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full rounded-full transition-all duration-300"
-                            style={{ 
-                              width: `${Math.min(100, Math.abs(f.contribution) * 10)}%`,
-                              backgroundColor: favorsHome ? homeInfo.color : awayInfo.color,
-                              marginLeft: favorsHome ? "0" : "auto"
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Teknik Değerleri Göster / Gizle Butonu */}
+        <button
+          type="button"
+          onClick={() => setShowTechDetails((prev) => !prev)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:text-slate-800 transition-colors shadow-2xs"
+        >
+          {showTechDetails ? <EyeOff size={13} /> : <Eye size={13} />}
+          <span>{showTechDetails ? "Teknik Değerleri Gizle" : "Teknik Verileri Göster"}</span>
+        </button>
       </div>
-    </div>
+
+      {/* ── 3. Tam 5 Tane Öne Çıkan Sebep Kartı ── */}
+      <div className="space-y-3">
+        {activeFeatures.map((feature, index) => (
+          <ReasonCard
+            key={`${feature.feature_name}-${index}`}
+            feature={feature}
+            rank={index + 1}
+            maxImpact={maxImpact}
+            totalImpact={totalImpact}
+            homeInfo={homeInfo}
+            awayInfo={awayInfo}
+            showTech={showTechDetails}
+          />
+        ))}
+      </div>
+
+      {/* ── 4. Herkesin Anlayacağı Özet Değerlendirme Kutusu ── */}
+      {top1Insight && top2Insight && (
+        <footer className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-slate-50/80 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs">
+              💡
+            </span>
+            <div className="min-w-0">
+              <h5 className="m-0 text-xs font-extrabold uppercase tracking-wider text-indigo-900">
+                Genel Değerlendirme
+              </h5>
+              <p className="mt-1 mb-0 text-xs sm:text-sm leading-relaxed text-slate-700">
+                Modelimiz bu karşılaşmada özellikle <strong>{favoredTeam.name}</strong> lehine olan{" "}
+                <strong className="text-indigo-900">{top1Insight.title}</strong> ve{" "}
+                <strong className="text-indigo-900">{top2Insight.title}</strong> avantajları sayesinde
+                bu takımın galibiyete daha yakın olduğunu değerlendirmektedir.
+              </p>
+            </div>
+          </div>
+        </footer>
+      )}
+    </section>
   );
 }

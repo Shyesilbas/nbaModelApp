@@ -121,12 +121,12 @@ def predict_score(
     pred_home = (pred_total + pred_margin) / 2.0
     pred_away = (pred_total - pred_margin) / 2.0
 
-    offsets = metadata.get("prediction_interval_offsets_80pct", {
-        "home": [-8.0, 8.0],
-        "away": [-8.0, 8.0],
-        "total": [-12.0, 12.0],
-        "margin": [-10.0, 10.0]
-    })
+    offsets = metadata.get("prediction_interval_offsets_80pct") or {
+        "home": [-16.1, 16.1],
+        "away": [-15.7, 15.7],
+        "total": [-25.2, 25.2],
+        "margin": [-20.1, 20.1]
+    }
 
     return ScorePredictionResponse(
         home_team=home_team,

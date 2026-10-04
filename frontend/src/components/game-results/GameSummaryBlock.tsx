@@ -22,12 +22,6 @@ export function GameSummaryBlock({
 
   const summaryItems = [
     {
-      label: isClose ? "Closest Game" : "Game Type",
-      value: isClose ? `${margin}-point margin` : margin >= 20 ? "Blowout" : "Comfortable win",
-      show: true,
-    },
-    { label: "Winner", value: winnerFull, show: !!winnerFull },
-    {
       label: "Top Scorer",
       value: topScorer ? `${topScorer.PLAYER_NAME ?? topScorer.player_name} (${topScorer.PTS ?? topScorer.pts})` : "",
       show: !!topScorer,
@@ -49,16 +43,28 @@ export function GameSummaryBlock({
   ].filter((item) => item.show && item.value);
 
   return (
-    <div className="rounded-[1.5rem] border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-5 shadow-[0_10px_40px_rgba(15,23,42,0.05)]">
-      <div className="mb-4">
-        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Game Summary</p>
-        <p className="mt-0.5 text-sm font-semibold text-slate-700">10-second read</p>
+    <div className="relative h-full overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white p-5 shadow-sm">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#c9082a] via-slate-200 to-[#1d428a]" />
+      <div className="mb-4 flex items-start justify-between gap-3 pt-1">
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Game at a glance</p>
+          <p className="mt-1 text-sm font-semibold text-slate-700">The story behind the final score</p>
+        </div>
+        <div className="shrink-0 rounded-xl bg-slate-50 px-3 py-2 text-right ring-1 ring-slate-100">
+          <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400">Margin</p>
+          <p className="text-lg font-black leading-tight text-slate-900">{margin}<span className="ml-1 text-[9px] font-bold text-slate-400">PTS</span></p>
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {winnerFull && <div className="mb-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800 ring-1 ring-emerald-100">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        <span className="font-bold">{winnerFull}</span>
+        <span className="text-emerald-700/70">{isClose ? "held on in a close finish" : margin >= 20 ? "pulled away for a big win" : "came away with the win"}</span>
+      </div>}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {summaryItems.map((item) => (
-          <div key={item.label} className="rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm">
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">{item.label}</p>
-            <p className="mt-1 text-[13px] font-bold leading-tight text-slate-800">{item.value}</p>
+          <div key={item.label} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5">
+            <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">{item.label}</p>
+            <p className="mt-1 truncate text-[12px] font-bold leading-tight text-slate-800">{item.value}</p>
           </div>
         ))}
       </div>

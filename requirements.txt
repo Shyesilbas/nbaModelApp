@@ -5,3 +5,4 @@ psycopg[binary]
 shap
 matplotlib
 duckdb
+pdfplumber

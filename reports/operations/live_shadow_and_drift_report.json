@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-10-04T14:15:34.686749+00:00",
+  "total_shadow_predictions_logged": 51,
+  "total_matched_with_outcomes": 50,
+  "win_evaluation": {
+    "evaluated_games": 50,
+    "brier_score": 0.25,
+    "roc_auc": 0.5,
+    "accuracy": 0.64,
+    "log_loss": 0.6931
+  },
+  "score_evaluation": {
+    "total_mae": 16.73,
+    "total_bias": 1.6,
+    "margin_mae": 13.72,
+    "margin_bias": 0.57,
+    "conformal_80_coverage": 78.0
+  },
+  "feature_drift_ks_tests": {
+    "PACE_LAST_5": {
+      "ks_statistic": 0.1996,
+      "p_value": 0.0329,
+      "drift_detected": true,
+      "ref_mean": 101.05,
+      "live_mean": 100.27
+    },
+    "OFF_RTG_LAST_5": {
+      "ks_statistic": 0.2343,
+      "p_value": 0.0071,
+      "drift_detected": true,
+      "ref_mean": 112.18,
+      "live_mean": 115.07
+    },
+    "DEF_RTG_LAST_5": {
+      "ks_statistic": 0.3181,
+      "p_value": 0.0001,
+      "drift_detected": true,
+      "ref_mean": 111.84,
+      "live_mean": 108.49
+    }
+  }
+}

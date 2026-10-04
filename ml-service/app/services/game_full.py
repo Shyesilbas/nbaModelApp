@@ -232,6 +232,33 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
     except Exception as e:
         logger.warning("XAI generation failed: %s", e)
 
+    try:
+        from .shadow_logger import log_game_prediction
+        feat_h = get_features_home()
+        log_game_prediction(
+            game_id=request.game_id or "unknown",
+            home_team=home_team,
+            away_team=away_team,
+            prediction_date=pred_date_str,
+            model_version=win_resp.model_version if win_resp else "v10.1",
+            win_probability=win_resp.home_win_probability if win_resp else 0.5,
+            predicted_home_score=score_values["home_score"],
+            predicted_away_score=score_values["away_score"],
+            predicted_total=score_values["total"],
+            predicted_margin=score_values["margin"],
+            home_range=score_values.get("home_range"),
+            away_range=score_values.get("away_range"),
+            total_range=score_values.get("total_range"),
+            margin_range=score_values.get("margin_range"),
+            features_snapshot={
+                k: round(float(v), 4)
+                for k, v in feat_h.items()
+                if isinstance(v, (int, float)) and k in ["ELO_DIFF", "PACE_LAST_5", "OFF_RTG_LAST_5", "DEF_RTG_LAST_5", "REST_DIFF"]
+            } if feat_h else None,
+        )
+    except Exception as e:
+        logger.warning("Shadow prediction logging failed: %s", e)
+
     return GameFullResponse(
         game_id=request.game_id or "unknown",
         score_prediction=ScorePredictionSub(

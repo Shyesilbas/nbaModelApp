@@ -213,8 +213,11 @@ def build_player_dataset_v4(seasons=None, output_path=None, custom_metadata_df=N
         
     new_cols = [c for c in df_rolling.columns if c.endswith("_LAST_10")]
     for col in new_cols:
-        df_v4[col] = df_v4.groupby("OPPONENT_ABBREVIATION")[col].transform(lambda x: x.bfill())
-        df_v4[col] = df_v4[col].fillna(df_v4[col].mean())
+        # These are pregame opponent tendencies. Backfilling or using a
+        # whole-dataset mean imports future opponents' results into the past.
+        # Leave unavailable early-season values missing; each fold's imputer
+        # is fitted only on its training rows.
+        df_v4[col] = pd.to_numeric(df_v4[col], errors="coerce")
         
     df_v4["TARGET_PTS"] = df_v4["PTS"]
     df_v4["TARGET_REB"] = df_v4["REB"]
