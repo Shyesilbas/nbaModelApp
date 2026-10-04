@@ -33,7 +33,7 @@ def fetch_team_games_for_season(season: str = None, season_types: Optional[List[
     season = season or get_default_season()
     
     if season_types is None:
-        season_types = ["Regular Season", "PlayIn", "Playoffs", "NBA Finals"]
+        season_types = ["Pre Season", "Regular Season", "PlayIn", "Playoffs", "NBA Finals"]
         
     # Map local season types to API season types, ensuring unique calls
     api_types_to_query = set()
@@ -142,6 +142,8 @@ def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFr
             season_id = 20000 + start_year
         elif season_type == "PlayIn":
             season_id = 50000 + start_year
+        elif season_type in ("Pre Season", "Preseason"):
+            season_id = 10000 + start_year
         else:  # Playoffs / NBA Finals
             season_id = 40000 + start_year
             

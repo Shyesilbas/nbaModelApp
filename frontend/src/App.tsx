@@ -1,7 +1,6 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import {
   Search,
-  Layers,
   Trophy,
   RefreshCw,
   BarChart2,
@@ -10,20 +9,16 @@ import {
 import GameResults from "./components/GameResults";
 
 const TeamExplorer = lazy(() => import("./components/TeamExplorer"));
-const CorePlayers = lazy(() => import("./components/CorePlayers"));
 const MultiTeamPlayers = lazy(() => import("./components/MultiTeamPlayers"));
 const NbaPrediction = lazy(() => import("./components/NbaPrediction"));
 const PlayerPage = lazy(() => import("./components/PlayerPage"));
 
-import TeamLogo from "./components/TeamLogo";
 import { loadJson, prefetchManifestFiles } from "./lib/dataCache";
-import { TEAM_NAME_BY_ABBR } from "./lib/nbaTeams";
 
 const MENU = [
   { id: "game-results",   label: "Game Results",   icon: <Trophy size={15} />,      section: null },
   { id: "player-profile", label: "Player Profile", icon: <UserCircle size={15} />,  section: null },
   { id: "team-explorer",  label: "Team Explorer",  icon: <Search size={15} />,      section: "Analysis" },
-  { id: "core-players",   label: "Core Players",   icon: <Layers size={15} />,      section: null },
   { id: "multi-team",     label: "Trade Discovery",icon: <RefreshCw size={15} />,   section: null },
   { id: "nba-prediction", label: "Predictions",    icon: <BarChart2 size={15} />,   section: "Models" },
 ];
@@ -31,9 +26,9 @@ const MENU = [
 export default function App() {
   const [activeTab, setActiveTab] = useState("game-results");
   const [predictionTarget, setPredictionTarget] = useState<{ home: string; away: string; date: string } | null>(null);
+  const [profileTargetPlayerId, setProfileTargetPlayerId] = useState<number | null>(null);
 
   const [rosters, setRosters]               = useState<any[]>([]);
-  const [corePlayers, setCorePlayers]       = useState<any[]>([]);
   const [multiTeamPlayers, setMultiTeamPlayers] = useState<any[]>([]);
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState<string | null>(null);
@@ -42,13 +37,11 @@ export default function App() {
     const fetchAll = async () => {
       try {
         await loadJson("/data/dataset_summary.json");
-        const [rostersData, coreData, multiData] = await Promise.all([
+        const [rostersData, multiData] = await Promise.all([
           loadJson<any[]>("/data/team_rosters.json"),
-          loadJson<any[]>("/data/core_players.json"),
           loadJson<any[]>("/data/multi_team_players.json"),
         ]);
         setRosters(rostersData);
-        setCorePlayers(coreData);
         setMultiTeamPlayers(multiData);
         setLoading(false);
         // Start background prefetching of all files in the manifest
@@ -61,7 +54,6 @@ export default function App() {
     fetchAll();
   }, []);
 
-  const activeLabel = useMemo(() => MENU.find((m) => m.id === activeTab)?.label ?? "Dashboard", [activeTab]);
 
   return (
     <div className="min-h-screen text-slate-900">
@@ -113,24 +105,6 @@ export default function App() {
 
         {/* ── Main ── */}
         <main className="min-w-0 flex-1">
-          {/* Page header */}
-          <header className="surface mb-5 flex items-center justify-between rounded-[1.75rem] px-5 py-3.5">
-            <div className="flex items-center gap-3">
-              <TeamLogo abbr="GSW" name={TEAM_NAME_BY_ABBR.GSW} size={36} />
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Current view</p>
-                <h1 className="text-xl font-black tracking-tight text-slate-900 lg:text-2xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  {activeLabel}
-                </h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.24em] text-slate-600">
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Season live
-              </div>
-            </div>
-          </header>
 
           <div>
             {loading ? (
@@ -173,9 +147,16 @@ export default function App() {
                     </div>
                   }
                 >
-                  {activeTab === "player-profile" && <PlayerPage />}
-                  {activeTab === "team-explorer" && <TeamExplorer rosters={rosters} />}
-                  {activeTab === "core-players" && <CorePlayers corePlayers={corePlayers} rosters={rosters} />}
+                  {activeTab === "player-profile" && <PlayerPage initialPlayerId={profileTargetPlayerId} />}
+                  {activeTab === "team-explorer" && (
+                    <TeamExplorer
+                      rosters={rosters}
+                      onSelectPlayer={(playerId) => {
+                        setProfileTargetPlayerId(playerId);
+                        setActiveTab("player-profile");
+                      }}
+                    />
+                  )}
                   {activeTab === "multi-team" && <MultiTeamPlayers players={multiTeamPlayers} />}
                   {activeTab === "nba-prediction" && (
                     <NbaPrediction

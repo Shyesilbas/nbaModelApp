@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Search,
   ChevronDown,
@@ -7,17 +7,14 @@ import {
   Calendar,
   AlertCircle,
   Trophy,
-  MapPin,
   GraduationCap,
   Globe,
   Ruler,
   Weight,
-  Hash,
   ArrowRightLeft,
   Users2,
 } from "lucide-react";
 import { loadJson, loadPrivateApi } from "../lib/dataCache";
-import { getTeamTheme } from "../lib/nbaTeams";
 import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
 import GameDetailPanel from "./GameDetailPanel";
@@ -121,57 +118,17 @@ const fmtDate = (d: string | null) => {
 };
 
 const POSITION_COLOR: Record<string, string> = {
-  G: "bg-blue-50 text-blue-700 border-blue-200",
-  F: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  C: "bg-purple-50 text-purple-700 border-purple-200",
-  GUARD: "bg-blue-50 text-blue-700 border-blue-200",
-  WING: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  BIG: "bg-purple-50 text-purple-700 border-purple-200",
+  G: "bg-slate-100 text-slate-600 border-slate-200",
+  F: "bg-slate-100 text-slate-600 border-slate-200",
+  C: "bg-slate-100 text-slate-600 border-slate-200",
+  GUARD: "bg-slate-100 text-slate-600 border-slate-200",
+  WING: "bg-slate-100 text-slate-600 border-slate-200",
+  BIG: "bg-slate-100 text-slate-600 border-slate-200",
 };
 const posColor = (p: string | null) =>
   p ? POSITION_COLOR[p.toUpperCase()] ?? "bg-slate-50 text-slate-600 border-slate-200" : "";
 
 /* ─────────── Sub-components ─────────── */
-
-function StatBlock({
-  label,
-  value,
-  sub,
-  highlight,
-  teamColor,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  highlight?: boolean;
-  teamColor?: string;
-}) {
-  return (
-    <div
-      className={[
-        "flex flex-col items-center justify-center rounded-md border px-3 py-3 text-center transition-colors duration-200",
-        highlight
-          ? "border-slate-200 bg-white"
-          : "border-slate-200 bg-slate-50",
-      ].join(" ")}
-      style={highlight && teamColor ? { borderTop: `2.5px solid ${teamColor}` } : undefined}
-    >
-      <p
-        className="text-2xl font-black leading-none font-mono"
-        style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          color: highlight && teamColor ? teamColor : "#0f172a",
-        }}
-      >
-        {value}
-      </p>
-      {sub && <p className="mt-0.5 text-[10px] font-semibold text-slate-400">{sub}</p>}
-      <p className="mt-1 text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">
-        {label}
-      </p>
-    </div>
-  );
-}
 
 function InfoChip({
   icon,
@@ -186,7 +143,7 @@ function InfoChip({
 }) {
   if (!value) return null;
   return (
-    <div className={`flex items-center gap-2 border border-slate-200 px-3 py-2 ${className || "bg-slate-50"}`}>
+    <div className={`flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 ${className || "bg-slate-50"}`}>
       <span className="shrink-0 text-slate-400">{icon}</span>
       <div className="min-w-0">
         <p className="text-[8px] font-black uppercase tracking-[0.22em] text-slate-400">{label}</p>
@@ -216,7 +173,7 @@ function SeasonSelector({
             className={[
               "border-b-2 px-1 py-2 text-[11px] font-bold uppercase tracking-[0.16em] transition-colors duration-200 cursor-pointer",
               isSelected
-                ? "border-[#c8102e] text-slate-900 font-black"
+                ? "border-slate-800 text-slate-900 font-black"
                 : "border-transparent text-slate-500 hover:text-slate-900",
             ].join(" ")}
           >
@@ -228,58 +185,78 @@ function SeasonSelector({
   );
 }
 
-function AveragesGrid({ avgs, teamColor }: { avgs: SeasonAverages; teamColor?: string }) {
-  const primary = [
-    { label: "PPG", value: fmtStat(avgs.PTS), highlight: true },
-    { label: "RPG", value: fmtStat(avgs.REB), highlight: true },
-    { label: "APG", value: fmtStat(avgs.AST), highlight: true },
-    { label: "SPG", value: fmtStat(avgs.STL) },
-    { label: "BPG", value: fmtStat(avgs.BLK) },
-    { label: "TPG", value: fmtStat(avgs.TOV) },
+function AveragesGrid({ avgs }: { avgs: SeasonAverages }) {
+  const headline = [
+    { label: "Points", short: "PPG", value: fmtStat(avgs.PTS) },
+    { label: "Rebounds", short: "RPG", value: fmtStat(avgs.REB) },
+    { label: "Assists", short: "APG", value: fmtStat(avgs.AST) },
+  ];
+  const supporting = [
     { label: "MIN", value: fmtStat(avgs.MIN) },
+    { label: "STL", value: fmtStat(avgs.STL) },
+    { label: "BLK", value: fmtStat(avgs.BLK) },
+    { label: "TOV", value: fmtStat(avgs.TOV) },
     { label: "+/-", value: fmtStat(avgs.PLUS_MINUS) },
+    { label: "OREB", value: fmtStat(avgs.OREB) },
+    { label: "DREB", value: fmtStat(avgs.DREB) },
   ];
   const shooting = [
     {
       label: "FG%",
       value: fmtPct(avgs.FG_PCT),
       sub: avgs.FGM != null && avgs.FGA != null ? `${fmtStat(avgs.FGM)} / ${fmtStat(avgs.FGA)}` : undefined,
-      highlight: true,
     },
     {
       label: "3P%",
       value: fmtPct(avgs.FG3_PCT),
       sub: avgs.FG3M != null && avgs.FG3A != null ? `${fmtStat(avgs.FG3M)} / ${fmtStat(avgs.FG3A)}` : undefined,
-      highlight: true,
     },
     {
       label: "FT%",
       value: fmtPct(avgs.FT_PCT),
       sub: avgs.FTM != null && avgs.FTA != null ? `${fmtStat(avgs.FTM)} / ${fmtStat(avgs.FTA)}` : undefined,
     },
-    { label: "OREB", value: fmtStat(avgs.OREB) },
-    { label: "DREB", value: fmtStat(avgs.DREB) },
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
-          Per-Game Averages
-        </p>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500 font-mono">
-          {avgs.games_played} GP
-        </span>
-      </div>
-      <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
-        {primary.map((item) => (
-          <StatBlock key={item.label} {...item} teamColor={teamColor} />
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {headline.map((item, index) => (
+          <div key={item.short} className={`rounded-2xl border p-4 sm:p-5 ${index === 0 ? "border-slate-800 bg-slate-900 text-white" : "border-slate-200 bg-slate-50 text-slate-900"}`}>
+            <div className={`text-xs font-medium ${index === 0 ? "text-slate-300" : "text-slate-500"}`}>{item.label}</div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-3xl font-semibold tracking-tight tabular-nums">{item.value}</span>
+              <span className={`text-xs font-semibold ${index === 0 ? "text-slate-400" : "text-slate-400"}`}>{item.short}</span>
+            </div>
+          </div>
         ))}
       </div>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-        {shooting.map((item) => (
-          <StatBlock key={item.label} {...item} teamColor={teamColor} />
-        ))}
+
+      <div>
+        <h3 className="mb-2 text-xs font-semibold text-slate-600">Other per-game stats</h3>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+          {supporting.map((item) => (
+            <div key={item.label} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+              <div className="text-[10px] font-medium text-slate-500">{item.label}</div>
+              <div className="mt-1 text-base font-semibold tabular-nums text-slate-900">{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="mb-2 text-xs font-semibold text-slate-600">Shooting</h3>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {shooting.map((item) => (
+            <div key={item.label} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div>
+                <div className="text-xs font-medium text-slate-500">{item.label}</div>
+                {item.sub && <div className="mt-1 text-[11px] tabular-nums text-slate-400">{item.sub}</div>}
+              </div>
+              <div className="text-xl font-semibold tabular-nums text-slate-900">{item.value}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -345,7 +322,7 @@ function GameLogTable({
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-md border border-slate-200 bg-slate-50/80">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
         <table className="w-full text-xs">
           <thead>
             <tr>
@@ -384,7 +361,7 @@ function GameLogTable({
                             <span className="text-slate-400 font-semibold">{item.from}</span>
                             <ArrowRightLeft size={12} className="text-amber-400 mx-1 animate-pulse" />
                             <TeamLogo abbr={item.to} name="" size={18} />
-                            <span className="text-[#c8102e] font-bold">{item.to}</span>
+                            <span className="text-slate-700 font-semibold">{item.to}</span>
                           </div>
                         </div>
                         <p className="text-[10px] font-semibold text-slate-400">
@@ -411,13 +388,13 @@ function GameLogTable({
                   className={[
                     "border-t border-slate-100 transition-colors",
                     isDnp ? "bg-amber-50/60 hover:bg-amber-50" : "bg-white hover:bg-slate-50",
-                    clickable ? "cursor-pointer hover:bg-[#c8102e]/5 group" : "",
+                    clickable ? "cursor-pointer hover:bg-slate-50 group" : "",
                   ].join(" ")}
                 >
                   <td className="sticky left-0 bg-inherit px-3 py-2.5">
                     <p className="text-[11px] font-semibold text-slate-700">{fmtDate(g.GAME_DATE)}</p>
                     {clickable && (
-                      <p className="mt-0.5 text-[8px] font-black uppercase tracking-widest text-[#c8102e] opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="mt-0.5 text-[8px] font-black uppercase tracking-widest text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
                         View box score
                       </p>
                     )}
@@ -476,7 +453,7 @@ function GameLogTable({
                   <td className="px-2 py-2.5 text-center">
                     <span className={[
                       "rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest",
-                      g.IS_PLAYOFF ? "bg-[#c8102e]/10 text-[#c8102e]" : "bg-slate-100 text-slate-400",
+                      g.IS_PLAYOFF ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500",
                     ].join(" ")}>
                       {g.IS_PLAYOFF ? "PO" : "RS"}
                     </span>
@@ -510,7 +487,7 @@ function GameLogTable({
                   className={[
                     "rounded-lg px-3 py-1.5 text-[10px] font-bold transition-all",
                     pg === page
-                      ? "bg-[#c8102e] text-white"
+                      ? "bg-slate-800 text-white"
                       : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50",
                   ].join(" ")}
                 >
@@ -545,20 +522,13 @@ function FeaturedCard({
   onClick: () => void;
 }) {
   const teamAbbr = profile.CURRENT_TEAM || avgs?.teams?.[avgs.teams.length - 1] || null;
-  const theme = getTeamTheme(teamAbbr);
 
   return (
     <button
       onClick={onClick}
-      className="group w-full overflow-hidden rounded-sm border border-slate-200 bg-white text-left shadow-sm transition-colors duration-200 hover:shadow-md hover:border-slate-400 relative cursor-pointer"
+      className="group w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left transition-all duration-200 hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
     >
       {/* Dynamic Team Accent Stripe */}
-      <div
-        className="h-1.5 w-full transition-opacity duration-200"
-        style={{
-          background: `linear-gradient(90deg, ${theme.primary}, ${theme.secondary || theme.primary})`,
-        }}
-      />
       <div className="p-4">
         <div className="flex items-center gap-3 mb-3">
           <div className="relative shrink-0">
@@ -575,7 +545,7 @@ function FeaturedCard({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-black text-slate-900 leading-tight group-hover:text-[#c8102e] transition-colors">
+            <p className="truncate text-sm font-semibold text-slate-900 leading-tight">
               {profile.PLAYER_NAME}
             </p>
             <div className="mt-1 flex items-center gap-1.5 flex-wrap">
@@ -586,8 +556,7 @@ function FeaturedCard({
               )}
               {teamAbbr && (
                 <span
-                  className="rounded-full px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider font-mono"
-                  style={{ backgroundColor: theme.badgeBg, color: theme.badgeText }}
+                  className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[8px] font-bold uppercase tracking-wider text-slate-600"
                 >
                   {teamAbbr}
                 </span>
@@ -602,21 +571,15 @@ function FeaturedCard({
         {avgs ? (
           <div className="grid grid-cols-3 gap-1.5">
             {[
-              { v: avgs.PTS, lbl: "PPG", highlight: true },
-              { v: avgs.REB, lbl: "RPG", highlight: false },
-              { v: avgs.AST, lbl: "APG", highlight: false },
-            ].map(({ v, lbl, highlight }) => (
+              { v: avgs.PTS, lbl: "PPG" },
+              { v: avgs.REB, lbl: "RPG" },
+              { v: avgs.AST, lbl: "APG" },
+            ].map(({ v, lbl }) => (
               <div
                 key={lbl}
-                className="rounded-sm border border-slate-100 bg-slate-50/80 px-2 py-1.5 text-center transition-colors group-hover:bg-slate-50"
+                className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center"
               >
-                <p
-                  className="text-sm font-black leading-none font-mono"
-                  style={{
-                    fontFamily: "'Barlow Condensed', sans-serif",
-                    color: highlight ? theme.primary : "#0f172a",
-                  }}
-                >
+                <p className="text-sm font-semibold leading-none tabular-nums text-slate-900">
                   {v != null ? v.toFixed(1) : "—"}
                 </p>
                 <p className="mt-0.5 text-[7px] font-black uppercase tracking-widest text-slate-400">{lbl}</p>
@@ -644,9 +607,11 @@ function DiscoveryGrid({
   onSelect: (p: PlayerProfile) => void;
   seasons: string[];
 }) {
-  const latestSeason = seasons[seasons.length - 1] || "2025-26";
-  const otherSeasons = seasons.filter((s) => s !== latestSeason);
-
+  const latestSeason = useMemo(() =>
+    [...seasons].reverse().find((season) => profiles.some((profile) =>
+      (averagesData[String(profile.PLAYER_ID)]?.[season]?.games_played ?? 0) >= 15
+    )) ?? seasons[seasons.length - 1] ?? "2025-26",
+  [profiles, averagesData, seasons]);
   const getBestAvgs = (pid: number, preferSeason?: string): { avgs: SeasonAverages; season: string } | null => {
     const pidStr = String(pid);
     const pAvgs = averagesData[pidStr];
@@ -666,84 +631,27 @@ function DiscoveryGrid({
       .map((p) => ({ p, res: getBestAvgs(p.PLAYER_ID, latestSeason) }))
       .filter((x) => x.res?.season === latestSeason && (x.res.avgs.PTS ?? 0) > 0)
       .sort((a, b) => (b.res!.avgs.PTS ?? 0) - (a.res!.avgs.PTS ?? 0))
-      .slice(0, 5)
+      .slice(0, 10)
       .map(({ p, res }) => ({ p, avgs: res!.avgs, label: "Scorer" })),
   [profiles, averagesData, seasons, latestSeason]);
 
-  // Top playmakers latestSeason
-  const topPlaymakers = useMemo(() =>
-    profiles
-      .map((p) => ({ p, res: getBestAvgs(p.PLAYER_ID, latestSeason) }))
-      .filter((x) => x.res?.season === latestSeason && (x.res.avgs.AST ?? 0) > 0)
-      .sort((a, b) => (b.res!.avgs.AST ?? 0) - (a.res!.avgs.AST ?? 0))
-      .slice(0, 4)
-      .map(({ p, res }) => ({ p, avgs: res!.avgs, label: "Playmaker" })),
-  [profiles, averagesData, seasons, latestSeason]);
-
-  // Top rebounders latestSeason
-  const topRebounders = useMemo(() =>
-    profiles
-      .map((p) => ({ p, res: getBestAvgs(p.PLAYER_ID, latestSeason) }))
-      .filter((x) => x.res?.season === latestSeason && (x.res.avgs.REB ?? 0) > 0)
-      .sort((a, b) => (b.res!.avgs.REB ?? 0) - (a.res!.avgs.REB ?? 0))
-      .slice(0, 4)
-      .map(({ p, res }) => ({ p, avgs: res!.avgs, label: "Rebounder" })),
-  [profiles, averagesData, seasons, latestSeason]);
-
-  // Legacy — players NOT in latestSeason
-  const legacyPlayers = useMemo(() => {
-    return profiles
-      .filter((p) => {
-        const pAvgs = averagesData[String(p.PLAYER_ID)];
-        if (!pAvgs) return false;
-        const inCurrent = pAvgs[latestSeason] && pAvgs[latestSeason].games_played > 5;
-        if (inCurrent) return false;
-        return otherSeasons.some(
-          (s) => pAvgs[s] && pAvgs[s].games_played >= 20
-        );
-      })
-      .map((p) => {
-        const res = getBestAvgs(p.PLAYER_ID);
-        return { p, avgs: res?.avgs ?? null, label: "Legacy" };
-      })
-      .filter((x) => x.avgs != null)
-      .sort((a, b) => (b.avgs?.PTS ?? 0) - (a.avgs?.PTS ?? 0))
-      .slice(0, 5);
-  }, [profiles, averagesData, seasons, latestSeason, otherSeasons]);
-
-  const renderSection = (
-    title: string,
-    subtitle: string,
-    items: Array<{ p: PlayerProfile; avgs: SeasonAverages | null; label: string }>
-  ) => {
-    if (items.length === 0) return null;
-    return (
-      <div>
-        <div className="mb-3 flex items-baseline gap-2">
-          <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">{title}</p>
-          <p className="text-[10px] text-slate-400">{subtitle}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {items.map(({ p, avgs, label }) => (
-            <FeaturedCard
-              key={p.PLAYER_ID}
-              profile={p}
-              label={label}
-              avgs={avgs}
-              onClick={() => onSelect(p)}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="space-y-8">
-      {renderSection("Top Scorers", "2025–26 · PPG leaders", topScorers)}
-      {renderSection("Playmakers", "2025–26 · APG leaders", topPlaymakers)}
-      {renderSection("Rebound leaders", "2025–26 · RPG leaders", topRebounders)}
-      {renderSection("Past seasons", "Players from 2018–25 · no longer active", legacyPlayers)}
+    <div>
+      <div className="mb-3 flex items-baseline gap-2">
+        <h2 className="m-0 text-base font-semibold text-slate-900">Players to explore</h2>
+        <p className="text-xs text-slate-500">Top scorers · {latestSeason}</p>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {topScorers.map(({ p, avgs, label }) => (
+          <FeaturedCard
+            key={p.PLAYER_ID}
+            profile={p}
+            label={label}
+            avgs={avgs}
+            onClick={() => onSelect(p)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -827,7 +735,7 @@ function calculateAveragesFromGames(seasonGames: GameRow[]): SeasonAverages {
 }
 
 /* ─────────── Main Component ─────────── */
-export default function PlayerPage() {
+export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId?: number | null }) {
   const [seasonsList, setSeasonsList] = useState<string[]>(["2022-23", "2023-24", "2024-25", "2025-26", "2026-27"]);
   const [profiles, setProfiles] = useState<PlayerProfile[]>([]);
   const [gamesData, setGamesData] = useState<Record<string, Record<string, GameRow[]>>>({});
@@ -887,7 +795,7 @@ export default function PlayerPage() {
     }
   }, [selectedPlayer, gamesData, averagesData, seasonsList, selectedSeason]);
 
-  const handleSelectPlayer = (p: PlayerProfile) => {
+  const handleSelectPlayer = useCallback((p: PlayerProfile) => {
     setSelectedPlayer(p);
     setSelectedGame(null);
     setOpponentSearch("");
@@ -916,7 +824,13 @@ export default function PlayerPage() {
           })
           .catch((e) => setError(e.message));
       });
-  };
+  }, []);
+
+  useEffect(() => {
+    if (initialPlayerId == null || loading) return;
+    const target = profiles.find((profile) => profile.PLAYER_ID === initialPlayerId);
+    if (target) handleSelectPlayer(target);
+  }, [handleSelectPlayer, initialPlayerId, loading, profiles]);
 
   const pid = selectedPlayer ? String(selectedPlayer.PLAYER_ID) : null;
   const playerGames = useMemo(() => (pid ? (gamesData[pid] ?? {}) : {}), [pid, gamesData]);
@@ -965,7 +879,7 @@ export default function PlayerPage() {
   if (loading) {
     return (
       <div className="flex h-72 flex-col items-center justify-center gap-4">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#c8102e] border-t-transparent" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-700 border-t-transparent" />
         <p className="text-[10px] font-black uppercase tracking-[0.32em] text-slate-400">
           Loading player data...
         </p>
@@ -975,7 +889,7 @@ export default function PlayerPage() {
 
   if (error) {
     return (
-      <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-4 rounded-sm border border-rose-200 bg-white p-8 text-center shadow-lg">
+      <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-4 rounded-2xl border border-rose-200 bg-white p-8 text-center shadow-sm">
         <div className="rounded-md bg-rose-50 p-4 text-rose-600">
           <AlertCircle size={28} />
         </div>
@@ -983,7 +897,7 @@ export default function PlayerPage() {
           <h2 className="text-xl font-black text-slate-900">Data not found</h2>
           <p className="mt-2 text-sm text-slate-500">{error}</p>
         </div>
-        <p className="rounded-sm border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-[11px] text-slate-500">
+        <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-[11px] text-slate-500">
           python3 scripts/export_player_profiles.py
         </p>
       </div>
@@ -991,35 +905,36 @@ export default function PlayerPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
 
       {/* ── Search bar ── */}
-      <div className="border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="mb-5 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-4 flex flex-col gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#c8102e]">NBA · Player Index</p>
-            <h1 className="mt-1 text-3xl font-black uppercase leading-none tracking-tight text-slate-950 sm:text-4xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Players</h1>
+            <p className="text-xs font-medium text-slate-500">NBA player profiles</p>
+            <h1 className="mt-1 text-3xl font-semibold leading-none tracking-tight text-slate-900">Players</h1>
           </div>
-          <p className="text-xs text-slate-500">{profiles.length.toLocaleString()} players · 2018–26</p>
+          <p className="text-xs text-slate-500">{profiles.length.toLocaleString()} profiles · 2018–26</p>
         </div>
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Find a player</p>
+        <label htmlFor="player-profile-search" className="mb-2 block text-xs font-medium text-slate-600">Find a player</label>
         <div className="relative">
           <div className="relative">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
+              id="player-profile-search"
               type="text"
               placeholder="Search by player name"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setShowDropdown(true); }}
               onFocus={() => setShowDropdown(true)}
               onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-              className="w-full rounded-sm border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/10 transition-all"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-sm font-medium text-slate-800 placeholder:text-slate-400 transition focus:border-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-200"
             />
             <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           </div>
 
           {showDropdown && filteredProfiles.length > 0 && (
-            <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 overflow-y-auto rounded-sm border border-slate-200 bg-white shadow-lg">
+            <div className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
               {filteredProfiles.map((p) => (
                 <button
                   key={p.PLAYER_ID}
@@ -1061,38 +976,18 @@ export default function PlayerPage() {
               currentAvgs?.teams?.[currentAvgs.teams.length - 1] ||
               selectedPlayer.CURRENT_TEAM ||
               null;
-            const playerTheme = getTeamTheme(primaryTeamAbbr);
-
             return (
-              <div className="relative border border-slate-200 bg-white shadow-sm overflow-hidden">
-                {/* Dynamic Top Stripe with Team Colors */}
-                <div
-                  className="h-1 w-full"
-                  style={{
-                    background: `linear-gradient(90deg, ${playerTheme.primary}, ${playerTheme.secondary || playerTheme.primary})`,
-                  }}
-                />
-
-                <div className="relative z-10 p-5 sm:p-7">
-                  <div className="flex flex-col gap-6 md:flex-row md:items-start">
-                    <div className="flex flex-col items-center gap-3 md:items-start shrink-0">
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="relative z-10 p-5 sm:p-6">
+                  <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                    <div className="shrink-0">
                       <div className="relative">
                         <PlayerPhoto
                           playerId={selectedPlayer.PLAYER_ID}
                           name={selectedPlayer.PLAYER_NAME ?? ""}
-                          size={120}
-                            className="rounded-sm ring-1 ring-slate-200"
-                          style={{ borderColor: `${playerTheme.primary}44` }}
+                          size={104}
+                          className="rounded-2xl ring-1 ring-slate-200"
                         />
-                        {selectedPlayer.OFFICIAL_POSITION && (
-                          <span
-                            className={`absolute -bottom-1 -right-1 rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.22em] shadow-sm ${posColor(
-                              selectedPlayer.OFFICIAL_POSITION
-                            )}`}
-                          >
-                            {selectedPlayer.OFFICIAL_POSITION}
-                          </span>
-                        )}
                       </div>
                     </div>
 
@@ -1104,55 +999,38 @@ export default function PlayerPage() {
                           </p>
                           {primaryTeamAbbr && (
                             <div
-                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase font-mono"
-                              style={{
-                                backgroundColor: playerTheme.badgeBg,
-                                borderColor: `${playerTheme.primary}33`,
-                                color: playerTheme.badgeText,
-                              }}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-600"
                             >
                               <TeamLogo abbr={primaryTeamAbbr} name="" size={13} />
                               <span>{primaryTeamAbbr}</span>
                             </div>
                           )}
-                          {selectedPlayer.CURRENT_TEAM && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[8px] font-black uppercase tracking-wider">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                              2026-27 Roster: {selectedPlayer.CURRENT_TEAM}
-                            </span>
-                          )}
                         </div>
 
                         <h2
-                          className="text-3xl font-black leading-tight text-slate-900 md:text-4xl"
-                          style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
+                          className="text-3xl font-semibold leading-tight tracking-tight text-slate-900 md:text-4xl"
                         >
                           {selectedPlayer.PLAYER_NAME}
                         </h2>
 
-                        {selectedPlayer.POSITION_GROUP && (
-                          <span
-                            className={`mt-1.5 inline-block rounded-full border px-3 py-0.5 text-[10px] font-black uppercase tracking-[0.22em] ${posColor(
-                              selectedPlayer.POSITION_GROUP
-                            )}`}
-                          >
-                            {selectedPlayer.POSITION_GROUP}
-                          </span>
-                        )}
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {selectedPlayer.OFFICIAL_POSITION && <span className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${posColor(selectedPlayer.OFFICIAL_POSITION)}`}>{selectedPlayer.OFFICIAL_POSITION}</span>}
+                          {selectedPlayer.POSITION_GROUP && <span className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${posColor(selectedPlayer.POSITION_GROUP)}`}>{selectedPlayer.POSITION_GROUP}</span>}
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
                         {currentAvgs?.teams && currentAvgs.teams.length > 1 && (
                           <InfoChip
-                            icon={<ArrowRightLeft size={12} className="text-amber-500 animate-pulse" />}
+                            icon={<ArrowRightLeft size={12} />}
                             label="Takımlar (Takas)"
                             value={currentAvgs.teams.join(" ➔ ")}
-                            className="bg-amber-50/50 border-amber-200/80"
+                            className="bg-slate-50"
                           />
                         )}
                         {primaryTeamAbbr && (!currentAvgs?.teams || currentAvgs.teams.length <= 1) && (
                           <InfoChip
-                            icon={<Users2 size={12} style={{ color: playerTheme.primary }} />}
+                            icon={<Users2 size={12} />}
                             label="Güncel Takım"
                             value={primaryTeamAbbr}
                           />
@@ -1175,14 +1053,6 @@ export default function PlayerPage() {
                               : null
                           }
                         />
-                        <InfoChip icon={<MapPin size={12} />} label="Pozisyon" value={selectedPlayer.OFFICIAL_POSITION} />
-                        {availableSeasons.length > 0 && (
-                          <InfoChip
-                            icon={<Hash size={12} />}
-                            label="Veritabanı Sezonları"
-                            value={`${availableSeasons.length} sezon`}
-                          />
-                        )}
                       </div>
                     </div>
                   </div>
@@ -1192,16 +1062,16 @@ export default function PlayerPage() {
           })()}
 
           {availableSeasons.length === 0 ? (
-            <div className="rounded-sm border border-amber-200 bg-amber-50 p-6 text-center">
-              <AlertCircle size={24} className="mx-auto mb-2 text-amber-500" />
-              <p className="text-sm font-semibold text-amber-700">No game data found for this player in the database.</p>
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
+              <AlertCircle size={24} className="mx-auto mb-2 text-slate-400" />
+              <p className="text-sm font-medium text-slate-600">No game data found for this player in the database.</p>
             </div>
           ) : (
             <>
               {/* Season selector */}
               {(() => {
                 return (
-                  <div className="rounded-sm border border-slate-200/80 bg-white p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Season</p>
@@ -1219,29 +1089,31 @@ export default function PlayerPage() {
 
               {/* Season Averages */}
               {currentAvgs && currentAvgs.games_total > 0 && (
-                <div className="rounded-sm border border-slate-100 bg-white p-6 shadow-sm">
-                  <div className="mb-4 flex items-center gap-2 flex-wrap">
-                    <TrendingUp size={16} className="text-[#c8102e]" />
-                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
-                      {selectedSeason} Season Averages
-                    </p>
-                    <span className="ml-auto rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[9px] font-bold text-slate-500 font-mono">
-                      {currentAvgs.games_played} played / {currentAvgs.games_total} total
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                  <div className="mb-5 flex items-end justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                        <TrendingUp size={17} />
+                      </div>
+                      <div>
+                        <h2 className="m-0 text-base font-semibold text-slate-900">Season averages</h2>
+                        <p className="mt-0.5 text-xs text-slate-500">{selectedSeason} · per game</p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium tabular-nums text-slate-600">
+                      {currentAvgs.games_played} / {currentAvgs.games_total} GP
                     </span>
                   </div>
-                  <AveragesGrid
-                    avgs={currentAvgs}
-                    teamColor={getTeamTheme(currentAvgs.teams?.[currentAvgs.teams.length - 1] || selectedPlayer.CURRENT_TEAM).primary}
-                  />
+                  <AveragesGrid avgs={currentAvgs} />
                 </div>
               )}
 
 
               {/* Game Log */}
-              <div className="rounded-sm border border-slate-100 bg-white p-6 shadow-sm">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-[#c8102e]" />
+                    <Calendar size={16} className="text-slate-500" />
                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
                       {selectedSeason} Game Log
                     </p>
@@ -1251,7 +1123,7 @@ export default function PlayerPage() {
                     <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[9px] font-bold text-amber-700">
                       {currentGames.filter((g) => g.DID_NOT_PLAY).length} DNP
                     </span>
-                    <span className="rounded-full bg-[#c8102e]/10 px-2.5 py-1 text-[9px] font-bold text-[#c8102e]">
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-bold text-slate-600">
                       {currentGames.filter((g) => g.IS_PLAYOFF).length} playoff
                     </span>
                   </div>
@@ -1266,7 +1138,7 @@ export default function PlayerPage() {
                       placeholder="Search opponent team name or abbreviation (e.g. Boston, LAL, Nuggets)..."
                       value={opponentSearch}
                       onChange={(e) => setOpponentSearch(e.target.value)}
-                      className="w-full rounded-md border border-slate-200/80 bg-slate-50/50 py-2 pl-8 pr-4 text-xs font-semibold text-slate-700 outline-none ring-offset-2 transition-all placeholder:text-slate-400 focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/10 animate-fade-in"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-8 pr-4 text-xs font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-200 animate-fade-in"
                     />
                   </div>
                 )}
@@ -1277,7 +1149,7 @@ export default function PlayerPage() {
                     DNP = Sakat / Oynamadı
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="rounded-full bg-[#c8102e]/10 px-1.5 py-0.5 text-[8px] font-black text-[#c8102e]">PO</span>
+                    <span className="rounded-full bg-slate-800 px-1.5 py-0.5 text-[8px] font-black text-white">PO</span>
                     Playoff
                   </span>
                   <span className="flex items-center gap-1.5">
@@ -1310,8 +1182,8 @@ export default function PlayerPage() {
                     </div>
                   )
                 ) : selectedSeason === "2026-27" ? (
-                  <div className="rounded-md border border-dashed border-slate-200 bg-slate-50/50 py-10 px-4 text-center">
-                    <Calendar size={28} className="mx-auto mb-2 text-[#c8102e]/50" />
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-10 px-4 text-center">
+                    <Calendar size={28} className="mx-auto mb-2 text-slate-400" />
                     <p className="text-sm font-bold text-slate-800">2026-27 Sezonu Fikstürü Hazırlandı</p>
                     <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
                       1,274 maçlık yeni sezon fikstürü sisteme yüklenmiştir. Maçlar oynandıkça maç sonuçları ve detaylı kutu istatistikleri burada otomatik olarak listelenecektir.
@@ -1328,16 +1200,7 @@ export default function PlayerPage() {
 
       {/* ── Discovery grid (shown when no player selected) ── */}
       {!selectedPlayer && profiles.length > 0 && (
-        <div className="rounded-sm border border-slate-200/80 bg-white p-6 shadow-sm">
-          <div className="mb-6">
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Player Leaders & Archive</p>
-            <h2 className="mt-1 text-xl font-black text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Explore NBA players · 2018–26
-            </h2>
-            <p className="mt-0.5 text-[11px] text-slate-400">
-              {profiles.length} players across 8 seasons — including retired &amp; traded players. Click any card or search above.
-            </p>
-          </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <DiscoveryGrid
             profiles={profiles}
             averagesData={averagesData}

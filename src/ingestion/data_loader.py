@@ -61,8 +61,11 @@ def load_team_games(data_dir: str = "data/raw/team_games", season: Optional[str]
     default_name = os.path.basename(paths.team_games_raw)
     specific_path = os.path.join(data_dir, default_name)
     if not os.path.exists(specific_path):
-        print(f"Raw team games file for season {season} not found: {specific_path}. Returning empty DataFrame.")
-        return pd.DataFrame()
+        if os.path.exists(paths.team_games_raw):
+            specific_path = paths.team_games_raw
+        else:
+            print(f"Raw team games file for season {season} not found: {specific_path}. Returning empty DataFrame.")
+            return pd.DataFrame()
     return pd.read_csv(specific_path)
 
 def load_player_games(data_dir: str = "data/raw/player_games", season: Optional[str] = None) -> pd.DataFrame:
@@ -81,6 +84,9 @@ def load_player_games(data_dir: str = "data/raw/player_games", season: Optional[
     default_name = os.path.basename(paths.player_games_raw)
     specific_path = os.path.join(data_dir, default_name)
     if not os.path.exists(specific_path):
-        print(f"Raw player games file for season {season} not found: {specific_path}. Returning empty DataFrame.")
-        return pd.DataFrame()
+        if os.path.exists(paths.player_games_raw):
+            specific_path = paths.player_games_raw
+        else:
+            print(f"Raw player games file for season {season} not found: {specific_path}. Returning empty DataFrame.")
+            return pd.DataFrame()
     return pd.read_csv(specific_path)

@@ -180,6 +180,12 @@ class UpdateDataService:
             v2_df.to_csv(v2_path, index=False)
             v2_df.to_parquet(v2_path.replace(".csv", ".parquet"), index=False, engine="pyarrow")
 
+            season_v2_path = runner.paths.team_model_ready_v2
+            if os.path.normpath(v2_path) != os.path.normpath(season_v2_path):
+                os.makedirs(os.path.dirname(season_v2_path), exist_ok=True)
+                v2_df.to_csv(season_v2_path, index=False)
+                v2_df.to_parquet(season_v2_path.replace(".csv", ".parquet"), index=False, engine="pyarrow")
+
             # Step 9: Export schedule/context and frontend data
             print("\nStep 9: Exporting schedule context and frontend datasets...")
             runner.build_schedule_context(save=True)

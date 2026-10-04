@@ -1,11 +1,9 @@
 {
-  "status": "ERROR",
-  "latest_team_game_date": "2021-07-20",
-  "latest_player_game_date": "2021-07-20",
-  "latest_schedule_date": null,
+  "status": "OK",
+  "latest_team_game_date": "2026-10-03",
+  "latest_player_game_date": "2026-10-03",
+  "latest_schedule_date": "2027-04-11",
   "missing_completed_game_ids": [],
   "team_player_mismatch_game_ids": [],
-  "warnings": [
-    "Critical: Combined schedule could not be loaded or is empty."
-  ]
+  "warnings": []
 }
