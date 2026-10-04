@@ -19,7 +19,7 @@ import {
   getRostersPreview,
   type PlayerStatusOverride,
 } from "../api/predictions";
-import { loadPrivateApi } from "../lib/dataCache";
+import { loadPrivateApiFresh } from "../lib/dataCache";
 import { loadArchivedGameIndex } from "../lib/archiveData";
 import { NBA_TEAMS } from "../lib/nbaTeams";
 import { CURRENT_SEASON, MIN_PREDICTION_DATE } from "../lib/constants";
@@ -85,11 +85,13 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   useEffect(() => {
+    let active = true;
     const fetchWeeks = async () => {
       try {
         setLoadingData(true);
         setDataError(null);
         const scheduleGames = await loadArchivedGameIndex(CURRENT_SEASON);
+        if (!active) return;
         setSeasonGames(scheduleGames);
         const gamesByWeek = new Map<string, { start: string; end: string; count: number }>();
         for (const game of scheduleGames) {
@@ -110,13 +112,20 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         let weekList: SeasonWeek[] = [...gamesByWeek.values()]
           .sort((a, b) => a.start.localeCompare(b.start))
           .map((week, index) => ({
-            week_number: index + 1, start_date: week.start, end_date: week.end,
+            week_number: index + 1,
+            start_date: week.start,
+            end_date: week.end,
             label: `Week ${index + 1} (${week.start.slice(5)} to ${week.end.slice(5)})`,
             game_count: week.count,
           }));
+
+        // The endpoint remains a fallback for older static archives without a game feed.
         if (weekList.length === 0) {
-          try { weekList = await loadPrivateApi<SeasonWeek[]>(`/frontend-data-api/weeks?season=${encodeURIComponent(CURRENT_SEASON)}`); }
-          catch { weekList = []; }
+          try {
+            weekList = await loadPrivateApiFresh<SeasonWeek[]>(`/frontend-data-api/weeks?season=${encodeURIComponent(CURRENT_SEASON)}`);
+          } catch {
+            weekList = [];
+          }
         }
 
         if (!weekList || weekList.length === 0) {
@@ -152,12 +161,13 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         setSelectedWeekNum(targetWeek);
       } catch (err: any) {
         console.error("Error loading schedule weeks:", err);
-        setDataError("Failed to initialize schedule weeks.");
+        if (active) setDataError("Failed to initialize schedule weeks.");
       } finally {
-        setLoadingData(false);
+        if (active) setLoadingData(false);
       }
     };
     fetchWeeks();
+    return () => { active = false; };
   }, [initialGame?.date]);
 
   useEffect(() => {

@@ -61,6 +61,27 @@ export async function loadPrivateApi<T>(path: string): Promise<T> {
   return (await fetchCachedApi(path)) as T;
 }
 
+export async function postPrivateApi<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(`${DATA_API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: { ...dataHeaders(), "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result?.detail || `Server returned ${response.status}`);
+  return result as T;
+}
+
+export async function loadPrivateApiFresh<T>(path: string): Promise<T> {
+  const response = await fetch(`${DATA_API_BASE_URL}${path}`, {
+    cache: "no-store",
+    headers: dataHeaders(),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result?.detail || `Server returned ${response.status}`);
+  return result as T;
+}
+
 function dataUrl(path: string) {
   const filename = path.replace(/^\/data\//, "");
   return `${DATA_API_BASE_URL}/frontend-data/${encodeURIComponent(filename)}`;

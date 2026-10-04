@@ -20,6 +20,7 @@ from scripts.season_utils import get_default_season
 UNIFIED_COLUMNS = [
     "GAME_ID",
     "GAME_DATE",
+    "GAME_START_UTC",
     "HOME_TEAM_ABBREVIATION",
     "AWAY_TEAM_ABBREVIATION",
     "HOME_TEAM_NAME",

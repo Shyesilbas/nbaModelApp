@@ -130,6 +130,14 @@ def _strip_embedded_detail(game: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in game.items() if k != "game_detail"}
 
 
+def _row_season(game: dict[str, Any]) -> str | None:
+    try:
+        return _season_from_game_id(game.get("GAME_ID") or game.get("game_id"))
+    except HTTPException:
+        season = game.get("SEASON")
+        return season if isinstance(season, str) and len(season) == 7 and season[4] == "-" else None
+
+
 def get_game_index(
     request: Request,
     season: str | None = None,
@@ -139,25 +147,41 @@ def get_game_index(
     _check_token(request)
     season_key = season or DEFAULT_SEASON
 
-    raw_games = []
+    # SQLite is a fast index, but it can lag behind the canonical JSON exports
+    # and contain only a partial season. Merge all available sources by GAME_ID
+    # so one stale database row cannot hide the rest of the schedule.
+    games_by_id: dict[str, dict[str, Any]] = {}
     conn = _get_db_conn()
     if conn is not None:
         try:
             cursor = conn.cursor()
             cursor.execute("SELECT data_json FROM games_index WHERE season = ?", (season_key,))
             rows = cursor.fetchall()
-            if rows:
-                raw_games = [json.loads(r[0]) for r in rows]
+            for row in rows:
+                game = json.loads(row[0])
+                gid = _norm_game_id(game.get("GAME_ID") or game.get("game_id"))
+                if gid.strip("0"):
+                    games_by_id[gid] = game
         except Exception as e:
             logger.warning("SQLite games_index query failed, falling back to JSON: %s", e)
         finally:
             conn.close()
 
-    if not raw_games:
-        if season and season != DEFAULT_SEASON:
-            raw_games = [g for g in _load_json("all_seasons_games.json") if g.get("SEASON") == season]
-        else:
-            raw_games = _load_json("games.json")
+    for filename in ("all_seasons_games.json", "games.json"):
+        try:
+            source_rows = _load_json(filename)
+        except HTTPException:
+            continue
+        if not isinstance(source_rows, list):
+            continue
+        for game in source_rows:
+            if _row_season(game) != season_key:
+                continue
+            gid = _norm_game_id(game.get("GAME_ID") or game.get("game_id"))
+            if gid.strip("0"):
+                games_by_id[gid] = {**games_by_id.get(gid, {}), **game}
+
+    raw_games = list(games_by_id.values())
 
     if start_date or end_date:
         filtered = []
