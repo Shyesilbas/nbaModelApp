@@ -36,36 +36,29 @@ const inferSeasonFromGameId = (gameId?: string | number | null): string => {
 
 export async function loadArchivedGameIndex(season?: string | null): Promise<GameFeedRow[]> {
   const seasonParam = season ? `?season=${encodeURIComponent(season)}` : "";
-  try {
-    const apiRows = await loadPrivateApi<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`);
-    if (apiRows.length > 0) {
-      return apiRows.map((g) => ({
-        ...g,
-        SEASON: g.SEASON ?? inferSeasonFromGameId(g.GAME_ID) ?? season ?? "2025-26",
-      }));
+  const [apiResult, currentResult, archiveResult, scheduleResult] = await Promise.allSettled([
+    loadPrivateApi<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`),
+    loadJson<GameFeedRow[]>("/data/games.json", []),
+    loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []),
+    loadJson<GameFeedRow[]>("/data/schedule.json", []),
+  ]);
+  const sources = [
+    apiResult.status === "fulfilled" ? apiResult.value : [],
+    archiveResult.status === "fulfilled" ? archiveResult.value : [],
+    scheduleResult.status === "fulfilled" ? scheduleResult.value : [],
+    currentResult.status === "fulfilled" ? currentResult.value : [],
+  ];
+  const byId = new Map<string, GameFeedRow>();
+  for (const source of sources) {
+    for (const row of source) {
+      const gid = normId(row.GAME_ID);
+      const inferredSeason = inferSeasonFromGameId(gid);
+      const rowSeason = inferredSeason || row.SEASON || season || undefined;
+      if (season && rowSeason !== season) continue;
+      byId.set(gid, { ...byId.get(gid), ...row, GAME_ID: gid, SEASON: rowSeason });
     }
-  } catch {
-    // Fall through to the committed static archive below.
   }
-
-  const rawCurrentRows = await loadJson<GameFeedRow[]>("/data/games.json", []);
-  const currentRows = rawCurrentRows.map((row: any) => ({
-    ...row,
-    SEASON: row.SEASON || inferSeasonFromGameId(row.GAME_ID)
-  }));
-
-  if (!season) {
-    const archivedRows = await loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []);
-    return archivedRows.length > 0 ? archivedRows : currentRows;
-  }
-
-  const matchingRows = currentRows.filter((row: any) => row.SEASON === season);
-  if (matchingRows.length > 0) return matchingRows;
-
-  const archivedRows = await loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []);
-  return archivedRows
-    .map((row: any) => ({ ...row, SEASON: row.SEASON || inferSeasonFromGameId(row.GAME_ID) }))
-    .filter((row: any) => row.SEASON === season);
+  return [...byId.values()].sort((a, b) => (a.GAME_DATE ?? "").localeCompare(b.GAME_DATE ?? ""));
 }
 
 export async function loadArchivedGameDetail(gameId: string) {

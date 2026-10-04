@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 from scripts.data_paths import get_data_paths
-from scripts.season_utils import get_default_season
+from scripts.season_utils import get_default_season, season_to_file_token
 
 # ─────────────────────────────────────────────
 def _get_latest_team_features(v2_df: pd.DataFrame) -> pd.DataFrame:
@@ -115,10 +115,15 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
 
     # ── 2. Load V2 team features and get latest per team ──────────────────
     if not os.path.exists(v2_model_path):
-        raise FileNotFoundError(
-            f"V2 model-ready dataset not found at {v2_model_path}.\n"
-            "Run `python3 main.py --build-model-dataset` first."
-        )
+        token = season_to_file_token(season or get_default_season())
+        alt_path = os.path.join("data", "processed", f"team_model_ready_v2_{token}.csv")
+        if os.path.exists(alt_path):
+            v2_model_path = alt_path
+        else:
+            raise FileNotFoundError(
+                f"V2 model-ready dataset not found at {v2_model_path}.\n"
+                "Run `python3 main.py --build-model-dataset` first."
+            )
 
     v2_df = pd.read_csv(v2_model_path)
     latest_features = _get_latest_team_features(v2_df)

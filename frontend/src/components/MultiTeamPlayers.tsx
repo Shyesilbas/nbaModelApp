@@ -6,12 +6,10 @@ import {
   Crown, 
   Sparkles, 
   ShieldCheck, 
-  Info, 
   LayoutGrid, 
   Table as TableIcon,
   ArrowUpDown,
   Filter,
-  Activity,
   Calendar
 } from "lucide-react";
 import PlayerPhoto from "./PlayerPhoto";
@@ -182,13 +180,6 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
     return list;
   }, [normalizedPlayers, search, selectedTeamFilter, selectedTier, sortBy, sortOrder]);
 
-  // Top Blockbuster Stars for marquee (sorted by IMPORTANCE_SCORE descending)
-  const topBlockbusters = useMemo(() => {
-    return [...normalizedPlayers]
-      .sort((a, b) => (b.IMPORTANCE_SCORE ?? 0) - (a.IMPORTANCE_SCORE ?? 0))
-      .slice(0, 4);
-  }, [normalizedPlayers]);
-
   const toggleSort = (field: SortField) => {
     if (sortBy === field) {
       setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
@@ -245,194 +236,26 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
   };
 
   return (
-    <div className="space-y-7 pb-8">
+    <div className="space-y-5 pb-8">
       {/* 1. Header Banner */}
-      <section className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white px-6 py-6 md:px-8 md:py-7 shadow-sm">
-        <div className="absolute inset-y-0 left-0 w-1 bg-slate-300" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-              <ArrowRightLeft size={13} /> Season {selectedSeason} <span className="text-slate-300">/</span> Player movement
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 m-0 leading-none">
-              Trade Discovery
-            </h1>
-            <p className="text-slate-500 text-sm max-w-xl font-medium">
-              Explore player moves, team journeys and the impact behind every trade.
-            </p>
-          </div>
-
-          {/* Season Selector & Quick Stats */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Season</span>
-              <select
-                value={selectedSeason}
-                onChange={(e) => setSelectedSeason(e.target.value)}
-                className="bg-transparent text-sm font-bold text-slate-800 focus:outline-none cursor-pointer"
-              >
-                {seasonsList.map((s) => (
-                  <option key={s} value={s} className="bg-white text-slate-900">
-                    {s} Season
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs">
-              <div>
-                <span className="text-slate-400 block text-[9px] uppercase font-sans font-black tracking-wider">Players</span>
-                <span className="text-lg font-black text-slate-900">{normalizedPlayers.length}</span>
-              </div>
-              <div className="h-8 w-px bg-slate-200" />
-              <div>
-                <span className="text-slate-400 block text-[9px] uppercase font-sans font-black tracking-wider">Top impact</span>
-                <span className="text-lg font-bold text-slate-800">
-                  {topBlockbusters[0]?.IMPORTANCE_SCORE ?? 0}
-                </span>
-              </div>
-            </div>
-          </div>
+      <section className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="mb-1 text-xs font-medium text-slate-500">Player movement · {selectedSeason}</p>
+          <h1 className="m-0 text-3xl font-semibold tracking-tight text-slate-900">Trade Discovery</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-slate-500">{normalizedPlayers.length} players</span>
+          <select value={selectedSeason} onChange={(e) => setSelectedSeason(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200">
+            {seasonsList.map((s) => <option key={s} value={s}>{s} Season</option>)}
+          </select>
         </div>
       </section>
 
-      {/* 2. Blockbuster Deals Spotlight (Top Rated Trades) */}
-      <section className="space-y-3.5">
-        <div className="flex items-end justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><Activity size={16} /></div>
-            <h2 className="text-lg font-semibold tracking-tight text-slate-900 m-0">
-              Top impact moves
-            </h2>
-          </div>
-          <span className="hidden sm:block text-[10px] font-bold uppercase tracking-wider text-slate-400">Ranked by player impact</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-          {topBlockbusters.map((player, idx) => {
-            const teams = (player.TEAMS_PLAYED_FOR || "").split(",").map(t => t.trim() as NbaTeamAbbr);
-            const primaryTeam = teams[teams.length - 1] || "MIA";
-            const fromTeam = teams[0] || "MIL";
-            const tier = getTierBadge(player.IMPORTANCE_SCORE ?? 0);
-            const TierIcon = tier.icon;
-
-            return (
-              <div
-                key={player.PLAYER_ID}
-                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300 hover:shadow-md transition-all duration-200"
-              >
-                {/* Rank & Tier Pill */}
-                <div className="flex items-center justify-between mb-3">
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-slate-400">
-                    #{idx + 1}
-                  </span>
-                  <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${tier.bg}`}>
-                    <TierIcon size={10} />
-                    {tier.label}
-                  </span>
-                </div>
-
-                {/* Player Profile Row */}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="relative">
-                    <PlayerPhoto
-                      playerId={player.PLAYER_ID}
-                      name={player.PLAYER_NAME}
-                      size={56}
-                      className="h-14 w-14 rounded-full border-2 border-white shadow-sm object-cover bg-slate-100"
-                    />
-                    <div className="absolute -bottom-1 -right-1">
-                      <TeamLogo abbr={primaryTeam} size={20} />
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-slate-900 truncate m-0">
-                      {player.PLAYER_NAME}
-                    </h3>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-[11px] font-medium text-slate-500">
-                        Impact
-                      </span>
-                      <span className="text-xs font-semibold tabular-nums text-slate-800">
-                        {player.IMPORTANCE_SCORE}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Trade Path Route */}
-                <div className="mb-2 flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-semibold"
-                    >
-                      {fromTeam}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      {TEAM_NAME_BY_ABBR[fromTeam] ? TEAM_NAME_BY_ABBR[fromTeam].split(" ").pop() : fromTeam}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1 text-slate-400 font-bold">
-                    <ArrowRightLeft size={12} className="text-slate-500" />
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className="px-2 py-0.5 rounded-md bg-slate-800 text-white text-[10px] font-semibold"
-                    >
-                      {primaryTeam}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      {TEAM_NAME_BY_ABBR[primaryTeam] ? TEAM_NAME_BY_ABBR[primaryTeam].split(" ").pop() : primaryTeam}
-                    </span>
-                  </div>
-                </div>
-
-                {player.TRADE_DATE && (
-                  <div className="mb-3 flex items-center justify-between text-[11px] text-slate-500 px-1">
-                    <span className="flex items-center gap-1 text-slate-600 font-medium">
-                      <Calendar size={11} className="text-slate-400" />
-                      {formatTradeDate(player.TRADE_DATE)}
-                    </span>
-                    {player.HOW_ACQUIRED && (
-                      <span className="truncate max-w-[130px] text-[10px] text-slate-400" title={player.HOW_ACQUIRED}>
-                        {player.HOW_ACQUIRED}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-4 gap-1 text-center bg-slate-50 rounded-lg p-2 border border-slate-100 text-slate-700">
-                  <div>
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase">PTS</span>
-                    <span className="text-xs font-semibold tabular-nums">{player.AVG_PTS}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase">REB</span>
-                    <span className="text-xs font-semibold tabular-nums">{player.AVG_REB}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase">AST</span>
-                    <span className="text-xs font-semibold tabular-nums">{player.AVG_AST}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase">MIN</span>
-                    <span className="text-xs font-semibold tabular-nums">{player.AVG_MIN}m</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 3. Filter & Sort Toolbar */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm space-y-4">
+      {/* Player filters */}
+      <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Search Bar */}
-          <div className="relative flex-1 max-w-xl">
+          <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
@@ -491,68 +314,16 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
           </div>
         </div>
 
-        {/* Tier & Sort Pills */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
-          {/* Tier Pills */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-bold text-slate-400 text-[11px] uppercase mr-1">Tier:</span>
-            {(
-              [
-                { id: "ALL", label: `All (${normalizedPlayers.length})` },
-                { id: "BLOCKBUSTER", label: "Blockbuster (Score ≥40)" },
-                { id: "STARTER", label: "Starters (28-40)" },
-                { id: "ROTATION", label: "Rotation (18-28)" },
-                { id: "DEPTH", label: "Depth (<18)" },
-              ] as const
-            ).map((tier) => (
-              <button
-                key={tier.id}
-                onClick={() => setSelectedTier(tier.id)}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                  selectedTier === tier.id
-                      ? "bg-slate-900 text-white shadow-sm"
-                      : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {tier.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Quick Sort Options */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-bold text-slate-400 text-[11px] uppercase mr-1">Sort:</span>
-            {[
-              { id: "TRADE_DATE" as SortField, label: "Tarih", icon: Calendar },
-              { id: "IMPORTANCE_SCORE" as SortField, label: "Impact Score" },
-              { id: "AVG_PTS" as SortField, label: "PTS" },
-              { id: "AVG_REB" as SortField, label: "REB" },
-              { id: "AVG_AST" as SortField, label: "AST" },
-              { id: "AVG_MIN" as SortField, label: "MIN" },
-              { id: "NUM_TEAMS" as SortField, label: "Teams" },
-            ].map((s) => {
-              const Icon = s.icon;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => toggleSort(s.id)}
-                  className={`px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5 transition-all text-xs ${
-                    sortBy === s.id
-                      ? "bg-slate-800 text-white shadow-sm"
-                      : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {Icon && <Icon size={12} className="text-slate-400" />}
-                  {s.label}
-                  {sortBy === s.id && (
-                    <span className="text-[10px] text-slate-300">
-                      {sortOrder === "desc" ? "↓" : "↑"}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+        <select value={selectedTier} onChange={(e) => setSelectedTier(e.target.value as TierFilter)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200">
+          <option value="ALL">All impact tiers</option><option value="BLOCKBUSTER">Blockbuster</option><option value="STARTER">Starter</option><option value="ROTATION">Rotation</option><option value="DEPTH">Depth</option>
+        </select>
+        <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as SortField); setSortOrder("desc"); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200">
+          <option value="TRADE_DATE">Sort: Trade date</option><option value="IMPORTANCE_SCORE">Sort: Impact</option><option value="AVG_PTS">Sort: Points</option><option value="AVG_REB">Sort: Rebounds</option><option value="AVG_AST">Sort: Assists</option><option value="AVG_MIN">Sort: Minutes</option><option value="NUM_TEAMS">Sort: Teams</option>
+        </select>
+        <button onClick={() => setSortOrder((current) => current === "desc" ? "asc" : "desc")} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" aria-label={`Sort ${sortOrder === "desc" ? "ascending" : "descending"}`}>
+          {sortOrder === "desc" ? "↓" : "↑"}
+        </button>
         </div>
       </section>
 
@@ -568,7 +339,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
           <p className="text-xs text-slate-400 mt-1">Try adjusting your search query, team filter, or tier selection.</p>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {processedPlayers.map((player) => {
             const teams = (player.TEAMS_PLAYED_FOR || "").split(",").map((t) => t.trim() as NbaTeamAbbr);
             const primaryTeam = teams[teams.length - 1] || "MIA";
@@ -813,33 +584,6 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
         </div>
       )}
 
-      {/* 5. Educational Insights Section */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-2.5">
-          <div className="flex items-center gap-2 text-slate-500 font-bold">
-            <Info size={18} />
-            <h3 className="text-sm font-semibold tracking-tight text-slate-900 m-0">
-              Why Impact Scores Matter for Trades
-            </h3>
-          </div>
-          <p className="text-slate-600 text-xs leading-relaxed">
-            When superstar or high-usage players switch teams (such as Giannis Antetokounmpo to Miami), historical team ratings become obsolete.
-            Our pipeline recalculates team offensive/defensive baselines by weighting roster minutes and individual player importance.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-2.5">
-          <div className="flex items-center gap-2 text-rose-600 font-bold">
-            <Activity size={18} />
-            <h3 className="text-sm font-semibold tracking-tight text-slate-900 m-0">
-              Stint-Specific Calibration
-            </h3>
-          </div>
-          <p className="text-slate-600 text-xs leading-relaxed">
-            Rather than blending a player's season into a single generic average, predictions isolate per-franchise splits. A player's pace, usage rate, and true shooting percentage are adapted to the current scheme they are running.
-          </p>
-        </div>
-      </section>
     </div>
   );
 };

@@ -13,10 +13,7 @@
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
-  Users2,
-  BarChart3,
   Star,
-  Clock,
 } from "lucide-react";
 import PlayerPhoto from "./PlayerPhoto";
 import { loadArchivedGameBoxscores, loadArchivedPlayByPlay } from "../lib/archiveData";
@@ -261,7 +258,8 @@ export default function GameDetailPanel({
   highlightPlayerId,
   onBack,
 }: GameDetailPanelProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "home" | "away" | "pbp">("overview");
+  const [activeTab, setActiveTab] = useState<"info" | "teams" | "players" | "highlights" | "pbp">("info");
+  const [playerTeam, setPlayerTeam] = useState<"home" | "away">("home");
   const [homeBS, setHomeBS] = useState<TBS | null>(null);
   const [awayBS, setAwayBS] = useState<TBS | null>(null);
   const [homePlayers, setHomePlayers] = useState<PBS[]>([]);
@@ -271,6 +269,7 @@ export default function GameDetailPanel({
   const normGameId = normId(game.GAME_ID);
 
   useEffect(() => {
+    setLoading(true);
     loadArchivedGameBoxscores(season, game.GAME_ID).then(({ team_boxscores: teamData, player_boxscores: playerData }) => {
       const gameTeams: TBS[] = (teamData as TBS[]).filter(
         (t) => normId(t.GAME_ID) === normGameId
@@ -292,6 +291,12 @@ export default function GameDetailPanel({
         gamePlayers.filter((p) => p.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION)
       );
       setLoading(false);
+    }).catch(() => {
+      setHomeBS(null);
+      setAwayBS(null);
+      setHomePlayers([]);
+      setAwayPlayers([]);
+      setLoading(false);
     });
   }, [normGameId, season]);
 
@@ -300,17 +305,25 @@ export default function GameDetailPanel({
     if (!highlightPlayerId || loading) return;
     const inHome = homePlayers.some((p) => Number(p.PLAYER_ID) === highlightPlayerId);
     const inAway = awayPlayers.some((p) => Number(p.PLAYER_ID) === highlightPlayerId);
-    if (inHome) setActiveTab("home");
-    else if (inAway) setActiveTab("away");
+    if (inHome) {
+      setPlayerTeam("home");
+      setActiveTab("players");
+    } else if (inAway) {
+      setPlayerTeam("away");
+      setActiveTab("players");
+    }
   }, [loading, homePlayers, awayPlayers, highlightPlayerId]);
 
   const homeWon = game.WINNER_TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION;
   const awayWon = game.WINNER_TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION;
 
-  const tabBase =
-    "rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] transition-all duration-200";
-  const tabActive = "bg-[#1d428a] text-white shadow-md shadow-[#1d428a]/25";
-  const tabInactive = "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50";
+  const tabs = [
+    { id: "info", label: "Game info" },
+    { id: "teams", label: "Team stats" },
+    { id: "players", label: "Player stats" },
+    { id: "highlights", label: "Highlights" },
+    { id: "pbp", label: "Play-by-play" },
+  ] as const;
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -324,9 +337,8 @@ export default function GameDetailPanel({
       </button>
 
       {/* Header card */}
-      <div className="rounded-[1.75rem] border border-slate-100 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)] overflow-hidden">
-        <div className="h-2 w-full" style={{ background: "linear-gradient(90deg, #1d428a, #c9082a)" }} />
-        <div className="p-5">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="p-5 sm:p-6">
           {/* Date + type */}
           <div className="mb-4 flex items-center gap-2">
             <span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
@@ -395,54 +407,63 @@ export default function GameDetailPanel({
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="border-t border-slate-100 px-5 py-3">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`${tabBase} ${activeTab === "overview" ? tabActive : tabInactive}`}
-            >
-              <BarChart3 size={9} className="inline mr-1 mb-0.5" />
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab("home")}
-              className={`${tabBase} ${activeTab === "home" ? tabActive : tabInactive}`}
-            >
-              <Users2 size={9} className="inline mr-1 mb-0.5" />
-              {game.HOME_TEAM_ABBREVIATION} · Home
-            </button>
-            <button
-              onClick={() => setActiveTab("away")}
-              className={`${tabBase} ${activeTab === "away" ? tabActive : tabInactive}`}
-            >
-              <Users2 size={9} className="inline mr-1 mb-0.5" />
-              {game.AWAY_TEAM_ABBREVIATION} · Away
-            </button>
-            <button
-              onClick={() => setActiveTab("pbp")}
-              className={`${tabBase} ${activeTab === "pbp" ? tabActive : tabInactive}`}
-            >
-              <Clock size={9} className="inline mr-1 mb-0.5" />
-              Play-by-Play
-            </button>
-          </div>
-        </div>
       </div>
+
+      <nav aria-label="Game details" className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`shrink-0 rounded-lg px-3.5 py-2.5 text-xs font-semibold transition-colors sm:px-4 ${activeTab === tab.id ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
       {/* Loading */}
       {loading && (
         <div className="flex h-32 items-center justify-center gap-2">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#1d428a] border-t-transparent" />
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-transparent" />
           <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
             Loading box scores...
           </span>
         </div>
       )}
 
-      {/* Overview tab */}
-      {!loading && activeTab === "overview" && (
-        <div className="space-y-3 animate-fade-in">
+      {/* General game information */}
+      {!loading && activeTab === "info" && (
+        <section className="animate-fade-in rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-4">
+            <h2 className="m-0 text-base font-semibold text-slate-900">General information</h2>
+            <p className="mt-1 text-xs text-slate-500">Match context and final result</p>
+          </div>
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+            {[
+              { label: "Date", value: fmtDate(game.GAME_DATE) || "—" },
+              { label: "Season", value: season || game.SEASON },
+              { label: "Competition", value: game.IS_PLAYOFF ? "Playoffs" : game.SEASON_TYPE || "Regular season" },
+              { label: "Home", value: game.HOME_TEAM_NAME || game.HOME_TEAM_ABBREVIATION || "—" },
+              { label: "Away", value: game.AWAY_TEAM_NAME || game.AWAY_TEAM_ABBREVIATION || "—" },
+              { label: "Winner", value: game.WINNER_TEAM_ABBREVIATION || "—" },
+              { label: "Margin", value: game.HOME_SCORE != null && game.AWAY_SCORE != null ? `${Math.abs(game.HOME_SCORE - game.AWAY_SCORE)} points` : "—" },
+              { label: "Game ID", value: game.GAME_ID },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                <dt className="text-[10px] font-medium text-slate-500">{item.label}</dt>
+                <dd className="mt-1 text-sm font-semibold text-slate-900">{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+
+      {/* Team box score */}
+      {!loading && activeTab === "teams" && (
+        <div className="grid grid-cols-1 gap-3 animate-fade-in xl:grid-cols-2">
           <TeamTotals
             tbs={awayBS}
             abbr={game.AWAY_TEAM_ABBREVIATION}
@@ -460,46 +481,39 @@ export default function GameDetailPanel({
         </div>
       )}
 
-      {/* Home box score tab */}
-      {!loading && activeTab === "home" && (
-        <div className="space-y-3 animate-fade-in">
-          <TeamTotals
-            tbs={homeBS}
-            abbr={game.HOME_TEAM_ABBREVIATION}
-            name={game.HOME_TEAM_NAME}
-            score={game.HOME_SCORE}
-            won={homeWon}
-          />
-          {homePlayers.length > 0 ? (
-            <PlayerTable players={homePlayers} highlightId={highlightPlayerId} />
+      {/* Player box score */}
+      {!loading && activeTab === "players" && (
+        <section className="space-y-3 animate-fade-in rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="m-0 text-base font-semibold text-slate-900">Player box score</h2>
+              <p className="mt-1 text-xs text-slate-500">Full individual game statistics</p>
+            </div>
+            <div className="flex rounded-lg bg-slate-100 p-1">
+              {([
+                { side: "away", abbr: game.AWAY_TEAM_ABBREVIATION },
+                { side: "home", abbr: game.HOME_TEAM_ABBREVIATION },
+              ] as const).map(({ side, abbr }) => (
+                <button key={side} type="button" onClick={() => setPlayerTeam(side)} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${playerTeam === side ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                  {abbr}
+                </button>
+              ))}
+            </div>
+          </div>
+          {(playerTeam === "home" ? homePlayers : awayPlayers).length > 0 ? (
+            <PlayerTable players={playerTeam === "home" ? homePlayers : awayPlayers} highlightId={highlightPlayerId} />
           ) : (
-            <p className="py-8 text-center text-[11px] text-slate-400">No player data available.</p>
+            <p className="rounded-xl bg-slate-50 py-10 text-center text-sm text-slate-500">Player box score data is not available for this team.</p>
           )}
-        </div>
+        </section>
       )}
 
-      {/* Away box score tab */}
-      {!loading && activeTab === "away" && (
-        <div className="space-y-3 animate-fade-in">
-          <TeamTotals
-            tbs={awayBS}
-            abbr={game.AWAY_TEAM_ABBREVIATION}
-            name={game.AWAY_TEAM_NAME}
-            score={game.AWAY_SCORE}
-            won={awayWon}
-          />
-          {awayPlayers.length > 0 ? (
-            <PlayerTable players={awayPlayers} highlightId={highlightPlayerId} />
-          ) : (
-            <p className="py-8 text-center text-[11px] text-slate-400">No player data available.</p>
-          )}
-        </div>
-      )}
-      {/* Play by Play tab */}
-      {!loading && activeTab === "pbp" && (
+      {/* Curated moments and complete play-by-play */}
+      {!loading && (activeTab === "highlights" || activeTab === "pbp") && (
         <PlayByPlayTab
           gameId={game.GAME_ID}
           season={season}
+          mode={activeTab}
         />
       )}
     </div>
@@ -518,6 +532,8 @@ interface PbpEvent {
   score_home: number;
   score_away: number;
   points_scored: number;
+  badges?: string[];
+  moment_reasons?: string[];
 }
 
 interface PbpData {
@@ -532,14 +548,18 @@ interface PbpData {
     away_total: number;
   }[];
   events: PbpEvent[];
+  scoring_event_count?: number;
+  highlight_event_count?: number;
 }
 
 function PlayByPlayTab({
   gameId,
   season,
+  mode,
 }: {
   gameId: string;
   season: string;
+  mode: "highlights" | "pbp";
 }) {
   const [data, setData] = useState<PbpData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -564,7 +584,7 @@ function PlayByPlayTab({
   if (loading) {
     return (
       <div className="flex h-32 items-center justify-center gap-2">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#1d428a] border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-transparent" />
         <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
           Loading game events...
         </span>
@@ -582,7 +602,17 @@ function PlayByPlayTab({
     );
   }
 
-  const filteredEvents = data.events.filter((e) => {
+  const keyMomentReasons = new Set([
+    "badge", "clutch", "lead_change", "team_run", "back_to_back_3", "player_3_run",
+    "30_pt_game", "20_pt_game", "double_double", "triple_double", "10_ast", "15_reb", "5_stl", "5_blk",
+  ]);
+  const curatedHighlights = data.events.filter((event) =>
+    (event.badges?.length ?? 0) > 0 || event.moment_reasons?.some((reason) => keyMomentReasons.has(reason))
+  );
+  const highlights = curatedHighlights.length > 0
+    ? curatedHighlights
+    : data.events.filter((event) => event.points_scored > 0);
+  const filteredEvents = mode === "highlights" ? highlights : data.events.filter((e) => {
     if (filter === "scoring") return e.points_scored > 0;
     if (filter === "q1") return e.period === 1;
     if (filter === "q2") return e.period === 2;
@@ -593,8 +623,7 @@ function PlayByPlayTab({
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Quarter scores table */}
-      <div className="rounded-[1.25rem] border border-slate-100 bg-white p-4 shadow-sm">
+      {mode === "pbp" && <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3">
           Quarter Breakdown
         </p>
@@ -616,10 +645,10 @@ function PlayByPlayTab({
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* Control panel / Filters */}
-      <div className="flex flex-wrap gap-1.5">
+      {mode === "pbp" && <div className="flex flex-wrap gap-1.5">
         {(["all", "q1", "q2", "q3", "q4", "scoring"] as const).map((f) => (
           <button
             key={f}
@@ -634,51 +663,48 @@ function PlayByPlayTab({
             {f}
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* Events Log */}
-      <div className="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm space-y-3">
-        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-          Game Events Feed
-        </p>
-        <div className="max-h-[500px] overflow-y-auto space-y-2 pr-2 scrollbar-thin">
+      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="m-0 text-base font-semibold text-slate-900">{mode === "highlights" ? "Game highlights" : "Play-by-play"}</h2>
+            <p className="mt-1 text-xs text-slate-500">{mode === "highlights" ? "Key moments, scoring runs and turning points" : "Chronological event log"}</p>
+          </div>
+          <span className="text-xs tabular-nums text-slate-500">{filteredEvents.length} events</span>
+        </div>
+        <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-100 scrollbar-thin">
           {filteredEvents.map((e, idx) => {
             return (
               <div
-                key={idx}
-                className={[
-                  "grid grid-cols-[75px_1fr_120px] items-center gap-3 py-2 px-3 rounded-xl border transition-colors text-xs",
-                  e.points_scored > 0
-                    ? "bg-emerald-50/30 border-emerald-100/60"
-                    : "bg-slate-50/20 border-slate-100/50 hover:bg-slate-50/40",
-                ].join(" ")}
+                key={`${e.period}-${e.clock}-${idx}`}
+                className="grid grid-cols-[64px_1fr_auto] items-center gap-3 px-2 py-3 text-sm first:pt-1 last:pb-1"
               >
-                {/* Time */}
-                <div className="font-bold text-slate-400 tabular-nums">
+                <div className="text-xs font-medium tabular-nums text-slate-400">
                   Q{e.period} {e.clock}
                 </div>
 
-                {/* Description */}
-                <div
-                  className={[
-                    "text-slate-700 leading-snug",
-                    e.points_scored > 0 ? "font-bold text-slate-900" : "",
-                  ].join(" ")}
-                >
-                  {e.team && (
-                    <span className="font-black text-slate-900 mr-2 uppercase">
-                      {e.team}:
-                    </span>
-                  )}
-                  {e.description}
+                <div className="min-w-0">
+                  <p className="m-0 text-sm font-medium leading-snug text-slate-800">
+                    {e.player_name && <span className="font-semibold text-slate-900">{e.player_name} · </span>}
+                    {e.team && <span className="font-semibold text-slate-500">{e.team} · </span>}
+                    {e.description || e.action_type}
+                  </p>
+                  {mode === "highlights" && (e.badges?.length || e.moment_reasons?.length) ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {[...(e.badges ?? []), ...(e.moment_reasons ?? []).filter((reason) => keyMomentReasons.has(reason) && reason !== "badge")].slice(0, 3).map((reason) => (
+                        <span key={reason} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium capitalize text-slate-600">{reason.replaceAll("_", " ")}</span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
-                {/* Score */}
-                <div className="text-right font-black text-slate-900 tabular-nums">
+                <div className="whitespace-nowrap text-right text-xs font-semibold tabular-nums text-slate-600">
                   {e.score_away} - {e.score_home}
                   {e.points_scored > 0 && (
-                    <span className="ml-1 text-[9px] text-emerald-600 font-black">
-                      (+{e.points_scored})
+                    <span className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-700">
+                      +{e.points_scored}
                     </span>
                   )}
                 </div>
@@ -687,7 +713,7 @@ function PlayByPlayTab({
           })}
           {filteredEvents.length === 0 && (
             <p className="py-8 text-center text-[11px] text-slate-400">
-              No events match the selected filter.
+              {mode === "highlights" ? "No highlighted moments are available for this game." : "No events match the selected filter."}
             </p>
           )}
         </div>

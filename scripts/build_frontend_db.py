@@ -21,6 +21,13 @@ def _norm_game_id(value) -> str:
     return digits.zfill(10)
 
 
+def _season_from_gid(gid: str, fallback: str) -> str:
+    if len(gid) == 10 and gid[:3] in {"001", "002", "004", "005"} and gid[3:5].isdigit():
+        yy = int(gid[3:5])
+        return f"20{yy:02d}-{(yy + 1) % 100:02d}"
+    return fallback
+
+
 def build_frontend_db() -> None:
     t_start = time.time()
     logger.info("Starting build of nba_frontend.db at %s", DB_PATH)
@@ -117,7 +124,10 @@ def build_frontend_db() -> None:
         with open(p, "r", encoding="utf-8") as f:
             raw = json.load(f)
         if isinstance(raw, list):
-            rows = [(_norm_game_id(r.get("GAME_ID")), season, json.dumps(r)) for r in raw]
+            rows = []
+            for r in raw:
+                gid = _norm_game_id(r.get("GAME_ID"))
+                rows.append((gid, _season_from_gid(gid, season), json.dumps(r)))
             cursor.executemany("INSERT INTO team_boxscores VALUES (?, ?, ?)", rows)
             logger.info("Ingested %d rows from %s.", len(rows), p.name)
 
@@ -141,7 +151,7 @@ def build_frontend_db() -> None:
                     pid = int(pid) if pid is not None else None
                 except (ValueError, TypeError):
                     pid = None
-                rows.append((gid, pid, season, json.dumps(r)))
+                rows.append((gid, pid, _season_from_gid(gid, season), json.dumps(r)))
             cursor.executemany("INSERT INTO player_boxscores VALUES (?, ?, ?, ?)", rows)
             logger.info("Ingested %d rows from %s.", len(rows), p.name)
 

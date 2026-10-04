@@ -13,10 +13,11 @@ import {
   type TeamBoxScore,
 } from "./game-results";
 
-type SeasonTypeFilter = "all" | "regular" | "playin" | "playoffs" | "finals";
+type SeasonTypeFilter = "all" | "preseason" | "regular" | "playin" | "playoffs" | "finals";
 
 const SEASON_TYPE_FILTERS: { id: SeasonTypeFilter; label: string; values: string[] }[] = [
   { id: "all", label: "All", values: [] },
+  { id: "preseason", label: "Pre Season", values: ["Pre Season", "Preseason"] },
   { id: "regular", label: "Regular Season", values: ["Regular Season"] },
   { id: "playin", label: "Play In", values: ["PlayIn"] },
   { id: "playoffs", label: "Play Off", values: ["Playoffs"] },
@@ -29,7 +30,7 @@ export default function GameResults({
 }: {
   onNavigateToPrediction?: (game: { HOME_TEAM_ABBREVIATION: string; AWAY_TEAM_ABBREVIATION: string; GAME_DATE: string }) => void;
 } = {}) {
-  const [seasonsList, setSeasonsList] = useState<string[]>(["2025-26", "2024-25", "2023-24", "2022-23"]);
+  const [seasonsList, setSeasonsList] = useState<string[]>(["2026-27", "2025-26", "2024-25", "2023-24", "2022-23"]);
   const [allResults,  setAllResults]  = useState<(GameFeedRow & { SEASON?: string | null })[]>([]);
   const [results,     setResults]     = useState<GameFeedRow[]>([]);
   const [gameDetailCache, setGameDetailCache] = useState<Record<string, {
@@ -102,18 +103,14 @@ export default function GameResults({
   );
 
   useEffect(() => {
-    // For past seasons, default to the latest/last match date (e.g. Finals / season end).
-    // For current/upcoming season (2026-27), default to the earliest match date.
     if (uniqueDates.length > 0) {
-      if (selectedSeason === "2026-27") {
-        setSelectedDate(uniqueDates[0]);
-      } else {
-        setSelectedDate(uniqueDates[uniqueDates.length - 1]);
-      }
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      setSelectedDate(uniqueDates.find((day) => day >= today) ?? uniqueDates[uniqueDates.length - 1]);
     } else {
       setSelectedDate("");
     }
-  }, [selectedSeason, seasonTypeFilter, uniqueDates.length]);
+  }, [selectedSeason, seasonTypeFilter, uniqueDates]);
 
   const seasonTypeCounts = useMemo(() => {
     const seasonPool = allResults.filter((g: any) => g.SEASON === selectedSeason);
@@ -122,7 +119,7 @@ export default function GameResults({
         ? seasonPool.length
         : seasonPool.filter((g) => filter.values.includes(g.SEASON_TYPE)).length;
       return acc;
-    }, { all: 0, regular: 0, playin: 0, playoffs: 0, finals: 0 });
+    }, { all: 0, preseason: 0, regular: 0, playin: 0, playoffs: 0, finals: 0 });
   }, [results, allResults, selectedSeason]);
 
   const selectedDateIndex = uniqueDates.indexOf(selectedDate);

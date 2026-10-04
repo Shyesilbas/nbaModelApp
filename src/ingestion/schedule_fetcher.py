@@ -48,8 +48,8 @@ def fetch_schedule_for_season(season: str = None) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
         
-    # Filter out preseason (starts with 001) and all-star (starts with 003)
-    df = df[df["gameId"].astype(str).str.startswith(("002", "004", "005"))].copy()
+    # Keep preseason (001), regular season (002), playoffs (004), play-in (005); filter out all-star (003)
+    df = df[df["gameId"].astype(str).str.startswith(("001", "002", "004", "005"))].copy()
     
     # Map columns to match schedule schema safely
     mapped_df = pd.DataFrame()
@@ -67,9 +67,11 @@ def fetch_schedule_for_season(season: str = None) -> pd.DataFrame:
     def determine_season_type(row):
         label = str(row.get("gameLabel", "")).strip()
         gid = str(row.get("gameId", ""))
-        if gid.startswith("005") or "play-in" in label.lower() or "playin" in label.lower():
+        if gid.startswith("001") or "preseason" in label.lower() or "pre season" in label.lower():
+            return "Pre Season"
+        elif gid.startswith("005") or "play-in" in label.lower() or "playin" in label.lower():
             return "PlayIn"
-        elif label == "NBA Finals" or gid.startswith("00425004") or "00425004" in gid:
+        elif label == "NBA Finals" or gid.startswith("00425004") or "00425004" in gid or gid.startswith("00426004") or "00426004" in gid:
             return "NBA Finals"
         elif gid.startswith("004") or any(r in label for r in ["Round", "Semifinals", "Finals", "Playoffs"]):
             return "Playoffs"

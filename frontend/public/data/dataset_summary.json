@@ -1,10 +1,10 @@
 {
-  "total_team_game_rows": 0,
+  "total_team_game_rows": 2,
   "team_games_regular": 0,
   "team_games_playin": 0,
   "team_games_playoffs": 0,
   "team_games_finals": 0,
-  "total_player_game_rows": 0,
+  "total_player_game_rows": 31,
   "player_games_regular": 0,
   "player_games_playin": 0,
   "player_games_playoffs": 0,
@@ -14,25 +14,25 @@
   "v1_rows": 0,
   "v1_features": 0,
   "v2_rows": 0,
-  "v2_features": 0,
+  "v2_features": 47,
   "v3_rows": 0,
   "v3_features": 0,
   "files_status": [
     {
       "name": "Raw Team Game Logs",
       "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/raw/team_games.csv",
-      "exists": false,
-      "rows": 0,
-      "columns": 0,
-      "size_kb": 0.0
+      "exists": true,
+      "rows": 2,
+      "columns": 29,
+      "size_kb": 0.48
     },
     {
       "name": "Raw Player Game Logs",
       "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/raw/player_games.csv",
-      "exists": false,
-      "rows": 0,
-      "columns": 0,
-      "size_kb": 0.0
+      "exists": true,
+      "rows": 31,
+      "columns": 29,
+      "size_kb": 3.96
     },
     {
       "name": "Team Rosters",
@@ -85,10 +85,10 @@
     {
       "name": "V2 Model-Ready Dataset",
       "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/processed/team_model_ready_v2.csv",
-      "exists": false,
+      "exists": true,
       "rows": 0,
-      "columns": 0,
-      "size_kb": 0.0
+      "columns": 54,
+      "size_kb": 0.99
     },
     {
       "name": "V3 Model-Ready Dataset",
@@ -102,17 +102,17 @@
       "name": "Combined Schedule",
       "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/processed/schedule_combined.csv",
       "exists": true,
-      "rows": 1274,
-      "columns": 12,
-      "size_kb": 111.13
+      "rows": 1273,
+      "columns": 17,
+      "size_kb": 105.04
     },
     {
       "name": "Upcoming Games Context",
       "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/processed/upcoming_games_context.csv",
-      "exists": false,
-      "rows": 0,
-      "columns": 0,
-      "size_kb": 0.0
+      "exists": true,
+      "rows": 1272,
+      "columns": 33,
+      "size_kb": 110.27
     }
   ]
 }

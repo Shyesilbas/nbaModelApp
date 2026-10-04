@@ -11,7 +11,6 @@ import {
   Swords,
   ShieldHalf,
   Sparkles,
-  ChevronRight,
   Layers3
 } from "lucide-react";
 import TeamLogo from "./TeamLogo";
@@ -34,7 +33,10 @@ interface PlayerRoster {
 
 interface TeamExplorerProps {
   rosters: PlayerRoster[];
+  onSelectPlayer: (playerId: number) => void;
 }
+
+type ExplorerView = "team" | "league";
 
 const ROLE_BY_RANK = [
   {
@@ -64,13 +66,14 @@ const ROLE_BY_RANK = [
   },
 ] as const;
 
-const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
+const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters, onSelectPlayer }) => {
   const [seasonsList, setSeasonsList] = useState<string[]>(["2026-27", "2025-26", "2024-25", "2023-24", "2022-23"]);
   const [selectedSeason, setSelectedSeason] = useState<string>("2026-27");
   const [seasonRosters, setSeasonRosters] = useState<Record<string, PlayerRoster[]>>({ "2026-27": rosters });
   const [loadingSeason, setLoadingSeason] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string>("BOS");
+  const [view, setView] = useState<ExplorerView>("team");
   const [sortBy, setSortBy] = useState<string>("AVG_MIN");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
@@ -151,6 +154,36 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
       .slice(0, 5);
   }, [rawTeamRoster]);
 
+  const leagueTeamRanks = useMemo(() => teamsList.map((team) => {
+    const players = activeRosters
+      .filter((player) => player.TEAM_ABBREVIATION === team)
+      .sort((a, b) => b.IMPORTANCE_SCORE - a.IMPORTANCE_SCORE);
+    const topThree = players.slice(0, 3);
+    return {
+      team,
+      players,
+      score: topThree.length ? topThree.reduce((sum, player) => sum + player.IMPORTANCE_SCORE, 0) / topThree.length : 0,
+    };
+  }).sort((a, b) => b.score - a.score), [activeRosters, teamsList]);
+
+  const leaguePlayerLeaders = useMemo(() => {
+    const rankByPlayer = new Map<string, number>();
+    leagueTeamRanks.forEach(({ team, players }) => {
+      players.forEach((player, index) => rankByPlayer.set(`${team}:${player.PLAYER_ID}`, index + 1));
+    });
+    return [...activeRosters]
+      .sort((a, b) => b.IMPORTANCE_SCORE - a.IMPORTANCE_SCORE)
+      .slice(0, 15)
+      .map((player) => ({
+        ...player,
+        CORE_RANK: rankByPlayer.get(`${player.TEAM_ABBREVIATION}:${player.PLAYER_ID}`) ?? 0,
+      }));
+  }, [activeRosters, leagueTeamRanks]);
+
+  const leagueAverage = useMemo(() => leagueTeamRanks.length
+    ? leagueTeamRanks.reduce((sum, item) => sum + item.score, 0) / leagueTeamRanks.length
+    : 0, [leagueTeamRanks]);
+
   // Sorted full roster
   const sortedTeamRoster = useMemo(() => {
     return [...rawTeamRoster].sort((a, b) => {
@@ -181,21 +214,6 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
       strength: top3.length > 0 ? strengthSum / top3.length : 0
     };
   }, [rawTeamRoster, corePlayers]);
-
-  const rosterPowerMap = useMemo(() => {
-    const core = corePlayers.slice(0, 3);
-    const secondary = corePlayers.slice(3, 5);
-    const rotation = rawTeamRoster
-      .filter(player => !corePlayers.some(corePlayer => corePlayer.PLAYER_ID === player.PLAYER_ID))
-      .sort((a, b) => b.IMPORTANCE_SCORE - a.IMPORTANCE_SCORE)
-      .slice(0, 3);
-
-    return [
-      { label: "Core", players: core, color: activeTeamTheme.primary },
-      { label: "Secondary", players: secondary, color: activeTeamTheme.secondary },
-      { label: "Rotation", players: rotation, color: "#64748b" },
-    ];
-  }, [corePlayers, rawTeamRoster, activeTeamTheme.primary, activeTeamTheme.secondary]);
 
   return (
     <div className="space-y-8 animate-fade-in-up">
@@ -330,6 +348,16 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
         </div>
       </section>
 
+      <div className="flex w-fit gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-xs">
+        <button onClick={() => setView("team")} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${view === "team" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}>
+          Team overview
+        </button>
+        <button onClick={() => setView("league")} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${view === "league" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}>
+          League rankings
+        </button>
+      </div>
+
+      {view === "team" ? <>
       {/* ─── Franchise Hierarchy Overview ─── */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -348,31 +376,27 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {corePlayers.map((player, idx) => {
             const role = ROLE_BY_RANK[idx] ?? ROLE_BY_RANK[4];
             const Icon = role.icon;
-            const featured = idx === 0;
-            const compact = idx >= 3;
             const isTop3 = idx < 3;
             const cardAccentColor = isTop3 ? activeTeamTheme.primary : activeTeamTheme.secondary;
             return (
               <div
                 key={player.PLAYER_ID}
-                className={`group relative overflow-hidden rounded-[1.75rem] border bg-white shadow-xs transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
-                  featured ? "lg:col-span-5 min-h-[22rem]" : compact ? "lg:col-span-3 min-h-[15rem]" : "lg:col-span-4 min-h-[18rem]"
-                }`}
+                className="group relative overflow-hidden rounded-2xl border bg-white shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                 style={{
                   borderColor: isTop3 ? `${activeTeamTheme.primary}28` : `${activeTeamTheme.secondary}22`,
                   boxShadow: `0 1px 0 rgba(15,23,42,0.02), 0 20px 40px ${isTop3 ? activeTeamTheme.glow : `${activeTeamTheme.secondary}0a`}`,
                 }}
               >
                 <div
-                  className="absolute inset-x-0 top-0 h-1.5"
+                  className="absolute inset-x-0 top-0 h-1"
                   style={{ background: isTop3 ? `linear-gradient(90deg, ${activeTeamTheme.primary}, ${activeTeamTheme.secondary})` : activeTeamTheme.secondary }}
                 />
-                <div className="flex h-full flex-col gap-4 p-5" style={{ background: featured ? `linear-gradient(180deg, ${activeTeamTheme.primary}0a 0%, #ffffff 46%)` : "#ffffff" }}>
-                  <div className="flex items-start justify-between gap-4">
+                <div className="flex h-full flex-col gap-3 p-4">
+                  <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: cardAccentColor, backgroundColor: `${cardAccentColor}12`, borderColor: `${cardAccentColor}22` }}>
@@ -380,18 +404,18 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                         </span>
                         <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{player.TEAM_ABBREVIATION}</span>
                       </div>
-                      <p className={`mt-3 font-black leading-none text-slate-900 ${featured ? "text-3xl" : "text-xl"}`} style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                      <p className="mt-2 text-lg font-bold leading-tight text-slate-900">
                         {player.PLAYER_NAME}
                       </p>
-                      <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
-                        <Icon size={14} style={{ color: cardAccentColor }} />
-                        <span className="font-semibold">{role.title}</span>
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                        <Icon size={12} style={{ color: cardAccentColor }} />
+                        <span className="font-medium">{role.title}</span>
                       </div>
                     </div>
                     <PlayerPhoto 
                       playerId={player.PLAYER_ID} 
                       name={player.PLAYER_NAME} 
-                      size={featured ? 72 : 56} 
+                      size={48}
                       style={{
                         borderColor: cardAccentColor,
                         boxShadow: `0 0 0 2px ${cardAccentColor}25, 0 4px 12px ${activeTeamTheme.glow}`,
@@ -399,37 +423,37 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
                     />
                   </div>
 
-                  <p className="text-sm leading-relaxed text-slate-500">{role.description}</p>
+                  <p className="text-xs leading-relaxed text-slate-500">{role.description}</p>
 
                   <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-black" style={{ color: cardAccentColor, backgroundColor: `${cardAccentColor}12` }}>
+                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ color: cardAccentColor, backgroundColor: `${cardAccentColor}12` }}>
                       Impact {player.IMPORTANCE_SCORE.toFixed(1)}
                     </span>
-                    <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
                       {player.GP} GP
                     </span>
                   </div>
 
-                  <div className={`grid gap-3 ${featured ? "grid-cols-5" : "grid-cols-2"}`}>
-                    <div className="rounded-2xl p-3 border" style={{ backgroundColor: `${activeTeamTheme.primary}08`, borderColor: `${activeTeamTheme.primary}18` }}>
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: activeTeamTheme.primary }}>PPG</p>
-                      <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_PTS.toFixed(1)}</p>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    <div className="rounded-xl p-2 border" style={{ backgroundColor: `${activeTeamTheme.primary}08`, borderColor: `${activeTeamTheme.primary}18` }}>
+                      <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: activeTeamTheme.primary }}>PPG</p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-900">{player.AVG_PTS.toFixed(1)}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50/80 p-3 border border-slate-100">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">RPG</p>
-                      <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_REB.toFixed(1)}</p>
+                    <div className="rounded-xl bg-slate-50/80 p-2 border border-slate-100">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">RPG</p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-900">{player.AVG_REB.toFixed(1)}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50/80 p-3 border border-slate-100">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">APG</p>
-                      <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_AST.toFixed(1)}</p>
+                    <div className="rounded-xl bg-slate-50/80 p-2 border border-slate-100">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">APG</p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-900">{player.AVG_AST.toFixed(1)}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50/80 p-3 border border-slate-100">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">MIN</p>
-                      <p className="mt-1 text-lg font-black text-slate-900">{player.AVG_MIN.toFixed(0)}</p>
+                    <div className="rounded-xl bg-slate-50/80 p-2 border border-slate-100">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">MIN</p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-900">{player.AVG_MIN.toFixed(0)}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50/80 p-3 border border-slate-100">
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">G</p>
-                      <p className="mt-1 text-lg font-black text-slate-900">{player.GP}</p>
+                    <div className="rounded-xl bg-slate-50/80 p-2 border border-slate-100">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">G</p>
+                      <p className="mt-0.5 text-sm font-bold text-slate-900">{player.GP}</p>
                     </div>
                   </div>
                 </div>
@@ -438,77 +462,6 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
           })}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-          <div className="lg:col-span-8 rounded-[1.75rem] border border-slate-200/70 bg-white p-5 shadow-xs">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="m-0 text-lg font-black uppercase tracking-wide text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  Roster Power Map
-                </h3>
-                <p className="mt-1 text-xs text-slate-400">A simple structure view of the current franchise hierarchy.</p>
-              </div>
-              <ChevronRight size={16} className="text-slate-300" />
-            </div>
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              {rosterPowerMap.map((group) => (
-                <div key={group.label} className="rounded-[1.4rem] border border-slate-200 bg-slate-50/70 p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{group.label}</span>
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: group.color }} />
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {group.players.length > 0 ? group.players.map((p) => (
-                      <div key={p.PLAYER_ID} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 shadow-[0_1px_0_rgba(15,23,42,0.03)]">
-                        <span className="truncate text-sm font-semibold text-slate-700">{p.PLAYER_NAME}</span>
-                        <span className="text-xs font-black text-slate-400">#{corePlayers.findIndex(cp => cp.PLAYER_ID === p.PLAYER_ID) + 1}</span>
-                      </div>
-                    )) : (
-                      <p className="text-sm text-slate-400">No players in this tier.</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="lg:col-span-4 rounded-[1.75rem] border border-slate-200/70 bg-white p-5 shadow-xs">
-            <h3 className="m-0 text-lg font-black uppercase tracking-wide text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-              Core Strength
-            </h3>
-            <p className="mt-1 text-xs text-slate-400">Top 3 impact average for the selected franchise.</p>
-            <div className="mt-5 rounded-[1.5rem] border border-slate-100 bg-slate-50/80 p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Top 3 Power</p>
-                  <p className="mt-2 text-4xl font-black text-slate-900">{teamSummary.strength.toFixed(1)}%</p>
-                </div>
-                <div className="relative h-20 w-20">
-                  <svg className="h-full w-full -rotate-90">
-                    <circle cx="40" cy="40" r="30" stroke="#e2e8f0" strokeWidth="6" fill="transparent" />
-                    <circle cx="40" cy="40" r="30" stroke={activeTeamTheme.primary} strokeWidth="6" fill="transparent" strokeDasharray={2 * Math.PI * 30} strokeDashoffset={2 * Math.PI * 30 - (teamSummary.strength / 100) * (2 * Math.PI * 30)} strokeLinecap="round" />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-sm font-black text-slate-800">{teamSummary.size}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-2xl bg-white p-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Roster</p>
-                  <p className="mt-1 text-lg font-black text-slate-900">{teamSummary.size}</p>
-                </div>
-                <div className="rounded-2xl bg-white p-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Avg PTS</p>
-                  <p className="mt-1 text-lg font-black text-slate-900">{teamSummary.avgPts.toFixed(1)}</p>
-                </div>
-                <div className="rounded-2xl bg-white p-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Roles</p>
-                  <p className="mt-1 text-lg font-black text-slate-900">5</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* ─── Discovered Roster Table (Full Matrix) ─── */}
@@ -642,6 +595,60 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ rosters }) => {
           </table>
         </div>
       </div>
+      </> : (
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-5 py-4">
+              <h2 className="m-0 text-base font-semibold text-slate-900">Franchise strength</h2>
+              <p className="mt-1 text-xs text-slate-500">Average importance score of each team’s top three players · league avg. {leagueAverage.toFixed(1)}</p>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {leagueTeamRanks.map((item, index) => {
+                const difference = item.score - leagueAverage;
+                return (
+                  <button key={item.team} onClick={() => { setSelectedTeam(item.team); setView("team"); }} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-slate-50">
+                    <span className="w-6 text-right text-xs tabular-nums text-slate-400">{index + 1}</span>
+                    <TeamLogo abbr={item.team} size={25} />
+                    <span className="w-10 text-sm font-semibold text-slate-800">{item.team}</span>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-slate-700" style={{ width: `${Math.min(item.score, 100)}%` }} />
+                    </div>
+                    <span className="w-10 text-right text-sm font-semibold tabular-nums text-slate-800">{item.score.toFixed(1)}</span>
+                    <span className={`hidden w-14 text-right text-xs tabular-nums sm:block ${difference >= 0 ? "text-slate-600" : "text-slate-400"}`}>{difference >= 0 ? "+" : ""}{difference.toFixed(1)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-5 py-4">
+              <h2 className="m-0 text-base font-semibold text-slate-900">League leaders</h2>
+              <p className="mt-1 text-xs text-slate-500">Top players by importance score · {selectedSeason}</p>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {leaguePlayerLeaders.map((player, index) => (
+                <button
+                  key={`${player.TEAM_ABBREVIATION}-${player.PLAYER_ID}`}
+                  type="button"
+                  onClick={() => onSelectPlayer(player.PLAYER_ID)}
+                  className="flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400"
+                  aria-label={`Open ${player.PLAYER_NAME} player profile`}
+                  title={`Open ${player.PLAYER_NAME} profile`}
+                >
+                  <span className="w-6 text-right text-xs tabular-nums text-slate-400">{index + 1}</span>
+                  <PlayerPhoto playerId={player.PLAYER_ID} name={player.PLAYER_NAME} size={34} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-800">{player.PLAYER_NAME}</p>
+                    <p className="text-[11px] text-slate-500">{player.TEAM_ABBREVIATION} · team rank #{player.CORE_RANK}</p>
+                  </div>
+                  <span className="text-sm font-semibold tabular-nums text-slate-800">{player.IMPORTANCE_SCORE.toFixed(1)}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 };

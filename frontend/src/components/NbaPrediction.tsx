@@ -20,6 +20,7 @@ import {
   type PlayerStatusOverride,
 } from "../api/predictions";
 import { loadPrivateApi } from "../lib/dataCache";
+import { loadArchivedGameIndex } from "../lib/archiveData";
 import { NBA_TEAMS } from "../lib/nbaTeams";
 import { CURRENT_SEASON, MIN_PREDICTION_DATE } from "../lib/constants";
 
@@ -63,6 +64,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   }
 
   const [weeks, setWeeks] = useState<SeasonWeek[]>([]);
+  const [seasonGames, setSeasonGames] = useState<any[]>([]);
   const [selectedWeekNum, setSelectedWeekNum] = useState<number>(1);
   const [loadingWeek, setLoadingWeek] = useState(false);
   const [upcomingGames, setUpcomingGames] = useState<any[]>([]);
@@ -87,11 +89,34 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
       try {
         setLoadingData(true);
         setDataError(null);
-        let weekList: SeasonWeek[] = [];
-        try {
-          weekList = await loadPrivateApi<SeasonWeek[]>(`/frontend-data-api/weeks?season=${encodeURIComponent(CURRENT_SEASON)}`);
-        } catch {
-          weekList = [];
+        const scheduleGames = await loadArchivedGameIndex(CURRENT_SEASON);
+        setSeasonGames(scheduleGames);
+        const gamesByWeek = new Map<string, { start: string; end: string; count: number }>();
+        for (const game of scheduleGames) {
+          const date = game.GAME_DATE?.slice(0, 10);
+          if (!date) continue;
+          const dateUtc = new Date(`${date}T00:00:00Z`);
+          if (Number.isNaN(dateUtc.getTime())) continue;
+          const monday = new Date(dateUtc);
+          monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+          const sunday = new Date(monday);
+          sunday.setUTCDate(sunday.getUTCDate() + 6);
+          const start = monday.toISOString().slice(0, 10);
+          const end = sunday.toISOString().slice(0, 10);
+          const key = `${start}:${end}`;
+          const existing = gamesByWeek.get(key);
+          gamesByWeek.set(key, { start, end, count: (existing?.count ?? 0) + 1 });
+        }
+        let weekList: SeasonWeek[] = [...gamesByWeek.values()]
+          .sort((a, b) => a.start.localeCompare(b.start))
+          .map((week, index) => ({
+            week_number: index + 1, start_date: week.start, end_date: week.end,
+            label: `Week ${index + 1} (${week.start.slice(5)} to ${week.end.slice(5)})`,
+            game_count: week.count,
+          }));
+        if (weekList.length === 0) {
+          try { weekList = await loadPrivateApi<SeasonWeek[]>(`/frontend-data-api/weeks?season=${encodeURIComponent(CURRENT_SEASON)}`); }
+          catch { weekList = []; }
         }
 
         if (!weekList || weekList.length === 0) {
@@ -144,9 +169,10 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
     const fetchWeekGames = async () => {
       setLoadingWeek(true);
       try {
-        const data = await loadPrivateApi<any[]>(
-          `/frontend-data-api/games?season=${encodeURIComponent(CURRENT_SEASON)}&start_date=${encodeURIComponent(currentWeek.start_date)}&end_date=${encodeURIComponent(currentWeek.end_date)}`
-        );
+        const data = seasonGames.filter((g) => {
+          const date = g.GAME_DATE?.slice(0, 10);
+          return date && date >= currentWeek.start_date && date <= currentWeek.end_date;
+        });
         if (!isMounted) return;
 
         const isCompletedGame = (g: any) => {
@@ -177,7 +203,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
     return () => {
       isMounted = false;
     };
-  }, [selectedWeekNum, weeks]);
+  }, [selectedWeekNum, weeks, seasonGames]);
 
   // Load preview rosters whenever home, away, date are chosen
   useEffect(() => {

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Clock, Trophy, Sparkles } from "lucide-react";
+import { Clock, Trophy, Sparkles, LayoutGrid, Users, ListOrdered } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import PlayerPhoto from "../PlayerPhoto";
+import { PlayerBoxTable } from "./PlayerBoxTable";
 import { getTeamTheme } from "../../lib/nbaTeams";
 import type { GameDetail, GameFeedRow } from "../../types/gameFeed";
 import { loadArchivedPlayByPlay } from "../../lib/archiveData";
@@ -9,11 +10,10 @@ import { GameLeaders } from "./GameLeaders";
 import { GameSummaryBlock } from "./GameSummaryBlock";
 import { QuarterScores } from "./QuarterScores";
 import { ShootingSummary } from "./ShootingSummary";
-import { TabButton } from "./TabButton";
 import { TeamComparisonBars } from "./TeamComparisonBars";
 import { TopPerformers } from "./TopPerformers";
 import type { PlayerBoxScore, TeamBoxScore } from "./types";
-import { fmtDate, fmtInt, fmtPair, fmtPct, teamCity, teamFull } from "./utils";
+import { fmtDate, fmtInt, teamCity, teamFull } from "./utils";
 
 /* ── Game Detail View ── */
 export function GameCardDetail({
@@ -70,64 +70,6 @@ export function GameCardDetail({
   const homeQS = gameDetail?.home_team?.quarter_scores;
   const awayQS = gameDetail?.away_team?.quarter_scores;
 
-  const renderPlayerList = (players: PlayerBoxScore[]) => (
-    <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-slate-200 bg-slate-50/80">
-      <table className="w-full text-xs">
-        <thead>
-          <tr>
-            <th className="sticky left-0 bg-slate-50 px-3 py-2.5 text-left text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">Player</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">MIN</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">PTS</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">FG</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">FG%</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">3P</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">3P%</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">FT</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">FT%</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">REB</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">AST</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">STL</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">BLK</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">TOV</th>
-            <th className="px-2 py-2.5 text-right text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">+/-</th>
-          </tr>
-        </thead>
-        <tbody>
-          {players.length ? players.map((p) => (
-            <tr key={p.PLAYER_ID} className="border-t border-slate-100 bg-white hover:bg-slate-50 transition-colors">
-              <td className="sticky left-0 bg-white px-3 py-2.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME} size={24} />
-                  <div className="min-w-0">
-                    <p className="truncate text-[11px] font-bold text-slate-800">{p.PLAYER_NAME}</p>
-                    <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400">{p.TEAM_ABBREVIATION}</p>
-                  </div>
-                </div>
-              </td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-500">{p.MIN != null ? Math.round(p.MIN) : "—"}</td>
-              <td className="px-2 py-2.5 text-right font-black text-slate-900">{fmtInt(p.PTS)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPair(p.FGM ?? null, p.FGA ?? null)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPct(p.FG_PCT)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPair(p.FG3M ?? null, p.FG3A ?? null)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPct(p.FG3_PCT)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPair(p.FTM ?? null, p.FTA ?? null)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtPct(p.FT_PCT)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.REB)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.AST)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.STL)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.BLK)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.TOV)}</td>
-              <td className="px-2 py-2.5 text-right font-medium text-slate-600">{fmtInt(p.PLUS_MINUS)}</td>
-            </tr>
-          )) : (
-            <tr>
-              <td colSpan={15} className="px-3 py-6 text-center text-sm text-slate-400 border-t border-slate-100">No player rows for this side.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
 
   return (
     <div className="space-y-4 animate-fade-in-up">
@@ -332,16 +274,25 @@ export function GameCardDetail({
       {/* ══════════════════════════════════════
           TAB BAR
           ══════════════════════════════════════ */}
-      <div className="rounded-[1.5rem] border border-slate-100 bg-white px-4 py-3 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          <TabButton label={isCompleted ? "Game Overview" : "Matchup Preview"} active={activeTab === "game"} onClick={() => setActiveTab("game")} />
-          <TabButton label={`${game.HOME_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Team Info"}`} active={activeTab === "home"} onClick={() => setActiveTab("home")} />
-          <TabButton label={`${game.AWAY_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Team Info"}`} active={activeTab === "away"} onClick={() => setActiveTab("away")} />
-          {isCompleted && (
-            <TabButton label="Play-by-Play" active={activeTab === "pbp"} onClick={() => setActiveTab("pbp")} />
-          )}
-        </div>
-      </div>
+      <nav className="sticky top-2 z-20 flex gap-1 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/90 p-1.5 shadow-sm backdrop-blur">
+        {([
+          { id: "game", label: isCompleted ? "Overview" : "Preview", icon: <LayoutGrid size={13} />, color: "#0f172a" },
+          { id: "away", label: `${game.AWAY_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Info"}`, icon: <Users size={13} />, color: awayTheme.primary },
+          { id: "home", label: `${game.HOME_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Info"}`, icon: <Users size={13} />, color: homeTheme.primary },
+          ...(isCompleted ? [{ id: "pbp", label: "Play-by-Play", icon: <ListOrdered size={13} />, color: "#0f172a" }] : []),
+        ] as { id: "game" | "home" | "away" | "pbp"; label: string; icon: React.ReactNode; color: string }[]).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setActiveTab(t.id)}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] transition-all ${activeTab === t.id ? "text-white shadow-md" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
+            style={activeTab === t.id ? { backgroundColor: t.color } : undefined}
+          >
+            {t.icon}
+            {t.label}
+          </button>
+        ))}
+      </nav>
 
       {/* ══════════════════════════════════════
           GAME OVERVIEW / MATCHUP PREVIEW TAB
@@ -482,7 +433,7 @@ export function GameCardDetail({
               )}
             </div>
             {isCompleted ? (
-              renderPlayerList(topHome)
+              <PlayerBoxTable players={topHome} accent={homeTheme.primary} />
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
                 <p className="text-xs font-bold text-slate-600">Player box score statistics are not available yet.</p>
@@ -537,7 +488,7 @@ export function GameCardDetail({
               )}
             </div>
             {isCompleted ? (
-              renderPlayerList(topAway)
+              <PlayerBoxTable players={topAway} accent={awayTheme.primary} />
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
                 <p className="text-xs font-bold text-slate-600">Player box score statistics are not available yet.</p>
