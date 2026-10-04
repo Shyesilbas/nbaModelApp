@@ -19,13 +19,13 @@ RAW_SCHEDULE_CSV = "data/raw/schedule/nba_schedule.csv"
 RAW_FINALS_CSV = "data/raw/schedule/nba_finals_upcoming.csv"
 
 SCHEDULE_COLUMNS = [
-    'GAME_ID', 'GAME_DATE', 'HOME_TEAM_ABBREVIATION', 'AWAY_TEAM_ABBREVIATION', 
+    'GAME_ID', 'GAME_DATE', 'GAME_START_UTC', 'HOME_TEAM_ABBREVIATION', 'AWAY_TEAM_ABBREVIATION',
     'SEASON_TYPE', 'IS_PLAYOFF', 'GAME_STATUS', 'PLAYOFF_ROUND', 'SERIES_GAME_NUMBER', 
     'HOME_SERIES_WINS', 'AWAY_SERIES_WINS', 'IS_ELIMINATION_GAME', 'CAN_CLINCH_SERIES'
 ]
 
 FINALS_COLUMNS = [
-    'GAME_ID', 'GAME_DATE', 'HOME_TEAM_ABBREVIATION', 'AWAY_TEAM_ABBREVIATION', 
+    'GAME_ID', 'GAME_DATE', 'GAME_START_UTC', 'HOME_TEAM_ABBREVIATION', 'AWAY_TEAM_ABBREVIATION',
     'SEASON_TYPE', 'IS_PLAYOFF', 'GAME_STATUS'
 ]
 
@@ -57,6 +57,12 @@ def fetch_schedule_for_season(season: str = None) -> pd.DataFrame:
     
     # Format date: YYYY-MM-DD
     mapped_df["GAME_DATE"] = pd.to_datetime(df["gameDateEst"]).dt.strftime("%Y-%m-%d")
+    # Keep scheduled UTC tip-off so the frontend can enable post-game
+    # ingestion after a fixed delay without relying on live game status.
+    if "gameDateUTC" in df.columns:
+        mapped_df["GAME_START_UTC"] = pd.to_datetime(df["gameDateUTC"], utc=True, errors="coerce").dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    else:
+        mapped_df["GAME_START_UTC"] = None
     
     mapped_df["HOME_TEAM_ABBREVIATION"] = df["homeTeam_teamTricode"]
     mapped_df["AWAY_TEAM_ABBREVIATION"] = df["awayTeam_teamTricode"]

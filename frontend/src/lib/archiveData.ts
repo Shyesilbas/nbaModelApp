@@ -1,4 +1,4 @@
-import { loadJson, loadPrivateApi } from "./dataCache";
+import { loadJson, loadPrivateApi, loadPrivateApiFresh } from "./dataCache";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 import type { PlayerBoxScore, TeamBoxScore } from "../components/game-results/types";
 
@@ -9,6 +9,9 @@ const seasonSuffix = (season?: string | null) =>
   !season || season === "2025-26" ? "" : `_${season}`;
 
 let gameDetailsPromise: Promise<GameDetail[]> | null = null;
+let currentGamesPromise: Promise<GameFeedRow[] | null> | null = null;
+let allSeasonGamesPromise: Promise<GameFeedRow[] | null> | null = null;
+let scheduleGamesPromise: Promise<GameFeedRow[] | null> | null = null;
 const pbpCache = new Map<string, Promise<any>>();
 
 async function loadGameDetails(): Promise<GameDetail[]> {
@@ -36,26 +39,34 @@ const inferSeasonFromGameId = (gameId?: string | number | null): string => {
 
 export async function loadArchivedGameIndex(season?: string | null): Promise<GameFeedRow[]> {
   const seasonParam = season ? `?season=${encodeURIComponent(season)}` : "";
-  const [apiResult, currentResult, archiveResult, scheduleResult] = await Promise.allSettled([
-    loadPrivateApi<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`),
-    loadJson<GameFeedRow[]>("/data/games.json", []),
-    loadJson<GameFeedRow[]>("/data/all_seasons_games.json", []),
-    loadJson<GameFeedRow[]>("/data/schedule.json", []),
+  currentGamesPromise ??= loadGameJson("/data/games.json");
+  allSeasonGamesPromise ??= loadGameJson("/data/all_seasons_games.json");
+  scheduleGamesPromise ??= loadGameJson("/data/schedule.json");
+  const [apiResult, archiveResult, scheduleResult, currentResult] = await Promise.allSettled([
+    loadPrivateApiFresh<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`),
+    allSeasonGamesPromise,
+    scheduleGamesPromise,
+    currentGamesPromise,
   ]);
   const sources = [
     apiResult.status === "fulfilled" ? apiResult.value : [],
-    archiveResult.status === "fulfilled" ? archiveResult.value : [],
-    scheduleResult.status === "fulfilled" ? scheduleResult.value : [],
-    currentResult.status === "fulfilled" ? currentResult.value : [],
+    archiveResult.status === "fulfilled" ? archiveResult.value ?? [] : [],
+    scheduleResult.status === "fulfilled" ? scheduleResult.value ?? [] : [],
+    currentResult.status === "fulfilled" ? currentResult.value ?? [] : [],
   ];
   const byId = new Map<string, GameFeedRow>();
   for (const source of sources) {
-    for (const row of source) {
-      const gid = normId(row.GAME_ID);
+    for (const raw of source) {
+      const gid = normId(raw.GAME_ID);
       const inferredSeason = inferSeasonFromGameId(gid);
-      const rowSeason = inferredSeason || row.SEASON || season || undefined;
+      const rowSeason = inferredSeason || raw.SEASON || season || undefined;
       if (season && rowSeason !== season) continue;
-      byId.set(gid, { ...byId.get(gid), ...row, GAME_ID: gid, SEASON: rowSeason });
+      byId.set(gid, {
+        ...byId.get(gid),
+        ...raw,
+        GAME_ID: gid,
+        SEASON: rowSeason,
+      });
     }
   }
   return [...byId.values()].sort((a, b) => (a.GAME_DATE ?? "").localeCompare(b.GAME_DATE ?? ""));
@@ -70,7 +81,7 @@ export async function loadArchivedGameDetail(gameId: string) {
 export async function loadArchivedGameBoxscores(season: string | null | undefined, gameId: string) {
   const seasonParam = season ? `?season=${encodeURIComponent(season)}` : "";
   try {
-    const detail = await loadPrivateApi<any>(`/frontend-data-api/games/${encodeURIComponent(gameId)}${seasonParam}`);
+    const detail = await loadPrivateApiFresh<any>(`/frontend-data-api/games/${encodeURIComponent(gameId)}${seasonParam}`);
     return detail;
   } catch (err) {
     const suffix = seasonSuffix(season);
@@ -96,6 +107,16 @@ async function fetchStaticJson<T>(path: string): Promise<T | null> {
     return (await response.json()) as T;
   } catch {
     return null;
+  }
+}
+
+async function loadGameJson(path: string): Promise<GameFeedRow[]> {
+  const staticRows = await fetchStaticJson<GameFeedRow[]>(path);
+  if (Array.isArray(staticRows) && staticRows.length > 0) return staticRows;
+  try {
+    return await loadJson<GameFeedRow[]>(path, []);
+  } catch {
+    return [];
   }
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
-import { loadJson } from "../lib/dataCache";
+import { loadJson, loadPrivateApiFresh, postPrivateApi } from "../lib/dataCache";
 import { loadArchivedGameBoxscores, loadArchivedGameIndex } from "../lib/archiveData";
 import {
   GameCard,
@@ -46,8 +46,18 @@ export default function GameResults({
   const [selectedDate,setSelectedDate]= useState<string>("");
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [initialDetailTab, setInitialDetailTab] = useState<"game" | "home" | "away" | "pbp">("game");
+  const [refreshState, setRefreshState] = useState<"idle" | "running" | "failed">("idle");
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [refreshDone, setRefreshDone] = useState(false);
+  const [freshPlayByPlay, setFreshPlayByPlay] = useState<any>(null);
 
   const handleOpenGame = (gameId: string, startTab: "game" | "home" | "away" | "pbp" = "game") => {
+    if (gameId !== selectedGameId) {
+      setRefreshState("idle");
+      setRefreshError(null);
+      setRefreshDone(false);
+      setFreshPlayByPlay(null);
+    }
     setInitialDetailTab(startTab);
     setSelectedGameId(gameId);
   };
@@ -62,29 +72,27 @@ export default function GameResults({
         }
       })
       .catch(() => {});
-
-    loadArchivedGameIndex("2026-27")
-      .then((rows) => {
-        setAllResults(rows.map((g) => ({ ...g, SEASON: g.SEASON ?? "2026-27" })));
-        setResults(rows.filter((g) => g.SEASON === "2026-27"));
-        setLoading(false);
-      })
-      .catch((e) => { setError(e.message); setLoading(false); });
   }, []);
 
-  // Lazy-load compact game index when switching seasons.
+  // Load the selected season once and replace its rows atomically. This avoids
+  // stale/partial indexes surviving a season switch and racing the first load.
   useEffect(() => {
-    loadArchivedGameIndex(selectedSeason).then((rows) => {
-      const filtered = rows
-        .map((g) => ({ ...g, SEASON: g.SEASON ?? selectedSeason }));
-      if (filtered.length > 0) {
-        setAllResults((prev) => {
-          const existingIds = new Set(prev.map(x => x.GAME_ID));
-          const newRows = filtered.filter(x => !existingIds.has(x.GAME_ID));
-          return [...prev, ...newRows];
-        });
-      }
-    });
+    let active = true;
+    setLoading(true);
+    setError(null);
+    loadArchivedGameIndex(selectedSeason)
+      .then((rows) => {
+        if (!active) return;
+        const currentSeasonRows = rows.map((g) => ({ ...g, SEASON: g.SEASON ?? selectedSeason }));
+        setAllResults((prev) => [
+          ...prev.filter((g) => g.SEASON !== selectedSeason),
+          ...currentSeasonRows,
+        ]);
+        setResults(currentSeasonRows);
+      })
+      .catch((e) => { if (active) setError(e.message); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [selectedSeason]);
 
   const sortedResults = useMemo(() => {
@@ -129,6 +137,45 @@ export default function GameResults({
   );
   const selectedGame       = useMemo(() => results.find((g) => g.GAME_ID === selectedGameId) ?? (allResults.find((g) => g.GAME_ID === selectedGameId) as GameFeedRow | undefined) ?? null, [results, allResults, selectedGameId]);
   const selectedDetail = selectedGameId ? gameDetailCache[selectedGameId] : null;
+
+  const refreshSelectedGame = async () => {
+    if (!selectedGame || refreshState === "running") return;
+    setRefreshState("running");
+    setRefreshError(null);
+    try {
+      await postPrivateApi(`/frontend-data-api/games/${encodeURIComponent(selectedGame.GAME_ID)}/refresh`, {
+        season: selectedSeason,
+      });
+      const deadline = Date.now() + 5 * 60_000;
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+        const status = await loadPrivateApiFresh<any>(`/frontend-data-api/games/${encodeURIComponent(selectedGame.GAME_ID)}/refresh`);
+        if (status.status === "complete") {
+          setGameDetailCache((prev) => ({ ...prev, [selectedGame.GAME_ID]: status.detail }));
+          setFreshPlayByPlay(status.play_by_play ?? null);
+          setRefreshDone(true);
+          const home = status.detail?.team_boxscores?.find((row: any) => row.TEAM_ABBREVIATION === selectedGame.HOME_TEAM_ABBREVIATION);
+          const away = status.detail?.team_boxscores?.find((row: any) => row.TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION);
+          const markFinal = (row: any) => row.GAME_ID === selectedGame.GAME_ID ? {
+            ...row,
+            GAME_STATUS: "Final",
+            HOME_SCORE: home?.PTS ?? row.HOME_SCORE,
+            AWAY_SCORE: away?.PTS ?? row.AWAY_SCORE,
+            WINNER_TEAM_ABBREVIATION: home?.WL === "W" ? row.HOME_TEAM_ABBREVIATION : away?.WL === "W" ? row.AWAY_TEAM_ABBREVIATION : row.WINNER_TEAM_ABBREVIATION,
+          } : row;
+          setAllResults((prev) => prev.map(markFinal));
+          setResults((prev) => prev.map(markFinal));
+          setRefreshState("idle");
+          return;
+        }
+        if (status.status === "failed") throw new Error(status.error || "Maç verileri alınamadı.");
+      }
+      throw new Error("Veri çekme işlemi zaman aşımına uğradı. Biraz sonra tekrar deneyin.");
+    } catch (err) {
+      setRefreshError(err instanceof Error ? err.message : "Maç verileri alınamadı.");
+      setRefreshState("failed");
+    }
+  };
 
   useEffect(() => {
     if (!selectedGame || !selectedGameId || gameDetailCache[selectedGameId]) return;
@@ -198,6 +245,11 @@ export default function GameResults({
             awayPlayers={playerTeamFilter(gamePlayers, selectedGame.AWAY_TEAM_ABBREVIATION)}
             initialTab={initialDetailTab}
             season={selectedSeason}
+            refreshState={refreshState}
+            refreshError={refreshError}
+            refreshDone={refreshDone}
+            freshPlayByPlay={freshPlayByPlay}
+            onRefresh={refreshSelectedGame}
             onPredict={() => {
               if (onNavigateToPrediction) {
                 onNavigateToPrediction({

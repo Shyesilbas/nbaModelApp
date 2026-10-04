@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Clock, Trophy, Sparkles, LayoutGrid, Users, ListOrdered } from "lucide-react";
+import { Clock, Trophy, Sparkles, LayoutGrid, Users, ListOrdered, RefreshCw } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import PlayerPhoto from "../PlayerPhoto";
 import { PlayerBoxTable } from "./PlayerBoxTable";
@@ -26,6 +26,11 @@ export function GameCardDetail({
   initialTab = "game",
   season,
   onPredict,
+  refreshState = "idle",
+  refreshError,
+  refreshDone = false,
+  freshPlayByPlay,
+  onRefresh,
 }: {
   game: GameFeedRow;
   gameDetail: GameDetail | null;
@@ -36,7 +41,17 @@ export function GameCardDetail({
   initialTab?: "game" | "home" | "away" | "pbp";
   season?: string;
   onPredict?: () => void;
+  refreshState?: "idle" | "running" | "failed";
+  refreshError?: string | null;
+  refreshDone?: boolean;
+  freshPlayByPlay?: PbpData | null;
+  onRefresh?: () => void;
 }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [activeTab, setActiveTab] = useState<"game" | "home" | "away" | "pbp">(
     initialTab || "game"
   );
@@ -45,6 +60,7 @@ export function GameCardDetail({
     game.GAME_STATUS === "Final" ||
     game.GAME_STATUS === "FINAL" ||
     ((Number(game.HOME_SCORE) || 0) > 0 && (Number(game.AWAY_SCORE) || 0) > 0);
+  const refreshAvailable = !!game.GAME_START_UTC && now >= Date.parse(game.GAME_START_UTC) + 4 * 60 * 60 * 1000;
 
   const awayTheme = getTeamTheme(game.AWAY_TEAM_ABBREVIATION);
   const homeTheme = getTeamTheme(game.HOME_TEAM_ABBREVIATION);
@@ -293,6 +309,17 @@ export function GameCardDetail({
           </button>
         ))}
       </nav>
+      {refreshAvailable && onRefresh && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <p className="text-xs font-semibold text-slate-500">Maç verileri (boxscore ve play-by-play) hazır değilse güncelleyebilirsiniz.</p>
+          <button type="button" disabled={refreshState === "running" || refreshDone} onClick={onRefresh}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#1d428a] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white transition hover:bg-[#17366f] disabled:cursor-wait disabled:opacity-60">
+            <RefreshCw size={13} className={refreshState === "running" ? "animate-spin" : ""} />
+            {refreshState === "running" ? "Veriler alınıyor…" : refreshDone ? "Veriler yüklendi" : refreshState === "failed" ? "Tekrar dene" : "Maç verilerini getir"}
+          </button>
+          {refreshError && <p role="alert" className="w-full text-xs text-rose-600">{refreshError}</p>}
+        </div>
+      )}
 
       {/* ══════════════════════════════════════
           GAME OVERVIEW / MATCHUP PREVIEW TAB
@@ -512,7 +539,7 @@ export function GameCardDetail({
           PLAY-BY-PLAY TAB
           ══════════════════════════════════════ */}
       {activeTab === "pbp" && (
-        <PlayByPlayTab gameId={game.GAME_ID} season={season ?? game.SEASON ?? gameDetail?.season ?? undefined} />
+        <PlayByPlayTab gameId={game.GAME_ID} season={season ?? game.SEASON ?? gameDetail?.season ?? undefined} initialData={freshPlayByPlay} />
       )}
     </div>
   );
@@ -573,14 +600,20 @@ function normalizePbpGameId(gameId: string) {
   return String(gameId).replace(/\D/g, "").padStart(10, "0");
 }
 
-function PlayByPlayTab({ gameId, season }: { gameId: string; season?: string }) {
-  const [data, setData] = useState<PbpData | null>(null);
+function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season?: string; initialData?: PbpData | null }) {
+  const [data, setData] = useState<PbpData | null>(initialData ?? null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "q1" | "q2" | "q3" | "q4" | "scoring">("all");
   const [openQuarter, setOpenQuarter] = useState<number>(1);
 
   useEffect(() => {
+    if (initialData) {
+      setData(initialData);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     const normGameId = normalizePbpGameId(gameId);
@@ -593,7 +626,7 @@ function PlayByPlayTab({ gameId, season }: { gameId: string; season?: string }) 
         setError(err.message || "Failed to load play-by-play.");
         setLoading(false);
       });
-  }, [gameId, season]);
+  }, [gameId, season, initialData]);
 
   if (loading) {
     return (

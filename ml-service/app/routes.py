@@ -2,6 +2,7 @@ import traceback
 from typing import Callable
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 
 from .schemas import (
     GameFullRequest,
@@ -36,6 +37,34 @@ from .services.shap_service import explain_win_probability, explain_score_predic
 from scripts.build_matchup_features import build_features
 
 router = APIRouter()
+
+
+class GameDataRefreshRequest(BaseModel):
+    season: str
+
+
+@router.post("/frontend-data-api/games/{game_id}/refresh")
+def refresh_game_data(game_id: str, req: GameDataRefreshRequest, request: Request):
+    from .services.game_data_refresh import start_refresh
+
+    def _start():
+        from .services.frontend_data import _check_token
+        _check_token(request)
+        return start_refresh(game_id, req.season)
+
+    return _run_endpoint(_start)
+
+
+@router.get("/frontend-data-api/games/{game_id}/refresh")
+def game_data_refresh_status(game_id: str, request: Request):
+    from .services.game_data_refresh import get_refresh_status
+
+    def _status():
+        from .services.frontend_data import _check_token
+        _check_token(request)
+        return get_refresh_status(game_id)
+
+    return _run_endpoint(_status)
 
 
 def _run_endpoint(handler: Callable):
@@ -94,7 +123,14 @@ def frontend_season_weeks(request: Request, season: str = None):
 
 @router.get("/frontend-data-api/games/{game_id}")
 def frontend_game_detail(game_id: str, request: Request, season: str = None):
-    return _run_endpoint(lambda: get_game_detail(game_id, request, season))
+    def _detail():
+        from .services.game_data_refresh import get_completed_detail
+        from .services.frontend_data import _check_token
+        _check_token(request)
+        refreshed = get_completed_detail(game_id)
+        return refreshed if refreshed is not None else get_game_detail(game_id, request, season)
+
+    return _run_endpoint(_detail)
 
 
 @router.get("/frontend-data-api/play-by-play/{game_id}")
@@ -193,4 +229,3 @@ def explain_game_endpoint(req: ShapExplanationRequest):
             score_model_explanation=score_exp
         )
     return _run_endpoint(_explain)
-
