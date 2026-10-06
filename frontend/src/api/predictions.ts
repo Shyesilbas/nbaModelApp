@@ -105,6 +105,7 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
         predicted_reb: p.proj_reb,
         predicted_ast: p.proj_ast,
         predicted_pra: p.proj_pra,
+        predicted_min: p.proj_min,
         status: p.status || "ACTIVE",
       })),
       away_players: (data.away_players || []).map((p: any) => ({
@@ -115,9 +116,12 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
         predicted_reb: p.proj_reb,
         predicted_ast: p.proj_ast,
         predicted_pra: p.proj_pra,
+        predicted_min: p.proj_min,
         status: p.status || "ACTIVE",
       })),
     },
     explanation: data.explanation,
+    is_preseason: Boolean(data.is_preseason),
+    season_type: data.season_type || (data.is_preseason ? "Pre Season" : "Regular Season"),
   };
 }

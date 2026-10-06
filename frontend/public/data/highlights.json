@@ -1,7 +1,7 @@
 {
   "highest_scoring_games": [
     {
-      "GAME_ID": "0012600009",
+      "GAME_ID": "12600009",
       "GAME_DATE": "2026-10-03",
       "HOME_TEAM": "TOR",
       "AWAY_TEAM": "MIA",
@@ -9,11 +9,51 @@
       "AWAY_SCORE": 129,
       "TOTAL_PTS": 234,
       "SEASON_TYPE": "Pre Season"
+    },
+    {
+      "GAME_ID": "12600067",
+      "GAME_DATE": "2026-10-04",
+      "HOME_TEAM": "DEN",
+      "AWAY_TEAM": "UTA",
+      "HOME_SCORE": 97,
+      "AWAY_SCORE": 109,
+      "TOTAL_PTS": 206,
+      "SEASON_TYPE": "Pre Season"
+    },
+    {
+      "GAME_ID": "12600066",
+      "GAME_DATE": "2026-10-04",
+      "HOME_TEAM": "LAC",
+      "AWAY_TEAM": "GSW",
+      "HOME_SCORE": 104,
+      "AWAY_SCORE": 101,
+      "TOTAL_PTS": 205,
+      "SEASON_TYPE": "Pre Season"
     }
   ],
   "lowest_scoring_games": [
     {
-      "GAME_ID": "0012600009",
+      "GAME_ID": "12600066",
+      "GAME_DATE": "2026-10-04",
+      "HOME_TEAM": "LAC",
+      "AWAY_TEAM": "GSW",
+      "HOME_SCORE": 104,
+      "AWAY_SCORE": 101,
+      "TOTAL_PTS": 205,
+      "SEASON_TYPE": "Pre Season"
+    },
+    {
+      "GAME_ID": "12600067",
+      "GAME_DATE": "2026-10-04",
+      "HOME_TEAM": "DEN",
+      "AWAY_TEAM": "UTA",
+      "HOME_SCORE": 97,
+      "AWAY_SCORE": 109,
+      "TOTAL_PTS": 206,
+      "SEASON_TYPE": "Pre Season"
+    },
+    {
+      "GAME_ID": "12600009",
       "GAME_DATE": "2026-10-03",
       "HOME_TEAM": "TOR",
       "AWAY_TEAM": "MIA",
@@ -25,12 +65,28 @@
   ],
   "top_points": [
     {
-      "PLAYER_NAME": "RJ Barrett",
-      "TEAM": "TOR",
-      "MATCHUP": "TOR vs. MIA",
-      "GAME_DATE": "2026-10-03",
+      "PLAYER_NAME": "Rui Hachimura",
+      "TEAM": "LAC",
+      "MATCHUP": "LAC vs. GSW",
+      "GAME_DATE": "2026-10-04",
+      "VALUE": 21,
+      "GAME_ID": "12600066"
+    },
+    {
+      "PLAYER_NAME": "Lauri Markkanen",
+      "TEAM": "UTA",
+      "MATCHUP": "UTA @ DEN",
+      "GAME_DATE": "2026-10-04",
+      "VALUE": 17,
+      "GAME_ID": "12600067"
+    },
+    {
+      "PLAYER_NAME": "Keaton Wagler",
+      "TEAM": "LAC",
+      "MATCHUP": "LAC vs. GSW",
+      "GAME_DATE": "2026-10-04",
       "VALUE": 15,
-      "GAME_ID": "0012600009"
+      "GAME_ID": "12600066"
     },
     {
       "PLAYER_NAME": "Tyreke Key",
@@ -38,31 +94,15 @@
       "MATCHUP": "TOR vs. MIA",
       "GAME_DATE": "2026-10-03",
       "VALUE": 15,
-      "GAME_ID": "0012600009"
+      "GAME_ID": "12600009"
     },
     {
-      "PLAYER_NAME": "Tim Hardaway Jr.",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA @ TOR",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 14,
-      "GAME_ID": "0012600009"
-    },
-    {
-      "PLAYER_NAME": "Pelle Larsson",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA @ TOR",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 13,
-      "GAME_ID": "0012600009"
-    },
-    {
-      "PLAYER_NAME": "Andrew Wiggins",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA @ TOR",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 12,
-      "GAME_ID": "0012600009"
+      "PLAYER_NAME": "Darius Garland",
+      "TEAM": "LAC",
+      "MATCHUP": "LAC vs. GSW",
+      "GAME_DATE": "2026-10-04",
+      "VALUE": 15,
+      "GAME_ID": "12600066"
     }
   ],
   "top_assists": [
@@ -72,7 +112,15 @@
       "MATCHUP": "TOR vs. MIA",
       "GAME_DATE": "2026-10-03",
       "VALUE": 8,
-      "GAME_ID": "0012600009"
+      "GAME_ID": "12600009"
+    },
+    {
+      "PLAYER_NAME": "Nikola Joki\u0107",
+      "TEAM": "DEN",
+      "MATCHUP": "DEN vs. UTA",
+      "GAME_DATE": "2026-10-04",
+      "VALUE": 7,
+      "GAME_ID": "12600067"
     },
     {
       "PLAYER_NAME": "Giannis Antetokounmpo",
@@ -80,31 +128,23 @@
       "MATCHUP": "MIA @ TOR",
       "GAME_DATE": "2026-10-03",
       "VALUE": 7,
-      "GAME_ID": "0012600009"
+      "GAME_ID": "12600009"
     },
     {
-      "PLAYER_NAME": "Tre Donaldson",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA @ TOR",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 5,
-      "GAME_ID": "0012600009"
+      "PLAYER_NAME": "Tyus Jones",
+      "TEAM": "DEN",
+      "MATCHUP": "DEN vs. UTA",
+      "GAME_DATE": "2026-10-04",
+      "VALUE": 6,
+      "GAME_ID": "12600067"
     },
     {
-      "PLAYER_NAME": "Davion Mitchell",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA @ TOR",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 4,
-      "GAME_ID": "0012600009"
-    },
-    {
-      "PLAYER_NAME": "Nikola Jovi\u0107",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA @ TOR",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 4,
-      "GAME_ID": "0012600009"
+      "PLAYER_NAME": "Darius Garland",
+      "TEAM": "LAC",
+      "MATCHUP": "LAC vs. GSW",
+      "GAME_DATE": "2026-10-04",
+      "VALUE": 6,
+      "GAME_ID": "12600066"
     }
   ],
   "top_rebounds": [
@@ -114,39 +154,39 @@
       "MATCHUP": "TOR vs. MIA",
       "GAME_DATE": "2026-10-03",
       "VALUE": 9,
-      "GAME_ID": "0012600009"
+      "GAME_ID": "12600009"
     },
     {
-      "PLAYER_NAME": "Nick Richards",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA @ TOR",
-      "GAME_DATE": "2026-10-03",
+      "PLAYER_NAME": "Yaxel Lendeborg",
+      "TEAM": "GSW",
+      "MATCHUP": "GSW @ LAC",
+      "GAME_DATE": "2026-10-04",
+      "VALUE": 9,
+      "GAME_ID": "12600066"
+    },
+    {
+      "PLAYER_NAME": "Charles Bassey",
+      "TEAM": "GSW",
+      "MATCHUP": "GSW @ LAC",
+      "GAME_DATE": "2026-10-04",
+      "VALUE": 8,
+      "GAME_ID": "12600066"
+    },
+    {
+      "PLAYER_NAME": "Cam Christie",
+      "TEAM": "LAC",
+      "MATCHUP": "LAC vs. GSW",
+      "GAME_DATE": "2026-10-04",
+      "VALUE": 8,
+      "GAME_ID": "12600066"
+    },
+    {
+      "PLAYER_NAME": "Marvin Bagley III",
+      "TEAM": "DEN",
+      "MATCHUP": "DEN vs. UTA",
+      "GAME_DATE": "2026-10-04",
       "VALUE": 7,
-      "GAME_ID": "0012600009"
-    },
-    {
-      "PLAYER_NAME": "Nikola Jovi\u0107",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA @ TOR",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 7,
-      "GAME_ID": "0012600009"
-    },
-    {
-      "PLAYER_NAME": "J'Vonne Hadley",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA @ TOR",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 6,
-      "GAME_ID": "0012600009"
-    },
-    {
-      "PLAYER_NAME": "Bam Adebayo",
-      "TEAM": "MIA",
-      "MATCHUP": "MIA @ TOR",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 6,
-      "GAME_ID": "0012600009"
+      "GAME_ID": "12600067"
     }
   ]
 }

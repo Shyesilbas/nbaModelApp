@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Clock, Trophy, Sparkles, LayoutGrid, Users, ListOrdered, RefreshCw } from "lucide-react";
+import { Clock, Trophy, Sparkles, LayoutGrid, Users, ListOrdered, RefreshCw, MapPin, Shield } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import PlayerPhoto from "../PlayerPhoto";
 import { PlayerBoxTable } from "./PlayerBoxTable";
@@ -13,7 +13,7 @@ import { ShootingSummary } from "./ShootingSummary";
 import { TeamComparisonBars } from "./TeamComparisonBars";
 import { TopPerformers } from "./TopPerformers";
 import type { PlayerBoxScore, TeamBoxScore } from "./types";
-import { fmtDate, fmtInt, teamCity, teamFull } from "./utils";
+import { fmtDate, fmtInt, teamCity, teamFull, isGameEligibleForRefresh, parseOfficials } from "./utils";
 
 /* ── Game Detail View ── */
 export function GameCardDetail({
@@ -47,58 +47,70 @@ export function GameCardDetail({
   freshPlayByPlay?: PbpData | null;
   onRefresh?: () => void;
 }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
   const [activeTab, setActiveTab] = useState<"game" | "home" | "away" | "pbp">(
     initialTab || "game"
   );
 
-  const isCompleted =
-    game.GAME_STATUS === "Final" ||
-    game.GAME_STATUS === "FINAL" ||
-    ((Number(game.HOME_SCORE) || 0) > 0 && (Number(game.AWAY_SCORE) || 0) > 0);
-  const refreshAvailable = !!game.GAME_START_UTC && now >= Date.parse(game.GAME_START_UTC) + 4 * 60 * 60 * 1000;
+  const normalizedStatus = (game.GAME_STATUS ?? "").trim().toLowerCase();
+  const hasFinalStatus = /^(final|finished|complete|completed)\b/.test(normalizedStatus);
+  const isLiveStatus = /live|progress|halftime|quarter|period/.test(normalizedStatus);
+  const isCompleted = hasFinalStatus || (
+    !isLiveStatus &&
+    game.HOME_SCORE != null && game.AWAY_SCORE != null &&
+    Number.isFinite(Number(game.HOME_SCORE)) && Number.isFinite(Number(game.AWAY_SCORE))
+  );
+
+  const hasGameData =
+    isCompleted ||
+    Boolean(game.WINNER_TEAM_ABBREVIATION) ||
+    Boolean(gameDetail?.home_team?.score != null && gameDetail?.away_team?.score != null) ||
+    Boolean(homeBS != null || awayBS != null) ||
+    ((gameDetail?.player_stats?.length ?? 0) > 0) ||
+    (homePlayers.length > 0 || awayPlayers.length > 0);
+
+  const canRefresh = !hasGameData && isGameEligibleForRefresh(game) && Boolean(onRefresh);
 
   const awayTheme = getTeamTheme(game.AWAY_TEAM_ABBREVIATION);
   const homeTheme = getTeamTheme(game.HOME_TEAM_ABBREVIATION);
 
-  const margin   = isCompleted ? Math.abs((game.HOME_SCORE ?? 0) - (game.AWAY_SCORE ?? 0)) : 0;
+  const homeScore = isCompleted ? (gameDetail?.home_team?.score ?? game.HOME_SCORE) : null;
+  const awayScore = isCompleted ? (gameDetail?.away_team?.score ?? game.AWAY_SCORE) : null;
+  const margin   = isCompleted ? Math.abs((homeScore ?? 0) - (awayScore ?? 0)) : 0;
   const topHome  = [...homePlayers].sort((a, b) => (b.PTS ?? 0) - (a.PTS ?? 0) || (b.MIN ?? 0) - (a.MIN ?? 0));
   const topAway  = [...awayPlayers].sort((a, b) => (b.PTS ?? 0) - (a.PTS ?? 0) || (b.MIN ?? 0) - (a.MIN ?? 0));
   const topGame  = [...(gameDetail?.player_stats ?? [...homePlayers, ...awayPlayers])]
     .sort((a: any, b: any) => (b.PTS ?? b.pts ?? 0) - (a.PTS ?? a.pts ?? 0) || (b.MIN ?? b.min ?? 0) - (a.MIN ?? a.min ?? 0));
 
-  const officials  = (gameDetail?.officials ?? []).filter((o: any) => o?.name || o?.n);
-  const arenaName  = gameDetail?.arena?.name?.trim();
-  const arenaCity  = [gameDetail?.arena?.city, gameDetail?.arena?.state].filter(Boolean).join(", ");
+  const officials  = parseOfficials([...(game.OFFICIALS ?? []), ...(gameDetail?.officials ?? [])])
+    .filter((official, index, rows) => rows.findIndex((row) => row.cleanName.toLowerCase() === official.cleanName.toLowerCase()) === index);
+  const arenaName  = gameDetail?.arena?.name?.trim() || (game as { ARENA?: string })?.ARENA;
+  const arenaCity  = [gameDetail?.arena?.city, gameDetail?.arena?.state].filter(Boolean).join(", ") || (game as { LOCATION?: string })?.LOCATION;
   const teamStatHome = (gameDetail?.team_stats ?? []).find((t: any) => t.TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION || t.team_abbreviation === game.HOME_TEAM_ABBREVIATION) ?? homeBS;
   const teamStatAway = (gameDetail?.team_stats ?? []).find((t: any) => t.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION || t.team_abbreviation === game.AWAY_TEAM_ABBREVIATION) ?? awayBS;
 
-  const homeWon   = isCompleted && game.WINNER_TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION;
-  const awayWon   = isCompleted && game.WINNER_TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION;
+  const winnerAbbr = game.WINNER_TEAM_ABBREVIATION ?? (isCompleted && Number(homeScore) !== Number(awayScore)
+    ? Number(homeScore) > Number(awayScore) ? game.HOME_TEAM_ABBREVIATION : game.AWAY_TEAM_ABBREVIATION
+    : null);
+  const homeWon   = isCompleted && winnerAbbr === game.HOME_TEAM_ABBREVIATION;
+  const awayWon   = isCompleted && winnerAbbr === game.AWAY_TEAM_ABBREVIATION;
   const winnerTheme = awayWon ? awayTheme : homeWon ? homeTheme : null;
-  const homeScore = isCompleted ? (gameDetail?.home_team?.score ?? game.HOME_SCORE) : null;
-  const awayScore = isCompleted ? (gameDetail?.away_team?.score ?? game.AWAY_SCORE) : null;
   const seasonLabel = game.PLAYOFF_ROUND ?? game.SEASON_TYPE ?? "NBA";
   const homeQS = gameDetail?.home_team?.quarter_scores;
   const awayQS = gameDetail?.away_team?.quarter_scores;
 
 
   return (
-    <div className="space-y-4 animate-fade-in-up">
+    <div className="space-y-5 rounded-[2rem] bg-[#eef2f7] p-2 animate-fade-in-up sm:space-y-6 sm:p-4">
 
       {/* ══════════════════════════════════════
           PREMIUM HERO — Score-centric layout
           ══════════════════════════════════════ */}
-      <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-md">
+      <section className="relative isolate overflow-hidden rounded-[1.75rem] border border-slate-800 bg-[#0b1220] text-white shadow-[0_24px_70px_rgba(15,23,42,0.22)] sm:rounded-[2rem]">
         {/* Top Dual Gradient Accent Line */}
         <div 
           className="absolute inset-x-0 top-0 h-1.5"
           style={{
-            background: `linear-gradient(90deg, ${awayTheme.primary} 0%, ${awayTheme.primary} 48%, #ffffff 48%, #ffffff 52%, ${homeTheme.primary} 52%, ${homeTheme.primary} 100%)`
+            background: `linear-gradient(90deg, ${awayTheme.primary} 0%, ${awayTheme.primary} 49.5%, #e2e8f0 49.5%, #e2e8f0 50.5%, ${homeTheme.primary} 50.5%, ${homeTheme.primary} 100%)`
           }}
         />
 
@@ -107,35 +119,36 @@ export function GameCardDetail({
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              `radial-gradient(ellipse at 15% 50%, ${awayTheme.glow} 0%, transparent 65%), ` +
-              `radial-gradient(ellipse at 85% 50%, ${homeTheme.glow} 0%, transparent 65%)`,
+              `radial-gradient(ellipse at 12% 55%, ${awayTheme.glow} 0%, transparent 54%), ` +
+              `radial-gradient(ellipse at 88% 55%, ${homeTheme.glow} 0%, transparent 54%), ` +
+              `linear-gradient(135deg, #111b2c, #080d17 55%, #111b2c)`,
           }}
         />
 
         {/* Top bar: competition + date */}
-        <div className="relative flex items-center justify-between border-b border-slate-100 px-5 py-2.5 bg-slate-50/40">
+        <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-white/[0.035] px-5 py-4 sm:px-7">
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-slate-900 text-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] shadow-2xs">
+            <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-2xs">
               {seasonLabel}
             </span>
             {game.SERIES_GAME_NUMBER != null && (
-              <span className="rounded-full bg-slate-200/70 px-2.5 py-1 text-[10px] font-bold text-slate-700">
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-slate-200">
                 Game {game.SERIES_GAME_NUMBER}
               </span>
             )}
             {game.IS_ELIMINATION_GAME && (
-              <span className="rounded-full bg-rose-50 border border-rose-200 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-rose-600 animate-pulse">
+              <span className="rounded-full border border-rose-300/30 bg-rose-400/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-rose-200">
                 Elimination Match
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
             {isCompleted ? (
-              <span className="rounded-full bg-emerald-50 border border-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+              <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">
                 {game.GAME_STATUS || "FINAL"}
               </span>
             ) : (
-              <span className="rounded-full bg-indigo-50 border border-indigo-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-indigo-700 flex items-center gap-1">
+              <span className="flex items-center gap-1 rounded-full border border-sky-300/20 bg-sky-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-sky-200">
                 <Clock size={11} />
                 {game.GAME_STATUS || "SCHEDULED"}
               </span>
@@ -145,28 +158,28 @@ export function GameCardDetail({
         </div>
 
         {/* Main score area */}
-        <div className="relative px-4 py-4 sm:px-6 sm:py-5">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4 lg:gap-8">
+        <div className="relative px-4 py-7 sm:px-8 sm:py-10">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-6 lg:gap-10">
 
             {/* Away Team */}
             <div className={`flex flex-col items-center gap-1.5 ${awayWon ? "" : isCompleted ? "opacity-60" : ""}`}>
               <div 
-                className="relative rounded-xl p-1.5 transition-transform hover:scale-105 shadow-xs"
+                className="relative rounded-2xl p-2 transition-transform hover:scale-105 shadow-lg shadow-black/20"
                 style={{ 
                   backgroundColor: `${awayTheme.primary}12`,
                   boxShadow: awayWon ? `0 0 0 2px ${awayTheme.primary}40, 0 8px 24px ${awayTheme.glow}` : undefined 
                 }}
               >
-                <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={44} />
+                <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={52} />
               </div>
               <div className="text-center">
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
                   {teamCity(game.AWAY_TEAM_ABBREVIATION)}
                 </p>
-                <p className="mt-0.5 text-base font-black leading-tight text-slate-900 sm:text-lg" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                <p className="mt-0.5 text-base font-black leading-tight text-white sm:text-lg" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
                   {teamFull(game.AWAY_TEAM_ABBREVIATION, game.AWAY_TEAM_NAME)}
                 </p>
-                <span className="mt-0.5 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                <span className="mt-0.5 inline-block rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-slate-300">
                   Away
                 </span>
               </div>
@@ -181,24 +194,24 @@ export function GameCardDetail({
             </div>
 
             {/* Score / Status block */}
-            <div className="flex min-w-[112px] flex-col items-center gap-1.5 sm:min-w-[150px]">
+            <div className="flex min-w-[112px] flex-col items-center gap-2 rounded-2xl border border-white/10 bg-black/25 px-3 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:min-w-[190px] sm:px-6 sm:py-6">
               {isCompleted ? (
                 <>
                   {/* Scores */}
                   <div className="flex items-center gap-2 sm:gap-4" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
                     <span
-                      className={`text-4xl font-black leading-none tabular-nums sm:text-5xl lg:text-6xl ${awayWon ? "text-slate-900" : "text-slate-300"}`}
+                      className={`text-4xl font-black leading-none tabular-nums sm:text-5xl lg:text-7xl ${awayWon ? "text-white" : "text-slate-500"}`}
                       style={{ color: awayWon ? awayTheme.primary : undefined }}
                     >
                       {awayScore ?? "—"}
                     </span>
                     <div className="flex flex-col items-center gap-1 px-1 sm:px-2">
-                      <div className="h-px w-4 bg-slate-200 sm:w-6" />
-                      <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400">FINAL</span>
-                      <div className="h-px w-4 bg-slate-200 sm:w-6" />
+                      <div className="h-px w-4 bg-white/20 sm:w-6" />
+                      <span className="whitespace-nowrap text-[8px] font-black uppercase tracking-[0.2em] text-slate-400">{game.GAME_STATUS || "FINAL"}</span>
+                      <div className="h-px w-4 bg-white/20 sm:w-6" />
                     </div>
                     <span
-                      className={`text-4xl font-black leading-none tabular-nums sm:text-5xl lg:text-6xl ${homeWon ? "text-slate-900" : "text-slate-300"}`}
+                      className={`text-4xl font-black leading-none tabular-nums sm:text-5xl lg:text-7xl ${homeWon ? "text-white" : "text-slate-500"}`}
                       style={{ color: homeWon ? homeTheme.primary : undefined }}
                     >
                       {homeScore ?? "—"}
@@ -206,27 +219,27 @@ export function GameCardDetail({
                   </div>
 
                   {/* Margin tag */}
-                  {game.WINNER_TEAM_ABBREVIATION && winnerTheme && (
+                  {winnerAbbr && winnerTheme && (
                     <div 
                       className="mt-1 rounded-full border px-3 py-0.5 text-center"
                       style={{ 
-                        borderColor: `${winnerTheme.primary}25`,
-                        backgroundColor: `${winnerTheme.primary}08`
+                      borderColor: `${winnerTheme.primary}45`,
+                      backgroundColor: `${winnerTheme.primary}18`
                       }}
                     >
-                      <p className="text-[10px] font-bold text-slate-600">
-                        <span className="font-black" style={{ color: winnerTheme.primary }}>{teamFull(game.WINNER_TEAM_ABBREVIATION)}</span> won by{" "}
-                        <span className="font-black text-slate-900">{margin} pts</span>
+                      <p className="text-[10px] font-bold text-slate-300">
+                        <span className="font-black text-white" style={{ color: winnerTheme.primary }}>{teamFull(winnerAbbr)}</span> won by{" "}
+                        <span className="font-black text-white">{margin} pts</span>
                       </p>
                     </div>
                   )}
                 </>
               ) : (
                 <div className="flex flex-col items-center gap-2">
-                  <span className="text-4xl lg:text-5xl font-black tracking-widest text-slate-300" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                  <span className="text-4xl font-black tracking-widest text-white/15 lg:text-6xl" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
                     VS
                   </span>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                  <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-300">
                     Scheduled Matchup
                   </span>
                   {onPredict && (
@@ -246,22 +259,22 @@ export function GameCardDetail({
             {/* Home Team */}
             <div className={`flex flex-col items-center gap-1.5 ${homeWon ? "" : isCompleted ? "opacity-60" : ""}`}>
               <div 
-                className="relative rounded-xl p-1.5 transition-transform hover:scale-105 shadow-xs"
+                className="relative rounded-2xl p-2 transition-transform hover:scale-105 shadow-lg shadow-black/20"
                 style={{ 
                   backgroundColor: `${homeTheme.primary}12`,
                   boxShadow: homeWon ? `0 0 0 2px ${homeTheme.primary}40, 0 8px 24px ${homeTheme.glow}` : undefined 
                 }}
               >
-                <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={44} />
+                <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={52} />
               </div>
               <div className="text-center">
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
                   {teamCity(game.HOME_TEAM_ABBREVIATION)}
                 </p>
-                <p className="mt-0.5 text-base font-black leading-tight text-slate-900 sm:text-lg" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                <p className="mt-0.5 text-base font-black leading-tight text-white sm:text-lg" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
                   {teamFull(game.HOME_TEAM_ABBREVIATION, game.HOME_TEAM_NAME)}
                 </p>
-                <span className="mt-0.5 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                <span className="mt-0.5 inline-block rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-slate-300">
                   Home
                 </span>
               </div>
@@ -276,23 +289,78 @@ export function GameCardDetail({
             </div>
           </div>
 
-          {/* Arena info row */}
-          {(arenaName || arenaCity) && (
-            <div className="mt-6 pt-4 border-t border-slate-100 flex justify-center">
-              <p className="text-xs text-slate-400 font-semibold">
-                {[arenaName, arenaCity].filter(Boolean).join(" · ")}
-              </p>
+          {/* Arena & Officials info row */}
+          {(arenaName || arenaCity || officials.length > 0) && (
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-white/10 pt-5 text-xs font-medium text-slate-400">
+              {(arenaName || arenaCity) && (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin size={13} className="text-slate-400 shrink-0" />
+                  <span className="font-semibold text-slate-200">{[arenaName, arenaCity].filter(Boolean).join(" · ")}</span>
+                </span>
+              )}
+              {officials.length > 0 && (
+                <>
+                  {(arenaName || arenaCity) && <span className="hidden text-white/20 sm:inline">•</span>}
+                  <div className="inline-flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 text-slate-400">
+                      <Shield size={13} className="text-slate-400 shrink-0" />
+                      <span className="font-bold text-slate-400">Hakemler:</span>
+                    </span>
+                    {officials.map((o, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[11px] font-bold text-slate-200"
+                      >
+                        <span className="font-mono text-[9px] font-black text-white">
+                          {o.jerseyNum ? `#${o.jerseyNum}` : `#${idx + 1}`}
+                        </span>
+                        <span>{o.cleanName}</span>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+
           )}
         </div>
       </section>
 
+      {/* Prominent Action Banner for Fetching/Refreshing Game Data: ONLY when eligible (!isCompleted and 4+ hours passed) */}
+      {canRefresh && (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.5rem] border border-slate-800 bg-gradient-to-r from-[#101b2c] via-[#17243a] to-[#101827] p-5 text-white shadow-lg sm:p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1d428a] text-white shadow-xs">
+              <RefreshCw size={18} className={refreshState === "running" ? "animate-spin" : ""} />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-white">
+                Bu maç oynandı mı? Skor & Kutu Skor Verilerini Getir
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-300">
+                NBA resmi API üzerinden maç skorunu, takım/oyuncu kutu skorunu ve Play-by-Play akışını otomatik indirir.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            disabled={refreshState === "running" || refreshDone}
+            onClick={onRefresh}
+            className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wider text-slate-950 shadow-sm transition hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+          >
+            <RefreshCw size={14} className={refreshState === "running" ? "animate-spin" : ""} />
+            {refreshState === "running" ? "Veriler alınıyor…" : refreshDone ? "Veriler Yüklendi" : refreshState === "failed" ? "Tekrar dene" : "Maç Verilerini Getir"}
+          </button>
+          {refreshError && <p role="alert" className="w-full text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">{refreshError}</p>}
+        </div>
+      )}
+
       {/* ══════════════════════════════════════
           TAB BAR
           ══════════════════════════════════════ */}
-      <nav className="sticky top-2 z-20 flex gap-1 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/90 p-1.5 shadow-sm backdrop-blur">
+      <nav aria-label="Game detail sections" role="tablist" className="sticky top-2 z-20 flex gap-1.5 overflow-x-auto rounded-2xl border border-slate-800 bg-[#101827]/95 p-2 shadow-xl shadow-slate-900/10 backdrop-blur">
         {([
-          { id: "game", label: isCompleted ? "Overview" : "Preview", icon: <LayoutGrid size={13} />, color: "#0f172a" },
+          { id: "game", label: isCompleted ? "Recap" : "Preview", icon: <LayoutGrid size={13} />, color: "#0f172a" },
           { id: "away", label: `${game.AWAY_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Info"}`, icon: <Users size={13} />, color: awayTheme.primary },
           { id: "home", label: `${game.HOME_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Info"}`, icon: <Users size={13} />, color: homeTheme.primary },
           ...(isCompleted ? [{ id: "pbp", label: "Play-by-Play", icon: <ListOrdered size={13} />, color: "#0f172a" }] : []),
@@ -300,8 +368,11 @@ export function GameCardDetail({
           <button
             key={t.id}
             type="button"
+            role="tab"
+            aria-selected={activeTab === t.id}
+            tabIndex={activeTab === t.id ? 0 : -1}
             onClick={() => setActiveTab(t.id)}
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] transition-all ${activeTab === t.id ? "text-white shadow-md" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
+            className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-3 text-[11px] font-bold transition-all ${activeTab === t.id ? "text-white shadow-lg" : "text-slate-400 hover:bg-white/[0.08] hover:text-white"}`}
             style={activeTab === t.id ? { backgroundColor: t.color } : undefined}
           >
             {t.icon}
@@ -309,52 +380,51 @@ export function GameCardDetail({
           </button>
         ))}
       </nav>
-      {refreshAvailable && onRefresh && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <p className="text-xs font-semibold text-slate-500">Maç verileri (boxscore ve play-by-play) hazır değilse güncelleyebilirsiniz.</p>
-          <button type="button" disabled={refreshState === "running" || refreshDone} onClick={onRefresh}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#1d428a] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white transition hover:bg-[#17366f] disabled:cursor-wait disabled:opacity-60">
-            <RefreshCw size={13} className={refreshState === "running" ? "animate-spin" : ""} />
-            {refreshState === "running" ? "Veriler alınıyor…" : refreshDone ? "Veriler yüklendi" : refreshState === "failed" ? "Tekrar dene" : "Maç verilerini getir"}
-          </button>
-          {refreshError && <p role="alert" className="w-full text-xs text-rose-600">{refreshError}</p>}
-        </div>
-      )}
-
       {/* ══════════════════════════════════════
           GAME OVERVIEW / MATCHUP PREVIEW TAB
           ══════════════════════════════════════ */}
       {activeTab === "game" && (
-        <div className="space-y-4 animate-fade-in">
+        <div role="tabpanel" aria-label={isCompleted ? "Game overview" : "Matchup preview"} className="space-y-5 animate-fade-in">
           {isCompleted ? (
             <>
-              <div className="grid items-stretch gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-                <GameSummaryBlock game={game} home={homeBS} away={awayBS} topPlayers={topGame} />
-                <QuarterScores
-                  homeAbbr={game.HOME_TEAM_ABBREVIATION}
-                  awayAbbr={game.AWAY_TEAM_ABBREVIATION}
-                  homeQS={homeQS}
-                  awayQS={awayQS}
-                />
-              </div>
-
-              <div className="grid items-start gap-4 xl:grid-cols-2">
-                <TeamComparisonBars home={homeBS} away={awayBS} />
-                <ShootingSummary home={teamStatHome as TeamBoxScore | null} away={teamStatAway as TeamBoxScore | null} />
-              </div>
-
-              <TopPerformers topGame={topGame} />
-              <GameLeaders leaders={gameDetail?.game_leaders} />
-
-              {/* 7. Officials (only if data exists) */}
-              {officials.length > 0 && (
-                <div className="rounded-[1.5rem] border border-slate-100 bg-white px-5 py-4 shadow-sm">
-                  <p className="mb-2 text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Officials</p>
-                  <p className="text-[11px] font-medium text-slate-600">
-                    {officials.slice(0, 3).map((o: any) => o.name || o.n).filter(Boolean).join(" · ")}
-                  </p>
+              <section aria-labelledby="recap-heading" className="space-y-3">
+                <div className="flex flex-wrap items-end justify-between gap-3 px-1">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">Final recap</p>
+                    <h3 id="recap-heading" className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">How the game unfolded</h3>
+                  </div>
+                  {winnerAbbr && (
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 shadow-sm">
+                      <span className="font-black text-slate-950">{teamFull(winnerAbbr)}</span> · won by {margin}
+                    </span>
+                  )}
                 </div>
-              )}
+                <div className="grid items-stretch gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+                  <GameSummaryBlock game={game} home={homeBS} away={awayBS} topPlayers={topGame} />
+                  <QuarterScores
+                    homeAbbr={game.HOME_TEAM_ABBREVIATION}
+                    awayAbbr={game.AWAY_TEAM_ABBREVIATION}
+                    homeQS={homeQS}
+                    awayQS={awayQS}
+                  />
+                </div>
+              </section>
+
+              <section aria-labelledby="team-breakdown-heading" className="space-y-3">
+                <div className="px-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">The numbers</p>
+                  <h3 id="team-breakdown-heading" className="mt-1 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">Team breakdown</h3>
+                </div>
+                <div className="grid items-start gap-4 xl:grid-cols-2">
+                  <TeamComparisonBars home={homeBS} away={awayBS} />
+                  <ShootingSummary home={teamStatHome as TeamBoxScore | null} away={teamStatAway as TeamBoxScore | null} />
+                </div>
+              </section>
+
+              <section aria-label="Player performances" className="space-y-4">
+                <TopPerformers topGame={topGame} />
+                <GameLeaders leaders={gameDetail?.game_leaders} />
+              </section>
             </>
           ) : (
             <div className="space-y-4">
@@ -419,8 +489,8 @@ export function GameCardDetail({
           HOME BOX SCORE TAB
           ══════════════════════════════════════ */}
       {activeTab === "home" && (
-        <div className="animate-fade-in space-y-4">
-          <div className="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm">
+        <div role="tabpanel" aria-label={`${game.HOME_TEAM_ABBREVIATION} team box score`} className="animate-fade-in space-y-5">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_5px_22px_rgba(15,23,42,0.045)]">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">{game.HOME_TEAM_ABBREVIATION} · Home</p>
@@ -429,7 +499,7 @@ export function GameCardDetail({
                 </p>
               </div>
               {isCompleted && (
-                <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center">
                     <p className="text-xl font-black text-slate-900">{homeScore ?? "—"}</p>
                     <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">PTS</p>
@@ -474,8 +544,8 @@ export function GameCardDetail({
           AWAY BOX SCORE TAB
           ══════════════════════════════════════ */}
       {activeTab === "away" && (
-        <div className="animate-fade-in space-y-4">
-          <div className="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm">
+        <div role="tabpanel" aria-label={`${game.AWAY_TEAM_ABBREVIATION} team box score`} className="animate-fade-in space-y-5">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_5px_22px_rgba(15,23,42,0.045)]">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">{game.AWAY_TEAM_ABBREVIATION} · Away</p>
@@ -484,7 +554,7 @@ export function GameCardDetail({
                 </p>
               </div>
               {isCompleted && (
-                <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center">
                     <p className="text-xl font-black text-slate-900">{awayScore ?? "—"}</p>
                     <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">PTS</p>
@@ -529,7 +599,9 @@ export function GameCardDetail({
           PLAY-BY-PLAY TAB
           ══════════════════════════════════════ */}
       {activeTab === "pbp" && (
-        <PlayByPlayTab gameId={game.GAME_ID} season={season ?? game.SEASON ?? gameDetail?.season ?? undefined} initialData={freshPlayByPlay} />
+        <div role="tabpanel" aria-label="Play-by-play">
+          <PlayByPlayTab gameId={game.GAME_ID} season={season ?? game.SEASON ?? gameDetail?.season ?? undefined} initialData={freshPlayByPlay} />
+        </div>
       )}
     </div>
   );
@@ -590,11 +662,22 @@ function normalizePbpGameId(gameId: string) {
   return String(gameId).replace(/\D/g, "").padStart(10, "0");
 }
 
+function periodFromLabel(label: string, index: number) {
+  const value = label.trim().toUpperCase();
+  const number = Number(value.match(/\d+/)?.[0]);
+  if (value.startsWith("OT")) return 4 + (number > 0 ? number : Math.max(1, index - 3));
+  return number > 0 ? number : index + 1;
+}
+
+function periodName(period: number) {
+  return period <= 4 ? `Q${period}` : `OT${period - 4}`;
+}
+
 function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season?: string; initialData?: PbpData | null }) {
   const [data, setData] = useState<PbpData | null>(initialData ?? null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "q1" | "q2" | "q3" | "q4" | "scoring">("all");
+  const [filter, setFilter] = useState<"all" | "scoring" | number>("all");
   const [openQuarter, setOpenQuarter] = useState<number>(1);
 
   useEffect(() => {
@@ -638,22 +721,24 @@ function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season
     );
   }
 
+  const periods = Array.from(new Set([
+    ...data.events.map((event) => event.period),
+    ...data.quarter_scores.map((score, index) => periodFromLabel(score.quarter, index)),
+  ])).sort((a, b) => a - b);
+  const periodLabel = periodName;
   const filteredEvents = data.events.filter((e) => {
     if (filter === "scoring") return e.points_scored > 0;
-    if (filter === "q1") return e.period === 1;
-    if (filter === "q2") return e.period === 2;
-    if (filter === "q3") return e.period === 3;
-    if (filter === "q4") return e.period === 4;
+    if (typeof filter === "number") return e.period === filter;
     return true;
   });
-  const eventsByQuarter = [1, 2, 3, 4].map((period) => ({
+  const eventsByQuarter = periods.map((period) => ({
     period,
     events: filteredEvents.filter((e) => e.period === period),
-    score: data.quarter_scores.find((qs) => qs.quarter === `Q${period}`),
+    score: data.quarter_scores.find((qs, index) => periodFromLabel(qs.quarter, index) === period),
   }));
   const scoringEvents = data.events.filter((e) => e.points_scored > 0).length;
   const highlightEvents = data.events.filter((e) => (e.badges?.length ?? 0) > 0).length;
-  const filterLabels = { all: "All plays", q1: "Q1", q2: "Q2", q3: "Q3", q4: "Q4", scoring: "Scoring plays" };
+  const filterLabels = ["All plays", ...periods.map(periodLabel), "Scoring plays"];
 
   return (
     <div className="animate-fade-in overflow-hidden rounded-[2rem] border border-slate-900/10 bg-[#08111f] shadow-[0_28px_80px_rgba(2,6,23,0.24)]">
@@ -696,10 +781,10 @@ function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season
           </div>
 
           <div className="mb-5 flex flex-wrap items-center gap-2">
-            {(["all", "q1", "q2", "q3", "q4", "scoring"] as const).map((f) => (
+            {(["all", ...periods, "scoring"] as const).map((f, index) => (
               <button
-                key={f}
-                onClick={() => setFilter(f)}
+                key={String(f)}
+                onClick={() => setFilter(f as "all" | "scoring" | number)}
                 aria-pressed={filter === f}
                 className={[
                   "rounded-lg px-3.5 py-2 text-[10px] font-bold transition-all",
@@ -708,7 +793,7 @@ function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season
                     : "border border-white/10 bg-slate-950/20 text-slate-300 hover:bg-white/10 hover:text-white",
                 ].join(" ")}
               >
-                {filterLabels[f]}
+                {filterLabels[index]}
               </button>
             ))}
           </div>
@@ -745,10 +830,10 @@ function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-xl font-black text-slate-950" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                    Q{period}
+                    {periodLabel(period)}
                   </div>
                   <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.28em] text-white/40">Quarter {period}</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.28em] text-white/40">{periodLabel(period)}</p>
                   <p className="mt-0.5 text-sm font-black text-white">
                     {data.away_team} {score?.away ?? "-"} - {score?.home ?? "-"} {data.home_team}
                   </p>
@@ -836,11 +921,11 @@ function PbpEventCard({ event: e }: { event: PbpEvent }) {
           )}
           <div className="min-w-0 sm:hidden">
             <p className="truncate text-xs font-bold text-white">{playerName}</p>
-            <p className="text-[10px] font-semibold tabular-nums text-white/45">Q{e.period} · {e.clock}</p>
+                    <p className="text-[10px] font-semibold tabular-nums text-white/45">{periodName(e.period)} · {e.clock}</p>
           </div>
           <div className="hidden min-w-0 sm:block">
             <p className="truncate text-xs font-bold text-white">{playerName}</p>
-            <p className="mt-0.5 text-[10px] font-semibold tabular-nums text-white/45">Q{e.period} · {e.clock}</p>
+            <p className="mt-0.5 text-[10px] font-semibold tabular-nums text-white/45">{periodName(e.period)} · {e.clock}</p>
           </div>
         </div>
 

@@ -82,7 +82,13 @@ def build_opponent_features(team_features_df: pd.DataFrame) -> pd.DataFrame:
         "FG3A_RATE_LAST_5_opp": "OPP_FG3A_RATE_LAST_5",
         "FG3A_RATE_LAST_10_opp": "OPP_FG3A_RATE_LAST_10",
         "IS_3_IN_4_opp": "OPP_IS_3_IN_4",
-        "IS_4_IN_5_opp": "OPP_IS_4_IN_5"
+        "IS_4_IN_5_opp": "OPP_IS_4_IN_5",
+        "CLEAN_NET_RTG_LAST_5_opp": "OPP_CLEAN_NET_RTG_LAST_5",
+        "CLEAN_NET_RTG_LAST_10_opp": "OPP_CLEAN_NET_RTG_LAST_10",
+        "CLUTCH_NET_RTG_LAST_5_opp": "OPP_CLUTCH_NET_RTG_LAST_5",
+        "CLUTCH_NET_RTG_LAST_10_opp": "OPP_CLUTCH_NET_RTG_LAST_10",
+        "GARBAGE_TIME_SHARE_LAST_5_opp": "OPP_GARBAGE_TIME_SHARE_LAST_5",
+        "GARBAGE_TIME_SHARE_LAST_10_opp": "OPP_GARBAGE_TIME_SHARE_LAST_10"
     }
     
     # Verify columns exist before renaming

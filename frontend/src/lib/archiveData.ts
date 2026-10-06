@@ -41,11 +41,12 @@ export async function loadArchivedGameIndex(season?: string | null): Promise<Gam
   const isCurrentSeason = !season || season === "2026-27";
   const sourceResults = isCurrentSeason
     ? (currentGamesPromise ??= loadGameJson("/data/games.json"), await Promise.allSettled([
-        loadPrivateApiFresh<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`),
         currentGamesPromise,
+        loadPrivateApiFresh<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`),
       ]))
     : (allSeasonGamesPromise ??= loadGameJson("/data/all_seasons_games.json"), await Promise.allSettled([
         allSeasonGamesPromise,
+        loadPrivateApiFresh<GameFeedRow[]>(`/frontend-data-api/games${seasonParam}`),
       ]));
   const sources = sourceResults.map((result) => result.status === "fulfilled" ? result.value ?? [] : []);
   const byId = new Map<string, GameFeedRow>();
@@ -55,9 +56,22 @@ export async function loadArchivedGameIndex(season?: string | null): Promise<Gam
       const inferredSeason = inferSeasonFromGameId(gid);
       const rowSeason = inferredSeason || raw.SEASON || season || undefined;
       if (season && rowSeason !== season) continue;
+      const existing = byId.get(gid);
+      const isExistingCompleted =
+        existing?.GAME_STATUS === "Final" ||
+        existing?.GAME_STATUS === "FINAL" ||
+        ((Number(existing?.HOME_SCORE) || 0) > 0 && (Number(existing?.AWAY_SCORE) || 0) > 0);
+      const isRawCompleted =
+        raw.GAME_STATUS === "Final" ||
+        raw.GAME_STATUS === "FINAL" ||
+        ((Number(raw.HOME_SCORE) || 0) > 0 && (Number(raw.AWAY_SCORE) || 0) > 0);
+
+      const merged = isExistingCompleted && !isRawCompleted
+        ? { ...raw, ...existing }
+        : { ...existing, ...raw };
+
       byId.set(gid, {
-        ...byId.get(gid),
-        ...raw,
+        ...merged,
         GAME_ID: gid,
         SEASON: rowSeason,
       });
@@ -76,22 +90,26 @@ export async function loadArchivedGameBoxscores(season: string | null | undefine
   const seasonParam = season ? `?season=${encodeURIComponent(season)}` : "";
   try {
     const detail = await loadPrivateApiFresh<any>(`/frontend-data-api/games/${encodeURIComponent(gameId)}${seasonParam}`);
-    return detail;
-  } catch (err) {
-    const suffix = seasonSuffix(season);
-    const [teamBoxscores, playerBoxscores, gameDetail] = await Promise.all([
-      loadJson<TeamBoxScore[]>(`/data/team_boxscores${suffix}.json`, []),
-      loadJson<PlayerBoxScore[]>(`/data/player_boxscores${suffix}.json`, []),
-      loadArchivedGameDetail(gameId),
-    ]);
-
-    const gid = normId(gameId);
-    return {
-      game_detail: gameDetail,
-      team_boxscores: teamBoxscores.filter((row) => normId(row.GAME_ID) === gid),
-      player_boxscores: playerBoxscores.filter((row) => normId(row.GAME_ID) === gid),
-    };
+    if (detail && ((detail.team_boxscores?.length ?? 0) > 0 || (detail.player_boxscores?.length ?? 0) > 0)) {
+      return detail;
+    }
+  } catch {
+    // continue to static fallback
   }
+
+  const suffix = seasonSuffix(season);
+  const [teamBoxscores, playerBoxscores, gameDetail] = await Promise.all([
+    loadJson<TeamBoxScore[]>(`/data/team_boxscores${suffix}.json`, []),
+    loadJson<PlayerBoxScore[]>(`/data/player_boxscores${suffix}.json`, []),
+    loadArchivedGameDetail(gameId),
+  ]);
+
+  const gid = normId(gameId);
+  return {
+    game_detail: gameDetail,
+    team_boxscores: teamBoxscores.filter((row) => normId(row.GAME_ID) === gid),
+    player_boxscores: playerBoxscores.filter((row) => normId(row.GAME_ID) === gid),
+  };
 }
 
 async function fetchStaticJson<T>(path: string): Promise<T | null> {

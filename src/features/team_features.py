@@ -73,11 +73,18 @@ def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFram
         diff_3 = df.groupby(team_col)["GAME_DATE"].diff(3).dt.days
         df["IS_3_IN_4"] = (diff_2 <= 3).astype(int)
         df["IS_4_IN_5"] = (diff_3 <= 4).astype(int)
+
+        from src.features.schedule_density import compute_schedule_density_features
+        df = compute_schedule_density_features(df, team_col=team_col)
     else:
         df["DAYS_REST"] = np.nan
         df["IS_B2B"] = False
         df["IS_3_IN_4"] = 0
         df["IS_4_IN_5"] = 0
+        df["GAMES_LAST_7D"] = 0
+        df["GAMES_LAST_14D"] = 0
+        df["TRAVEL_KM_LAST_7D"] = 0.0
+        df["CUMULATIVE_FATIGUE_INDEX"] = 0.0
 
     # 8. PTS_LAST_5 & PTS_LAST_10 (shifted by 1 to prevent data leakage)
     if team_col in df.columns and "PTS" in df.columns:
@@ -302,10 +309,10 @@ def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFram
     df["IS_ELIMINATION_GAME"] = df["GAME_ID"].map(lambda x: playoff_map.get(str(x).split(".")[0].zfill(10), {}).get("IS_ELIMINATION_GAME", 0)).fillna(0).astype(int)
     df["CAN_CLINCH_SERIES"] = df["GAME_ID"].map(lambda x: playoff_map.get(str(x).split(".")[0].zfill(10), {}).get("CAN_CLINCH_SERIES", 0)).fillna(0).astype(int)
 
-    if season_dir:
-        df = integrate_pbp_features(df, season_dir)
+    df = integrate_pbp_features(df, season_dir)
 
     return df
+
 
 def load_playoff_context_map():
     import glob

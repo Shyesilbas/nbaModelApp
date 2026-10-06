@@ -102,7 +102,10 @@ export const NBA_TEAMS = NBA_TEAM_ABBRS.map((abbr) => ({
   secondaryColor: TEAM_THEME_BY_ABBR[abbr].secondary,
 }));
 
-export const getTeamLogoUrl = (abbr: string) => `https://a.espncdn.com/i/teamlogos/nba/500/${abbr.toLowerCase()}.png`;
+export const getTeamLogoUrl = (abbr: string) =>
+  abbr.toUpperCase() === "UTA"
+    ? "https://cdn.nba.com/logos/nba/1610612762/primary/L/logo.svg"
+    : `https://a.espncdn.com/i/teamlogos/nba/500/${abbr.toLowerCase()}.png`;
 export const getPlayerHeadshotUrl = (playerId: number | string) =>
   `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${playerId}.png`;
 

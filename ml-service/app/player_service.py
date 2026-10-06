@@ -25,6 +25,30 @@ def is_playoff_date(dt) -> int:
     return 0
 
 
+def is_preseason_match(dt, home_team: str = None, away_team: str = None, season: str = None) -> bool:
+    try:
+        from scripts.data_paths import get_data_paths
+        from pathlib import Path
+        s = season or date_to_season(dt)
+        dp = get_data_paths(s)
+        sched_p = Path(dp.schedule_combined)
+        if sched_p.exists():
+            df_sched = pd.read_csv(sched_p)
+            df_sched["GAME_DATE"] = pd.to_datetime(df_sched["GAME_DATE"])
+            match = df_sched[
+                (df_sched["GAME_DATE"].dt.date == dt.date()) &
+                (df_sched["HOME_TEAM_ABBREVIATION"] == home_team) &
+                (df_sched["AWAY_TEAM_ABBREVIATION"] == away_team)
+            ]
+            if not match.empty:
+                st = str(match.iloc[0].get("SEASON_TYPE", "")).lower()
+                gid = str(match.iloc[0].get("GAME_ID", ""))
+                return ("pre" in st) or gid.startswith("001") or gid.startswith("126")
+    except Exception:
+        pass
+    return bool(dt.month == 10 and dt.day < 20)
+
+
 def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
@@ -71,6 +95,32 @@ def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
     else:
         df["MIN_LAST_5"] = min_col
 
+    min_ema = df["MIN_EMA_10"]
+    if "MIN_EMA_5" in df.columns:
+        df["MIN_EMA_5"] = df["MIN_EMA_5"].fillna(min_ema)
+    else:
+        df["MIN_EMA_5"] = min_ema
+
+    if "MIN_LAST_3" in df.columns:
+        df["MIN_LAST_3"] = df["MIN_LAST_3"].fillna(df["MIN_LAST_5"])
+    else:
+        df["MIN_LAST_3"] = df["MIN_LAST_5"]
+
+    if "MIN_LAST_10" in df.columns:
+        df["MIN_LAST_10"] = df["MIN_LAST_10"].fillna(min_ema)
+    else:
+        df["MIN_LAST_10"] = min_ema
+
+    if "MIN_TREND" in df.columns:
+        df["MIN_TREND"] = df["MIN_TREND"].fillna(0.0)
+    else:
+        df["MIN_TREND"] = df["MIN_EMA_5"] - min_ema
+
+    if "MIN_STD_LAST_10" in df.columns:
+        df["MIN_STD_LAST_10"] = df["MIN_STD_LAST_10"].fillna(3.0)
+    else:
+        df["MIN_STD_LAST_10"] = 3.0
+
     # Ensure USG_PCT is populated
     if "USG_PCT_LAST_10" in df.columns:
         df["USG_PCT_LAST_10"] = df["USG_PCT_LAST_10"].fillna(18.0)
@@ -81,6 +131,48 @@ def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
         df["USG_PCT_LAST_3"] = df["USG_PCT_LAST_3"].fillna(18.0)
     else:
         df["USG_PCT_LAST_3"] = 18.0
+
+    usg_10 = df["USG_PCT_LAST_10"]
+    usg_3 = df["USG_PCT_LAST_3"]
+    if "USG_PCT_EMA_10" in df.columns:
+        df["USG_PCT_EMA_10"] = df["USG_PCT_EMA_10"].fillna(usg_10)
+    else:
+        df["USG_PCT_EMA_10"] = usg_10
+
+    if "USG_PCT_EMA_5" in df.columns:
+        df["USG_PCT_EMA_5"] = df["USG_PCT_EMA_5"].fillna(usg_3)
+    else:
+        df["USG_PCT_EMA_5"] = usg_3
+
+    if "USG_PCT_TREND" in df.columns:
+        df["USG_PCT_TREND"] = df["USG_PCT_TREND"].fillna(0.0)
+    else:
+        df["USG_PCT_TREND"] = df["USG_PCT_EMA_5"] - df["USG_PCT_EMA_10"]
+
+    if "USG_PCT_STD_LAST_10" in df.columns:
+        df["USG_PCT_STD_LAST_10"] = df["USG_PCT_STD_LAST_10"].fillna(2.0)
+    else:
+        df["USG_PCT_STD_LAST_10"] = 2.0
+
+    if "TEAM_PACE" in df.columns:
+        df["TEAM_PACE"] = df["TEAM_PACE"].fillna(100.0)
+    else:
+        df["TEAM_PACE"] = 100.0
+
+    if "OPP_TEAM_PACE" in df.columns:
+        df["OPP_TEAM_PACE"] = df["OPP_TEAM_PACE"].fillna(100.0)
+    else:
+        df["OPP_TEAM_PACE"] = 100.0
+
+    if "DAYS_REST" in df.columns:
+        df["DAYS_REST"] = df["DAYS_REST"].fillna(2.0)
+    else:
+        df["DAYS_REST"] = 2.0
+
+    if "PLUS_MINUS_LAST_5" in df.columns:
+        df["PLUS_MINUS_LAST_5"] = df["PLUS_MINUS_LAST_5"].fillna(0.0)
+    else:
+        df["PLUS_MINUS_LAST_5"] = 0.0
 
     # Ensure POSITION_GROUP / PLAYER_POSITION_GROUP
     if "PLAYER_POSITION_GROUP" not in df.columns and "POSITION_GROUP" in df.columns:
@@ -99,32 +191,30 @@ def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
 def _load_player_dataset(season: str = None):
     global _player_df_cache
 
-    season_path_parquet = ROOT / f"data/season={season}/features/player_features.parquet" if season else None
-    season_path_csv = ROOT / f"data/season={season}/features/player_features.csv" if season else None
+    cache_key = f"player_dataset_{season or 'default'}"
+    if cache_key in _player_df_cache:
+        return _player_df_cache[cache_key]
+
     v4_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
-    v3_path = ROOT / "data/experimental/player_model_ready_v3_matchups.csv"
+    dfs = []
+    if v4_path.exists():
+        dfs.append(pd.read_csv(v4_path))
 
-    if season_path_parquet and season_path_parquet.exists():
-        selected_path = season_path_parquet
-    elif season_path_csv and season_path_csv.exists():
-        selected_path = season_path_csv
-    elif v4_path.exists():
-        selected_path = v4_path
-    else:
-        selected_path = v3_path
+    if season:
+        season_path_parquet = ROOT / f"data/season={season}/features/player_features.parquet"
+        season_path_csv = ROOT / f"data/season={season}/features/player_features.csv"
+        if season_path_parquet.exists():
+            dfs.append(pd.read_parquet(season_path_parquet))
+        elif season_path_csv.exists():
+            dfs.append(pd.read_csv(season_path_csv))
 
-    if not selected_path.exists():
+    if not dfs:
         raise FileNotFoundError("Player dataset (V3 or V4) missing for player inference.")
 
-    cache_key = str(selected_path)
-    if cache_key not in _player_df_cache:
-        if str(selected_path).endswith(".parquet"):
-            df = pd.read_parquet(selected_path)
-        else:
-            df = pd.read_csv(selected_path)
-        _player_df_cache[cache_key] = _normalize_player_dataset(df)
-
-    return _player_df_cache[cache_key]
+    df_combined = pd.concat(dfs, ignore_index=True) if len(dfs) > 1 else dfs[0]
+    normalized_df = _normalize_player_dataset(df_combined)
+    _player_df_cache[cache_key] = normalized_df
+    return normalized_df
 
 
 def _active_roster_ids(team: str, season: str):
@@ -157,16 +247,19 @@ def _roster_candidates(last_games, team: str, active_ids, team_roster_df=None):
                 row_copy = template_row.copy()
                 pid = r["PLAYER_ID"]
                 pname = r.get("PLAYER_NAME", f"Player {pid}")
-                avg_min = float(r.get("AVG_MIN", 15.0))
-                avg_pts = float(r.get("AVG_PTS", 8.0))
-                avg_reb = float(r.get("AVG_REB", 3.0))
-                avg_ast = float(r.get("AVG_AST", 2.0))
+                avg_min = float(r.get("AVG_MIN", 0.0))
+                avg_pts = float(r.get("AVG_PTS", 0.0))
+                avg_reb = float(r.get("AVG_REB", 0.0))
+                avg_ast = float(r.get("AVG_AST", 0.0))
                 row_copy.update({
                     "PLAYER_ID": pid,
                     "PLAYER_NAME": pname,
                     "TEAM_ABBREVIATION": team,
                     "MIN_EMA_10": avg_min,
+                    "MIN_EMA_5": avg_min,
                     "MIN_LAST_5": avg_min,
+                    "MIN_LAST_3": avg_min,
+                    "MIN_LAST_10": avg_min,
                     "MIN": avg_min,
                     "PTS_LAST_5": avg_pts,
                     "PTS_LAST_10": avg_pts,
@@ -175,8 +268,10 @@ def _roster_candidates(last_games, team: str, active_ids, team_roster_df=None):
                     "REB": avg_reb,
                     "AST_LAST_5": avg_ast,
                     "AST": avg_ast,
-                    "USG_PCT_LAST_10": 18.0,
-                    "USG_PCT_LAST_3": 18.0,
+                    "USG_PCT_LAST_10": 12.0,
+                    "USG_PCT_LAST_3": 12.0,
+                    "USG_PCT_EMA_10": 12.0,
+                    "USG_PCT_EMA_5": 12.0,
                     "POSITION_GROUP": "WING",
                     "PLAYER_POSITION_GROUP": "WING",
                 })
@@ -188,6 +283,7 @@ def _roster_candidates(last_games, team: str, active_ids, team_roster_df=None):
             return candidates
 
     return last_games[last_games["TEAM_ABBREVIATION"] == team]
+
 
 
 def _filter_recent_active(candidates, past_df, team: str, active_ids=None):
@@ -338,6 +434,7 @@ def get_player_predictions(
     player_loader,
     score_loader,
     player_status_overrides=None,
+    is_preseason: bool = None,
 ):
     """
     Generate player predictions for home and away teams using the V3/V4 Ridge models.
@@ -346,6 +443,9 @@ def get_player_predictions(
     """
     pred_dt = pd.to_datetime(prediction_date)
     season = date_to_season(pred_dt)
+    if is_preseason is None:
+        is_preseason = is_preseason_match(pred_dt, home_team, away_team, season)
+
     df = _load_player_dataset(season)
     
     historical_home = df[(df['TEAM_ABBREVIATION'] == home_team) & (df['GAME_DATE'] == pred_dt)].copy()
@@ -360,6 +460,7 @@ def get_player_predictions(
         home_X, away_X = _build_future_rosters(df, home_team, away_team, pred_dt, prediction_date)
     
     full_X = pd.concat([home_X, away_X], ignore_index=True)
+    full_X["IS_PRESEASON"] = 1 if is_preseason else 0
     features = player_loader.feature_cols
     
     # Ensure all columns exist
@@ -393,60 +494,14 @@ def get_player_predictions(
     full_X["RAW_PROJ_REB"] = np.maximum(0.0, raw_reb)
     full_X["RAW_PROJ_AST"] = np.maximum(0.0, raw_ast)
     
-    # Process overrides and usage redistribution
+    # Process overrides and usage redistribution via dedicated engine
+    from .services.usage_redistribution import redistribute_usage_and_minutes
     override_lookup = _parse_player_overrides(player_status_overrides)
-    status_list = []
-    factor_list = []
-    min_limit_list = []
-
-    for _, row in full_X.iterrows():
-        pid = row.get("PLAYER_ID")
-        pname = str(row.get("PLAYER_NAME", "")).strip().lower()
-        entry = None
-        if pd.notna(pid):
-            try:
-                entry = override_lookup.get(int(pid))
-            except (ValueError, TypeError):
-                entry = None
-        if entry is None and pname:
-            entry = override_lookup.get(pname)
-
-        if entry is not None:
-            status_list.append(entry["status"])
-            factor_list.append(entry["factor"])
-            min_limit_list.append(entry["minute_limit"])
-        else:
-            status_list.append("ACTIVE")
-            factor_list.append(1.0)
-            min_limit_list.append(None)
-
-    full_X["STATUS"] = status_list
-    full_X["STATUS_FACTOR"] = factor_list
-    full_X["MINUTE_LIMIT"] = min_limit_list
-
-    base_pts = full_X["RAW_PROJ_PTS"].copy()
-    scaled_raw_pts = full_X["RAW_PROJ_PTS"] * full_X["STATUS_FACTOR"]
-    scaled_raw_reb = full_X["RAW_PROJ_REB"] * full_X["STATUS_FACTOR"]
-    scaled_raw_ast = full_X["RAW_PROJ_AST"] * full_X["STATUS_FACTOR"]
-
-    full_X["RAW_PROJ_PTS"] = scaled_raw_pts
-    full_X["RAW_PROJ_REB"] = scaled_raw_reb
-    full_X["RAW_PROJ_AST"] = scaled_raw_ast
-
-    # 35% Usage redistribution for lost scoring to active teammates
-    for team_code in full_X["TEAM_ABBREVIATION"].unique():
-        t_mask = full_X["TEAM_ABBREVIATION"] == team_code
-        team_base_pts = base_pts[t_mask].sum()
-        team_curr_pts = full_X.loc[t_mask, "RAW_PROJ_PTS"].sum()
-        lost_pts = max(0.0, team_base_pts - team_curr_pts)
-
-        if lost_pts > 0:
-            redistribute_pts = lost_pts * 0.35
-            active_mask = t_mask & (full_X["STATUS_FACTOR"] > 0.0)
-            active_pts_sum = full_X.loc[active_mask, "RAW_PROJ_PTS"].sum()
-            if active_pts_sum > 0:
-                shares = full_X.loc[active_mask, "RAW_PROJ_PTS"] / active_pts_sum
-                full_X.loc[active_mask, "RAW_PROJ_PTS"] += redistribute_pts * shares
+    full_X = redistribute_usage_and_minutes(
+        full_X,
+        override_lookup,
+        is_preseason=bool(is_preseason),
+    )
 
     return full_X
 

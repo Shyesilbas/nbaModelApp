@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, Shield, Sparkles, Trophy, Users } from "lucide-react";
+import { ChevronDown, ChevronUp, Info, Shield, Sparkles, Trophy, Users } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import PlayerPhoto from "../PlayerPhoto";
 import { PlayerMatchupModal, type PlayerMatchupData } from "./PlayerMatchupModal";
@@ -20,6 +20,8 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
     team: TeamInfo;
     opponent: TeamInfo;
   } | null>(null);
+  const [expandedDnp, setExpandedDnp] = useState<Record<string, boolean>>({});
+
 
   const all = [
     ...(players.home_players?.map((p) => ({ ...p, teamAbbr: homeInfo.abbr, teamColor: homeInfo.color, isHome: true })) ?? []),
@@ -151,101 +153,185 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
         {[
           { label: awayInfo.abbr, name: awayInfo.name, color: awayInfo.color, players: players.away_players, isHome: false },
           { label: homeInfo.abbr, name: homeInfo.name, color: homeInfo.color, players: players.home_players, isHome: true },
-        ].map((side) => (
-          <div key={side.label} className="flex flex-col">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <TeamLogo abbr={side.label} name={side.name} size={18} />
-                <h5 className="text-xs font-black uppercase tracking-wider" style={{ color: side.color }}>
-                  {side.label} Projections
-                </h5>
+        ].map((side) => {
+          const activePlayers = side.players?.filter((p) => p.status !== "DNP" && (p.predicted_min ?? p.predicted_pts ?? 0) > 0) || [];
+          const dnpPlayers = side.players?.filter((p) => p.status === "DNP" || ((p.predicted_min ?? 0) <= 0 && p.status !== "OUT")) || [];
+          const isDnpOpen = !!expandedDnp[side.label];
+
+          const toggleDnp = () => {
+            setExpandedDnp((prev) => ({ ...prev, [side.label]: !prev[side.label] }));
+          };
+
+          return (
+            <div key={side.label} className="flex flex-col">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <TeamLogo abbr={side.label} name={side.name} size={18} />
+                  <h5 className="text-xs font-black uppercase tracking-wider" style={{ color: side.color }}>
+                    {side.label} Projections
+                  </h5>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full uppercase">
+                    {activePlayers.length} Rotasyon Oyuncusu
+                  </span>
+                  {dnpPlayers.length > 0 && (
+                    <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                      +{dnpPlayers.length} DNP
+                    </span>
+                  )}
+                </div>
               </div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase">
-                {side.players?.length || 0} Aktif Oyuncu
-              </span>
-            </div>
 
-            <div className="overflow-hidden rounded-xl border border-slate-200/80 shadow-2xs text-xs bg-white flex-1">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">
-                  <tr>
-                    <th className="px-3 py-2.5">Oyuncu</th>
-                    <th className="px-2 py-2.5 text-center">Pos</th>
-                    <th className="px-2 py-2.5 text-right text-slate-800">PTS</th>
-                    <th className="px-2 py-2.5 text-right">REB</th>
-                    <th className="px-2 py-2.5 text-right">AST</th>
-                    <th className="px-2 py-2.5 text-right text-indigo-700">PRA</th>
-                    <th className="px-2.5 py-2.5 text-center w-10">İncele</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {side.players?.map((p: PlayerMatchupData) => {
-                    const isOut = p.status === "OUT";
-                    const isRestricted = p.status === "RESTRICTED";
+              {/* Active Rotation Table */}
+              <div className="overflow-hidden rounded-xl border border-slate-200/80 shadow-2xs text-xs bg-white">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">
+                    <tr>
+                      <th className="px-3 py-2.5">Oyuncu</th>
+                      <th className="px-2 py-2.5 text-center">Pos</th>
+                      <th className="px-2 py-2.5 text-right text-slate-800">PTS</th>
+                      <th className="px-2 py-2.5 text-right">REB</th>
+                      <th className="px-2 py-2.5 text-right">AST</th>
+                      <th className="px-2 py-2.5 text-right text-indigo-700">PRA</th>
+                      <th className="px-2.5 py-2.5 text-center w-10">İncele</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {activePlayers.map((p: PlayerMatchupData) => {
+                      const isOut = p.status === "OUT";
+                      const isRestricted = p.status === "RESTRICTED";
 
-                    return (
-                      <tr 
-                        key={p.player_id} 
-                        onClick={() => handleOpenPlayerModal(p, side.isHome)}
-                        className={`hover:bg-slate-50/80 transition-colors cursor-pointer group ${
-                          isOut ? "bg-rose-50/40 text-slate-400" : isRestricted ? "bg-amber-50/30" : ""
-                        }`}
-                      >
-                        <td className="px-3 py-2 font-bold text-slate-800">
-                          <div className="flex items-center gap-2">
-                            <PlayerPhoto playerId={p.player_id} name={p.player_name} size={22} />
-                            <span className={`group-hover:text-indigo-600 transition-colors ${isOut ? "line-through text-slate-400" : ""}`}>
-                              {p.player_name}
-                            </span>
-                            {isOut && (
-                              <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
-                                OUT
+                      return (
+                        <tr 
+                          key={p.player_id} 
+                          onClick={() => handleOpenPlayerModal(p, side.isHome)}
+                          className={`hover:bg-slate-50/80 transition-colors cursor-pointer group ${
+                            isOut ? "bg-rose-50/40 text-slate-400" : isRestricted ? "bg-amber-50/30" : ""
+                          }`}
+                        >
+                          <td className="px-3 py-2 font-bold text-slate-800">
+                            <div className="flex items-center gap-2">
+                              <PlayerPhoto playerId={p.player_id} name={p.player_name} size={22} />
+                              <span className={`group-hover:text-indigo-600 transition-colors ${isOut ? "line-through text-slate-400" : ""}`}>
+                                {p.player_name}
                               </span>
-                            )}
-                            {isRestricted && (
-                              <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
-                                RESTR.
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-2 py-2 text-center text-[10px] uppercase font-semibold text-slate-400">
-                          {p.position_group}
-                        </td>
-                        <td className="px-2 py-2 text-right font-black font-mono text-slate-900">
-                          {p.predicted_pts.toFixed(1)}
-                        </td>
-                        <td className="px-2 py-2 text-right font-semibold font-mono text-slate-600">
-                          {p.predicted_reb.toFixed(1)}
-                        </td>
-                        <td className="px-2 py-2 text-right font-semibold font-mono text-slate-600">
-                          {p.predicted_ast.toFixed(1)}
-                        </td>
-                        <td className="px-2 py-2 text-right font-black font-mono text-indigo-600">
-                          {p.predicted_pra.toFixed(1)}
-                        </td>
-                        <td className="px-2.5 py-2 text-center">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenPlayerModal(p, side.isHome);
-                            }}
-                            className="w-6 h-6 rounded-md bg-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 text-slate-400 inline-flex items-center justify-center transition-colors shadow-2xs"
-                            title={`${p.player_name} - Maç Raporu ve Son Maçlar`}
-                          >
-                            <Info size={13} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                              {isOut && (
+                                <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
+                                  OUT
+                                </span>
+                              )}
+                              {isRestricted && (
+                                <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
+                                  RESTR.
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 text-center text-[10px] uppercase font-semibold text-slate-400">
+                            {p.position_group}
+                          </td>
+                          <td className="px-2 py-2 text-right font-black font-mono text-slate-900">
+                            {p.predicted_pts.toFixed(1)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-semibold font-mono text-slate-600">
+                            {p.predicted_reb.toFixed(1)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-semibold font-mono text-slate-600">
+                            {p.predicted_ast.toFixed(1)}
+                          </td>
+                          <td className="px-2 py-2 text-right font-black font-mono text-indigo-600">
+                            {p.predicted_pra.toFixed(1)}
+                          </td>
+                          <td className="px-2.5 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenPlayerModal(p, side.isHome);
+                              }}
+                              className="w-6 h-6 rounded-md bg-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 text-slate-400 inline-flex items-center justify-center transition-colors shadow-2xs"
+                              title={`${p.player_name} - Maç Raporu ve Son Maçlar`}
+                            >
+                              <Info size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* DNP Reserves Collapsible Section */}
+              {dnpPlayers.length > 0 && (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={toggleDnp}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200/70 text-[11px] font-bold text-slate-600 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                      Rotasyon Dışı &amp; Yedekler ({dnpPlayers.length} Oyuncu - DNP)
+                    </span>
+                    <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400">
+                      <span>{isDnpOpen ? "Gizle" : "Görüntüle"}</span>
+                      {isDnpOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    </div>
+                  </button>
+
+                  {isDnpOpen && (
+                    <div className="mt-1.5 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-50/40 text-xs">
+                      <table className="w-full">
+                        <tbody className="divide-y divide-slate-100/80">
+                          {dnpPlayers.map((p: PlayerMatchupData) => (
+                            <tr
+                              key={p.player_id}
+                              onClick={() => handleOpenPlayerModal(p, side.isHome)}
+                              className="hover:bg-slate-100/60 transition-colors cursor-pointer opacity-75"
+                            >
+                              <td className="px-3 py-2 text-slate-700">
+                                <div className="flex items-center gap-2">
+                                  <PlayerPhoto playerId={p.player_id} name={p.player_name} size={20} />
+                                  <span className="font-semibold text-slate-600">{p.player_name}</span>
+                                  <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">
+                                    DNP
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-2 py-2 text-center text-[10px] uppercase font-semibold text-slate-400">
+                                {p.position_group}
+                              </td>
+                              <td colSpan={4} className="px-2 py-2 text-right text-[10px] font-medium text-slate-400">
+                                0.0 Dakika · Rotasyonda Değil
+                              </td>
+                              <td className="px-2.5 py-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenPlayerModal(p, side.isHome);
+                                  }}
+                                  className="w-5 h-5 rounded bg-slate-100 text-slate-400 hover:text-indigo-600 inline-flex items-center justify-center transition-colors"
+                                  title={`${p.player_name} - Oyuncu Bilgisi`}
+                                >
+                                  <Info size={11} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
 
       {/* ── MODAL COMPONENT ── */}
       {selectedPlayer && (

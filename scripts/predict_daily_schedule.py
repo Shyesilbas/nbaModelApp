@@ -188,6 +188,11 @@ def predict_single_game(home, away, date, model_ver):
         # P = 1 / (1 + exp(-k * margin))
         k = 0.145
         win_prob = 1.0 / (1.0 + math.exp(-k * pred_margin))
+
+    is_preseason = bool(features.get("IS_PRESEASON", 0) == 1) or features.get("SEASON_TYPE") in ("Pre Season", "Preseason")
+    if is_preseason:
+        # Preseason variance shrinkage: temper extreme probabilities towards 50%
+        win_prob = 0.50 + 0.50 * (win_prob - 0.50)
         
     return {
         "home": home,
@@ -195,6 +200,8 @@ def predict_single_game(home, away, date, model_ver):
         "win_prob": win_prob,
         "pred_home": pred_home,
         "pred_away": pred_away,
+        "is_preseason": is_preseason,
+        "season_type": features.get("SEASON_TYPE", "Pre Season" if is_preseason else "Regular Season"),
     }
 
 def main():

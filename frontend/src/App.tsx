@@ -24,14 +24,54 @@ const MENU = [
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState("game-results");
-  const [predictionTarget, setPredictionTarget] = useState<{ home: string; away: string; date: string } | null>(null);
-  const [profileTargetPlayerId, setProfileTargetPlayerId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState(() => {
+    const savedTab = sessionStorage.getItem("nba-intel-active-tab");
+    return MENU.some((item) => item.id === savedTab) ? savedTab! : "game-results";
+  });
+  const [predictionTarget, setPredictionTarget] = useState<{ home: string; away: string; date: string } | null>(() => {
+    try {
+      const saved = sessionStorage.getItem("nba-intel-prediction-target");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [profileTargetPlayerId, setProfileTargetPlayerId] = useState<number | null>(() => {
+    const saved = sessionStorage.getItem("nba-intel-profile-player-id");
+    return saved ? Number(saved) : null;
+  });
 
   const [rosters, setRosters]               = useState<any[]>([]);
   const [multiTeamPlayers, setMultiTeamPlayers] = useState<any[]>([]);
   const [loading, setLoading]               = useState(true);
   const [error, setError]                   = useState<string | null>(null);
+
+  useEffect(() => {
+    sessionStorage.setItem("nba-intel-active-tab", activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (predictionTarget) sessionStorage.setItem("nba-intel-prediction-target", JSON.stringify(predictionTarget));
+    else sessionStorage.removeItem("nba-intel-prediction-target");
+  }, [predictionTarget]);
+
+  useEffect(() => {
+    if (profileTargetPlayerId != null) sessionStorage.setItem("nba-intel-profile-player-id", String(profileTargetPlayerId));
+    else sessionStorage.removeItem("nba-intel-profile-player-id");
+  }, [profileTargetPlayerId]);
+
+  useEffect(() => {
+    const saveScroll = () => sessionStorage.setItem("nba-intel-scroll-y", String(window.scrollY));
+    window.addEventListener("scroll", saveScroll, { passive: true });
+    return () => window.removeEventListener("scroll", saveScroll);
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const savedScroll = Number(sessionStorage.getItem("nba-intel-scroll-y") ?? 0);
+    const frame = requestAnimationFrame(() => window.scrollTo(0, savedScroll));
+    return () => cancelAnimationFrame(frame);
+  }, [loading]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -92,13 +132,6 @@ export default function App() {
             ))}
           </nav>
 
-          {/* Season status — compact footer strip */}
-          <div className="border-t border-slate-100 px-3.5 py-3">
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              <p className="text-[10px] font-semibold text-slate-500">Season data synced</p>
-            </div>
-          </div>
         </aside>
 
         {/* ── Main ── */}

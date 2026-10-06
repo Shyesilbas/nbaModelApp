@@ -15,8 +15,10 @@ export interface PlayerMatchupData {
   predicted_pra: number;
   raw_pts?: number;
   scale_factor?: number;
-  status?: "ACTIVE" | "RESTRICTED" | "OUT";
+  status?: "ACTIVE" | "RESTRICTED" | "OUT" | "DNP";
+  predicted_min?: number;
 }
+
 
 interface PlayerMatchupModalProps {
   player: PlayerMatchupData | null;

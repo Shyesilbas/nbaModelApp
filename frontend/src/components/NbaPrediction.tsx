@@ -564,7 +564,15 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                                 <span className="text-xs font-black text-slate-800">
                                   {g.HOME_TEAM_ABBREVIATION} vs {g.AWAY_TEAM_ABBREVIATION}
                                 </span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase">{g.SEASON_TYPE}</span>
+                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                                  g.SEASON_TYPE === "NBA Finals"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : (g.SEASON_TYPE === "Pre Season" || g.SEASON_TYPE === "Preseason")
+                                    ? "bg-purple-100 text-purple-800 font-extrabold"
+                                    : "text-slate-400 bg-slate-100"
+                                }`}>
+                                  {g.SEASON_TYPE}
+                                </span>
                               </div>
                               <span className="text-[10px] font-mono text-slate-400 font-bold">{g.GAME_DATE}</span>
                             </button>
@@ -614,8 +622,14 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                                 <span className="font-extrabold">{g.HOME_TEAM_ABBREVIATION}</span>
                                 <span className="text-slate-300">vs</span>
                                 <span className="font-extrabold">{g.AWAY_TEAM_ABBREVIATION}</span>
-                                <span className="text-[8px] uppercase font-black tracking-wider text-slate-400 px-1 py-0.5 bg-slate-50 border border-slate-150 rounded">
-                                  {g.SEASON_TYPE === "NBA Finals" ? "Finals" : "Regular"}
+                                <span className={`text-[8px] uppercase font-black tracking-wider px-1 py-0.5 rounded border ${
+                                  g.SEASON_TYPE === "NBA Finals"
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : (g.SEASON_TYPE === "Pre Season" || g.SEASON_TYPE === "Preseason")
+                                    ? "bg-purple-50 text-purple-700 border-purple-200 font-extrabold"
+                                    : "bg-slate-50 text-slate-400 border-slate-150"
+                                }`}>
+                                  {g.SEASON_TYPE === "NBA Finals" ? "Finals" : (g.SEASON_TYPE === "Pre Season" || g.SEASON_TYPE === "Preseason" ? "Preseason" : "Regular")}
                                 </span>
                               </div>
                               <span className="text-[10px] text-slate-400 font-bold font-mono">{g.GAME_DATE}</span>
@@ -793,6 +807,21 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                   Prediction Warning: {result.score_prediction.confidence_warning}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Pre-Season Calibration Info Banner */}
+          {(result.is_preseason || result.season_type === "Pre Season" || result.season_type === "Preseason") && (
+            <div className="p-4 bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border border-purple-200/90 rounded-2xl flex items-center gap-3.5 text-xs text-purple-900 shadow-xs">
+              <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 font-black text-[11px] shadow-sm tracking-wide">
+                PRE
+              </div>
+              <div className="space-y-0.5">
+                <p className="font-bold text-purple-950 m-0 text-xs">Hazırlık Maçı (Pre-Season) Kalibrasyonu Devrede</p>
+                <p className="text-[11px] text-purple-800/85 m-0 leading-relaxed">
+                  Koç rotasyonları ve kısıtlı süreler nedeniyle as oyuncuların dakika tavanı (maks 22 dk) ve istatistik projeksiyonları otomatik olarak ölçeklenmiş, galibiyet olasılığı hazırlık maçı varyansına göre dengelenmiştir.
+                </p>
+              </div>
             </div>
           )}
 

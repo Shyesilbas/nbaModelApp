@@ -79,6 +79,34 @@ def add_win_strength_features(df: pd.DataFrame) -> pd.DataFrame:
     opp_net_rtg = df.get("OPP_NET_RTG_LAST_10", 0.0)
     df["NET_RTG_DIFF_LAST_10"] = net_rtg - opp_net_rtg
 
+    clean_net = df.get("CLEAN_NET_RTG_LAST_10")
+    if clean_net is None or (isinstance(clean_net, pd.Series) and clean_net.isna().all()):
+        clean_net = net_rtg
+    elif isinstance(clean_net, pd.Series):
+        clean_net = clean_net.fillna(net_rtg)
+
+    opp_clean_net = df.get("OPP_CLEAN_NET_RTG_LAST_10")
+    if opp_clean_net is None or (isinstance(opp_clean_net, pd.Series) and opp_clean_net.isna().all()):
+        opp_clean_net = opp_net_rtg
+    elif isinstance(opp_clean_net, pd.Series):
+        opp_clean_net = opp_clean_net.fillna(opp_net_rtg)
+
+    df["CLEAN_NET_RTG_DIFF_LAST_10"] = clean_net - opp_clean_net
+
+    clutch_net = df.get("CLUTCH_NET_RTG_LAST_10")
+    if clutch_net is None or (isinstance(clutch_net, pd.Series) and clutch_net.isna().all()):
+        clutch_net = net_rtg
+    elif isinstance(clutch_net, pd.Series):
+        clutch_net = clutch_net.fillna(net_rtg)
+
+    opp_clutch_net = df.get("OPP_CLUTCH_NET_RTG_LAST_10")
+    if opp_clutch_net is None or (isinstance(opp_clutch_net, pd.Series) and opp_clutch_net.isna().all()):
+        opp_clutch_net = opp_net_rtg
+    elif isinstance(opp_clutch_net, pd.Series):
+        opp_clutch_net = opp_clutch_net.fillna(opp_net_rtg)
+
+    df["CLUTCH_NET_RTG_DIFF_LAST_10"] = clutch_net - opp_clutch_net
+
     efg = df.get("EFG_PCT_LAST_10", 0.53)
     def_efg = df.get("DEF_EFG_PCT_LAST_10", 0.53)
     df["EFG_DIFF_LAST_10"] = efg - def_efg

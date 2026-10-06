@@ -1,6 +1,6 @@
 # NBA ML Project - Feature Pipeline Sync Report (2025-26)
 
-> Generated: 2026-07-17
+> Generated: 2026-10-04
 > Sync Status: **SUCCESS**
 
 ## 1. Row Count Verification

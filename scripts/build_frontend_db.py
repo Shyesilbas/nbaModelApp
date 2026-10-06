@@ -112,14 +112,14 @@ def build_frontend_db() -> None:
             cursor.executemany("INSERT OR REPLACE INTO game_details VALUES (?, ?)", rows)
             logger.info("Ingested %d game_details rows.", len(rows))
 
-    # 3. Ingest team_boxscores*.json
-    for p in FRONTEND_DIR.glob("team_boxscores*.json"):
+    seen_tb = set()
+    for p in sorted(FRONTEND_DIR.glob("team_boxscores*.json"), key=lambda x: "_" in x.name, reverse=True):
         if p.name == "team_boxscores.json":
-            season = "2025-26"
+            season = "2026-27"
         elif "_" in p.stem:
             season = p.stem.removeprefix("team_boxscores_")
         else:
-            season = "2025-26"
+            season = "2026-27"
         logger.info("Ingesting %s (season=%s)...", p.name, season)
         with open(p, "r", encoding="utf-8") as f:
             raw = json.load(f)
@@ -127,18 +127,24 @@ def build_frontend_db() -> None:
             rows = []
             for r in raw:
                 gid = _norm_game_id(r.get("GAME_ID"))
+                team_key = r.get("TEAM_ABBREVIATION") or r.get("TEAM_ID")
+                combo = (gid, team_key)
+                if combo in seen_tb:
+                    continue
+                seen_tb.add(combo)
                 rows.append((gid, _season_from_gid(gid, season), json.dumps(r)))
             cursor.executemany("INSERT INTO team_boxscores VALUES (?, ?, ?)", rows)
             logger.info("Ingested %d rows from %s.", len(rows), p.name)
 
     # 4. Ingest player_boxscores*.json
-    for p in FRONTEND_DIR.glob("player_boxscores*.json"):
+    seen_pb = set()
+    for p in sorted(FRONTEND_DIR.glob("player_boxscores*.json"), key=lambda x: "_" in x.name, reverse=True):
         if p.name == "player_boxscores.json":
-            season = "2025-26"
+            season = "2026-27"
         elif "_" in p.stem:
             season = p.stem.removeprefix("player_boxscores_")
         else:
-            season = "2025-26"
+            season = "2026-27"
         logger.info("Ingesting %s (season=%s)...", p.name, season)
         with open(p, "r", encoding="utf-8") as f:
             raw = json.load(f)
@@ -151,6 +157,11 @@ def build_frontend_db() -> None:
                     pid = int(pid) if pid is not None else None
                 except (ValueError, TypeError):
                     pid = None
+                combo = (gid, pid)
+                if pid is not None and combo in seen_pb:
+                    continue
+                if pid is not None:
+                    seen_pb.add(combo)
                 rows.append((gid, pid, _season_from_gid(gid, season), json.dumps(r)))
             cursor.executemany("INSERT INTO player_boxscores VALUES (?, ?, ?, ?)", rows)
             logger.info("Ingested %d rows from %s.", len(rows), p.name)
@@ -184,7 +195,14 @@ def build_frontend_db() -> None:
         with open(games_file, "r", encoding="utf-8") as f:
             games_raw = json.load(f)
         if isinstance(games_raw, list):
-            rows = [("2025-26", _norm_game_id(r.get("GAME_ID") or r.get("game_id")), json.dumps(r)) for r in games_raw]
+            rows = []
+            for r in games_raw:
+                gid = _norm_game_id(r.get("GAME_ID") or r.get("game_id"))
+                s = r.get("SEASON") or _season_from_gid(gid, "2025-26")
+                r_copy = dict(r)
+                if not r_copy.get("SEASON"):
+                    r_copy["SEASON"] = s
+                rows.append((s, gid, json.dumps(r_copy)))
             cursor.executemany("INSERT OR REPLACE INTO games_index VALUES (?, ?, ?)", rows)
 
     all_games_file = FRONTEND_DIR / "all_seasons_games.json"
@@ -193,7 +211,14 @@ def build_frontend_db() -> None:
         with open(all_games_file, "r", encoding="utf-8") as f:
             all_raw = json.load(f)
         if isinstance(all_raw, list):
-            rows = [(r.get("SEASON", "unknown"), _norm_game_id(r.get("GAME_ID") or r.get("game_id")), json.dumps(r)) for r in all_raw]
+            rows = []
+            for r in all_raw:
+                gid = _norm_game_id(r.get("GAME_ID") or r.get("game_id"))
+                s = r.get("SEASON") or _season_from_gid(gid, "unknown")
+                r_copy = dict(r)
+                if not r_copy.get("SEASON"):
+                    r_copy["SEASON"] = s
+                rows.append((s, gid, json.dumps(r_copy)))
             cursor.executemany("INSERT OR REPLACE INTO games_index VALUES (?, ?, ?)", rows)
 
     # 7. Ingest team_rosters

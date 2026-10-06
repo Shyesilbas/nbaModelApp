@@ -1,9 +1,9 @@
 {
   "model_name": "logistic_regression",
   "version": "10.2-temporal-candidate",
-  "training_date": "2026-10-04T14:14:14.257900Z",
+  "training_date": "2026-10-04T21:08:07.160074Z",
   "number_of_rows": 10280,
-  "number_of_features": 40,
+  "number_of_features": 42,
   "training_manifest": {
     "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
     "train_seasons": [
@@ -42,6 +42,8 @@
         "PLAYOFF_REST_DIFF",
         "CLOSE_STRENGTH_REST_DIFF",
         "NET_RTG_DIFF_LAST_10",
+        "CLEAN_NET_RTG_DIFF_LAST_10",
+        "CLUTCH_NET_RTG_DIFF_LAST_10",
         "EFG_DIFF_LAST_10",
         "THREE_POINT_RATE_DIFF",
         "TOV_FORCED_DIFF",
@@ -159,7 +161,7 @@
     }
   },
   "provenance": {
-    "code_revision": "624a55c19ed13ee0e09634359efc9a0c6dcb3260",
+    "code_revision": "a53c58a85462a487dc5a9ede9dd7be7fe45a1847",
     "python_version": "3.12.4",
     "packages": {
       "numpy": "1.26.4",
@@ -170,44 +172,44 @@
     },
     "feature_contract": {
       "path": "config/features/win_v10.yaml",
-      "sha256": "575beb082165634ec0abfbf13b4f4f9d983ef08f62c63bc800442cdd50784e1f",
-      "bytes": 3397
+      "sha256": "0db5fc4745f702185d29682b6ea0a35d8e848fc71610a81849edb3c39c5a7225",
+      "bytes": 3460
     },
     "input_snapshots": [
       {
         "path": "data/processed/team_model_ready_v3_2020_21.csv",
-        "sha256": "f32c37e1492d03794516b6ca5ac946d32ba108587dcde85f040f3b1e37d625c2",
-        "bytes": 3050434
+        "sha256": "06c51deeb417e08379132cb66a8cccae7ba54f6c6f2861d69acc8225e1746bf3",
+        "bytes": 3050268
       },
       {
         "path": "data/processed/team_model_ready_v3_2021_22.csv",
-        "sha256": "e2e82b919cf025d0ef449baefc8c9b397695d550ec7b0c1e831a7d74ef63fa5f",
-        "bytes": 3707222
+        "sha256": "15d36fc7fb41b0b77c5147949ea103e9f0361ab40a4b6cdf4e2706bcbacc6d3c",
+        "bytes": 3707036
       },
       {
         "path": "data/processed/team_model_ready_v3_2022_23.csv",
-        "sha256": "5a38b93dffa242c8bf774b54d643d531ee0db6bed09d5607a0a60946869c6bf8",
-        "bytes": 3704000
+        "sha256": "6645f39acd462b2e1b846e692fbc736cdb83a066076fb3605950caaa3a0e889d",
+        "bytes": 3703682
       },
       {
         "path": "data/processed/team_model_ready_v3_2023_24.csv",
-        "sha256": "b1cd9306f20ca4bc6818e7ecb7a83848f8d522cf68f8430efda893d30107ff96",
-        "bytes": 3712056
+        "sha256": "bedb163577375d8263ac8a42dba7d682b6656fdf7f62f2c4a8bdc23ce6efb61b",
+        "bytes": 3711940
       },
       {
         "path": "data/processed/team_model_ready_v3_2024_25.csv",
-        "sha256": "6e1a4235126b1b64a3d48ea9e2d61aecdcd6dbae55baf1dcf3bb843b9d2e9224",
-        "bytes": 3699502
+        "sha256": "1a7443d182ab362f443eda7e674a8d12d11852933812f20159b3b488b862de63",
+        "bytes": 3979155
       },
       {
         "path": "data/processed/team_model_ready_v3_2025_26.csv",
-        "sha256": "ade8ff99dfbe1accd41911c8b0fd7947e496f941ad8ff602bd89a292cd9c0f86",
-        "bytes": 3722005
+        "sha256": "7232c4066c42dfdd9c6809a8fb43991428f65c3b5a52624ce3c1605ff27a6c2b",
+        "bytes": 3977518
       }
     ],
     "training_manifest": {
       "path": "config/training_manifest.yaml",
-      "sha256": "099724d0253cc0a03395813133e1fd36d3315369ba65cd5d75ba2a8ec1fde69c",
+      "sha256": "1a7682acfffd8653c1217869b37e3df9d35f25b830124f281748bff04965fee7",
       "bytes": 1022
     },
     "trainer_source": {
@@ -218,13 +220,13 @@
     "artifacts": [
       {
         "path": "models/experimental/win_probability_model_v10.pkl",
-        "sha256": "1a5a9db78925a8fb9c976ad3f727a965308a45a3a039d2e28046fab056e104f2",
-        "bytes": 4478
+        "sha256": "b9a4f7a2ec1814d7278e6d9cbc6dc18f5c946753168bc161d99178fe302bf761",
+        "bytes": 109344
       },
       {
         "path": "models/experimental/feature_columns_v10.json",
-        "sha256": "18268f511d87e7b7e22b1c1c5bb64138370f0f89974988bcadad89bb60b918a6",
-        "bytes": 979
+        "sha256": "ed569e75b458073eae9312b58f66d713e68c46afc666248797a02f37a830f857",
+        "bytes": 1044
       }
     ]
   },
@@ -288,72 +290,72 @@
   ],
   "model_selection_metrics_inner_holdout": {
     "logistic_regression_uncalibrated": {
-      "accuracy": 0.6647446457990115,
-      "precision": 0.6628664495114006,
-      "recall": 0.6705107084019769,
-      "f1": 0.6666666666666666,
-      "roc_auc": 0.74125048514177,
-      "brier_score": 0.20615341439245724
+      "accuracy": 0.6729818780889621,
+      "precision": 0.6715686274509803,
+      "recall": 0.6771004942339374,
+      "f1": 0.6743232157506153,
+      "roc_auc": 0.7376027618476368,
+      "brier_score": 0.20852937202168176
     },
     "logistic_regression_sigmoid": {
-      "accuracy": 0.6762767710049423,
-      "precision": 0.6742671009771987,
+      "accuracy": 0.6754530477759473,
+      "precision": 0.6731707317073171,
       "recall": 0.6820428336079077,
-      "f1": 0.6781326781326781,
-      "roc_auc": 0.7368591039736843,
-      "brier_score": 0.2086154005312878
+      "f1": 0.6775777414075287,
+      "roc_auc": 0.7368401054148607,
+      "brier_score": 0.20850522903959293
     },
     "logistic_regression_isotonic": {
       "accuracy": 0.6729818780889621,
-      "precision": 0.6704545454545454,
-      "recall": 0.6803953871499177,
-      "f1": 0.6753883892068684,
-      "roc_auc": 0.735801969879142,
-      "brier_score": 0.2087853869640369
+      "precision": 0.6671974522292994,
+      "recall": 0.6902800658978583,
+      "f1": 0.6785425101214575,
+      "roc_auc": 0.7366745465451121,
+      "brier_score": 0.20860211779639312
     },
     "lightgbm_uncalibrated": {
-      "accuracy": 0.6672158154859967,
-      "precision": 0.6672158154859967,
-      "recall": 0.6672158154859967,
-      "f1": 0.6672158154859967,
-      "roc_auc": 0.7206289065786582,
-      "brier_score": 0.21378650294184673
+      "accuracy": 0.6523887973640856,
+      "precision": 0.6508972267536705,
+      "recall": 0.657331136738056,
+      "f1": 0.6540983606557377,
+      "roc_auc": 0.715724564322335,
+      "brier_score": 0.21498334317908993
     },
     "lightgbm_sigmoid": {
-      "accuracy": 0.64332784184514,
-      "precision": 0.6426229508196721,
-      "recall": 0.6457990115321252,
-      "f1": 0.6442070665571077,
-      "roc_auc": 0.704979522267668,
-      "brier_score": 0.2207710067482764
+      "accuracy": 0.6392092257001647,
+      "precision": 0.6392092257001647,
+      "recall": 0.6392092257001647,
+      "f1": 0.6392092257001647,
+      "roc_auc": 0.7044747034189263,
+      "brier_score": 0.22061274558544552
     },
     "lightgbm_isotonic": {
-      "accuracy": 0.6400329489291599,
-      "precision": 0.6450511945392492,
-      "recall": 0.6227347611202636,
-      "f1": 0.633696563285834,
-      "roc_auc": 0.7041897250365722,
-      "brier_score": 0.2193076987167674
+      "accuracy": 0.6416803953871499,
+      "precision": 0.6447811447811448,
+      "recall": 0.6309719934102141,
+      "f1": 0.6378018318068276,
+      "roc_auc": 0.7035478451563174,
+      "brier_score": 0.21998017332181602
     }
   },
   "holdout_metrics": {
-    "accuracy": 0.6617647058823529,
-    "precision": 0.6625,
-    "recall": 0.6595022624434389,
-    "f1": 0.6609977324263039,
-    "roc_auc": 0.7204513113982105,
-    "brier_score": 0.21340862328065538
+    "accuracy": 0.6538461538461539,
+    "precision": 0.6545454545454545,
+    "recall": 0.6515837104072398,
+    "f1": 0.6530612244897959,
+    "roc_auc": 0.7190999877152392,
+    "brier_score": 0.21378201115406156
   },
-  "selected_model": "logistic_regression_uncalibrated",
+  "selected_model": "logistic_regression_sigmoid",
   "selected_family": "logistic_regression",
-  "selected_calibration": "uncalibrated",
+  "selected_calibration": "sigmoid",
   "selected_metrics": {
-    "accuracy": 0.6617647058823529,
-    "precision": 0.6625,
-    "recall": 0.6595022624434389,
-    "f1": 0.6609977324263039,
-    "roc_auc": 0.7204513113982105,
-    "brier_score": 0.21340862328065538
+    "accuracy": 0.6538461538461539,
+    "precision": 0.6545454545454545,
+    "recall": 0.6515837104072398,
+    "f1": 0.6530612244897959,
+    "roc_auc": 0.7190999877152392,
+    "brier_score": 0.21378201115406156
   },
   "target_column": "WIN"
 }

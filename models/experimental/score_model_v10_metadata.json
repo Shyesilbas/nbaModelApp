@@ -1,6 +1,6 @@
 {
     "version": "v10_temporal_Ridge_candidate",
-    "updated_at": "2026-10-04T14:13:48.112739Z",
+    "updated_at": "2026-10-04T21:07:46.705340Z",
     "training_manifest": {
         "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
         "train_seasons": [
@@ -82,6 +82,7 @@
                 "NET_RTG_LAST_10",
                 "OPP_NET_RTG_LAST_5",
                 "NET_RTG_DIFF_LAST_10",
+                "CLEAN_NET_RTG_DIFF_LAST_10",
                 "EFG_DIFF_LAST_10",
                 "THREE_POINT_RATE_DIFF",
                 "FT_MARGIN_LAST_5",
@@ -90,7 +91,7 @@
         }
     },
     "provenance": {
-        "code_revision": "624a55c19ed13ee0e09634359efc9a0c6dcb3260",
+        "code_revision": "a53c58a85462a487dc5a9ede9dd7be7fe45a1847",
         "python_version": "3.12.4",
         "packages": {
             "numpy": "1.26.4",
@@ -101,39 +102,39 @@
         },
         "feature_contract": {
             "path": "config/features/score_v10.yaml",
-            "sha256": "50b782775b6c7ffc9902f7e10434232f3706b5b831a0431d94d5b800c7d0087e",
-            "bytes": 1244
+            "sha256": "484210c339b08a8494cc58ca75751b6b6257cba6a0ddedec4feb83581e463d2b",
+            "bytes": 1275
         },
         "input_snapshots": [
             {
                 "path": "data/processed/team_model_ready_v3_2020_21.csv",
-                "sha256": "f32c37e1492d03794516b6ca5ac946d32ba108587dcde85f040f3b1e37d625c2",
-                "bytes": 3050434
+                "sha256": "06c51deeb417e08379132cb66a8cccae7ba54f6c6f2861d69acc8225e1746bf3",
+                "bytes": 3050268
             },
             {
                 "path": "data/processed/team_model_ready_v3_2021_22.csv",
-                "sha256": "e2e82b919cf025d0ef449baefc8c9b397695d550ec7b0c1e831a7d74ef63fa5f",
-                "bytes": 3707222
+                "sha256": "15d36fc7fb41b0b77c5147949ea103e9f0361ab40a4b6cdf4e2706bcbacc6d3c",
+                "bytes": 3707036
             },
             {
                 "path": "data/processed/team_model_ready_v3_2022_23.csv",
-                "sha256": "5a38b93dffa242c8bf774b54d643d531ee0db6bed09d5607a0a60946869c6bf8",
-                "bytes": 3704000
+                "sha256": "6645f39acd462b2e1b846e692fbc736cdb83a066076fb3605950caaa3a0e889d",
+                "bytes": 3703682
             },
             {
                 "path": "data/processed/team_model_ready_v3_2023_24.csv",
-                "sha256": "b1cd9306f20ca4bc6818e7ecb7a83848f8d522cf68f8430efda893d30107ff96",
-                "bytes": 3712056
+                "sha256": "bedb163577375d8263ac8a42dba7d682b6656fdf7f62f2c4a8bdc23ce6efb61b",
+                "bytes": 3711940
             },
             {
                 "path": "data/processed/team_model_ready_v3_2024_25.csv",
-                "sha256": "6e1a4235126b1b64a3d48ea9e2d61aecdcd6dbae55baf1dcf3bb843b9d2e9224",
-                "bytes": 3699502
+                "sha256": "1a7443d182ab362f443eda7e674a8d12d11852933812f20159b3b488b862de63",
+                "bytes": 3979155
             }
         ],
         "training_manifest": {
             "path": "config/training_manifest.yaml",
-            "sha256": "099724d0253cc0a03395813133e1fd36d3315369ba65cd5d75ba2a8ec1fde69c",
+            "sha256": "1a7682acfffd8653c1217869b37e3df9d35f25b830124f281748bff04965fee7",
             "bytes": 1022
         },
         "trainer_source": {
@@ -159,8 +160,8 @@
             },
             {
                 "path": "models/experimental/score_model_v10_margin.pkl",
-                "sha256": "04549cb700ec59bfaac57551e99bb609af5b4475e358afd1f4bfffb328da7bca",
-                "bytes": 179983
+                "sha256": "e8b2ba9723c631bac464143736026ee3f0d638f583e06e8c693187532961868b",
+                "bytes": 180035
             },
             {
                 "path": "models/experimental/score_model_v10_ridge_total.pkl",
@@ -169,12 +170,12 @@
             },
             {
                 "path": "models/experimental/score_model_v10_ridge_margin.pkl",
-                "sha256": "9be746f222fe1b923b4b5d262192b51cf8d9e4c3aaa68823826b7a30c89ea9e6",
+                "sha256": "105dbb9ebdf1fd4a15a0055748285823365af5cfb09c4caaba1ea80d1a74c186",
                 "bytes": 992
             },
             {
                 "path": "models/experimental/score_model_v10_oof_margins.parquet",
-                "sha256": "22e379ed2b4842e12dea15cccbe7d3b3d0b2582a474ce3b77f4492297631c447",
+                "sha256": "107d5ad627d701f2c53f1d986eba58bbdb264dd0e7fd037e82cfeeecd0587a81",
                 "bytes": 43499
             }
         ]
@@ -281,13 +282,13 @@
         ],
         "total_intercept": -0.44916525909992683,
         "margin": [
-            -1.5925116005387747,
-            1.994544451166187,
-            -1.8180728008618814,
-            -0.19540651720942448,
-            0.2812970117516472
+            -1.6277026937308303,
+            2.0752014190329087,
+            -1.815092008773358,
+            -0.1941436872438654,
+            0.2550929700277305
         ],
-        "margin_intercept": -0.22019337302520844,
+        "margin_intercept": -0.22775729587874988,
         "features": [
             "is_playoff",
             "home_b2b",
@@ -393,6 +394,7 @@
         "NET_RTG_LAST_10",
         "OPP_NET_RTG_LAST_5",
         "NET_RTG_DIFF_LAST_10",
+        "CLEAN_NET_RTG_DIFF_LAST_10",
         "EFG_DIFF_LAST_10",
         "THREE_POINT_RATE_DIFF",
         "FT_MARGIN_LAST_5",
@@ -422,12 +424,12 @@
             30.2
         ],
         "margin": [
-            -24.0,
-            24.0
+            -24.1,
+            24.1
         ],
         "home": [
-            -19.4,
-            19.4
+            -19.3,
+            19.3
         ],
         "away": [
             -19.6,
@@ -477,12 +479,12 @@
                 30.2
             ],
             "margin": [
-                -24.0,
-                24.0
+                -24.1,
+                24.1
             ],
             "home": [
-                -19.4,
-                19.4
+                -19.3,
+                19.3
             ],
             "away": [
                 -19.6,
@@ -517,12 +519,12 @@
                 18.4
             ],
             "home": [
-                -14.6,
+                -14.5,
                 14.9
             ],
             "away": [
                 -15.2,
-                15.6
+                15.7
             ]
         },
         "empirical_quantiles_90pct": {
@@ -531,8 +533,8 @@
                 30.3
             ],
             "margin": [
-                -23.9,
-                24.1
+                -24.1,
+                23.9
             ],
             "home": [
                 -19.4,
@@ -540,7 +542,7 @@
             ],
             "away": [
                 -19.2,
-                20.0
+                19.9
             ]
         },
         "coverage_report": {
@@ -558,21 +560,21 @@
             "margin": {
                 "std_dev": 14.73,
                 "mae": 11.73,
-                "bias": -0.0,
+                "bias": 0.0,
                 "conformal_80_radius": 18.5,
                 "conformal_80_empirical_coverage": 80.1,
-                "conformal_90_radius": 24.0,
+                "conformal_90_radius": 24.1,
                 "conformal_90_empirical_coverage": 90.1,
                 "conformal_50_radius": 9.9,
                 "conformal_50_empirical_coverage": 50.0
             },
             "home": {
                 "std_dev": 11.61,
-                "mae": 9.29,
+                "mae": 9.3,
                 "bias": 0.0,
                 "conformal_80_radius": 14.8,
                 "conformal_80_empirical_coverage": 80.1,
-                "conformal_90_radius": 19.4,
+                "conformal_90_radius": 19.3,
                 "conformal_90_empirical_coverage": 90.1,
                 "conformal_50_radius": 7.9,
                 "conformal_50_empirical_coverage": 50.0
@@ -580,7 +582,7 @@
             "away": {
                 "std_dev": 11.95,
                 "mae": 9.5,
-                "bias": 0.0,
+                "bias": -0.0,
                 "conformal_80_radius": 15.4,
                 "conformal_80_empirical_coverage": 80.1,
                 "conformal_90_radius": 19.6,

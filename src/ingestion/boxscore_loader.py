@@ -211,16 +211,19 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
     # GAME_STATUS — all rows here are completed
     results["GAME_STATUS"] = "Final"
 
-    # Join schedule for extra playoff context fields if available
+    # Join schedule for extra playoff context and arena fields if available
     dp = get_data_paths(season)
     combined_sched = dp.schedule_combined
     if os.path.exists(combined_sched):
-        sched = pd.read_csv(combined_sched, dtype={"GAME_ID": str})[
-            ["GAME_ID", "PLAYOFF_ROUND", "SERIES_GAME_NUMBER",
-             "HOME_SERIES_WINS", "AWAY_SERIES_WINS",
-             "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES"]
+        sched_df = pd.read_csv(combined_sched, dtype={"GAME_ID": str})
+        desired_cols = [
+            "GAME_ID", "PLAYOFF_ROUND", "SERIES_GAME_NUMBER",
+            "HOME_SERIES_WINS", "AWAY_SERIES_WINS",
+            "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES",
+            "ARENA", "LOCATION"
         ]
-        results = results.merge(sched, on="GAME_ID", how="left")
+        available_cols = [c for c in desired_cols if c in sched_df.columns]
+        results = results.merge(sched_df[available_cols], on="GAME_ID", how="left")
 
     # Calculate week number relative to season start using the season year.
     start_year = int((season or get_default_season()).split("-")[0])
@@ -242,7 +245,8 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
     # Append schedule-joined cols that may exist
     extra = [c for c in ["PLAYOFF_ROUND", "SERIES_GAME_NUMBER",
                          "HOME_SERIES_WINS", "AWAY_SERIES_WINS",
-                         "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES"]
+                         "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES",
+                         "ARENA", "LOCATION"]
              if c in results.columns]
     final_cols += extra
 

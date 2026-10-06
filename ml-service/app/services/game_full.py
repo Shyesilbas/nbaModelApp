@@ -67,19 +67,42 @@ def _build_game_full_player_list(df, scaled_pts, scaled_reb, scaled_ast, scale) 
                 pid = int(r["PLAYER_ID"])
             except (ValueError, TypeError):
                 pid = None
+
+        stat_status = str(r.get("STATUS", "ACTIVE")).upper()
+        p_min = round(float(r["PROJ_MIN"]), 1) if "PROJ_MIN" in r and pd.notna(r["PROJ_MIN"]) else 0.0
+
+        if stat_status in ("OUT", "DNP") or p_min <= 0.0:
+            s_pts = 0.0
+            s_reb = 0.0
+            s_ast = 0.0
+            s_pra = 0.0
+            raw_p = 0.0
+        else:
+            s_pts = round(scaled_pts[i], 1)
+            s_reb = round(scaled_reb[i], 1)
+            s_ast = round(scaled_ast[i], 1)
+            s_pra = round(s_pts + s_reb + s_ast, 1)
+            raw_p = round(r["RAW_PROJ_PTS"], 1)
+
+        pos_name = str(r.get("PLAYER_POSITION_GROUP", r.get("POSITION_GROUP", "UNKNOWN")))
+        if pid is not None and pid in svc.CANONICAL_POSITIONS:
+            pos_name = svc.CANONICAL_POSITIONS[pid]
+
         players.append(GameFullPlayer(
             player_id=pid,
-            player_name=str(r.get("PLAYER_NAME", f"Player {r['PLAYER_ID']}")),
-            position_group=svc.CANONICAL_POSITIONS.get(int(r["PLAYER_ID"]), str(r.get("PLAYER_POSITION_GROUP", "UNKNOWN"))),
-            proj_pts=round(scaled_pts[i], 1),
-            proj_reb=round(scaled_reb[i], 1),
-            proj_ast=round(scaled_ast[i], 1),
-            proj_pra=round(scaled_pts[i] + scaled_reb[i] + scaled_ast[i], 1),
-            raw_pts=round(r["RAW_PROJ_PTS"], 1),
+            player_name=str(r.get("PLAYER_NAME", f"Player {r.get('PLAYER_ID', '')}")),
+            position_group=pos_name,
+            proj_pts=s_pts,
+            proj_reb=s_reb,
+            proj_ast=s_ast,
+            proj_pra=s_pra,
+            raw_pts=raw_p,
             scale_factor=round(scale, 3),
-            status=str(r.get("STATUS", "ACTIVE")),
+            status=stat_status,
+            proj_min=p_min,
         ))
     return players
+
 
 
 def _predict_game_full_players(
@@ -89,6 +112,7 @@ def _predict_game_full_players(
     home_score: float,
     away_score: float,
     player_status_overrides: list = None,
+    is_preseason: bool = None,
 ) -> Tuple[List[GameFullPlayer], List[GameFullPlayer], float, float]:
     players_df = get_player_predictions(
         home_team,
@@ -97,6 +121,7 @@ def _predict_game_full_players(
         svc.player_loader,
         svc.score_loader,
         player_status_overrides=player_status_overrides,
+        is_preseason=is_preseason,
     )
     home_players_df = players_df[players_df["IS_HOME"] == 1]
     away_players_df = players_df[players_df["IS_HOME"] == 0]
@@ -201,6 +226,9 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
         )
         score_values = _score_values_from_response(score_resp)
 
+    feat_h = get_features_home()
+    is_preseason = bool(feat_h.get("IS_PRESEASON", 0) == 1) or (feat_h.get("SEASON_TYPE") in ("Pre Season", "Preseason"))
+
     home_list: list[GameFullPlayer] = []
     away_list: list[GameFullPlayer] = []
     home_scale = 1.0
@@ -213,6 +241,7 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
             score_values["home_score"],
             score_values["away_score"],
             player_status_overrides=request.player_status_overrides,
+            is_preseason=is_preseason,
         )
     except Exception as e:
         logger.warning("Player inference failed in /predict/game_full: %s", e)
@@ -224,17 +253,20 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
             prediction_date=pred_date_str,
             player_status_overrides=request.player_status_overrides,
         )
-        win_resp = svc.predict(win_req, features=get_features_home())
+        win_resp = svc.predict(win_req, features=feat_h)
+
+    if is_preseason and win_resp is not None:
+        win_resp.home_win_probability = round(0.50 + 0.50 * (win_resp.home_win_probability - 0.50), 4)
+        win_resp.away_win_probability = round(1.0 - win_resp.home_win_probability, 4)
 
     explanation = None
     try:
-        explanation = _build_game_explanation(get_features_home(), get_features_away())
+        explanation = _build_game_explanation(feat_h, get_features_away())
     except Exception as e:
         logger.warning("XAI generation failed: %s", e)
 
     try:
         from .shadow_logger import log_game_prediction
-        feat_h = get_features_home()
         log_game_prediction(
             game_id=request.game_id or "unknown",
             home_team=home_team,
@@ -259,6 +291,11 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
     except Exception as e:
         logger.warning("Shadow prediction logging failed: %s", e)
 
+    conf_warning = score_values.get("confidence_warning")
+    if is_preseason:
+        preseason_warning = "Hazirlik Maci (Pre-Season): Rotasyonlar ve as oyuncu sureleri koclara bagli olarak kisitlidir."
+        conf_warning = f"{conf_warning} | {preseason_warning}" if conf_warning else preseason_warning
+
     return GameFullResponse(
         game_id=request.game_id or "unknown",
         score_prediction=ScorePredictionSub(
@@ -271,7 +308,7 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
             total=round(score_values["total"], 1),
             total_range=score_values["total_range"],
             model_version=score_values["model_version"],
-            confidence_warning=score_values.get("confidence_warning")
+            confidence_warning=conf_warning
         ),
         win_probability=WinProbabilitySub(
             home_win_prob=round(win_resp.home_win_probability, 4),
@@ -284,5 +321,7 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
             home=round(home_scale, 3),
             away=round(away_scale, 3)
         ),
-        explanation=explanation
+        explanation=explanation,
+        is_preseason=is_preseason,
+        season_type=str(feat_h.get("SEASON_TYPE", "Pre Season" if is_preseason else "Regular Season"))
     )

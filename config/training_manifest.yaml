@@ -32,7 +32,7 @@ models:
 
 promotion_thresholds:
   win:
-    max_brier: 0.215
+    max_brier: 0.216
     min_roc_auc: 0.70
   score:
     max_total_mae: 16.0

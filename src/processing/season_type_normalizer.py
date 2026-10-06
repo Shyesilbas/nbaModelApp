@@ -34,7 +34,14 @@ def parse_game_id_metadata(game_id: Any) -> Dict[str, Optional[Any]]:
     gid_str = str(game_id).split(".")[0].strip().zfill(10)
     prefix = gid_str[:3]
     
-    if prefix == "002":
+    if prefix == "001":
+        return {
+            "SEASON_TYPE": "Pre Season",
+            "IS_PLAYOFF": False,
+            "PLAYOFF_ROUND": None,
+            "SERIES_GAME_NUMBER": None
+        }
+    elif prefix == "002":
         return {
             "SEASON_TYPE": "Regular Season",
             "IS_PLAYOFF": False,
