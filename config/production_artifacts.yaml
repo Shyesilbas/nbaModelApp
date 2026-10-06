@@ -3,7 +3,7 @@ win_model:
   feature_columns_path: models/production/feature_columns_v10.json
   metadata_path: models/production/model_metadata.json
   status: production
-  notes: "Current production win probability model V10.1 (LightGBM Isotonic with aligned Elo scale, venue symmetry, bottom-up player projections, and OOF score margin integration)."
+  notes: "Current production win probability model V11 (LightGBM Isotonic with PBP Clean Net Rating, Clutch Net Rating, garbage time filtering, aligned Continuous Elo, and OOF score margin integration)."
 
 score_model:
   home_model_path: models/production/score_model_v10_home_rtg.pkl
@@ -14,7 +14,7 @@ score_model:
   ridge_margin_path: models/production/score_model_v10_ridge_margin.pkl
   metadata_path: models/production/score_model_v10_metadata.json
   status: production
-  notes: "Current production score model V10.1 (XGBoost models with Ridge segment calibration, leak-free roster projections, and exported OOF margins)."
+  notes: "Current production score model V11 (XGBoost models with Clean Net Rating margin differentials, Ridge segment calibration, and exported OOF margins)."
 
 core_players:
   path: data/production/core_players.csv

@@ -384,12 +384,19 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     ]
     scheduled_game_row = scheduled_game.iloc[0] if not scheduled_game.empty else None
 
+    is_preseason_val = False
     if scheduled_game_row is not None:
         is_playoff_val = bool(scheduled_game_row.get("IS_PLAYOFF", False)) or (scheduled_game_row.get("SEASON_TYPE") in ["Playoffs", "PlayIn", "NBA Finals"])
+        st_label = str(scheduled_game_row.get("SEASON_TYPE", "")).lower()
+        gid_label = str(scheduled_game_row.get("GAME_ID", ""))
+        is_preseason_val = ("pre" in st_label) or gid_label.startswith("001") or gid_label.startswith("126")
     else:
         is_playoff_val = pred_dt.month in [4, 5, 6]
+        is_preseason_val = bool(pred_dt.month == 10 and pred_dt.day < 20)
 
     out["IS_PLAYOFF"] = int(is_playoff_val)
+    out["IS_PRESEASON"] = int(is_preseason_val)
+    out["SEASON_TYPE"] = "Pre Season" if is_preseason_val else ("Playoffs" if is_playoff_val else "Regular Season")
 
     # IS_ELIMINATION_GAME and CAN_CLINCH_SERIES
     if is_playoff_val:
@@ -614,6 +621,15 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     except Exception as e:
         print(f"Warning: failed to compute ridge player features for inference: {e}")
 
+    # Situational and Advanced Net Rating Differentials
+    clean_h = float(safe_get(home_row, "CLEAN_NET_RTG_LAST_10", safe_get(home_row, "NET_RTG_LAST_10", 0.0)))
+    clean_a = float(safe_get(away_row, "CLEAN_NET_RTG_LAST_10", safe_get(away_row, "NET_RTG_LAST_10", 0.0)))
+    out["CLEAN_NET_RTG_DIFF_LAST_10"] = clean_h - clean_a
+
+    clutch_h = float(safe_get(home_row, "CLUTCH_NET_RTG_LAST_10", safe_get(home_row, "NET_RTG_LAST_10", 0.0)))
+    clutch_a = float(safe_get(away_row, "CLUTCH_NET_RTG_LAST_10", safe_get(away_row, "NET_RTG_LAST_10", 0.0)))
+    out["CLUTCH_NET_RTG_DIFF_LAST_10"] = clutch_h - clutch_a
+
     # Final mapping and missing-column handling for the original required cols
     res = {}
     missing_cols = []
@@ -739,10 +755,19 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
             net_a = w_away * float(res.get("OPP_NET_RTG_LAST_10", 0.0))
             res["NET_RTG_DIFF_LAST_10"] = net_h - net_a
 
+            clean_net_h = w_home * float(res.get("CLEAN_NET_RTG_LAST_10", res.get("NET_RTG_LAST_10", 0.0)))
+            clean_net_a = w_away * float(res.get("OPP_CLEAN_NET_RTG_LAST_10", res.get("OPP_NET_RTG_LAST_10", 0.0)))
+            res["CLEAN_NET_RTG_DIFF_LAST_10"] = clean_net_h - clean_net_a
+
+            clutch_h = w_home * float(res.get("CLUTCH_NET_RTG_LAST_10", 0.0))
+            clutch_a = w_away * float(res.get("OPP_CLUTCH_NET_RTG_LAST_10", 0.0))
+            res["CLUTCH_NET_RTG_DIFF_LAST_10"] = clutch_h - clutch_a
+
             res["CURRENT_VENUE_WINRATE_LAST_5"] = w_home * float(res.get("CURRENT_VENUE_WINRATE_LAST_5", 0.5)) + (1.0 - w_home) * 0.54
             res["OPP_CURRENT_VENUE_WINRATE_LAST_5"] = w_away * float(res.get("OPP_CURRENT_VENUE_WINRATE_LAST_5", 0.5)) + (1.0 - w_away) * 0.46
             res["HOME_WINRATE_LAST_5"] = w_home * float(res.get("HOME_WINRATE_LAST_5", 0.5)) + (1.0 - w_home) * 0.54
             res["AWAY_WINRATE_LAST_5"] = w_away * float(res.get("AWAY_WINRATE_LAST_5", 0.5)) + (1.0 - w_away) * 0.46
+
 
             res["OFF_RTG_LAST_5"] = w_home * float(res.get("OFF_RTG_LAST_5", 114.0)) + (1.0 - w_home) * 114.0
             res["OPP_OFF_RTG_LAST_5"] = w_away * float(res.get("OPP_OFF_RTG_LAST_5", 114.0)) + (1.0 - w_away) * 114.0
@@ -750,6 +775,24 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
             res["OPP_DEF_RTG_LAST_5"] = w_away * float(res.get("OPP_DEF_RTG_LAST_5", 114.0)) + (1.0 - w_away) * 114.0
     except Exception:
         pass
+
+    # Situational and Advanced Net Rating Differentials (computed for all games)
+    try:
+        clean_h = float(res.get("CLEAN_NET_RTG_LAST_10") if res.get("CLEAN_NET_RTG_LAST_10") is not None else (res.get("NET_RTG_LAST_10") or 0.0))
+        clean_a = float(res.get("OPP_CLEAN_NET_RTG_LAST_10") if res.get("OPP_CLEAN_NET_RTG_LAST_10") is not None else (res.get("OPP_NET_RTG_LAST_10") or 0.0))
+        res["CLEAN_NET_RTG_DIFF_LAST_10"] = clean_h - clean_a
+
+        clutch_h = float(res.get("CLUTCH_NET_RTG_LAST_10") or 0.0)
+        clutch_a = float(res.get("OPP_CLUTCH_NET_RTG_LAST_10") or 0.0)
+        res["CLUTCH_NET_RTG_DIFF_LAST_10"] = clutch_h - clutch_a
+
+        if "NET_RTG_DIFF_LAST_10" not in res or res["NET_RTG_DIFF_LAST_10"] is None:
+            net_h = float(res.get("NET_RTG_LAST_10") or 0.0)
+            net_a = float(res.get("OPP_NET_RTG_LAST_10") or 0.0)
+            res["NET_RTG_DIFF_LAST_10"] = net_h - net_a
+    except Exception:
+        pass
+
 
     # Compute SCORE_PRED_MARGIN from active Score Model to link Score and Win models
     try:
@@ -990,38 +1033,40 @@ def compute_ridge_player_features_for_inference(
         away_scaled = away_proj * away_factors
 
         if t == "pts":
-            # 35% Usage redistribution for lost scoring to active teammates
             home_lost = max(0.0, float((home_proj - home_scaled).sum()))
             if home_lost > 0:
                 h_active = home_factors > 0.0
                 h_active_sum = home_scaled[h_active].sum()
                 if h_active_sum > 0:
-                    home_scaled[h_active] += home_lost * 0.35 * (home_scaled[h_active] / h_active_sum)
+                    home_scaled[h_active] += home_lost * 0.70 * (home_scaled[h_active] / h_active_sum)
 
             away_lost = max(0.0, float((away_proj - away_scaled).sum()))
             if away_lost > 0:
                 a_active = away_factors > 0.0
                 a_active_sum = away_scaled[a_active].sum()
                 if a_active_sum > 0:
-                    away_scaled[a_active] += away_lost * 0.35 * (away_scaled[a_active] / a_active_sum)
-        
+                    away_scaled[a_active] += away_lost * 0.70 * (away_scaled[a_active] / a_active_sum)
+
         home_predictions[t] = home_scaled
         away_predictions[t] = away_scaled
-        
+
         res[f"TEAM_V3_PROJ_{t.upper()}_SUM"] = float(home_scaled.sum())
         res[f"TEAM_V3_PROJ_{t.upper()}_AVG"] = float(home_scaled.mean())
-        
+
         res[f"OPP_V3_PROJ_{t.upper()}_SUM"] = float(away_scaled.sum())
         res[f"OPP_V3_PROJ_{t.upper()}_AVG"] = float(away_scaled.mean())
-        
+
     # Calculate V4 PRA mathematically as PTS + REB + AST
     home_pra = home_predictions["pts"] + home_predictions["reb"] + home_predictions["ast"]
     away_pra = away_predictions["pts"] + away_predictions["reb"] + away_predictions["ast"]
-    
+
     res["TEAM_V3_PROJ_PRA_SUM"] = float(home_pra.sum())
     res["TEAM_V3_PROJ_PRA_AVG"] = float(home_pra.mean())
     res["OPP_V3_PROJ_PRA_SUM"] = float(away_pra.sum())
     res["OPP_V3_PROJ_PRA_AVG"] = float(away_pra.mean())
+
+    res["ACTIVE_ROSTER_PROJECTED_PTS_DIFF"] = float(home_predictions["pts"].sum() - away_predictions["pts"].sum())
+    res["ACTIVE_ROSTER_PROJECTED_PRA_DIFF"] = float(home_pra.sum() - away_pra.sum())
         
     return res
 

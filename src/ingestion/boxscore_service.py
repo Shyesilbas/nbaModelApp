@@ -23,30 +23,24 @@ class BoxscoreService:
         default_season = get_default_season()
 
         if self.save and self.output_scope != "experimental":
-            os.makedirs(OUT_DIR, exist_ok=True)
-
             def _save_json(df: pd.DataFrame, filename: str):
                 for col in df.select_dtypes(include=["datetime64[ns]"]).columns:
                     df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%Y-%m-%d")
-                path = os.path.join(OUT_DIR, filename)
-                df.to_json(path, orient="records", indent=2, double_precision=4, date_format="iso")
+                for target_dir in ["frontend/public/data", "data/frontend"]:
+                    os.makedirs(target_dir, exist_ok=True)
+                    path = os.path.join(target_dir, filename)
+                    df.to_json(path, orient="records", indent=2, double_precision=4, date_format="iso")
+
+            _save_json(results_df.copy(), f"game_results_{current_season}.json")
+            team_recent = team_bs_df.sort_values("GAME_DATE", ascending=False).copy()
+            _save_json(team_recent, f"team_boxscores_{current_season}.json")
+            player_recent = player_bs_df.sort_values("GAME_DATE", ascending=False).copy()
+            _save_json(player_recent, f"player_boxscores_{current_season}.json")
 
             if current_season == default_season:
                 _save_json(results_df.copy(), "game_results.json")
-
-                team_recent = team_bs_df.sort_values("GAME_DATE", ascending=False).copy()
                 _save_json(team_recent, "team_boxscores.json")
-
-                player_recent = player_bs_df.sort_values("GAME_DATE", ascending=False).copy()
                 _save_json(player_recent, "player_boxscores.json")
-            else:
-                _save_json(results_df.copy(), f"game_results_{current_season}.json")
-
-                team_recent = team_bs_df.sort_values("GAME_DATE", ascending=False).copy()
-                _save_json(team_recent, f"team_boxscores_{current_season}.json")
-
-                player_recent = player_bs_df.sort_values("GAME_DATE", ascending=False).copy()
-                _save_json(player_recent, f"player_boxscores_{current_season}.json")
 
             # Game details: merge game results with the corresponding team and player box scores.
             game_details = []
@@ -89,6 +83,16 @@ class BoxscoreService:
                         leaders["rebounds"] = max(player_stats, key=lambda x: x.get("REB", -1) or -1)
                         leaders["assists"] = max(player_stats, key=lambda x: x.get("AST", -1) or -1)
 
+                    # Enrich arena and officials metadata
+                    from src.ingestion.game_summary_fetcher import fetch_game_summary
+                    summary = fetch_game_summary(game_id, season=self.season)
+                    summary_arena = summary.get("arena") or {}
+                    summary_officials = summary.get("officials") or []
+
+                    arena_name = summary_arena.get("name") or row.get("ARENA")
+                    arena_city = summary_arena.get("city") or (row.get("LOCATION", "").split(",")[0].strip() if row.get("LOCATION") else None)
+                    arena_state = summary_arena.get("state") or (row.get("LOCATION", "").split(",")[1].strip() if row.get("LOCATION") and "," in str(row.get("LOCATION")) else None)
+
                     game_details.append({
                         "game_id": game_id,
                         "season": row.get("SEASON"),
@@ -97,9 +101,9 @@ class BoxscoreService:
                         "game_time": row.get("GAME_TIME"),
                         "game_status": row.get("GAME_STATUS", "Final"),
                         "arena": {
-                            "name": row.get("ARENA"),
-                            "city": row.get("LOCATION", "").split(",")[0].strip() if row.get("LOCATION") else None,
-                            "state": row.get("LOCATION", "").split(",")[1].strip() if row.get("LOCATION") and "," in str(row.get("LOCATION")) else None,
+                            "name": arena_name,
+                            "city": arena_city,
+                            "state": arena_state,
                         },
                         "home_team": {
                             "team_id": home_id,
@@ -118,13 +122,27 @@ class BoxscoreService:
                         "team_stats": team_stats,
                         "player_stats": player_stats,
                         "game_leaders": leaders,
-                        "officials": row.get("OFFICIALS", []) or [],
+                        "officials": summary_officials if summary_officials else (row.get("OFFICIALS", []) or []),
                         "game_result": _row_to_dict(row),
                     })
 
-            game_details_path = os.path.join(OUT_DIR, "game_details.json")
-            with open(game_details_path, "w") as f:
-                json.dump(game_details, f, indent=2, default=str)
+            for target_dir in ["frontend/public/data", "data/frontend"]:
+                os.makedirs(target_dir, exist_ok=True)
+                gd_path = os.path.join(target_dir, "game_details.json")
+                existing_gd = []
+                if os.path.exists(gd_path):
+                    try:
+                        with open(gd_path, "r", encoding="utf-8") as f:
+                            existing_gd = json.load(f)
+                    except Exception:
+                        existing_gd = []
+                gd_map = {str(item.get("game_id", "")).zfill(10): item for item in existing_gd if isinstance(item, dict)}
+                for item in game_details:
+                    normalized_gid = str(item.get("game_id", "")).zfill(10)
+                    item["game_id"] = normalized_gid
+                    gd_map[normalized_gid] = item
+                with open(gd_path, "w", encoding="utf-8") as f:
+                    json.dump(list(gd_map.values()), f, indent=2, default=str)
 
             # Highlights
             highlights = {"highest_scoring_games": [], "lowest_scoring_games": [], "top_points": [], "top_assists": [], "top_rebounds": []}

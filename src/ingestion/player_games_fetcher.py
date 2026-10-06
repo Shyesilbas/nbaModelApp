@@ -92,17 +92,86 @@ def fetch_player_games_for_season(season: str = None, season_types: Optional[Lis
 
 def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFrame] = None, season: Optional[str] = None) -> pd.DataFrame:
     """
-    Fallback method to fetch player games using BoxScoreTraditionalV2 for a single game.
+    Fallback method to fetch player games using BoxScoreTraditionalV3 (with V2 fallback) for a single game.
     Resolves metadata using the schedule context.
     """
-    from nba_api.stats.endpoints import boxscoretraditionalv2
-    
     game_id_str = str(game_id).zfill(10)
-    logger.info(f"Fallback: Fetching player boxscore for game {game_id_str} using BoxScoreTraditionalV2...")
+    logger.info(f"Fallback: Fetching player boxscore for game {game_id_str}...")
     
+    df = None
+    team_wl = {}
+
+    # Attempt BoxScoreTraditionalV3 first (active official endpoint)
     try:
-        bs = call_nba_api(boxscoretraditionalv2.BoxScoreTraditionalV2, game_id=game_id_str)
-        df = bs.get_data_frames()[0]  # PlayerStats DataFrame
+        from nba_api.stats.endpoints import boxscoretraditionalv3
+        bs3 = call_nba_api(boxscoretraditionalv3.BoxScoreTraditionalV3, game_id=game_id_str)
+        frames3 = bs3.get_data_frames()
+        if len(frames3) >= 1 and not frames3[0].empty:
+            raw_p = frames3[0].copy()
+            rename_map = {
+                "personId": "PLAYER_ID",
+                "teamId": "TEAM_ID",
+                "teamTricode": "TEAM_ABBREVIATION",
+                "minutes": "MIN",
+                "points": "PTS",
+                "fieldGoalsMade": "FGM",
+                "fieldGoalsAttempted": "FGA",
+                "fieldGoalsPercentage": "FG_PCT",
+                "threePointersMade": "FG3M",
+                "threePointersAttempted": "FG3A",
+                "threePointersPercentage": "FG3_PCT",
+                "freeThrowsMade": "FTM",
+                "freeThrowsAttempted": "FTA",
+                "freeThrowsPercentage": "FT_PCT",
+                "reboundsOffensive": "OREB",
+                "reboundsDefensive": "DREB",
+                "reboundsTotal": "REB",
+                "assists": "AST",
+                "steals": "STL",
+                "blocks": "BLK",
+                "turnovers": "TO",
+                "foulsPersonal": "PF",
+                "plusMinusPoints": "PLUS_MINUS",
+                "comment": "COMMENT"
+            }
+            df = raw_p.rename(columns=rename_map)
+            if "PLAYER_NAME" not in df.columns:
+                fn = df["firstName"].fillna("") if "firstName" in df.columns else ""
+                ln = df["familyName"].fillna("") if "familyName" in df.columns else ""
+                df["PLAYER_NAME"] = (fn + " " + ln).str.strip()
+
+            if len(frames3) >= 3 and not frames3[2].empty:
+                team_df = frames3[2]
+                if len(team_df) == 2:
+                    pts0 = float(team_df.iloc[0]["points"])
+                    pts1 = float(team_df.iloc[1]["points"])
+                    t0_id = int(team_df.iloc[0]["teamId"])
+                    t1_id = int(team_df.iloc[1]["teamId"])
+                    team_wl[t0_id] = "W" if pts0 > pts1 else "L"
+                    team_wl[t1_id] = "W" if pts1 > pts0 else "L"
+    except Exception as exc:
+        logger.warning(f"BoxScoreTraditionalV3 failed for player game {game_id_str}: {exc}, falling back to V2")
+
+    # Fallback to BoxScoreTraditionalV2 if V3 failed or was empty
+    if df is None or df.empty:
+        try:
+            from nba_api.stats.endpoints import boxscoretraditionalv2
+            bs2 = call_nba_api(boxscoretraditionalv2.BoxScoreTraditionalV2, game_id=game_id_str)
+            df = bs2.get_data_frames()[0]
+            if len(bs2.get_data_frames()) >= 2:
+                team_df = bs2.get_data_frames()[1]
+                if len(team_df) == 2:
+                    pts0 = float(team_df.iloc[0]["PTS"])
+                    pts1 = float(team_df.iloc[1]["PTS"])
+                    t0_id = int(team_df.iloc[0]["TEAM_ID"])
+                    t1_id = int(team_df.iloc[1]["TEAM_ID"])
+                    team_wl[t0_id] = "W" if pts0 > pts1 else "L"
+                    team_wl[t1_id] = "W" if pts1 > pts0 else "L"
+        except Exception as exc:
+            logger.error(f"BoxScoreTraditionalV2 also failed for player game {game_id_str}: {exc}")
+            return pd.DataFrame()
+
+    try:
         if df.empty:
             logger.warning(f"No player box score data returned for game {game_id_str}.")
             return pd.DataFrame()
@@ -146,18 +215,6 @@ def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.Data
             season_id = 10000 + start_year
         else:
             season_id = 40000 + start_year
-            
-        # Find which team won to determine WL for players
-        team_df = bs.get_data_frames()[1]
-        team_wl = {}
-        if len(team_df) == 2:
-            pts0 = float(team_df.iloc[0]["PTS"])
-            pts1 = float(team_df.iloc[1]["PTS"])
-            t0_id = int(team_df.iloc[0]["TEAM_ID"])
-            t1_id = int(team_df.iloc[1]["TEAM_ID"])
-            
-            team_wl[t0_id] = "W" if pts0 > pts1 else "L"
-            team_wl[t1_id] = "W" if pts1 > pts0 else "L"
             
         # Prepare mapped rows
         rows = []
@@ -263,9 +320,9 @@ def fetch_missing_player_games_by_game_ids(game_ids: List[str], season: str = No
                 if not df_filtered.empty:
                     all_logs.append(df_filtered)
         except Exception as e:
-            logger.error(f"LeagueGameLog player query failed for {api_st}: {e}. Falling back to BoxScoreTraditionalV2.")
+            logger.error(f"LeagueGameLog player query failed for {api_st}: {e}. Falling back to BoxScoreTraditionalV3.")
             
-    # Check if we got all game IDs we needed. If not, fallback to BoxScoreTraditionalV2
+    # Check if we got all game IDs we needed. If not, fallback to BoxScoreTraditionalV3
     found_gids = set()
     if all_logs:
         df_found = pd.concat(all_logs, ignore_index=True)
@@ -274,7 +331,7 @@ def fetch_missing_player_games_by_game_ids(game_ids: List[str], season: str = No
     missing_targets = [gid for gid in game_ids if str(gid).zfill(10) not in found_gids]
     
     if missing_targets:
-        logger.info(f"Using BoxScoreTraditionalV2 fallback for player games: {missing_targets}")
+        logger.info(f"Using BoxScoreTraditionalV3 fallback for player games: {missing_targets}")
         for gid in missing_targets:
             df_fallback = fetch_player_games_from_boxscore(gid, schedule_df, season=season)
             if not df_fallback.empty:

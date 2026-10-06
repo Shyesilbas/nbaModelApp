@@ -107,19 +107,19 @@ for _, p in active_players.iterrows():
     name = p["DISPLAY_FIRST_LAST"]
     
     stats = prev_player_stats.get(pid, {
-        "GP": 10,
-        "TOTAL_MIN": 200.0,
-        "AVG_MIN": 20.0,
-        "AVG_PTS": 10.0,
-        "AVG_REB": 4.0,
-        "AVG_AST": 2.5
+        "GP": 0,
+        "TOTAL_MIN": 0.0,
+        "AVG_MIN": 0.0,
+        "AVG_PTS": 0.0,
+        "AVG_REB": 0.0,
+        "AVG_AST": 0.0
     })
     
-    avg_min = float(stats.get("AVG_MIN", 20.0))
-    avg_pts = float(stats.get("AVG_PTS", 10.0))
-    avg_reb = float(stats.get("AVG_REB", 4.0))
-    avg_ast = float(stats.get("AVG_AST", 2.5))
-    gp = int(stats.get("GP", 10))
+    avg_min = float(stats.get("AVG_MIN", 0.0))
+    avg_pts = float(stats.get("AVG_PTS", 0.0))
+    avg_reb = float(stats.get("AVG_REB", 0.0))
+    avg_ast = float(stats.get("AVG_AST", 0.0))
+    gp = int(stats.get("GP", 0))
     total_min = float(stats.get("TOTAL_MIN", avg_min * gp))
     
     importance = (avg_min * 0.5) + (avg_pts * 1.0) + (avg_reb * 1.2) + (avg_ast * 1.5)

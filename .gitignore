@@ -121,9 +121,13 @@ models/**/*.h5
 models/**/*.pt
 models/**/*.parquet
 models/**/replaced_leaky/
+models/**/backup/
+ml-service/data/
+ml-service/frontend/
 outputs/
 outputs/analysis/
 
 !models/
 !outputs/
 !notebooks/
+

@@ -1,22 +1,30 @@
-import { Sparkles, ChevronRight, Calendar, Trophy, Clock } from "lucide-react";
+import { Sparkles, ChevronRight, Calendar, Trophy, Clock, RefreshCw, Shield } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
-import { fmtDate } from "./utils";
+import { fmtDate, isGameEligibleForRefresh, parseOfficials } from "./utils";
 import { getTeamTheme } from "../../lib/nbaTeams";
 
 export function GameCard({
   game,
   onOpen,
   onPredict,
+  onRefresh,
+  isRefreshing,
 }: {
   game: GameFeedRow;
   onOpen: () => void;
   onPredict?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }) {
   const isCompleted =
     game.GAME_STATUS === "Final" ||
     game.GAME_STATUS === "FINAL" ||
+    Boolean(game.WINNER_TEAM_ABBREVIATION) ||
     ((Number(game.HOME_SCORE) || 0) > 0 && (Number(game.AWAY_SCORE) || 0) > 0);
+
+  const canRefresh = !isCompleted && isGameEligibleForRefresh(game) && Boolean(onRefresh);
+  const officials = parseOfficials(game.OFFICIALS);
 
   const margin = isCompleted ? Math.abs((game.HOME_SCORE ?? 0) - (game.AWAY_SCORE ?? 0)) : 0;
   const awayWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION;
@@ -34,15 +42,15 @@ export function GameCard({
   return (
     <div
       onClick={handleClick}
-      className="group relative w-full overflow-hidden border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-slate-400 hover:shadow-md text-left cursor-pointer flex flex-col justify-between"
+      className="group relative w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_4px_18px_rgba(15,23,42,0.045)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_12px_28px_rgba(15,23,42,0.09)] text-left cursor-pointer flex flex-col justify-between"
     >
       {/* Dual-Team Gradient Header Line */}
       <div
-        className="h-1 w-full shrink-0 bg-[#c8102e]"
+        className="h-1 w-full shrink-0 bg-gradient-to-r from-[#1d428a] via-slate-200 to-[#c8102e]"
       />
 
       {/* Top Meta Bar */}
-      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 bg-white">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-100/80 px-5 py-3 bg-white">
         <div className="flex items-center gap-1.5">
           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{seasonLabel}</span>
           {game.SERIES_GAME_NUMBER != null && (
@@ -71,10 +79,10 @@ export function GameCard({
       </div>
 
       {/* Main Scoreboard Matchup */}
-      <div className="p-4">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <div className="px-5 pb-5 pt-6">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
           {/* Away Team */}
-          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
             <div 
               className="relative shrink-0 transition-transform group-hover:scale-105"
               style={{ 
@@ -82,10 +90,10 @@ export function GameCard({
                 boxShadow: awayWon ? `0 0 0 1.5px ${awayTheme.primary}40` : undefined
               }}
             >
-              <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={36} />
+              <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={42} />
             </div>
             <div className="min-w-0">
-              <p className={`text-sm font-black leading-snug truncate ${awayWon ? "text-slate-900" : "text-slate-700 font-bold"}`}>
+                <p className={`text-sm font-black leading-snug truncate ${awayWon ? "text-slate-900" : "text-slate-700 font-bold"}`}>
                 {game.AWAY_TEAM_ABBREVIATION}
               </p>
               <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Away</p>
@@ -93,7 +101,7 @@ export function GameCard({
           </div>
 
           {/* Central Scores / VS */}
-          <div className="min-w-[6.5rem] text-center" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <div className="min-w-[6.5rem] rounded-2xl bg-slate-50/80 px-4 py-3 text-center" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
             {isCompleted ? (
               <>
                 <div className="flex items-baseline justify-center gap-1.5">
@@ -152,18 +160,55 @@ export function GameCard({
                 boxShadow: homeWon ? `0 0 0 1.5px ${homeTheme.primary}40` : undefined
               }}
             >
-              <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={36} />
+              <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={42} />
             </div>
           </div>
         </div>
 
         {/* Footer info bar */}
-        <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <Calendar size={11} />
-            <span>{fmtDate(game.GAME_DATE)}</span>
+        <div className="mt-5 border-t border-slate-100 pt-4 flex flex-wrap items-center justify-between gap-3 text-[10px]">
+          <div className="flex items-center gap-2 text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <Calendar size={11} />
+              <span>{fmtDate(game.GAME_DATE)}</span>
+            </div>
+            {game.ARENA && (
+              <>
+                <span>•</span>
+                <span className="truncate max-w-[130px]" title={game.LOCATION ? `${game.ARENA} (${game.LOCATION})` : game.ARENA}>
+                  {game.ARENA}
+                </span>
+              </>
+            )}
+            {officials.length > 0 && (
+              <>
+                <span>•</span>
+                <span
+                  className="inline-flex items-center gap-1 font-semibold text-slate-600 bg-slate-100/90 px-1.5 py-0.5 rounded text-[9px]"
+                  title={`Hakemler: ${officials.map((o) => o.cleanName).join(", ")}`}
+                >
+                  <Shield size={10} className="text-slate-500" />
+                  <span>{officials.map((o) => o.jerseyNum ? `#${o.jerseyNum}` : o.cleanName).slice(0, 3).join(" ")}</span>
+                </span>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {canRefresh && (
+              <button
+                type="button"
+                disabled={isRefreshing}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRefresh?.();
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-blue-700 font-bold transition-colors text-[10px] hover:border-blue-300 hover:bg-blue-100 disabled:opacity-60 cursor-pointer"
+                title="Maç skorunu, kutu istatistiklerini ve pbp verisini çek"
+              >
+                <RefreshCw size={10} className={isRefreshing ? "animate-spin" : ""} />
+                {isRefreshing ? "Çekiliyor…" : "Verileri Getir"}
+              </button>
+            )}
             {!isCompleted && onPredict && (
               <button
                 type="button"
@@ -171,7 +216,7 @@ export function GameCard({
                   e.stopPropagation();
                   onPredict();
                 }}
-                className="inline-flex items-center gap-1.5 bg-[#c8102e] px-2.5 py-1 text-white font-black uppercase tracking-[0.16em] hover:bg-[#a10d25] transition-colors text-[9px]"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#c8102e] px-3 py-2 text-white font-bold hover:bg-[#a10d25] transition-colors text-[10px]"
               >
                 <Sparkles size={10} />
                 Predict

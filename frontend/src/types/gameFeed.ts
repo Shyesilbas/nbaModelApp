@@ -76,10 +76,8 @@ export interface GameFeedRow {
   AWAY_TEAM_PTS_LAST_10?: number | null;
   AWAY_TEAM_DAYS_REST?: number | null;
   AWAY_TEAM_IS_B2B?: boolean | null;
-  HOME_TOP3_CORE_PLAYERS?: string | null;
-  HOME_TOP5_CORE_PLAYERS?: string | null;
-  AWAY_TOP3_CORE_PLAYERS?: string | null;
-  AWAY_TOP5_CORE_PLAYERS?: string | null;
+  OFFICIALS?: unknown[] | null;
+  GAME_TIME_EST?: string | null;
   _isUpcoming?: boolean;
   game_detail?: GameDetail | null;
 }

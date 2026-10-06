@@ -11,3 +11,5 @@ lightgbm
 shap
 matplotlib
 duckdb
+nba_api
+requests

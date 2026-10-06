@@ -83,17 +83,58 @@ def fetch_team_games_for_season(season: str = None, season_types: Optional[List[
 
 def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFrame] = None, season: Optional[str] = None) -> pd.DataFrame:
     """
-    Fallback method to fetch team games using BoxScoreTraditionalV2 for a single game.
+    Fallback method to fetch team games using BoxScoreTraditionalV3 (with V2 fallback) for a single game.
     Resolves date, matchup, and season type using the schedule context.
     """
-    from nba_api.stats.endpoints import boxscoretraditionalv2
-    
     game_id_str = str(game_id).zfill(10)
-    logger.info(f"Fallback: Fetching team boxscore for game {game_id_str} using BoxScoreTraditionalV2...")
+    logger.info(f"Fallback: Fetching team boxscore for game {game_id_str}...")
     
+    df = None
     try:
-        bs = call_nba_api(boxscoretraditionalv2.BoxScoreTraditionalV2, game_id=game_id_str)
-        df = bs.get_data_frames()[1]  # TeamStats DataFrame
+        from nba_api.stats.endpoints import boxscoretraditionalv3
+        bs3 = call_nba_api(boxscoretraditionalv3.BoxScoreTraditionalV3, game_id=game_id_str)
+        frames3 = bs3.get_data_frames()
+        if len(frames3) >= 3 and not frames3[2].empty:
+            raw_t = frames3[2]
+            rename_map = {
+                "teamId": "TEAM_ID",
+                "teamTricode": "TEAM_ABBREVIATION",
+                "teamName": "TEAM_NAME",
+                "minutes": "MIN",
+                "points": "PTS",
+                "fieldGoalsMade": "FGM",
+                "fieldGoalsAttempted": "FGA",
+                "fieldGoalsPercentage": "FG_PCT",
+                "threePointersMade": "FG3M",
+                "threePointersAttempted": "FG3A",
+                "threePointersPercentage": "FG3_PCT",
+                "freeThrowsMade": "FTM",
+                "freeThrowsAttempted": "FTA",
+                "freeThrowsPercentage": "FT_PCT",
+                "reboundsOffensive": "OREB",
+                "reboundsDefensive": "DREB",
+                "reboundsTotal": "REB",
+                "assists": "AST",
+                "steals": "STL",
+                "blocks": "BLK",
+                "turnovers": "TO",
+                "foulsPersonal": "PF",
+                "plusMinusPoints": "PLUS_MINUS",
+            }
+            df = raw_t.rename(columns=rename_map)
+    except Exception as exc:
+        logger.warning(f"BoxScoreTraditionalV3 failed for {game_id_str}: {exc}, falling back to V2")
+
+    if df is None or df.empty:
+        try:
+            from nba_api.stats.endpoints import boxscoretraditionalv2
+            bs2 = call_nba_api(boxscoretraditionalv2.BoxScoreTraditionalV2, game_id=game_id_str)
+            df = bs2.get_data_frames()[1]
+        except Exception as exc:
+            logger.error(f"BoxScoreTraditionalV2 also failed for {game_id_str}: {exc}")
+            return pd.DataFrame()
+
+    try:
         if df.empty:
             logger.warning(f"No team box score data returned for game {game_id_str}.")
             return pd.DataFrame()
@@ -221,7 +262,7 @@ def fetch_missing_team_games_by_game_ids(
     """
     Fetches team game logs specifically for missing game IDs.
 
-    This uses per-game BoxScoreTraditionalV2 requests so we do not re-download
+    This uses per-game BoxScoreTraditionalV3 requests so we do not re-download
     the full season every time a few new games are missing.
     """
     if not game_ids:

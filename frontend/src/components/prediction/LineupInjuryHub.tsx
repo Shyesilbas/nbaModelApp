@@ -11,7 +11,8 @@ export interface RotationPlayer {
   predicted_pts?: number;
   predicted_reb?: number;
   predicted_ast?: number;
-  status?: "ACTIVE" | "RESTRICTED" | "OUT";
+  predicted_min?: number;
+  status?: "ACTIVE" | "RESTRICTED" | "OUT" | "DNP";
 }
 
 interface LineupInjuryHubProps {
@@ -40,11 +41,12 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
   const [homeQuery, setHomeQuery] = useState("");
   const [awayQuery, setAwayQuery] = useState("");
 
-  const getPlayerStatus = (p: RotationPlayer): "ACTIVE" | "RESTRICTED" | "OUT" => {
+  const getPlayerStatus = (p: RotationPlayer): "ACTIVE" | "RESTRICTED" | "OUT" | "DNP" => {
     const key = String(p.player_id ?? p.player_name);
     if (overrides[key]) return overrides[key].status;
     return p.status || "ACTIVE";
   };
+
 
   const handleStatusSelect = (p: RotationPlayer, status: "ACTIVE" | "RESTRICTED" | "OUT") => {
     const key = String(p.player_id ?? p.player_name);
@@ -83,7 +85,7 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
                 </span>
               </div>
               <p className="text-[10px] font-medium text-slate-400">
-                {players.length} Players Available · Rotation &amp; Injury
+                {players.filter((p) => getPlayerStatus(p) !== "DNP" && getPlayerStatus(p) !== "OUT").length} Aktif Rotasyon · {players.length} Kadro Oyuncusu
               </p>
             </div>
           </div>
@@ -132,6 +134,7 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
               const currentStatus = getPlayerStatus(p);
               const isOut = currentStatus === "OUT";
               const isRestricted = currentStatus === "RESTRICTED";
+              const isDnp = currentStatus === "DNP" || ((p.predicted_min ?? 0) <= 0 && !isOut);
 
               return (
                 <div
@@ -141,13 +144,15 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
                       ? "bg-rose-950/20 border-rose-900/40 opacity-75"
                       : isRestricted
                       ? "bg-amber-950/20 border-amber-900/40"
+                      : isDnp
+                      ? "bg-slate-950/25 border-slate-800/40 opacity-70 hover:opacity-100 hover:border-slate-700"
                       : "bg-slate-950/40 border-slate-800/60 hover:border-slate-700"
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-xs font-black truncate ${isOut ? "line-through text-slate-400" : "text-slate-100"}`}>
+                        <span className={`text-xs font-black truncate ${isOut ? "line-through text-slate-400" : isDnp ? "text-slate-400" : "text-slate-100"}`}>
                           {p.player_name}
                         </span>
                         {p.position_group && (
@@ -155,18 +160,28 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
                             {p.position_group}
                           </span>
                         )}
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
-                        {p.predicted_pts !== undefined && (
-                          <span>
-                            Proj PTS: <strong className={isOut ? "text-slate-500" : "text-indigo-300"}>{p.predicted_pts}</strong>
+                        {isDnp && (
+                          <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-500 uppercase">
+                            DNP
                           </span>
                         )}
-                        {isRestricted && <span className="text-amber-400 font-sans font-bold">• 60% Mins Limit</span>}
-                        {isOut && <span className="text-rose-400 font-sans font-bold">• 0 Mins (Usage Distributed)</span>}
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+                        {!isOut && !isDnp && p.predicted_pts !== undefined && (
+                          <span>
+                            Proj: <strong className="text-indigo-300">{p.predicted_pts} Sayı</strong>
+                            {p.predicted_min !== undefined && (
+                              <span className="text-slate-400 font-sans font-medium"> · {p.predicted_min} Dk</span>
+                            )}
+                          </span>
+                        )}
+                        {isDnp && <span className="text-slate-500 font-sans font-medium">• 0 Dk (DNP / Rotasyon Dışı)</span>}
+                        {isRestricted && <span className="text-amber-400 font-sans font-bold">• Kısıtlı Süre (%60)</span>}
+                        {isOut && <span className="text-rose-400 font-sans font-bold">• 0 Dk (Rolü Dağıtıldı)</span>}
                       </div>
                     </div>
                   </div>
+
 
                   {/* 3-Way Status Toggle */}
                   <div className="flex items-center bg-slate-900 border border-slate-700/80 rounded-lg p-0.5 shrink-0">

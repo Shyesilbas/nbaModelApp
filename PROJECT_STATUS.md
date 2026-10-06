@@ -12,8 +12,8 @@ This file tracks the overall status of the project.
 
 | Model | Artifact | Status |
 |-------|----------|--------|
-| WIN | `models/production/win_probability_model_v10.pkl` (and `v9` alias) | **ACTIVE** — v10.1 LightGBM Isotonic (Continuous Elo aligned, bottom-up player projections, leak-free OOF score margin integration) |
-| SCORE home/away/total/margin | `models/production/score_model_v10_*.pkl` (and `v9` alias) | **ACTIVE** — v10.1 XGBoost + Ridge calibration (box-score played counts removed, OOF residual calibration) |
+| WIN | `models/production/win_probability_model_v10.pkl` (and `v9` alias) | **ACTIVE** — v11 LightGBM Isotonic (PBP Clean Net Rating, Clutch Net Rating, garbage time filtering, Continuous Elo aligned, OOF score margin integration) |
+| SCORE home/away/total/margin | `models/production/score_model_v10_*.pkl` (and `v9` alias) | **ACTIVE** — v11 XGBoost + Ridge calibration (Clean Net Rating margin differential, OOF residual calibration) |
 | PLAYER PTS/REB/AST | `models/production/player_v9_lgb_*.pkl` and `player_v9_ridge_*.pkl` | **ACTIVE** — v9 LightGBM + Ridge calibration (6-season V4 datasets: 2020-21 to 2025-26) |
 
 ## Phase Status

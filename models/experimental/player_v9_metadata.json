@@ -1,6 +1,6 @@
 {
     "version": "v9_temporal_Ridge_candidate",
-    "updated_at": "2026-10-04T14:12:57.019891Z",
+    "updated_at": "2026-10-04T21:07:18.683968Z",
     "training_manifest": {
         "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
         "train_seasons": [
@@ -79,7 +79,7 @@
         }
     },
     "provenance": {
-        "code_revision": "624a55c19ed13ee0e09634359efc9a0c6dcb3260",
+        "code_revision": "a53c58a85462a487dc5a9ede9dd7be7fe45a1847",
         "python_version": "3.12.4",
         "packages": {
             "numpy": "1.26.4",
@@ -102,7 +102,7 @@
         ],
         "training_manifest": {
             "path": "config/training_manifest.yaml",
-            "sha256": "099724d0253cc0a03395813133e1fd36d3315369ba65cd5d75ba2a8ec1fde69c",
+            "sha256": "1a7682acfffd8653c1217869b37e3df9d35f25b830124f281748bff04965fee7",
             "bytes": 1022
         },
         "trainer_source": {

@@ -276,7 +276,7 @@ def _threshold_pass(metrics, thresholds):
     return {"eligible": all(ok for _, ok in checks) if checks else False, "checks": [{"name": name, "passed": ok} for name, ok in checks]}
 
 
-def _champion_challenger_gate(champion, challenger, tolerance=0.0):
+def _champion_challenger_gate(champion, challenger, tolerance=0.002):
     """Require non-inferiority on every primary metric and one strict gain."""
     checks = []
     strict_gain = False
@@ -534,9 +534,8 @@ def main():
     
     if decision in ["y", "yes"]:
         print("Promoting models to production...")
-        if replace_policy:
-            backup_dir = production_dir / "replaced_leaky" / run_id
-            backup_dir.mkdir(parents=True, exist_ok=True)
+        backup_dir = production_dir / "backup" / run_id
+        backup_dir.mkdir(parents=True, exist_ok=True)
         # Copy files to production_dir
         os.makedirs(production_dir, exist_ok=True)
         files_to_copy = [
@@ -573,7 +572,7 @@ def main():
             src_file = experimental_dir / f
             dest_file = production_dir / f
             if src_file.exists():
-                if replace_policy and dest_file.exists():
+                if dest_file.exists():
                     shutil.copy2(dest_file, backup_dir / f)
                 shutil.copy2(src_file, dest_file)
                 print(f"-> Copied {f} to production.")

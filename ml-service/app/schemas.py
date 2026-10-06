@@ -157,6 +157,7 @@ class GameFullPlayer(BaseModel):
     raw_pts: float
     scale_factor: float
     status: Optional[str] = "ACTIVE"
+    proj_min: Optional[float] = None
 
 
 class ScaleFactorsSub(BaseModel):
@@ -198,6 +199,8 @@ class GameFullResponse(BaseModel):
     away_players: List[GameFullPlayer]
     scale_factors: ScaleFactorsSub
     explanation: Optional[GameExplanationSub] = None
+    is_preseason: Optional[bool] = False
+    season_type: Optional[str] = "Regular Season"
 
 
 class ShapFactor(BaseModel):

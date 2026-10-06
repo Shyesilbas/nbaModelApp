@@ -34,6 +34,9 @@ if command -v python3 >/dev/null 2>&1; then
       . .venv/bin/activate
     fi
 
+    # free port 8001 if already bound by an orphan process
+    lsof -ti :8001 | xargs kill -9 2>/dev/null || true
+
     # start uvicorn using the venv's python
     python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 &
     ML_PID=$!
