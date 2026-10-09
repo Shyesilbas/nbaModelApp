@@ -17,11 +17,13 @@ import math
 import os
 import hashlib
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pandas as pd
 from scripts.season_utils import discover_seasons
 
-OUT_DIR = os.environ.get("FRONTEND_DATA_DIR", "data/frontend")
+ROOT = Path(__file__).resolve().parents[1]
+OUT_DIR = os.environ.get("FRONTEND_DATA_DIR", str(ROOT / "data" / "frontend"))
 
 
 def nan_safe(val):
@@ -94,8 +96,10 @@ def load_game_results(season_key: str, season_path: str) -> list[dict]:
     return rows
 
 
-def main():
-    os.makedirs(OUT_DIR, exist_ok=True)
+def main(out_dir: str | None = None):
+    target_dir = out_dir or os.environ.get("FRONTEND_DATA_DIR", OUT_DIR)
+    target_dir = str((ROOT / target_dir).resolve() if not os.path.isabs(target_dir) else target_dir)
+    os.makedirs(target_dir, exist_ok=True)
     seasons = discover_seasons()
 
     all_games = []
@@ -109,19 +113,19 @@ def main():
     all_games.sort(key=lambda g: g["GAME_DATE"] or "", reverse=True)
     print(f"Total: {len(all_games)} games across all seasons")
 
-    out_path = os.path.join(OUT_DIR, "all_seasons_games.json")
+    out_path = os.path.join(target_dir, "all_seasons_games.json")
     with open(out_path, "w") as f:
         json.dump(all_games, f, separators=(",", ":"))
     print(f"Wrote -> {out_path}")
 
     # Write dynamically discovered seasons list
     seasons_list = sorted(list(seasons.keys()), reverse=True)
-    seasons_path = os.path.join(OUT_DIR, "seasons.json")
+    seasons_path = os.path.join(target_dir, "seasons.json")
     with open(seasons_path, "w") as f:
         json.dump(seasons_list, f, separators=(",", ":"))
     print(f"Wrote seasons list -> {seasons_path}")
 
-    write_manifest(OUT_DIR)
+    write_manifest(target_dir)
 
 
 if __name__ == "__main__":

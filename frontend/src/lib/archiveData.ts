@@ -1,4 +1,5 @@
 import { loadJson, loadPrivateApi, loadPrivateApiFresh } from "./dataCache";
+import { CURRENT_SEASON } from "./constants";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 import type { PlayerBoxScore, TeamBoxScore } from "../components/game-results/types";
 
@@ -6,12 +7,18 @@ const normId = (id: string | number) =>
   String(id ?? "").replace(/\D/g, "").padStart(10, "0");
 
 const seasonSuffix = (season?: string | null) =>
-  !season || season === "2025-26" ? "" : `_${season}`;
+  !season || season === CURRENT_SEASON ? "" : `_${season}`;
 
 let gameDetailsPromise: Promise<GameDetail[]> | null = null;
 let currentGamesPromise: Promise<GameFeedRow[] | null> | null = null;
 let allSeasonGamesPromise: Promise<GameFeedRow[] | null> | null = null;
 const pbpCache = new Map<string, Promise<any>>();
+
+export function invalidateGameIndexCache() {
+  currentGamesPromise = null;
+  allSeasonGamesPromise = null;
+  gameDetailsPromise = null;
+}
 
 async function loadGameDetails(): Promise<GameDetail[]> {
   if (!gameDetailsPromise) {
@@ -134,7 +141,7 @@ async function loadGameJson(path: string): Promise<GameFeedRow[]> {
 
 export async function loadArchivedPlayByPlay(gameId: string, season?: string | null) {
   const gid = normId(gameId);
-  const seasonKey = season ?? "2025-26";
+  const seasonKey = season ?? CURRENT_SEASON;
   const cacheKey = `${seasonKey}:${gid}`;
 
   if (!pbpCache.has(cacheKey)) {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 import { loadJson, loadPrivateApiFresh, postPrivateApi } from "../lib/dataCache";
-import { loadArchivedGameBoxscores, loadArchivedGameIndex } from "../lib/archiveData";
+import { loadArchivedGameBoxscores, loadArchivedGameIndex, invalidateGameIndexCache } from "../lib/archiveData";
 import {
   GameCard,
   GameCardDetail,
@@ -146,8 +146,14 @@ export default function GameResults({
     () => sortedResults.filter((g) => g.GAME_DATE === selectedDate),
     [sortedResults, selectedDate],
   );
-  const selectedGame       = useMemo(() => results.find((g) => g.GAME_ID === selectedGameId) ?? (allResults.find((g) => g.GAME_ID === selectedGameId) as GameFeedRow | undefined) ?? null, [results, allResults, selectedGameId]);
-  const selectedDetail = selectedGameId ? gameDetailCache[selectedGameId] : null;
+  const selectedGame = useMemo(() => {
+    if (!selectedGameId) return null;
+    const targetGid = normGid(selectedGameId);
+    return results.find((g) => normGid(g.GAME_ID) === targetGid) ??
+           (allResults.find((g) => normGid(g.GAME_ID) === targetGid) as GameFeedRow | undefined) ??
+           null;
+  }, [results, allResults, selectedGameId]);
+  const selectedDetail = selectedGameId ? (gameDetailCache[normGid(selectedGameId)] ?? gameDetailCache[selectedGameId] ?? null) : null;
 
   const [refreshingGameId, setRefreshingGameId] = useState<string | null>(null);
 
@@ -172,19 +178,22 @@ export default function GameResults({
           error?: string;
         }>(`/frontend-data-api/games/${encodeURIComponent(targetGame.GAME_ID)}/refresh`);
         if (status.status === "complete") {
+          const gid = normGid(targetGame.GAME_ID);
+          const detailObj = status.detail as unknown as {
+            game_detail: GameDetail;
+            team_boxscores: TeamBoxScore[];
+            player_boxscores: PlayerBoxScore[];
+          };
           setGameDetailCache((prev) => ({
             ...prev,
-            [targetGame.GAME_ID]: status.detail as unknown as {
-              game_detail: GameDetail;
-              team_boxscores: TeamBoxScore[];
-              player_boxscores: PlayerBoxScore[];
-            },
+            [targetGame.GAME_ID]: detailObj,
+            [gid]: detailObj,
           }));
           setFreshPlayByPlay(status.play_by_play ?? null);
           setRefreshDone(true);
           const home = status.detail?.team_boxscores?.find((row) => row.TEAM_ABBREVIATION === targetGame.HOME_TEAM_ABBREVIATION);
           const away = status.detail?.team_boxscores?.find((row) => row.TEAM_ABBREVIATION === targetGame.AWAY_TEAM_ABBREVIATION);
-          const markFinal = (row: GameFeedRow): GameFeedRow => row.GAME_ID === targetGame.GAME_ID ? {
+          const markFinal = (row: GameFeedRow): GameFeedRow => normGid(row.GAME_ID) === gid ? {
             ...row,
             GAME_STATUS: "Final",
             HOME_SCORE: home?.PTS ?? row.HOME_SCORE,
@@ -193,6 +202,7 @@ export default function GameResults({
           } : row;
           setAllResults((prev) => prev.map(markFinal));
           setResults((prev) => prev.map(markFinal));
+          invalidateGameIndexCache();
           setRefreshingGameId(null);
           setRefreshState("idle");
           return;
@@ -214,11 +224,13 @@ export default function GameResults({
   };
 
   useEffect(() => {
-    if (!selectedGame || !selectedGameId || gameDetailCache[selectedGameId]) return;
+    if (!selectedGame || !selectedGameId) return;
+    const gid = normGid(selectedGameId);
+    if (gameDetailCache[gid] || gameDetailCache[selectedGameId]) return;
     setDetailLoading(true);
     loadArchivedGameBoxscores(selectedSeason, selectedGame.GAME_ID)
       .then((detail) => {
-        setGameDetailCache((prev) => ({ ...prev, [selectedGameId]: detail }));
+        setGameDetailCache((prev) => ({ ...prev, [gid]: detail, [selectedGameId]: detail }));
       })
       .catch((e) => setError(e.message))
       .finally(() => setDetailLoading(false));

@@ -55,9 +55,12 @@ export function GameCardDetail({
   const hasFinalStatus = /^(final|finished|complete|completed)\b/.test(normalizedStatus);
   const isLiveStatus = /live|progress|halftime|quarter|period/.test(normalizedStatus);
   const isCompleted = hasFinalStatus || (
-    !isLiveStatus &&
-    game.HOME_SCORE != null && game.AWAY_SCORE != null &&
-    Number.isFinite(Number(game.HOME_SCORE)) && Number.isFinite(Number(game.AWAY_SCORE))
+    !isLiveStatus && (
+      (game.HOME_SCORE != null && game.AWAY_SCORE != null &&
+      Number.isFinite(Number(game.HOME_SCORE)) && Number.isFinite(Number(game.AWAY_SCORE))) ||
+      (homeBS?.PTS != null && awayBS?.PTS != null) ||
+      (gameDetail?.home_team?.score != null && gameDetail?.away_team?.score != null)
+    )
   );
 
   const hasGameData =
@@ -73,8 +76,8 @@ export function GameCardDetail({
   const awayTheme = getTeamTheme(game.AWAY_TEAM_ABBREVIATION);
   const homeTheme = getTeamTheme(game.HOME_TEAM_ABBREVIATION);
 
-  const homeScore = isCompleted ? (gameDetail?.home_team?.score ?? game.HOME_SCORE) : null;
-  const awayScore = isCompleted ? (gameDetail?.away_team?.score ?? game.AWAY_SCORE) : null;
+  const homeScore = isCompleted ? (gameDetail?.home_team?.score ?? homeBS?.PTS ?? game.HOME_SCORE) : null;
+  const awayScore = isCompleted ? (gameDetail?.away_team?.score ?? awayBS?.PTS ?? game.AWAY_SCORE) : null;
   const margin   = isCompleted ? Math.abs((homeScore ?? 0) - (awayScore ?? 0)) : 0;
   const topHome  = [...homePlayers].sort((a, b) => (b.PTS ?? 0) - (a.PTS ?? 0) || (b.MIN ?? 0) - (a.MIN ?? 0));
   const topAway  = [...awayPlayers].sort((a, b) => (b.PTS ?? 0) - (a.PTS ?? 0) || (b.MIN ?? 0) - (a.MIN ?? 0));

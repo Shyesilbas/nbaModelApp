@@ -179,7 +179,19 @@ def get_game_index(
                 continue
             gid = _norm_game_id(game.get("GAME_ID") or game.get("game_id"))
             if gid.strip("0"):
-                games_by_id[gid] = {**games_by_id.get(gid, {}), **game}
+                existing = games_by_id.get(gid, {})
+                is_existing_completed = (
+                    existing.get("GAME_STATUS") in ("Final", "FINAL")
+                    or (existing.get("HOME_SCORE") is not None and existing.get("AWAY_SCORE") is not None)
+                )
+                is_new_completed = (
+                    game.get("GAME_STATUS") in ("Final", "FINAL")
+                    or (game.get("HOME_SCORE") is not None and game.get("AWAY_SCORE") is not None)
+                )
+                if is_existing_completed and not is_new_completed:
+                    games_by_id[gid] = {**game, **existing}
+                else:
+                    games_by_id[gid] = {**existing, **game}
 
     raw_games = list(games_by_id.values())
 
