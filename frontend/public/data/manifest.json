@@ -1,12 +1,12 @@
 {
   "season": "multi",
-  "generated_at": "2026-10-05T19:48:01.240860+00:00",
-  "version": "575add73f6ab98b7",
+  "generated_at": "2026-10-06T12:29:56.312156+00:00",
+  "version": "4458e3ae238c009c",
   "files": {
     "all_seasons_games.json": {
       "path": "/data/all_seasons_games.json",
-      "size_bytes": 3572679,
-      "sha256": "3d457f53e5822ba16bae32a38345b7672cf6107d99f148bb89dee1e56b08e552"
+      "size_bytes": 3574867,
+      "sha256": "26d435a1bd0d403feb5768c19a742149302b53cfb6d7c985e41c64db2d6336e2"
     },
     "core_players.json": {
       "path": "/data/core_players.json",
@@ -15,18 +15,18 @@
     },
     "dataset_summary.json": {
       "path": "/data/dataset_summary.json",
-      "size_bytes": 3056,
-      "sha256": "f3c58dc602583a4466cd4532171488751faa2da9fcf0f030cb07fb3a2d891e2c"
+      "size_bytes": 3355,
+      "sha256": "67f20b7011d5b63d19897c9ed77ad95c2ad07958d8ebd94165caa61b1492a6c5"
     },
     "game_details.json": {
       "path": "/data/game_details.json",
-      "size_bytes": 26381790,
-      "sha256": "1d4c56bf94954b282b3d41839812676d36eb3cc0f78cfcf928c7fa4f0cbd3ae5"
+      "size_bytes": 26614274,
+      "sha256": "581f9227f0141b407c4fe0db8775b3f5d34fd8e003a61a48b0aa911151c2c0d6"
     },
     "game_results.json": {
       "path": "/data/game_results.json",
-      "size_bytes": 614,
-      "sha256": "39efc05d2204d5e36174fc720bc7624a4e4ea71aaabea2254c95c8c55e6441c8"
+      "size_bytes": 5328,
+      "sha256": "6d34201d50f6d73f5c3928c2572d97f16f06130970330021f680ce11c34e03cd"
     },
     "game_results_2020-21.json": {
       "path": "/data/game_results_2020-21.json",
@@ -58,15 +58,20 @@
       "size_bytes": 817235,
       "sha256": "a6940b119352986426c7780c6fb7b2bcae11875f385a7f36c7798a91b715f7e1"
     },
+    "game_results_2026-27.json": {
+      "path": "/data/game_results_2026-27.json",
+      "size_bytes": 5328,
+      "sha256": "6d34201d50f6d73f5c3928c2572d97f16f06130970330021f680ce11c34e03cd"
+    },
     "games.json": {
       "path": "/data/games.json",
-      "size_bytes": 2213400,
-      "sha256": "d74c474ee4941e4b27ccfd342c567ce7e63ec9982cf5a45c41541df948ee98cf"
+      "size_bytes": 1867246,
+      "sha256": "2c03c36f14d2fbbcb8d657e154353c05d88dac70f84fcc438edc07c052b53646"
     },
     "highlights.json": {
       "path": "/data/highlights.json",
-      "size_bytes": 5326,
-      "sha256": "75c725c340a59f831df46de88c5a3665484d89f3e40ffb42c536ea350a9b83a5"
+      "size_bytes": 5289,
+      "sha256": "6475397c7cf4d095f634392b7917af3a8fcd4ae47be798315f9c26e63a399cc3"
     },
     "model_ready_v2_summary.json": {
       "path": "/data/model_ready_v2_summary.json",
@@ -80,8 +85,8 @@
     },
     "player_boxscores.json": {
       "path": "/data/player_boxscores.json",
-      "size_bytes": 16192,
-      "sha256": "595d7ef29ae314a64c22daecafb2cdd09ef51c42a0abb34dc5eb904dd231f3c1"
+      "size_bytes": 147464,
+      "sha256": "dd505376e2c83b3e6a00e52a20b502b645b316c3ca3a1d1e6e64c77af5cb7d39"
     },
     "player_boxscores_2020-21.json": {
       "path": "/data/player_boxscores_2020-21.json",
@@ -113,6 +118,11 @@
       "size_bytes": 16079810,
       "sha256": "fa965121027b0e9f5dc3bfbf7670d45755bee781341e21f37ab3b8fb5d7ce3f0"
     },
+    "player_boxscores_2026-27.json": {
+      "path": "/data/player_boxscores_2026-27.json",
+      "size_bytes": 147464,
+      "sha256": "dd505376e2c83b3e6a00e52a20b502b645b316c3ca3a1d1e6e64c77af5cb7d39"
+    },
     "player_name_lookup.json": {
       "path": "/data/player_name_lookup.json",
       "size_bytes": 60579,
@@ -135,8 +145,8 @@
     },
     "schedule.json": {
       "path": "/data/schedule.json",
-      "size_bytes": 631515,
-      "sha256": "29a4530bebe2a9fc532a8345f444f37affce7923b314afb3d3e913adcfde8e9f"
+      "size_bytes": 661722,
+      "sha256": "bdcf555f82cb9ee01ffa3b1b0e4484e3356589b3c40063a3c878560fccded9ad"
     },
     "schedule_details_2024_25.json": {
       "path": "/data/schedule_details_2024_25.json",
@@ -165,8 +175,8 @@
     },
     "team_boxscores.json": {
       "path": "/data/team_boxscores.json",
-      "size_bytes": 1274,
-      "sha256": "07f0321d376e167327ab4f69ba8da46a4de79e6a9e24b28941cc9cfeee37475e"
+      "size_bytes": 10104,
+      "sha256": "dc3df954fcf018cef2763d4a1bc4d0d567ef62281269cf167f6ddd522b1386de"
     },
     "team_boxscores_2020-21.json": {
       "path": "/data/team_boxscores_2020-21.json",
@@ -198,15 +208,20 @@
       "size_bytes": 1699871,
       "sha256": "b1119271e6546f1857407a74933c5a06bf635588de955ea6aa177a1c6a39ab58"
     },
+    "team_boxscores_2026-27.json": {
+      "path": "/data/team_boxscores_2026-27.json",
+      "size_bytes": 10104,
+      "sha256": "dc3df954fcf018cef2763d4a1bc4d0d567ef62281269cf167f6ddd522b1386de"
+    },
     "team_rosters.json": {
       "path": "/data/team_rosters.json",
-      "size_bytes": 116063,
-      "sha256": "9f2b18067cf973c260b0c5d8a7c0cd99a32a337267656acaff6c0b0596f025af"
+      "size_bytes": 115076,
+      "sha256": "e7e92b95a533c4f438a26c987d880a4e6a20c11fa84899de82b46db8330a37ad"
     },
     "upcoming_games_context.json": {
       "path": "/data/upcoming_games_context.json",
-      "size_bytes": 1330621,
-      "sha256": "29796ad963a897183efafd96c4fabc0f55d5a0856031a5eca512fe18a58fc166"
+      "size_bytes": 1360801,
+      "sha256": "336083c0fb641b0c8b1a76364fe6f08360e0d6b18f71011d844acb74d57d09a9"
     }
   }
 }

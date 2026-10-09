@@ -37,12 +37,12 @@ if command -v python3 >/dev/null 2>&1; then
     # free port 8001 if already bound by an orphan process
     lsof -ti :8001 | xargs kill -9 2>/dev/null || true
 
-    # start uvicorn using the venv's python
-    python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 &
+    # start uvicorn from REPO_ROOT with auto-reload for app directory
+    cd "$REPO_ROOT"
+    "$REPO_ROOT/ml-service/.venv/bin/python" -m uvicorn app.main:app --app-dir ml-service --host 127.0.0.1 --port 8001 --reload --reload-dir ml-service/app &
     ML_PID=$!
     echo "ML service started (PID $ML_PID) on port 8001"
     deactivate || true
-    cd "$REPO_ROOT"
   else
     echo "ml-service/requirements.txt not found — skipping ML service start"
   fi

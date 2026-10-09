@@ -72,7 +72,7 @@ def _write_frontend_manifest(out_dir: str, season: str):
         json.dump(manifest, f, indent=2)
     print(f"✅ Exported frontend data manifest -> {out_path}")
 
-def export_data(season: str = None):
+def export_data(season: str = None, out_dir: str = None):
     from scripts.season_utils import get_default_season
     normalized_s = normalize_season(season or get_default_season())
 
@@ -80,21 +80,23 @@ def export_data(season: str = None):
     raw_team_path = paths.team_games_raw
     raw_player_path = paths.player_games_raw
     
-    roster_path = f"data/season={normalized_s}/analysis/team_rosters.csv"
-    core_path = f"data/season={normalized_s}/analysis/core_players.csv"
-    star_path = f"data/season={normalized_s}/analysis/star_candidates.csv"
-    multi_team_path = f"data/season={normalized_s}/analysis/multi_team_players.csv"
-    lookup_path = f"data/season={normalized_s}/analysis/player_name_lookup.csv"
+    roster_path = str(ROOT / "data" / f"season={normalized_s}" / "analysis" / "team_rosters.csv")
+    core_path = str(ROOT / "data" / f"season={normalized_s}" / "analysis" / "core_players.csv")
+    star_path = str(ROOT / "data" / f"season={normalized_s}" / "analysis" / "star_candidates.csv")
+    multi_team_path = str(ROOT / "data" / f"season={normalized_s}" / "analysis" / "multi_team_players.csv")
+    lookup_path = str(ROOT / "data" / f"season={normalized_s}" / "analysis" / "player_name_lookup.csv")
     
     schedule_combined_path = paths.schedule_combined
     upcoming_context_path  = paths.upcoming_context
 
     token = normalized_s.replace("-", "_")
-    model_v1_path = f"data/processed/team_model_ready_{token}.csv"
+    model_v1_path = str(ROOT / "data" / "processed" / f"team_model_ready_{token}.csv")
     model_v2_path = paths.team_model_ready_v2
-    model_v3_path = f"data/processed/team_model_ready_v3_{token}.csv"
+    model_v3_path = str(ROOT / "data" / "processed" / f"team_model_ready_v3_{token}.csv")
     
-    out_dir = os.environ.get("FRONTEND_DATA_DIR", "frontend/public/data")
+    if out_dir is None:
+        out_dir = os.environ.get("FRONTEND_DATA_DIR", str(ROOT / "frontend" / "public" / "data"))
+    out_dir = str((ROOT / out_dir).resolve() if not os.path.isabs(out_dir) else out_dir)
     os.makedirs(out_dir, exist_ok=True)
     games_feed_path = os.path.join(out_dir, "games.json")
     
@@ -155,6 +157,16 @@ def export_data(season: str = None):
                 df_results["GAME_DATE"] = pd.to_datetime(df_results["GAME_DATE"], errors="coerce").dt.strftime("%Y-%m-%d")
             result_cols = [c for c in df_results.columns if c != "GAME_DATE"]
             df_games = df_games.merge(df_results[result_cols], on="GAME_ID", how="left", suffixes=("", "_RESULT"))
+            for col in result_cols:
+                if col == "GAME_ID":
+                    continue
+                res_col = col + "_RESULT"
+                if res_col in df_games.columns:
+                    if col in df_games.columns:
+                        df_games[col] = df_games[res_col].where(df_games[res_col].notna(), df_games[col])
+                    else:
+                        df_games[col] = df_games[res_col]
+                    df_games.drop(columns=[res_col], inplace=True)
 
         if os.path.exists(upcoming_context_path):
             df_upcoming = pd.read_csv(upcoming_context_path, dtype={"GAME_ID": str})

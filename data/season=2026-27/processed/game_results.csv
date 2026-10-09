@@ -1,4 +1,9 @@
 GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABBREVIATION,AWAY_TEAM_NAME,AWAY_SCORE,WINNER_TEAM_ABBREVIATION,LOSER_TEAM_ABBREVIATION,SEASON_TYPE,IS_PLAYOFF,GAME_STATUS,WEEK,PLAYOFF_ROUND,SERIES_GAME_NUMBER,HOME_SERIES_WINS,AWAY_SERIES_WINS,IS_ELIMINATION_GAME,CAN_CLINCH_SERIES,ARENA,LOCATION
-12600009,2026-10-03,TOR,Toronto Raptors,105,MIA,Miami Heat,129,MIA,TOR,Pre Season,False,Final,,,,,,,,,
-12600066,2026-10-04,LAC,Clippers,104,GSW,Warriors,101,LAC,GSW,Pre Season,False,Final,,,,,,,,,
-12600067,2026-10-04,DEN,Nuggets,97,UTA,Jazz,109,UTA,DEN,Pre Season,False,Final,,,,,,,,,
+0012600009,2026-10-03,TOR,Toronto Raptors,105,MIA,Miami Heat,129,MIA,TOR,Pre Season,False,Final,,Preseason,,0,1,False,False,Videotron Centre,"Quebec City, QC"
+0012600066,2026-10-04,LAC,Clippers,104,GSW,Warriors,101,LAC,GSW,Pre Season,False,Final,,Preseason,,0,0,False,False,Stan Sheriff Center,"Honolulu, HI"
+0012600067,2026-10-04,DEN,Nuggets,97,UTA,Jazz,109,UTA,DEN,Pre Season,False,Final,,Preseason,,0,0,False,False,CU Events Center,"Boulder, CO"
+0012600004,2026-10-05,ATL,Hawks,123,MEM,Grizzlies,132,MEM,ATL,Pre Season,False,Final,,Preseason,,0,0,False,False,State Farm Arena,"Atlanta, GA"
+0012600022,2026-10-05,DET,Pistons,109,PHX,Suns,107,DET,PHX,Pre Season,False,Final,,Preseason,,0,0,False,False,Little Caesars Arena,"Detroit, MI"
+0012600023,2026-10-05,PHI,76ers,120,NYK,Knicks,97,PHI,NYK,Pre Season,False,Final,,Preseason,,0,0,False,False,Xfinity Mobile Arena,"Philadelphia, PA"
+0012600024,2026-10-05,MIL,Bucks,97,MIN,Timberwolves,116,MIN,MIL,Pre Season,False,Final,,Preseason,,0,0,False,False,Fiserv Forum,"Milwaukee, WI"
+0012600028,2026-10-05,SAC,Kings,103,LAL,Lakers,127,LAL,SAC,Pre Season,False,Final,,Preseason,,0,0,False,False,Golden 1 Center,"Sacramento, CA"

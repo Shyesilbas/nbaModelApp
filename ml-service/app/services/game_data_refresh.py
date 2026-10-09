@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+import json
+import logging
+import os
 import threading
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
+import pandas as pd
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 _lock = threading.Lock()
 _jobs: dict[str, dict[str, Any]] = {}
@@ -36,8 +45,6 @@ def start_refresh(game_id: str, season: str | None = None) -> dict[str, Any]:
     gid = _game_id(game_id)
     from scripts.data_paths import get_data_paths
     from scripts.season_utils import normalize_season
-    import pandas as pd
-    import os
 
     resolved_season = normalize_season(season) if season else _infer_season_from_game_id(gid)
 
@@ -131,7 +138,6 @@ def _run_refresh(game_id: str, season: str, home_team: str | None, away_team: st
             write_payload,
         )
         from scripts.season_utils import normalize_season
-        from pathlib import Path
 
         season_key = normalize_season(season)
         team = fetch_missing_team_games_by_game_ids([game_id], season=season_key)
@@ -148,8 +154,7 @@ def _run_refresh(game_id: str, season: str, home_team: str | None, away_team: st
 
         gd_entry = None
         try:
-            import json
-            for gd_file in [Path("data/frontend/game_details.json"), Path("frontend/public/data/game_details.json")]:
+            for gd_file in [REPO_ROOT / "data" / "frontend" / "game_details.json", REPO_ROOT / "frontend" / "public" / "data" / "game_details.json"]:
                 if gd_file.exists():
                     with open(gd_file, "r", encoding="utf-8") as f:
                         gd_all = json.load(f)
@@ -218,48 +223,122 @@ def _run_refresh(game_id: str, season: str, home_team: str | None, away_team: st
                         gr_df.loc[mask, "WINNER_TEAM_ABBREVIATION"] = winner
                         gr_df.loc[mask, "LOSER_TEAM_ABBREVIATION"] = loser
                         gr_df.to_csv(gr_path, index=False)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Error updating game_results.csv: %s", e)
 
             try:
-                import json
-                for all_games_path in [
-                    Path("frontend/public/data/all_seasons_games.json"),
-                    Path("data/frontend/all_seasons_games.json"),
-                ]:
-                    if all_games_path.exists():
-                        with open(all_games_path, "r", encoding="utf-8") as f:
-                            games_list = json.load(f)
-                        updated = False
-                        for g in games_list:
-                            if str(g.get("GAME_ID", "")).zfill(10) == game_id:
-                                g["GAME_STATUS"] = "Final"
-                                g["HOME_SCORE"] = home_pts
-                                g["AWAY_SCORE"] = away_pts
-                                g["WINNER_TEAM_ABBREVIATION"] = winner
-                                g["LOSER_TEAM_ABBREVIATION"] = loser
-                                updated = True
-                        if updated:
-                            with open(all_games_path, "w", encoding="utf-8") as f:
-                                json.dump(games_list, f, separators=(",", ":"))
-            except Exception:
-                pass
+                from scripts.export_frontend_data import export_data
+                from scripts.export_all_seasons_games import main as export_all_main
+
+                for out_dir in [str(REPO_ROOT / "data" / "frontend"), str(REPO_ROOT / "frontend" / "public" / "data")]:
+                    export_data(season=season_key, out_dir=out_dir)
+                    export_all_main(out_dir=out_dir)
+            except Exception as e:
+                logger.warning("Error running frontend exports: %s", e)
+
+            try:
+                import sqlite3
+                db_path = REPO_ROOT / "data" / "frontend" / "nba_frontend.db"
+                if db_path.exists():
+                    conn = sqlite3.connect(db_path)
+                    cur = conn.cursor()
+
+                    cur.execute("SELECT season, data_json FROM games_index WHERE game_id = ?", (game_id,))
+                    existing_rows = cur.fetchall()
+                    if existing_rows:
+                        for s_val, dj_val in existing_rows:
+                            g_obj = json.loads(dj_val)
+                            g_obj["GAME_STATUS"] = "Final"
+                            g_obj["HOME_SCORE"] = home_pts
+                            g_obj["AWAY_SCORE"] = away_pts
+                            g_obj["WINNER_TEAM_ABBREVIATION"] = winner
+                            g_obj["LOSER_TEAM_ABBREVIATION"] = loser
+                            cur.execute(
+                                "UPDATE games_index SET data_json = ? WHERE season = ? AND game_id = ?",
+                                (json.dumps(g_obj), s_val, game_id),
+                            )
+                    else:
+                        games_file = REPO_ROOT / "data" / "frontend" / "games.json"
+                        if games_file.exists():
+                            with open(games_file, "r", encoding="utf-8") as f:
+                                all_g = json.load(f)
+                            for g in all_g:
+                                if str(g.get("GAME_ID", "")).zfill(10) == game_id:
+                                    cur.execute(
+                                        "INSERT OR REPLACE INTO games_index (season, game_id, data_json) VALUES (?, ?, ?)",
+                                        (season_key, game_id, json.dumps(g)),
+                                    )
+                                    break
+
+                    cur.execute("DELETE FROM team_boxscores WHERE game_id = ? AND season = ?", (game_id, season_key))
+                    t_rows = _records(team_bs, game_id)
+                    for tr in t_rows:
+                        cur.execute(
+                            "INSERT INTO team_boxscores (game_id, season, data_json) VALUES (?, ?, ?)",
+                            (game_id, season_key, json.dumps(tr)),
+                        )
+
+                    cur.execute("DELETE FROM player_boxscores WHERE game_id = ? AND season = ?", (game_id, season_key))
+                    p_rows = _records(player_bs, game_id)
+                    for pr in p_rows:
+                        pid = pr.get("PLAYER_ID")
+                        try:
+                            pid = int(pid) if pid is not None else None
+                        except (ValueError, TypeError):
+                            pid = None
+                        cur.execute(
+                            "INSERT INTO player_boxscores (game_id, player_id, season, data_json) VALUES (?, ?, ?, ?)",
+                            (game_id, pid, season_key, json.dumps(pr)),
+                        )
+
+                    if not gd_entry:
+                        for gd_file in [REPO_ROOT / "data" / "frontend" / "game_details.json", REPO_ROOT / "frontend" / "public" / "data" / "game_details.json"]:
+                            if gd_file.exists():
+                                try:
+                                    with open(gd_file, "r", encoding="utf-8") as f:
+                                        for item in json.load(f):
+                                            if str(item.get("game_id", "")).zfill(10) == game_id:
+                                                gd_entry = item
+                                                break
+                                    if gd_entry:
+                                        detail["game_detail"] = gd_entry
+                                        break
+                                except Exception:
+                                    pass
+
+                    if gd_entry:
+                        cur.execute(
+                            "INSERT OR REPLACE INTO game_details (game_id, data_json) VALUES (?, ?)",
+                            (game_id, json.dumps(gd_entry)),
+                        )
+
+                    for sf_name in ["games.json", "all_seasons_games.json", "manifest.json", "schedule.json"]:
+                        sf_path = REPO_ROOT / "data" / "frontend" / sf_name
+                        if sf_path.exists():
+                            cur.execute(
+                                "INSERT OR REPLACE INTO static_files (filename, data_json) VALUES (?, ?)",
+                                (sf_name, sf_path.read_text(encoding="utf-8")),
+                            )
+
+                    conn.commit()
+                    conn.close()
+            except Exception as e:
+                logger.warning("Error updating SQLite tables for game %s: %s", game_id, e)
 
         payload = None
         try:
             payload = build_play_by_play_payload(game_id, home_team, away_team, 1, 10)
-            pbp_dir = Path("data") / f"season={season_key}" / "raw" / "play_by_play"
+            pbp_dir = REPO_ROOT / "data" / f"season={season_key}" / "raw" / "play_by_play"
             write_payload(payload, pbp_dir)
-            sync_payload_to_frontend(payload, Path("frontend/public/data/play_by_play"))
+            sync_payload_to_frontend(payload, REPO_ROOT / "frontend" / "public" / "data" / "play_by_play")
 
             try:
-                import json
                 from scripts.export_play_by_play_moments import condense_payload
 
                 condensed = condense_payload(payload)
                 for moments_dir in [
-                    Path("data") / "frontend" / "play_by_play_moments" / season_key,
-                    Path("frontend") / "public" / "data" / "play_by_play_moments" / season_key,
+                    REPO_ROOT / "data" / "frontend" / "play_by_play_moments" / season_key,
+                    REPO_ROOT / "frontend" / "public" / "data" / "play_by_play_moments" / season_key,
                 ]:
                     moments_dir.mkdir(parents=True, exist_ok=True)
                     (moments_dir / f"{game_id}.json").write_text(json.dumps(condensed, indent=2), encoding="utf-8")
@@ -267,12 +346,11 @@ def _run_refresh(game_id: str, season: str, home_team: str | None, away_team: st
                 pass
 
             try:
-                import pandas as pd
                 from src.features.pbp_situational import parse_pbp_file
 
                 pbp_rec = parse_pbp_file(str(pbp_dir / f"{game_id}.json"))
                 if pbp_rec:
-                    sit_path = Path("data/processed/pbp_situational_features.parquet")
+                    sit_path = REPO_ROOT / "data" / "processed" / "pbp_situational_features.parquet"
                     if sit_path.exists():
                         sit_df = pd.read_parquet(sit_path)
                         sit_df = sit_df[sit_df["GAME_ID"].astype(str).str.zfill(10) != game_id]
@@ -285,14 +363,17 @@ def _run_refresh(game_id: str, season: str, home_team: str | None, away_team: st
             pass
 
         try:
-            from scripts.build_frontend_db import build_frontend_db
-            build_frontend_db()
+            from .frontend_data import _read_json_file, _get_game_grouped_boxscores, _get_game_details_index
+            _read_json_file.cache_clear()
+            _get_game_grouped_boxscores.cache_clear()
+            _get_game_details_index.cache_clear()
         except Exception:
             pass
 
         with _lock:
             _jobs[game_id] = {"status": "complete", "detail": detail, "play_by_play": payload, "error": None}
     except Exception as exc:
+        logger.exception("Error during on-demand game data refresh for %s: %s", game_id, exc)
         with _lock:
             _jobs[game_id] = {"status": "failed", "detail": None, "error": str(exc)}
 

@@ -1,10 +1,10 @@
 {
-  "total_team_game_rows": 2,
+  "total_team_game_rows": 16,
   "team_games_regular": 0,
   "team_games_playin": 0,
   "team_games_playoffs": 0,
   "team_games_finals": 0,
-  "total_player_game_rows": 31,
+  "total_player_game_rows": 265,
   "player_games_regular": 0,
   "player_games_playin": 0,
   "player_games_playoffs": 0,
@@ -22,29 +22,29 @@
       "name": "Raw Team Game Logs",
       "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/raw/team_games.csv",
       "exists": true,
-      "rows": 2,
+      "rows": 16,
       "columns": 29,
-      "size_kb": 0.48
+      "size_kb": 2.45
     },
     {
       "name": "Raw Player Game Logs",
       "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/raw/player_games.csv",
       "exists": true,
-      "rows": 31,
+      "rows": 265,
       "columns": 29,
-      "size_kb": 3.96
+      "size_kb": 43.42
     },
     {
       "name": "Team Rosters",
-      "path": "data/season=2026-27/analysis/team_rosters.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/analysis/team_rosters.csv",
       "exists": true,
       "rows": 621,
       "columns": 10,
-      "size_kb": 35.72
+      "size_kb": 34.76
     },
     {
       "name": "Core Players List",
-      "path": "data/season=2026-27/analysis/core_players.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/analysis/core_players.csv",
       "exists": true,
       "rows": 621,
       "columns": 7,
@@ -52,7 +52,7 @@
     },
     {
       "name": "Star Candidates",
-      "path": "data/season=2026-27/analysis/star_candidates.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/analysis/star_candidates.csv",
       "exists": true,
       "rows": 150,
       "columns": 11,
@@ -60,7 +60,7 @@
     },
     {
       "name": "Multi-Team Players",
-      "path": "data/season=2026-27/analysis/multi_team_players.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/analysis/multi_team_players.csv",
       "exists": true,
       "rows": 177,
       "columns": 12,
@@ -68,7 +68,7 @@
     },
     {
       "name": "Player Name Lookup",
-      "path": "data/season=2026-27/analysis/player_name_lookup.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/season=2026-27/analysis/player_name_lookup.csv",
       "exists": true,
       "rows": 621,
       "columns": 3,
@@ -76,7 +76,7 @@
     },
     {
       "name": "V1 Model-Ready Dataset",
-      "path": "data/processed/team_model_ready_2026_27.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_2026_27.csv",
       "exists": false,
       "rows": 0,
       "columns": 0,
@@ -92,7 +92,7 @@
     },
     {
       "name": "V3 Model-Ready Dataset",
-      "path": "data/processed/team_model_ready_v3_2026_27.csv",
+      "path": "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2026_27.csv",
       "exists": false,
       "rows": 0,
       "columns": 0,
@@ -104,7 +104,7 @@
       "exists": true,
       "rows": 1273,
       "columns": 17,
-      "size_kb": 105.04
+      "size_kb": 141.96
     },
     {
       "name": "Upcoming Games Context",
@@ -112,7 +112,7 @@
       "exists": true,
       "rows": 1272,
       "columns": 33,
-      "size_kb": 110.27
+      "size_kb": 147.16
     }
   ]
 }

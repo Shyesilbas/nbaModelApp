@@ -1,7 +1,17 @@
 {
   "highest_scoring_games": [
     {
-      "GAME_ID": "12600009",
+      "GAME_ID": "0012600004",
+      "GAME_DATE": "2026-10-05",
+      "HOME_TEAM": "ATL",
+      "AWAY_TEAM": "MEM",
+      "HOME_SCORE": 123,
+      "AWAY_SCORE": 132,
+      "TOTAL_PTS": 255,
+      "SEASON_TYPE": "Pre Season"
+    },
+    {
+      "GAME_ID": "0012600009",
       "GAME_DATE": "2026-10-03",
       "HOME_TEAM": "TOR",
       "AWAY_TEAM": "MIA",
@@ -11,29 +21,39 @@
       "SEASON_TYPE": "Pre Season"
     },
     {
-      "GAME_ID": "12600067",
-      "GAME_DATE": "2026-10-04",
-      "HOME_TEAM": "DEN",
-      "AWAY_TEAM": "UTA",
-      "HOME_SCORE": 97,
-      "AWAY_SCORE": 109,
-      "TOTAL_PTS": 206,
+      "GAME_ID": "0012600028",
+      "GAME_DATE": "2026-10-05",
+      "HOME_TEAM": "SAC",
+      "AWAY_TEAM": "LAL",
+      "HOME_SCORE": 103,
+      "AWAY_SCORE": 127,
+      "TOTAL_PTS": 230,
       "SEASON_TYPE": "Pre Season"
     },
     {
-      "GAME_ID": "12600066",
-      "GAME_DATE": "2026-10-04",
-      "HOME_TEAM": "LAC",
-      "AWAY_TEAM": "GSW",
-      "HOME_SCORE": 104,
-      "AWAY_SCORE": 101,
-      "TOTAL_PTS": 205,
+      "GAME_ID": "0012600023",
+      "GAME_DATE": "2026-10-05",
+      "HOME_TEAM": "PHI",
+      "AWAY_TEAM": "NYK",
+      "HOME_SCORE": 120,
+      "AWAY_SCORE": 97,
+      "TOTAL_PTS": 217,
+      "SEASON_TYPE": "Pre Season"
+    },
+    {
+      "GAME_ID": "0012600022",
+      "GAME_DATE": "2026-10-05",
+      "HOME_TEAM": "DET",
+      "AWAY_TEAM": "PHX",
+      "HOME_SCORE": 109,
+      "AWAY_SCORE": 107,
+      "TOTAL_PTS": 216,
       "SEASON_TYPE": "Pre Season"
     }
   ],
   "lowest_scoring_games": [
     {
-      "GAME_ID": "12600066",
+      "GAME_ID": "0012600066",
       "GAME_DATE": "2026-10-04",
       "HOME_TEAM": "LAC",
       "AWAY_TEAM": "GSW",
@@ -43,7 +63,7 @@
       "SEASON_TYPE": "Pre Season"
     },
     {
-      "GAME_ID": "12600067",
+      "GAME_ID": "0012600067",
       "GAME_DATE": "2026-10-04",
       "HOME_TEAM": "DEN",
       "AWAY_TEAM": "UTA",
@@ -53,56 +73,76 @@
       "SEASON_TYPE": "Pre Season"
     },
     {
-      "GAME_ID": "12600009",
-      "GAME_DATE": "2026-10-03",
-      "HOME_TEAM": "TOR",
-      "AWAY_TEAM": "MIA",
-      "HOME_SCORE": 105,
-      "AWAY_SCORE": 129,
-      "TOTAL_PTS": 234,
+      "GAME_ID": "0012600024",
+      "GAME_DATE": "2026-10-05",
+      "HOME_TEAM": "MIL",
+      "AWAY_TEAM": "MIN",
+      "HOME_SCORE": 97,
+      "AWAY_SCORE": 116,
+      "TOTAL_PTS": 213,
+      "SEASON_TYPE": "Pre Season"
+    },
+    {
+      "GAME_ID": "0012600022",
+      "GAME_DATE": "2026-10-05",
+      "HOME_TEAM": "DET",
+      "AWAY_TEAM": "PHX",
+      "HOME_SCORE": 109,
+      "AWAY_SCORE": 107,
+      "TOTAL_PTS": 216,
+      "SEASON_TYPE": "Pre Season"
+    },
+    {
+      "GAME_ID": "0012600023",
+      "GAME_DATE": "2026-10-05",
+      "HOME_TEAM": "PHI",
+      "AWAY_TEAM": "NYK",
+      "HOME_SCORE": 120,
+      "AWAY_SCORE": 97,
+      "TOTAL_PTS": 217,
       "SEASON_TYPE": "Pre Season"
     }
   ],
   "top_points": [
+    {
+      "PLAYER_NAME": "Nique Clifford",
+      "TEAM": "SAC",
+      "MATCHUP": "SAC vs. LAL",
+      "GAME_DATE": "2026-10-05",
+      "VALUE": 23,
+      "GAME_ID": "0012600028"
+    },
+    {
+      "PLAYER_NAME": "Jaylen Brown",
+      "TEAM": "PHI",
+      "MATCHUP": "PHI vs. NYK",
+      "GAME_DATE": "2026-10-05",
+      "VALUE": 22,
+      "GAME_ID": "0012600023"
+    },
     {
       "PLAYER_NAME": "Rui Hachimura",
       "TEAM": "LAC",
       "MATCHUP": "LAC vs. GSW",
       "GAME_DATE": "2026-10-04",
       "VALUE": 21,
-      "GAME_ID": "12600066"
+      "GAME_ID": "0012600066"
     },
     {
-      "PLAYER_NAME": "Lauri Markkanen",
-      "TEAM": "UTA",
-      "MATCHUP": "UTA @ DEN",
-      "GAME_DATE": "2026-10-04",
-      "VALUE": 17,
-      "GAME_ID": "12600067"
+      "PLAYER_NAME": "Luka Don\u010di\u0107",
+      "TEAM": "LAL",
+      "MATCHUP": "LAL @ SAC",
+      "GAME_DATE": "2026-10-05",
+      "VALUE": 21,
+      "GAME_ID": "0012600028"
     },
     {
-      "PLAYER_NAME": "Keaton Wagler",
-      "TEAM": "LAC",
-      "MATCHUP": "LAC vs. GSW",
-      "GAME_DATE": "2026-10-04",
-      "VALUE": 15,
-      "GAME_ID": "12600066"
-    },
-    {
-      "PLAYER_NAME": "Tyreke Key",
-      "TEAM": "TOR",
-      "MATCHUP": "TOR vs. MIA",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 15,
-      "GAME_ID": "12600009"
-    },
-    {
-      "PLAYER_NAME": "Darius Garland",
-      "TEAM": "LAC",
-      "MATCHUP": "LAC vs. GSW",
-      "GAME_DATE": "2026-10-04",
-      "VALUE": 15,
-      "GAME_ID": "12600066"
+      "PLAYER_NAME": "Cameron Carr",
+      "TEAM": "LAL",
+      "MATCHUP": "LAL @ SAC",
+      "GAME_DATE": "2026-10-05",
+      "VALUE": 19,
+      "GAME_ID": "0012600028"
     }
   ],
   "top_assists": [
@@ -112,7 +152,15 @@
       "MATCHUP": "TOR vs. MIA",
       "GAME_DATE": "2026-10-03",
       "VALUE": 8,
-      "GAME_ID": "12600009"
+      "GAME_ID": "0012600009"
+    },
+    {
+      "PLAYER_NAME": "VJ Edgecombe",
+      "TEAM": "PHI",
+      "MATCHUP": "PHI vs. NYK",
+      "GAME_DATE": "2026-10-05",
+      "VALUE": 7,
+      "GAME_ID": "0012600023"
     },
     {
       "PLAYER_NAME": "Nikola Joki\u0107",
@@ -120,7 +168,7 @@
       "MATCHUP": "DEN vs. UTA",
       "GAME_DATE": "2026-10-04",
       "VALUE": 7,
-      "GAME_ID": "12600067"
+      "GAME_ID": "0012600067"
     },
     {
       "PLAYER_NAME": "Giannis Antetokounmpo",
@@ -128,7 +176,7 @@
       "MATCHUP": "MIA @ TOR",
       "GAME_DATE": "2026-10-03",
       "VALUE": 7,
-      "GAME_ID": "12600009"
+      "GAME_ID": "0012600009"
     },
     {
       "PLAYER_NAME": "Tyus Jones",
@@ -136,57 +184,49 @@
       "MATCHUP": "DEN vs. UTA",
       "GAME_DATE": "2026-10-04",
       "VALUE": 6,
-      "GAME_ID": "12600067"
-    },
-    {
-      "PLAYER_NAME": "Darius Garland",
-      "TEAM": "LAC",
-      "MATCHUP": "LAC vs. GSW",
-      "GAME_DATE": "2026-10-04",
-      "VALUE": 6,
-      "GAME_ID": "12600066"
+      "GAME_ID": "0012600067"
     }
   ],
   "top_rebounds": [
     {
-      "PLAYER_NAME": "Collin Murray-Boyles",
-      "TEAM": "TOR",
-      "MATCHUP": "TOR vs. MIA",
-      "GAME_DATE": "2026-10-03",
-      "VALUE": 9,
-      "GAME_ID": "12600009"
+      "PLAYER_NAME": "Kel'el Ware",
+      "TEAM": "MIL",
+      "MATCHUP": "MIL vs. MIN",
+      "GAME_DATE": "2026-10-05",
+      "VALUE": 12,
+      "GAME_ID": "0012600024"
     },
     {
-      "PLAYER_NAME": "Yaxel Lendeborg",
-      "TEAM": "GSW",
-      "MATCHUP": "GSW @ LAC",
-      "GAME_DATE": "2026-10-04",
-      "VALUE": 9,
-      "GAME_ID": "12600066"
+      "PLAYER_NAME": "Asa Newell",
+      "TEAM": "ATL",
+      "MATCHUP": "ATL vs. MEM",
+      "GAME_DATE": "2026-10-05",
+      "VALUE": 12,
+      "GAME_ID": "0012600004"
     },
     {
-      "PLAYER_NAME": "Charles Bassey",
-      "TEAM": "GSW",
-      "MATCHUP": "GSW @ LAC",
-      "GAME_DATE": "2026-10-04",
-      "VALUE": 8,
-      "GAME_ID": "12600066"
+      "PLAYER_NAME": "Jabari Walker",
+      "TEAM": "PHI",
+      "MATCHUP": "PHI vs. NYK",
+      "GAME_DATE": "2026-10-05",
+      "VALUE": 11,
+      "GAME_ID": "0012600023"
     },
     {
-      "PLAYER_NAME": "Cam Christie",
-      "TEAM": "LAC",
-      "MATCHUP": "LAC vs. GSW",
-      "GAME_DATE": "2026-10-04",
-      "VALUE": 8,
-      "GAME_ID": "12600066"
+      "PLAYER_NAME": "Dylan Cardwell",
+      "TEAM": "SAC",
+      "MATCHUP": "SAC vs. LAL",
+      "GAME_DATE": "2026-10-05",
+      "VALUE": 10,
+      "GAME_ID": "0012600028"
     },
     {
-      "PLAYER_NAME": "Marvin Bagley III",
-      "TEAM": "DEN",
-      "MATCHUP": "DEN vs. UTA",
-      "GAME_DATE": "2026-10-04",
-      "VALUE": 7,
-      "GAME_ID": "12600067"
+      "PLAYER_NAME": "Saint Thomas",
+      "TEAM": "PHI",
+      "MATCHUP": "PHI vs. NYK",
+      "GAME_DATE": "2026-10-05",
+      "VALUE": 10,
+      "GAME_ID": "0012600023"
     }
   ]
 }

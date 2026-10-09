@@ -1,10 +1,12 @@
 from typing import Tuple
 import os
 import json
+from pathlib import Path
 import pandas as pd
 from src.ingestion.boxscore_loader import run_boxscore_pipeline
 
-OUT_DIR = "frontend/public/data"
+ROOT = Path(__file__).resolve().parents[2]
+TARGET_DIRS = [str(ROOT / "frontend" / "public" / "data"), str(ROOT / "data" / "frontend")]
 
 
 class BoxscoreService:
@@ -26,7 +28,7 @@ class BoxscoreService:
             def _save_json(df: pd.DataFrame, filename: str):
                 for col in df.select_dtypes(include=["datetime64[ns]"]).columns:
                     df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%Y-%m-%d")
-                for target_dir in ["frontend/public/data", "data/frontend"]:
+                for target_dir in TARGET_DIRS:
                     os.makedirs(target_dir, exist_ok=True)
                     path = os.path.join(target_dir, filename)
                     df.to_json(path, orient="records", indent=2, double_precision=4, date_format="iso")
@@ -126,7 +128,7 @@ class BoxscoreService:
                         "game_result": _row_to_dict(row),
                     })
 
-            for target_dir in ["frontend/public/data", "data/frontend"]:
+            for target_dir in TARGET_DIRS:
                 os.makedirs(target_dir, exist_ok=True)
                 gd_path = os.path.join(target_dir, "game_details.json")
                 existing_gd = []
@@ -208,8 +210,10 @@ class BoxscoreService:
                             "VALUE": int(row["REB"]),
                             "GAME_ID": row["GAME_ID"]
                         })
-            highlights_path = os.path.join(OUT_DIR, "highlights.json")
-            with open(highlights_path, "w") as f:
-                json.dump(highlights, f, indent=2)
+            for target_dir in TARGET_DIRS:
+                os.makedirs(target_dir, exist_ok=True)
+                highlights_path = os.path.join(target_dir, "highlights.json")
+                with open(highlights_path, "w") as f:
+                    json.dump(highlights, f, indent=2)
 
         return team_bs_df, player_bs_df, results_df
