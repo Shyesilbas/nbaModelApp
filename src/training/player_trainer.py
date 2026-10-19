@@ -46,7 +46,7 @@ class PlayerModelTrainer:
                 continue
         return sorted(set(ids))
 
-    def _model_pipeline(self):
+    def _model_pipeline(self, target=None):
         params = {
             "n_estimators": 150,
             "learning_rate": 0.05,
@@ -58,6 +58,7 @@ class PlayerModelTrainer:
         # The contract can override LightGBM settings, e.g. objective: l1 to fit the
         # conditional median, which is what an MAE-scored prop line needs.
         params.update(self.feature_contract.dict_value("lgb_params"))
+        params.update(self.feature_contract.dict_value("lgb_params_by_target").get(target) or {})
         return Pipeline([
             ('imputer', SimpleImputer(strategy='mean')),
             ('lgb', lgb.LGBMRegressor(**params)),
@@ -132,7 +133,7 @@ class PlayerModelTrainer:
             X_target = X.loc[target_df.index]
             y = pd.to_numeric(target_df[target], errors="coerce")
             
-            pipeline = self._model_pipeline()
+            pipeline = self._model_pipeline(short_name)
             
             if self.holdout_config.get("strategy") == "season_holdout":
                 X_train, X_test, y_train, y_test, split_meta = season_holdout_train_test_split(
@@ -185,7 +186,7 @@ class PlayerModelTrainer:
             temporal_splits = expanding_window_date_splits(fit_df, date_col="GAME_DATE", n_splits=3)
             oof_preds = pd.Series(index=fit_df.index, dtype=float)
             for f_tr, f_val in temporal_splits:
-                fold_pipe = self._model_pipeline()
+                fold_pipe = self._model_pipeline(short_name)
                 fold_pipe.fit(X_fit.iloc[f_tr], y_fit.iloc[f_tr])
                 oof_preds.iloc[f_val] = fold_pipe.predict(X_fit.iloc[f_val])
 

@@ -76,7 +76,10 @@ required_context_columns:
   - PLAYER_POSITION_GROUP
   - USG_PCT_LAST_10
   - MIN_EMA_10
-lgb_params:
-  # Fit the conditional median: player stats are right-skewed and the models
-  # are judged on MAE, which the median minimises.
-  objective: l1
+lgb_params_by_target:
+  # Fit the conditional median for points: they are right-skewed and the model
+  # is judged on MAE, which the median minimises. In walk-forward tests over
+  # 2023-24..2025-26 the L1 objective cut PTS MAE (4.564 -> 4.557) but raised
+  # REB (1.901 -> 1.903) and AST (1.339 -> 1.348) MAE, so it applies to PTS only.
+  pts:
+    objective: l1

@@ -574,8 +574,27 @@ class WinModelTrainer:
 
         if not candidates:
             raise ValueError("No WIN candidate could be evaluated on the inner time holdout.")
+        # One inner block is too small to separate the families: in the 2023-24
+        # walk-forward fit LightGBM won it by 0.001 Brier and then lost 0.017 AUC on
+        # the test season. The family is therefore chosen on the mean Brier of
+        # expanding-window folds over the whole training span, and only the
+        # calibration is chosen on the inner block.
+        family_folds = expanding_window_date_splits(
+            train_meta,
+            date_col=self.holdout_config.get("date_col", "GAME_DATE"),
+            n_splits=4,
+        )
+        family_brier = {}
+        for family_name, base_pipe in [("logistic_regression", lr_pipeline), ("logistic_l1", l1_pipeline), ("lightgbm", lgb_pipeline)]:
+            fold_scores = []
+            for fold_train, fold_val in family_folds:
+                fitted = clone(base_pipe).fit(X_train_full.iloc[fold_train], y_train_full.iloc[fold_train])
+                fold_scores.append(brier_score_loss(y_train_full.iloc[fold_val], fitted.predict_proba(X_train_full.iloc[fold_val])[:, 1]))
+            family_brier[family_name] = float(np.mean(fold_scores))
+        chosen_family = min(family_brier, key=family_brier.get)
         best_cand_name, best_family, best_calib, best_base_pipe, best_metrics = min(
-            candidates, key=lambda item: (item[4]["brier_score"], -item[4]["roc_auc"])
+            (c for c in candidates if c[1] == chosen_family),
+            key=lambda item: (item[4]["brier_score"], -item[4]["roc_auc"]),
         )
 
         os.makedirs(self.output_dir, exist_ok=True)
@@ -654,6 +673,7 @@ class WinModelTrainer:
             "split": split_meta.__dict__,
             "dropped_static_venue_split_features": sorted(drop_static),
             "model_selection_metrics_inner_holdout": selection_metrics,
+            "model_family_selection_fold_brier": family_brier,
             "holdout_metrics": holdout_metrics,
             "selected_model": best_cand_name,
             "selected_family": best_family,
