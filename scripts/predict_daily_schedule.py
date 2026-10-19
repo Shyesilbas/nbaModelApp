@@ -149,7 +149,7 @@ def predict_single_game(home, away, date, model_ver):
         pred_margin_raw = float(margin_model.predict(X_margin)[0])
         
         # Build away perspective features (flip team/opponent)
-        away_features = build_features(away, home, date)
+        away_features = build_features(away, home, date, team_is_home=False)
         row_away = [away_features[c] for c in meta["away_off_rtg_features"]]
         X_away = pd.DataFrame([row_away], columns=meta["away_off_rtg_features"])
         pred_away_rtg = float(away_model.predict(X_away)[0])

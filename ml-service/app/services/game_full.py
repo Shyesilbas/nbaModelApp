@@ -199,6 +199,7 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
                 home_team,
                 pred_date_str,
                 player_status_overrides=request.player_status_overrides,
+                team_is_home=False,
             )
         return features_away
 
