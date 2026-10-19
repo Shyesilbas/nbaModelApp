@@ -178,3 +178,16 @@ def normalize_game_matchups(df: pd.DataFrame) -> pd.DataFrame:
     )
     df["MATCHUP"] = df["NORMALIZED_MATCHUP"]
     return df
+
+
+def regulation_team_minutes(minutes: pd.Series) -> pd.Series:
+    """Team minutes on the true 240 + 25 * overtimes scale.
+
+    The 2018-19 to 2024-25 team logs report every game 10 minutes long
+    (250 regulation, 275 one OT); 2025-26 onwards reports 240/265. Left as is,
+    PACE in those seasons is 4% low and the score model learns totals ~10
+    points below reality.
+    """
+    m = pd.to_numeric(minutes, errors="coerce")
+    inflated = ((m - 240) % 25 == 10) & (m >= 250)
+    return m.where(~inflated, m - 10)

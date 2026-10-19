@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from src.processing.pbp_integration import integrate_pbp_features
 from src.processing.season_type_normalizer import drop_preseason
+from src.processing.cleaning import regulation_team_minutes
 
 def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFrame:
     """
@@ -119,6 +120,7 @@ def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFram
         for col in needed_box_cols:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
+        df["MIN"] = regulation_team_minutes(df["MIN"])
         df["POSS"] = df["FGA"] + 0.44 * df["FTA"] - df["OREB"] + df["TOV"]
         df["PACE"] = 48.0 * (df["POSS"] / (df["MIN"].replace(0, np.nan) / 5))
         df["OFF_RTG"] = 100.0 * (df["PTS"] / df["POSS"].replace(0, np.nan))

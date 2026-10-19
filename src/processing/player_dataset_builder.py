@@ -1,6 +1,7 @@
 import os
 import sys
 import pandas as pd
+from src.processing.cleaning import regulation_team_minutes
 from src.features.player_form import RAW_GAME_COLUMNS, add_player_form_features
 import numpy as np
 from pathlib import Path
@@ -36,7 +37,7 @@ def compute_team_features(seasons):
 
     df_team = df_team.sort_values("GAME_DATE").reset_index(drop=True)
     
-    df_team["MIN"] = pd.to_numeric(df_team["MIN"], errors="coerce").fillna(240)
+    df_team["MIN"] = regulation_team_minutes(df_team["MIN"]).fillna(240)
     df_team["GAME_PACE"] = (df_team["FGA"] + 0.44 * df_team["FTA"] - df_team["OREB"] + df_team["TOV"]) / (df_team["MIN"] / 5) * 48
     
     df_team["TEAM_PACE"] = df_team.groupby("TEAM_ABBREVIATION")["GAME_PACE"].transform(

@@ -20,6 +20,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from src.processing.cleaning import regulation_team_minutes
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import season_to_file_token
 from src.training.player_trainer import PlayerModelTrainer
@@ -124,7 +125,7 @@ def predict_score(seasons, test_season, model_dir: Path) -> pd.DataFrame:
         "PRED_MARGIN": margin,
         "REAL_TOTAL": home_pts + away_pts,
         "REAL_MARGIN": home_pts - away_pts,
-        "OVERTIME": minutes > 240,
+        "OVERTIME": regulation_team_minutes(pd.Series(minutes)).to_numpy() > 240,
     })
 
 
