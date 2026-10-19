@@ -76,3 +76,7 @@ required_context_columns:
   - PLAYER_POSITION_GROUP
   - USG_PCT_LAST_10
   - MIN_EMA_10
+lgb_params:
+  # Fit the conditional median: player stats are right-skewed and the models
+  # are judged on MAE, which the median minimises.
+  objective: l1
