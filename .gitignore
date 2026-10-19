@@ -133,3 +133,6 @@ outputs/analysis/
 !outputs/
 !notebooks/
 
+
+# Holdout copies trained without the validation season (retrain gate only)
+models/experimental/holdout_eval/
