@@ -24,6 +24,9 @@ from src.training.training_manifest import load_training_manifest
 from scripts.data_paths import get_data_paths
 from scripts.generate_report import add_location_features, get_indicator_df
 
+CLEAN_HOLDOUT_METRICS_FILE = "clean_holdout_metrics.json"
+
+
 def _season_to_season_ids(season):
     base_year = season.split("-")[0]
     return [int(prefix + base_year) for prefix in ("2", "4", "5")]
@@ -408,63 +411,89 @@ def main():
             return name in args.models
         return manifest.model_enabled(name)
 
-    print("\n[1/3] Training Candidate Models...")
-    if is_model_enabled("player"):
-        print("-> Training Player Models (LGBM + Ridge Calibration)...")
-        player_trainer = PlayerModelTrainer(
-            data_path=manifest.player_dataset_path,
-            output_dir=experimental_dir,
-            version="v9",
-            manifest_metadata=manifest_metadata,
-            holdout_config=manifest.holdout,
-            feature_contract_path=manifest.feature_contracts.get("player"),
-        )
-        trainer_metadata["player"] = player_trainer.train_and_export()
-    
-    if is_model_enabled("score"):
-        print("-> Training Score Models (XGBoost + Ridge Calibration)...")
-        score_trainer = ScoreModelTrainer(
-            output_dir=experimental_dir,
-            version="v10",
-            data_files=manifest.team_dataset_files,
-            player_data_path=manifest.player_dataset_path,
-            player_models_dir=experimental_dir,
-            manifest_metadata=manifest_metadata,
-            holdout_config=manifest.holdout,
-            feature_contract_path=manifest.feature_contracts.get("score"),
-        )
-        trainer_metadata["score"] = score_trainer.train_and_export()
-    
-    if is_model_enabled("win"):
-        print("-> Training Win Probability Model (Calibrated Classifier)...")
-        win_validation_file = ROOT / "data" / "processed" / f"team_model_ready_v3_{validation_season.replace('-', '_')}.csv"
-        win_data_files = list(manifest.team_dataset_files)
-        if win_validation_file.exists() and win_validation_file not in win_data_files:
-            win_data_files.append(win_validation_file)
-        win_holdout_config = dict(manifest.holdout)
-        win_holdout_config.update({
-            "strategy": "external_season_holdout",
-            "calibration_season": validation_season,
-            "policy": "train_completed_seasons_before_external_validation",
-        })
-        win_trainer = WinModelTrainer(
-            output_dir=experimental_dir,
-            version="v10",
-            player_data_path=manifest.player_dataset_path,
-            player_models_dir=experimental_dir,
-            score_models_dir=experimental_dir,
-            data_files=win_data_files,
-            manifest_metadata=manifest_metadata,
-            holdout_config=win_holdout_config,
-            feature_contract_path=manifest.feature_contracts.get("win"),
-        )
-        trainer_metadata["win"] = win_trainer.train_and_export()
-    
+    def train_candidates(out_dir, holdout):
+        out_dir.mkdir(parents=True, exist_ok=True)
+        metadata = {}
+        if is_model_enabled("player"):
+            print("-> Training Player Models (LGBM + Ridge Calibration)...")
+            metadata["player"] = PlayerModelTrainer(
+                data_path=manifest.player_dataset_path,
+                output_dir=out_dir,
+                version="v9",
+                manifest_metadata=manifest_metadata,
+                holdout_config=holdout,
+                feature_contract_path=manifest.feature_contracts.get("player"),
+            ).train_and_export()
+
+        if is_model_enabled("score"):
+            print("-> Training Score Models (Ridge + Ridge Calibration)...")
+            metadata["score"] = ScoreModelTrainer(
+                output_dir=out_dir,
+                version="v10",
+                data_files=manifest.team_dataset_files,
+                player_data_path=manifest.player_dataset_path,
+                player_models_dir=out_dir,
+                manifest_metadata=manifest_metadata,
+                holdout_config=holdout,
+                feature_contract_path=manifest.feature_contracts.get("score"),
+            ).train_and_export()
+
+        if is_model_enabled("win"):
+            print("-> Training Win Probability Model (Calibrated Classifier)...")
+            win_validation_file = ROOT / "data" / "processed" / f"team_model_ready_v3_{validation_season.replace('-', '_')}.csv"
+            win_data_files = list(manifest.team_dataset_files)
+            if win_validation_file.exists() and win_validation_file not in win_data_files:
+                win_data_files.append(win_validation_file)
+            win_holdout_config = dict(holdout)
+            win_holdout_config.update({
+                "strategy": "external_season_holdout",
+                "calibration_season": validation_season,
+                "policy": "train_completed_seasons_before_external_validation",
+            })
+            metadata["win"] = WinModelTrainer(
+                output_dir=out_dir,
+                version="v10",
+                player_data_path=manifest.player_dataset_path,
+                player_models_dir=out_dir,
+                score_models_dir=out_dir,
+                data_files=win_data_files,
+                manifest_metadata=manifest_metadata,
+                holdout_config=win_holdout_config,
+                feature_contract_path=manifest.feature_contracts.get("win"),
+            ).train_and_export()
+        return metadata
+
+    # Shipped models are refit on every eligible row, validation season included,
+    # so scoring them on that season is in-sample. The gate instead scores copies
+    # fitted without the validation season, and compares them with the clean
+    # metrics recorded when the current champion was promoted.
+    refit_all = manifest.holdout.get("final_refit_scope") != "train_only"
+    eval_dir = experimental_dir / "holdout_eval" if refit_all else experimental_dir
+    if refit_all:
+        print("\n[1/3] Training holdout copies (validation season unseen)...")
+        train_candidates(eval_dir, {**manifest.holdout, "final_refit_scope": "train_only"})
+        print("\n[1/3] Training candidate models for release (all eligible rows)...")
+        trainer_metadata = train_candidates(experimental_dir, manifest.holdout)
+    else:
+        print("\n[1/3] Training Candidate Models...")
+        trainer_metadata = train_candidates(experimental_dir, manifest.holdout)
+
     print("\n[2/3] Evaluating Champion vs Challenger...")
-    
-    champ_metrics = evaluate_model_files(production_dir, validation_season, manifest.required_segments)
-    chall_metrics = evaluate_model_files(experimental_dir, validation_season, manifest.required_segments)
-    
+
+    chall_metrics = evaluate_model_files(eval_dir, validation_season, manifest.required_segments)
+    clean_champion_path = production_dir / CLEAN_HOLDOUT_METRICS_FILE
+    champion_record = json.loads(clean_champion_path.read_text()) if clean_champion_path.exists() else {}
+    champion_is_clean = champion_record.get("validation_season") == validation_season
+    if champion_is_clean:
+        champ_metrics = champion_record["metrics"]
+        print(f"Champion metrics: clean holdout recorded at promotion ({champion_record.get('run_id')}).")
+    else:
+        champ_metrics = evaluate_model_files(production_dir, validation_season, manifest.required_segments)
+        print(
+            f"Champion metrics: no clean holdout record for {validation_season}; the champion is scored on a "
+            "season it may have been trained on, so the comparison below favours it."
+        )
+
     if "error" in champ_metrics or "error" in chall_metrics:
         print(f"Error evaluating models: {champ_metrics.get('error') or chall_metrics.get('error')}")
         sys.exit(1)
@@ -492,8 +521,12 @@ def main():
         
     print("--------------------------------------------------")
     challenger_gate = _champion_challenger_gate(champ_metrics, chall_metrics)
-    is_better = challenger_gate["passed"]
     baseline_gate = _baseline_gate(chall_metrics)
+    if not champion_is_clean:
+        # An in-sample champion is not a fair bar; fall back to the baselines and thresholds.
+        print("Champion/challenger comparison skipped (champion scored in-sample); using the baseline gate.")
+        challenger_gate = {"passed": baseline_gate["passed"], "checks": {"skipped": "champion metrics are in-sample"}}
+    is_better = challenger_gate["passed"]
 
     eligibility = _threshold_pass(chall_metrics, manifest.promotion_thresholds)
     replace_policy = bool(args.replace_leaky_champion)
@@ -581,6 +614,13 @@ def main():
             else:
                 print(f"Warning: {f} not found in experimental output directory.")
                 
+        if all_models_selected:
+            (production_dir / CLEAN_HOLDOUT_METRICS_FILE).write_text(json.dumps({
+                "run_id": run_id,
+                "validation_season": validation_season,
+                "note": "Metrics of copies fitted without the validation season; the next retrain's gate compares against these.",
+                "metrics": chall_metrics,
+            }, indent=2, default=float))
         if replace_policy:
             release = {
                 "release_id": run_id,
