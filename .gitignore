@@ -44,7 +44,7 @@ Thumbs.db
 # Project-specific generated/local assets — ignore all data/ except production runtime files
 data/*
 # Keep the prior season's historical feature inputs and current season's live
-# inference bundle in Git so Render can use them after deployment.
+# inference bundle in Git.
 !data/season=2026-27
 data/season=2026-27/*
 !data/season=2026-27/analysis
@@ -116,7 +116,7 @@ scratch/
 
 # Model binaries are generated artifacts; metadata/schema JSON may stay tracked.
 models/**/*.pkl
-# Production models ship with the repo: the Render build copies models/production.
+# Production models are tracked in the repo.
 !models/production/*.pkl
 models/**/*.joblib
 models/**/*.h5
