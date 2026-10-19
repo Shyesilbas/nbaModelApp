@@ -56,14 +56,11 @@ def _experimental_candidate():
         return {
             "model_name": "cross_season_win_logistic_regression",
             "path": str(experimental_path),
-            "training_date": "2026-06-09",
-            "version": "2026-06-09",
-            "metrics": {
-                "roc_auc": 0.7048,
-                "brier": 0.2190,
-                "accuracy": 0.6422
-            },
-            "note": "Best experimental candidate from cross-season training"
+            "training_date": None,
+            "version": None,
+            # Never report numbers that no metadata file backs.
+            "metrics": {"roc_auc": None, "brier": None, "accuracy": None},
+            "note": "Metadata file missing; metrics unknown"
         }
 
     import json
