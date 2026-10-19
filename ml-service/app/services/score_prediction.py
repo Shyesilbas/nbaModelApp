@@ -80,6 +80,7 @@ def predict_score(
             pred_date_str,
             season=getattr(request, "season", None),
             player_status_overrides=getattr(request, "player_status_overrides", None),
+            team_is_home=False,
         )
     )
     X_away_rtg = pd.DataFrame([[features_away[c] for c in away_off_rtg_features]], columns=away_off_rtg_features)

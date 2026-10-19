@@ -77,7 +77,7 @@ class ScorePredictor:
         pred_home_rtg = float(self.home_rtg_model.predict(X_home_rtg)[0]) if self.home_rtg_model else 110.0
 
         if away_features is None:
-            away_features = build_features(away_team, home_team, prediction_date)
+            away_features = build_features(away_team, home_team, prediction_date, team_is_home=False)
         X_away_rtg = pd.DataFrame([[away_features.get(c, 0.0) for c in away_off_rtg_features]], columns=away_off_rtg_features)
         pred_away_rtg = float(self.away_rtg_model.predict(X_away_rtg)[0]) if self.away_rtg_model else 110.0
 
