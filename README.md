@@ -6,15 +6,17 @@ Production-grade NBA machine learning pipeline, analytics engine, and interactiv
 
 ## Benchmark Highlights & Model Metrics
 
-The platform is trained across **6 full NBA seasons (2020-21 through 2025-26)** encompassing **10,280 games** and **165,988 player-game records**.
+Models are trained on six NBA seasons (2020-21 through 2025-26: 7,390 games, 165,430 player-game rows). Every number below is measured, not copied from training metadata, and can be reproduced with `python -m scripts.backtest.offline` (walk-forward) and `python -m scripts.backtest.live` (season replay through the API code).
 
-| Layer | Architecture | Key Features | Pure Unseen Holdout (2025-26) | Full Production Refit (Live 2026-27) |
-| :--- | :--- | :--- | :--- | :--- |
-| **WIN Probability (v10.1)** | Calibrated LightGBM (Isotonic) | Continuous Elo, Dean Oliver Four Factors, 3PT regression delta, Havoc rate, Out-of-fold score margins, Player PRA projections | **ROC-AUC: 0.7391**<br>Brier: `0.2057`<br>Accuracy: `66.6%`<br>Log-Loss: `0.5938` | **ROC-AUC: 0.7918** (2025-26)<br>Cross-Season ROC-AUC: `0.7772`<br>Live Accuracy: **71.7%**<br>Cross-Season Acc: `70.3%` |
-| **SCORE Prediction (v10)** | 4-way XGBoost + Ridge Residual Correction | Team pace, Home/Away Off_Rtg, Rest advantage, Travel distance, Playoff elimination context | **Total Points MAE: ~14.75 pts**<br>Pace MAE: `3.15`<br>Margin MAE: `9.82` | Continuous residual correction for playoff intensity & back-to-backs |
-| **PLAYER Projection (v9)** | LightGBM Regressors + Ridge Calibration | Rolling 5/10/20 game form, Usage rate trends, Defense vs Position, Minutes projections | **PTS $R^2$: 0.50** (MAE 4.12)<br>**AST $R^2$: 0.46** (MAE 1.34)<br>**REB $R^2$: 0.43** (MAE 1.86) | Calibrated for 165K+ player logs with position & usage buckets |
+| Layer | Model | Walk-forward 2025-26 (trained on 2020-21..2024-25 only) | 3-season walk-forward (2023-24..2025-26, 2,644 games) |
+| :--- | :--- | :--- | :--- |
+| **WIN Probability (v10)** | Logistic regression (family picked on fold-averaged Brier), early-season Elo blend | ROC-AUC `0.736`, Brier `0.206`, Log-loss `0.599`, Accuracy `68.5%` (1,257 games) | ROC-AUC `0.728`, Brier `0.209`, Accuracy `66.9%` |
+| **SCORE Prediction (v10)** | Ridge pace / offensive-rating models + Ridge residual correction | Total MAE `15.38`, Margin MAE `11.47`, Winner accuracy `68.2%` | Total MAE `14.94`, Margin MAE `11.33` |
+| **PLAYER Projection (v9)** | LightGBM (L1 objective for points) + Ridge calibration | MAE PTS `4.54`, REB `1.89`, AST `1.34` (28,698 rows) | MAE PTS `4.56`, REB `1.90`, AST `1.34` |
 
-> **Validation Rigor**: Metrics are split into **Pure Out-of-Sample Holdout** (model strictly fitted on 2020-21 through 2024-25 and evaluated on completely unseen 2025-26) and **Full Refit** (retrained on all 10,280 rows for live production deployment). Zero future data leakage.
+Live replay of 2025-26 (every game predicted from the API code path with features as of that morning, models trained through 2024-25): ROC-AUC `0.731`, Brier `0.208`, Total MAE `15.42`, Margin MAE `11.48`, 0 failed games out of 1,321.
+
+> **Validation**: walk-forward means each test season is predicted by models fitted only on earlier seasons. The production models are then refit on every eligible row (`final_refit_scope: all_eligible_rows`). The 2026-10 model audit and the step-by-step measurements of each fix are in the audit report.
 
 ---
 
