@@ -3,6 +3,7 @@ from .schemas import (
     WinProbRequest, WinProbResponse
 )
 from scripts.build_matchup_features import build_features
+from src.features.continuous_elo import HOME_COURT_ADVANTAGE
 from typing import Any, Dict, Optional
 import logging
 import pandas as pd
@@ -76,7 +77,7 @@ def predict(request: WinProbRequest, features: Optional[Dict[str, Any]] = None) 
     if blend_weight > 0.0:
         home_elo = float(feats.get("PRE_GAME_ELO", 1500.0))
         away_elo = float(feats.get("OPP_PRE_GAME_ELO", 1500.0))
-        elo_prob_home = 1.0 / (1.0 + 10.0 ** (-((home_elo + 100.0) - away_elo) / 400.0))
+        elo_prob_home = 1.0 / (1.0 + 10.0 ** (-((home_elo + HOME_COURT_ADVANTAGE) - away_elo) / 400.0))
         p_home = (1.0 - blend_weight) * p_home + blend_weight * elo_prob_home
         p_away = 1.0 - p_home
 

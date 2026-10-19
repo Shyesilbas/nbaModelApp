@@ -212,7 +212,10 @@ def evaluate_model_files(model_dir, season, segments=None):
             win_results = dict(win_segments.get("overall", {}))
             win_results["segments"] = win_segments
             baseline_probabilities = {"league_coin_flip": np.full(len(eval_df), 0.5)}
-            if "ELO_DIFF" in eval_df.columns:
+            if "ELO_EXPECTED_WIN_PROB" in eval_df.columns:
+                # Includes home-court advantage, so the baseline is the Elo forecast itself.
+                baseline_probabilities["pregame_elo"] = eval_df["ELO_EXPECTED_WIN_PROB"].astype(float).clip(0.0, 1.0)
+            elif "ELO_DIFF" in eval_df.columns:
                 baseline_probabilities["pregame_elo"] = 1.0 / (1.0 + np.power(10.0, -eval_df["ELO_DIFF"].astype(float) / 400.0))
             if "WINRATE_LAST_10" in eval_df.columns:
                 baseline_probabilities["last_10_win_rate"] = eval_df["WINRATE_LAST_10"].astype(float).clip(0.0, 1.0)
