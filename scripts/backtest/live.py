@@ -48,8 +48,11 @@ def _predict_game(game):
                 ScorePredictionRequest(home_team=home, away_team=away, prediction_date=date),
                 features=feats, away_features=away_feats, win_response=win,
             )
+        cols = svc.loader.feature_cols
+        raw = svc.loader.predict_proba(pd.DataFrame([[feats.get(c, float("nan")) for c in cols]], columns=cols))[0][1]
         row.update({
             "P_HOME_WIN": win.home_win_probability,
+            "P_HOME_WIN_MODEL_ONLY": float(raw),
             "PRED_HOME": score.predicted_home_score,
             "PRED_AWAY": score.predicted_away_score,
             "ELO_BLEND_WEIGHT": float(feats.get("EARLY_SEASON_ELO_BLEND_WEIGHT", 0.0)),
