@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 
+from src.processing.season_type_normalizer import drop_preseason
 from src.features.continuous_elo import ContinuousEloEngine, INITIAL_ELO, BASE_K_FACTOR, SEASON_REGRESSION, HOME_COURT_ADVANTAGE
 
 K_FACTOR = BASE_K_FACTOR
@@ -191,6 +192,7 @@ def compute_current_elo_state(team_games: pd.DataFrame, season: str = None) -> d
     import json
 
     root = Path(__file__).resolve().parents[2]
+    team_games = drop_preseason(team_games)
 
     if not season and not team_games.empty and "GAME_DATE" in team_games.columns:
         try:
