@@ -10,8 +10,13 @@ from datetime import datetime
 from pathlib import Path
 from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
 from sklearn.base import clone
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import RidgeCV
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 from src.training.feature_contract import load_feature_contract
+from src.training.feature_guards import check_feature_matrix
 from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split
 from src.training.provenance import build_training_provenance
 
@@ -90,7 +95,15 @@ class ScoreModelTrainer:
         self.base_off_rtg_features = self.feature_contract.list_value("base_off_rtg_features")
         self.home_off_rtg_features = self.base_off_rtg_features.copy()
         self.away_off_rtg_features = self.base_off_rtg_features.copy() + self.feature_contract.list_value("away_extra_features")
-        self.margin_features = self.home_off_rtg_features + self.feature_contract.list_value("margin_extra_features")
+        if "margin_features" in self.feature_contract.raw:
+            self.margin_features = self.feature_contract.list_value("margin_features")
+        else:
+            self.margin_features = self.home_off_rtg_features + self.feature_contract.list_value("margin_extra_features")
+        for name in ("pace_features", "home_off_rtg_features", "away_off_rtg_features", "margin_features"):
+            setattr(self, name, list(dict.fromkeys(getattr(self, name))))
+        # "ridge" (default since score_v10 r2): standardized RidgeCV. "xgboost": the
+        # previous tuned XGBRegressor, kept for comparison runs.
+        self.estimator = str(self.feature_contract.raw.get("estimator", "xgboost")).lower()
 
     def apply_player_projection_enrichment(self, df):
         if "TEAM_V3_PROJ_PTS_SUM" in df.columns:
@@ -177,6 +190,15 @@ class ScoreModelTrainer:
         return add_win_strength_features(df)
 
     def tune_and_train(self, X_train, y_train, game_dates=None, random_state=42):
+        if self.estimator == "ridge":
+            # Score targets are close to linear in the rolling ratings; Ridge beat the
+            # tuned XGB on pace, ratings and margin in walk-forward tests.
+            model = Pipeline([
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler()),
+                ("ridge", RidgeCV(alphas=np.logspace(-2, 4, 25))),
+            ])
+            return model.fit(X_train, y_train)
         base_model = xgb.XGBRegressor(random_state=random_state)
         param_grid = {
             'n_estimators': [100, 150, 200, 300],
@@ -486,6 +508,13 @@ class ScoreModelTrainer:
             "home_off_rtg_features": self.home_off_rtg_features,
             "away_off_rtg_features": self.away_off_rtg_features,
             "margin_features": self.margin_features,
+            "feature_guard": {
+                "pace": check_feature_matrix(df_home[self.pace_features], "SCORE pace"),
+                "home_off_rtg": check_feature_matrix(df_home[self.home_off_rtg_features], "SCORE home rating"),
+                "away_off_rtg": check_feature_matrix(df_away[self.away_off_rtg_features], "SCORE away rating"),
+                "margin": check_feature_matrix(df_home[self.margin_features], "SCORE margin"),
+            },
+            "estimator": self.estimator,
             "prediction_interval_offsets_80pct": conformal_stats.get("offsets_80pct", {}),
             "prediction_interval_offsets_90pct": conformal_stats.get("offsets_90pct", {}),
             "prediction_interval_offsets_50pct": conformal_stats.get("offsets_50pct", {}),
