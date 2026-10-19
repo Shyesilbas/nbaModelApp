@@ -116,6 +116,8 @@ scratch/
 
 # Model binaries are generated artifacts; metadata/schema JSON may stay tracked.
 models/**/*.pkl
+# Production models ship with the repo: the Render build copies models/production.
+!models/production/*.pkl
 models/**/*.joblib
 models/**/*.h5
 models/**/*.pt
