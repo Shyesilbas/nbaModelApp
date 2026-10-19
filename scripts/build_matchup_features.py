@@ -84,6 +84,21 @@ def _read_frame_cached(path_str: str, mtime_ns: int, size_bytes: int):
     return pd.read_parquet(path) if path.suffix == ".parquet" else pd.read_csv(path)
 
 
+def previous_season(season: str) -> str:
+    start = int(season[:4]) - 1
+    return f"{start}-{str(start + 1)[-2:]}"
+
+
+def is_preseason_game(game_id=None, season_type=None, season_id=None) -> bool:
+    """Preseason rows must never feed rolling features, Elo or game counts."""
+    if season_type is not None and "pre" in str(season_type).lower():
+        return True
+    if season_id is not None and str(season_id).split(".")[0].startswith("1"):
+        return True
+    gid = str(game_id or "").split(".")[0].zfill(10)
+    return gid.startswith("001")
+
+
 def _read_frame(path: Path):
     stat = path.stat()
     return _read_frame_cached(str(path.resolve()), stat.st_mtime_ns, stat.st_size)
@@ -103,8 +118,8 @@ def _load_team_features(season: str = None):
             if not df.empty:
                 return df
     # Fallback to previous latest season if upcoming season features not yet generated
-    if season and season != "2025-26":
-        fallback_paths = get_data_paths("2025-26")
+    if season:
+        fallback_paths = get_data_paths(previous_season(season))
         for p in [Path(fallback_paths.team_features.replace(".csv", ".parquet")), Path(fallback_paths.team_features)]:
             if p.exists():
                 df = _read_frame(p)
@@ -127,8 +142,8 @@ def _load_game_results(season: str = None):
             if not df.empty:
                 return df
     # Fallback to previous latest season if upcoming season results not yet generated
-    if season and season != "2025-26":
-        fallback_paths = get_data_paths("2025-26")
+    if season:
+        fallback_paths = get_data_paths(previous_season(season))
         for p in [Path(fallback_paths.game_results.replace(".csv", ".parquet")), Path(fallback_paths.game_results)]:
             if p.exists():
                 df = _read_frame(p)
@@ -144,8 +159,8 @@ def _load_player_games(season: str = None):
     for p in [p_parq, p_csv]:
         if p.exists():
             return _read_frame(p)
-    if season and season != "2025-26":
-        fallback_paths = get_data_paths("2025-26")
+    if season:
+        fallback_paths = get_data_paths(previous_season(season))
         for p in [Path(fallback_paths.player_games_raw.replace(".csv", ".parquet")), Path(fallback_paths.player_games_raw)]:
             if p.exists():
                 return _read_frame(p)
@@ -159,8 +174,8 @@ def _load_team_games(season: str = None):
     for p in [p_parq, p_csv]:
         if p.exists():
             return _read_frame(p)
-    if season and season != "2025-26":
-        fallback_paths = get_data_paths("2025-26")
+    if season:
+        fallback_paths = get_data_paths(previous_season(season))
         for p in [Path(fallback_paths.team_games_raw.replace(".csv", ".parquet")), Path(fallback_paths.team_games_raw)]:
             if p.exists():
                 return _read_frame(p)
@@ -275,9 +290,97 @@ def _ensure_datetime(df, col):
         df[col] = pd.to_datetime(df[col], errors="coerce")
 
 
-def build_features(home_team: str, away_team: str, prediction_date: str, season: str = None, player_status_overrides: list = None):
+def _raw_season_games(season: str) -> pd.DataFrame:
+    """Completed regular-season and playoff team games of one season (no preseason)."""
+    paths = get_data_paths(season)
+    for p in [Path(paths.team_games_raw.replace(".csv", ".parquet")), Path(paths.team_games_raw)]:
+        if p.exists():
+            df = _read_frame(p).copy()
+            break
+    else:
+        return pd.DataFrame()
+    if df.empty:
+        return df
+    df["GAME_ID"] = df["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+    _ensure_datetime(df, "GAME_DATE")
+    keep = [
+        not is_preseason_game(g, t, sid)
+        for g, t, sid in zip(df["GAME_ID"], df.get("SEASON_TYPE", [None] * len(df)), df.get("SEASON_ID", [None] * len(df)))
+    ]
+    return df[keep]
+
+
+@lru_cache(maxsize=64)
+def _pregame_rows_cached(season: str, date_str: str, matchups: tuple) -> dict:
+    """Feature rows exactly as training sees them, for games that have not been played yet.
+
+    Training rows hold each team's form *before* that game (rolling windows are
+    shifted by one). Reusing a team's last stored row at inference therefore
+    skips its most recent game. Instead, a placeholder row for every requested
+    matchup is appended to the season's completed games and the training
+    feature code is re-run, so the placeholder gets the same pregame values a
+    training row would have, including H2H against today's opponent.
+    """
+    from src.features import build_team_features
+    from src.features.boxscore_advanced_features import compute_team_boxscore_advanced_features
+
+    pred_dt = pd.to_datetime(date_str)
+    raw = _raw_season_games(season)
+    past = raw[raw["GAME_DATE"] < pred_dt] if not raw.empty else raw
+    team_ids = {}
+    for s in [season, previous_season(season)]:
+        r = _raw_season_games(s)
+        if not r.empty and "TEAM_ID" in r.columns:
+            for abbr, tid in zip(r["TEAM_ABBREVIATION"], r["TEAM_ID"]):
+                team_ids.setdefault(abbr, tid)
+
+    season_id = (past["SEASON_ID"].iloc[-1] if not past.empty and "SEASON_ID" in past.columns else f"2{season[:4]}")
+    placeholders = []
+    for i, (home, away, stype) in enumerate(matchups):
+        gid = f"PREGAME{i:03d}"
+        for team, opp, at_home in [(home, away, True), (away, home, False)]:
+            placeholders.append({
+                "SEASON_ID": season_id,
+                "TEAM_ID": team_ids.get(team, 0),
+                "TEAM_ABBREVIATION": team,
+                "GAME_ID": gid,
+                "GAME_DATE": pred_dt,
+                "MATCHUP": f"{team} vs. {opp}" if at_home else f"{team} @ {opp}",
+                "SEASON_TYPE": stype or "Regular Season",
+            })
+    frame = pd.concat([past, pd.DataFrame(placeholders)], ignore_index=True)
+    feats = build_team_features(frame, season_dir=get_data_paths(season).season_dir)
+    adv = compute_team_boxscore_advanced_features(frame)
+    adv_cols = [c for c in adv.columns if c not in feats.columns]
+    feats = feats.merge(adv[["GAME_ID", "TEAM_ABBREVIATION"] + adv_cols], on=["GAME_ID", "TEAM_ABBREVIATION"], how="left")
+
+    rows = {}
+    for i, (home, away, _) in enumerate(matchups):
+        game = feats[feats["GAME_ID"].astype(str) == f"PREGAME{i:03d}"]
+        for _, r in game.iterrows():
+            rows[(r["TEAM_ABBREVIATION"], home, away)] = r
+    return rows
+
+
+def pregame_team_rows(season: str, pred_dt: pd.Timestamp, home_team: str, away_team: str, full_games_df: pd.DataFrame) -> dict:
+    """Pregame rows for every game scheduled on ``pred_dt`` (one feature build per day)."""
+    day = full_games_df[full_games_df["GAME_DATE"].dt.normalize() == pred_dt.normalize()] if not full_games_df.empty else full_games_df
+    matchups = []
+    for r in day.itertuples():
+        if not is_preseason_game(getattr(r, "GAME_ID", None), getattr(r, "SEASON_TYPE", None)):
+            matchups.append((r.HOME_TEAM_ABBREVIATION, r.AWAY_TEAM_ABBREVIATION, getattr(r, "SEASON_TYPE", None)))
+    if not any(m[0] == home_team and m[1] == away_team for m in matchups):
+        matchups.append((home_team, away_team, None))
+    return _pregame_rows_cached(season, pred_dt.strftime("%Y-%m-%d"), tuple(sorted(set(matchups), key=str)))
+
+
+def build_features(home_team: str, away_team: str, prediction_date: str, season: str = None, player_status_overrides: list = None, team_is_home: bool = True):
     """Return Ordered dict (feature_name -> value) matching the active win model feature list.
     home_team and away_team should be team abbreviations (e.g., "LAL"). prediction_date is YYYY-MM-DD.
+
+    Features are built from ``home_team``'s point of view. Pass ``team_is_home=False``
+    to get the visiting team's row of a game that ``away_team`` hosts (used by
+    the away scoring model, which was trained on visiting-team rows).
     """
     if not season:
         pred_dt_temp = pd.to_datetime(prediction_date)
@@ -301,8 +404,11 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     # Early in a season the current-season files may only contain a few games.
     # Carry forward the previous season's history so every team has pregame data,
     # while retaining current-season rows for teams that have already played.
-    if season != "2025-26":
-        prior_team_df = _load_team_features("2025-26")
+    if True:
+        try:
+            prior_team_df = _load_team_features(previous_season(season))
+        except FileNotFoundError:
+            prior_team_df = pd.DataFrame()
         if not prior_team_df.empty:
             team_df = pd.concat([prior_team_df, team_df], ignore_index=True)
             if "GAME_ID" in team_df.columns:
@@ -311,7 +417,10 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
                     keep="last",
                 )
 
-        prior_games_df = _load_game_results("2025-26")
+        try:
+            prior_games_df = _load_game_results(previous_season(season))
+        except FileNotFoundError:
+            prior_games_df = pd.DataFrame()
         if not prior_games_df.empty:
             games_df = pd.concat([prior_games_df, games_df], ignore_index=True)
             if "GAME_ID" in games_df.columns:
@@ -359,11 +468,15 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     if checks:
         raise RuntimeError("Leakage/coverage check failed: " + "; ".join(checks))
 
-    # Head-to-head aggregation (last 5 H2H games) computed from game_results to double-check
-    # games_df has columns HOME_TEAM_ABBREVIATION, AWAY_TEAM_ABBREVIATION, HOME_SCORE, AWAY_SCORE
-    mask_h2h = ((games_df["HOME_TEAM_ABBREVIATION"] == home_team) & (games_df["AWAY_TEAM_ABBREVIATION"] == away_team)) | \
-               ((games_df["HOME_TEAM_ABBREVIATION"] == away_team) & (games_df["AWAY_TEAM_ABBREVIATION"] == home_team))
-    h2h_games = games_df[mask_h2h].sort_values("GAME_DATE", ascending=False).head(5)
+    # Replace the teams' last stored rows (which describe their previous game)
+    # with true pregame rows for this game.
+    venue_home, venue_away = (home_team, away_team) if team_is_home else (away_team, home_team)
+    try:
+        pregame = pregame_team_rows(season, pred_dt, venue_home, venue_away, full_games_df)
+        home_row = pregame.get((home_team, venue_home, venue_away), home_row)
+        away_row = pregame.get((away_team, venue_home, venue_away), away_row)
+    except Exception as e:
+        print(f"Warning: pregame feature rows unavailable, falling back to last stored rows: {e}")
 
     def safe_get(row, col, default=0.0):
         if row is None:
@@ -373,14 +486,13 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     # Compose features in order
     out = {}
 
-    # IS_HOME: 1 for home team row
-    out["IS_HOME"] = 1
+    out["IS_HOME"] = 1 if team_is_home else 0
 
     # IS_PLAYOFF: look up scheduled game or fallback to month-based playoff windows (April-June)
     scheduled_game = full_games_df[
         (full_games_df["GAME_DATE"].dt.date == pred_dt.date()) &
-        (full_games_df["HOME_TEAM_ABBREVIATION"] == home_team) &
-        (full_games_df["AWAY_TEAM_ABBREVIATION"] == away_team)
+        (full_games_df["HOME_TEAM_ABBREVIATION"] == venue_home) &
+        (full_games_df["AWAY_TEAM_ABBREVIATION"] == venue_away)
     ]
     scheduled_game_row = scheduled_game.iloc[0] if not scheduled_game.empty else None
 
@@ -410,7 +522,10 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
             ((playoffs["HOME_TEAM_ABBREVIATION"] == away_team) & (playoffs["AWAY_TEAM_ABBREVIATION"] == home_team))
         ]
         
-        prior_h2h = h2h_playoffs[h2h_playoffs["GAME_DATE"] < pred_dt].sort_values("GAME_DATE")
+        series_start = pd.Timestamp(f"{int(season.split('-')[0])}-09-01")
+        prior_h2h = h2h_playoffs[
+            (h2h_playoffs["GAME_DATE"] < pred_dt) & (h2h_playoffs["GAME_DATE"] >= series_start)
+        ].sort_values("GAME_DATE")
         
         wins = {home_team: 0, away_team: 0}
         for _, row in prior_h2h.iterrows():
@@ -487,13 +602,17 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
         dist = 0.0
         tz_diff = 0.0
 
-    out["TRAVEL_DISTANCE"] = 0.0
-    out["TIMEZONE_DIFF"] = 0.0
+    out["TRAVEL_DISTANCE"] = 0.0 if team_is_home else dist
+    out["TIMEZONE_DIFF"] = 0.0 if team_is_home else tz_diff
 
     # The opening ratings already carry forward franchise strength. Replay only
     # this season's games on top of them; replaying prior-season rows would
     # double-count history now that those rows are included for rolling features.
-    elo_input = current_season_team_df if season != "2025-26" and not current_season_team_df.empty else team_df
+    # Season opening ratings (carried over from earlier seasons) plus this
+    # season's completed games; preseason games never move Elo.
+    elo_input = _raw_season_games(season)
+    if not elo_input.empty:
+        elo_input = elo_input[elo_input["GAME_DATE"] < pred_dt]
     elo_state = compute_current_elo_state(elo_input, season=season)
     out.update(build_matchup_strength_features(
         home_team=home_team,
@@ -515,8 +634,8 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     # Opponent equivalents (OPP_...): use away_row as opponent viewpoint
     out["OPP_DAYS_REST"] = days_rest_away if not pd.isna(days_rest_away) else np.nan
     out["OPP_IS_B2B"] = is_b2b_away
-    out["OPP_TRAVEL_DISTANCE"] = dist
-    out["OPP_TIMEZONE_DIFF"] = tz_diff
+    out["OPP_TRAVEL_DISTANCE"] = dist if team_is_home else 0.0
+    out["OPP_TIMEZONE_DIFF"] = tz_diff if team_is_home else 0.0
     out["OPP_PTS_LAST_5"] = float(safe_get(away_row, "PTS_LAST_5", np.nan))
     out["OPP_PTS_LAST_10"] = float(safe_get(away_row, "PTS_LAST_10", np.nan))
     out["OPP_WINRATE_LAST_5"] = float(safe_get(away_row, "WINRATE_LAST_5", np.nan))
@@ -546,64 +665,16 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     out["OPP_AWAY_PTS_LAST_5"] = float(safe_get(away_row, "AWAY_PTS_LAST_5", np.nan))
     out["OPP_AWAY_PTS_ALLOWED_LAST_5"] = float(safe_get(away_row, "AWAY_PTS_ALLOWED_LAST_5", np.nan))
 
-    out["CURRENT_VENUE_WINRATE_LAST_5"] = float(
-        safe_get(home_row, "HOME_WINRATE_LAST_5", np.nan)
-    )
-    out["CURRENT_VENUE_PTS_LAST_5"] = float(
-        safe_get(home_row, "HOME_PTS_LAST_5", np.nan)
-    )
-    out["CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = float(
-        safe_get(home_row, "HOME_PTS_ALLOWED_LAST_5", np.nan)
-    )
-    out["OPP_CURRENT_VENUE_WINRATE_LAST_5"] = float(
-        safe_get(away_row, "AWAY_WINRATE_LAST_5", np.nan)
-    )
-    out["OPP_CURRENT_VENUE_PTS_LAST_5"] = float(
-        safe_get(away_row, "AWAY_PTS_LAST_5", np.nan)
-    )
-    out["OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5"] = float(
-        safe_get(away_row, "AWAY_PTS_ALLOWED_LAST_5", np.nan)
-    )
+    # Pregame rows already resolve CURRENT_VENUE_* to the venue of this game.
+    for col in ["CURRENT_VENUE_WINRATE_LAST_5", "CURRENT_VENUE_PTS_LAST_5", "CURRENT_VENUE_PTS_ALLOWED_LAST_5"]:
+        out[col] = float(safe_get(home_row, col, np.nan))
+        out[f"OPP_{col}"] = float(safe_get(away_row, col, np.nan))
 
-    # H2H (from precomputed home_row H2H columns when available) -- fallback to aggregation above
-    out["H2H_GAMES_LAST_5"] = float(safe_get(home_row, "H2H_GAMES_LAST_5", np.nan)) if not pd.isna(safe_get(home_row, "H2H_GAMES_LAST_5", np.nan)) else float(len(h2h_games))
-    out["H2H_WINRATE_LAST_5"] = float(safe_get(home_row, "H2H_WINRATE_LAST_5", np.nan)) if not pd.isna(safe_get(home_row, "H2H_WINRATE_LAST_5", np.nan)) else (float((h2h_games.apply(lambda r: (r['WINNER_TEAM_ABBREVIATION']==home_team), axis=1).sum()) / max(1, len(h2h_games))))
-    # last 5 h2h points for home and allowed
-    if not h2h_games.empty:
-        h2h_pts = []
-        h2h_allowed = []
-        for _, g in h2h_games.iterrows():
-            if g["HOME_TEAM_ABBREVIATION"] == home_team:
-                h2h_pts.append(g.get("HOME_SCORE", np.nan))
-                h2h_allowed.append(g.get("AWAY_SCORE", np.nan))
-            else:
-                h2h_pts.append(g.get("AWAY_SCORE", np.nan))
-                h2h_allowed.append(g.get("HOME_SCORE", np.nan))
-        out["H2H_PTS_LAST_5"] = float(np.mean(h2h_pts))
-        out["H2H_PTS_ALLOWED_LAST_5"] = float(np.mean(h2h_allowed))
-    else:
-        out["H2H_PTS_LAST_5"] = float(safe_get(home_row, "H2H_PTS_LAST_5", np.nan))
-        out["H2H_PTS_ALLOWED_LAST_5"] = float(safe_get(home_row, "H2H_PTS_ALLOWED_LAST_5", np.nan))
-
-    # Opponent H2H fields (mirror)
-    out["OPP_H2H_GAMES_LAST_5"] = float(safe_get(away_row, "H2H_GAMES_LAST_5", np.nan)) if not pd.isna(safe_get(away_row, "H2H_GAMES_LAST_5", np.nan)) else float(len(h2h_games))
-    out["OPP_H2H_WINRATE_LAST_5"] = float(safe_get(away_row, "H2H_WINRATE_LAST_5", np.nan)) if not pd.isna(safe_get(away_row, "H2H_WINRATE_LAST_5", np.nan)) else (float((h2h_games.apply(lambda r: (r['WINNER_TEAM_ABBREVIATION']==away_team), axis=1).sum()) / max(1, len(h2h_games))))
-    # Opponent h2h points
-    if not h2h_games.empty:
-        opp_pts = []
-        opp_allowed = []
-        for _, g in h2h_games.iterrows():
-            if g["HOME_TEAM_ABBREVIATION"] == away_team:
-                opp_pts.append(g.get("HOME_SCORE", np.nan))
-                opp_allowed.append(g.get("AWAY_SCORE", np.nan))
-            else:
-                opp_pts.append(g.get("AWAY_SCORE", np.nan))
-                opp_allowed.append(g.get("HOME_SCORE", np.nan))
-        out["OPP_H2H_PTS_LAST_5"] = float(np.mean(opp_pts))
-        out["OPP_H2H_PTS_ALLOWED_LAST_5"] = float(np.mean(opp_allowed))
-    else:
-        out["OPP_H2H_PTS_LAST_5"] = float(safe_get(away_row, "H2H_PTS_LAST_5", np.nan))
-        out["OPP_H2H_PTS_ALLOWED_LAST_5"] = float(safe_get(away_row, "H2H_PTS_ALLOWED_LAST_5", np.nan))
+    # H2H: the pregame rows hold this season's last meetings with today's opponent,
+    # NaN before the first meeting, exactly like the training rows.
+    for col in ["H2H_GAMES_LAST_5", "H2H_WINRATE_LAST_5", "H2H_PTS_LAST_5", "H2H_PTS_ALLOWED_LAST_5"]:
+        out[col] = float(safe_get(home_row, col, np.nan))
+        out[f"OPP_{col}"] = float(safe_get(away_row, col, np.nan))
 
     try:
         player_feats = compute_player_features_for_inference(
@@ -684,12 +755,16 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
         if k not in res:
             res[k] = v
         # Translate player features:
+        # Never let an alias overwrite a real feature: AWAY_PTS_LAST_5 is this
+        # team's away-venue split, not the opponent's OPP_PTS_LAST_5.
         if k.startswith("HOME_"):
-            team_k = k.replace("HOME_", "TEAM_")
-            res[team_k] = v
+            team_k = k.replace("HOME_", "TEAM_", 1)
+            if team_k not in out:
+                res[team_k] = v
         elif k.startswith("AWAY_"):
-            opp_k = k.replace("AWAY_", "OPP_")
-            res[opp_k] = v
+            opp_k = k.replace("AWAY_", "OPP_", 1)
+            if opp_k not in out:
+                res[opp_k] = v
 
     # Manually map aliases to fix V3 score missing player gap feature names
     res["TEAM_CORE_TOP3_PTS_LAST_5_SUM"] = res.get("HOME_TOP3_EXPECTED_PTS_SUM", 0.0)
@@ -702,7 +777,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     try:
         season_start_year = int(season.split("-")[0])
         season_start_dt = pd.Timestamp(f"{season_start_year}-09-01")
-        raw_tg = _load_team_games(season)
+        raw_tg = _raw_season_games(season)
         if not raw_tg.empty and "GAME_DATE" in raw_tg.columns:
             _ensure_datetime(raw_tg, "GAME_DATE")
             n_home = int(len(raw_tg[(raw_tg["TEAM_ABBREVIATION"] == home_team) & (raw_tg["GAME_DATE"] < pred_dt) & (raw_tg["GAME_DATE"] >= season_start_dt)]))
@@ -807,7 +882,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
             s_ridge_margin = load_cached_joblib(s_ridge_path) if s_ridge_path and s_ridge_path.exists() else None
             req_margin_cols = s_meta.get("margin_features", []) if s_meta else []
 
-            margin_input = {c: res.get(c, 0.0) for c in req_margin_cols}
+            margin_input = {c: res.get(c, np.nan) for c in req_margin_cols}
             df_margin_input = pd.DataFrame([margin_input])
             raw_m = float(s_margin_model.predict(df_margin_input)[0])
             if s_ridge_margin is not None:
@@ -819,8 +894,11 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
             else:
                 pred_margin_val = raw_m
             res["SCORE_PRED_MARGIN"] = float(pred_margin_val)
-    except Exception:
-        res["SCORE_PRED_MARGIN"] = 0.0
+    except Exception as e:
+        # A silent 0.0 reads as "even game" to the WIN model; NaN lets its imputer
+        # fall back to the training mean and the warning makes the failure visible.
+        print(f"Warning: SCORE_PRED_MARGIN could not be computed: {e}")
+        res["SCORE_PRED_MARGIN"] = np.nan
 
     # Validation: ensure all values derived from rows have GAME_DATE < prediction_date
     # (we filtered at top; assert again)

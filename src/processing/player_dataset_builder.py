@@ -1,6 +1,8 @@
 import os
 import sys
 import pandas as pd
+from src.processing.cleaning import regulation_team_minutes
+from src.features.player_form import RAW_GAME_COLUMNS, add_player_form_features
 import numpy as np
 from pathlib import Path
 
@@ -35,7 +37,7 @@ def compute_team_features(seasons):
 
     df_team = df_team.sort_values("GAME_DATE").reset_index(drop=True)
     
-    df_team["MIN"] = pd.to_numeric(df_team["MIN"], errors="coerce").fillna(240)
+    df_team["MIN"] = regulation_team_minutes(df_team["MIN"]).fillna(240)
     df_team["GAME_PACE"] = (df_team["FGA"] + 0.44 * df_team["FTA"] - df_team["OREB"] + df_team["TOV"]) / (df_team["MIN"] / 5) * 48
     
     df_team["TEAM_PACE"] = df_team.groupby("TEAM_ABBREVIATION")["GAME_PACE"].transform(
@@ -112,21 +114,12 @@ def build_player_dataset_v4(seasons=None, output_path=None, custom_metadata_df=N
     
     df_player["USG_PCT"] = np.where(denom > 0, num / denom, 0.0)
     
-    grp_usg = df_player.groupby(player_col)["USG_PCT"]
-    df_player["USG_PCT_LAST_3"] = grp_usg.transform(lambda x: x.shift(1).rolling(window=3, min_periods=1).mean())
-    df_player["USG_PCT_LAST_10"] = grp_usg.transform(lambda x: x.shift(1).rolling(window=10, min_periods=1).mean())
-    df_player["USG_PCT_EMA_5"] = grp_usg.transform(lambda x: x.shift(1).ewm(span=5, min_periods=1).mean())
-    df_player["USG_PCT_EMA_10"] = grp_usg.transform(lambda x: x.shift(1).ewm(span=10, min_periods=1).mean())
-    df_player["USG_PCT_STD_LAST_10"] = grp_usg.transform(lambda x: x.shift(1).rolling(window=10, min_periods=2).std())
-    df_player["USG_PCT_TREND"] = df_player["USG_PCT_EMA_5"] - df_player["USG_PCT_EMA_10"]
-    
-    grp_min = df_player.groupby(player_col)["MIN"]
-    df_player["MIN_LAST_3"] = grp_min.transform(lambda x: x.shift(1).rolling(window=3, min_periods=1).mean())
-    df_player["MIN_LAST_10"] = grp_min.transform(lambda x: x.shift(1).rolling(window=10, min_periods=1).mean())
-    df_player["MIN_EMA_5"] = grp_min.transform(lambda x: x.shift(1).ewm(span=5, min_periods=1).mean())
-    df_player["MIN_EMA_10"] = grp_min.transform(lambda x: x.shift(1).ewm(span=10, min_periods=1).mean())
-    df_player["MIN_STD_LAST_10"] = grp_min.transform(lambda x: x.shift(1).rolling(window=10, min_periods=2).std())
-    df_player["MIN_TREND"] = df_player["MIN_EMA_5"] - df_player["MIN_EMA_10"]
+    for col in ["PTS", "REB", "AST", "PLUS_MINUS"]:
+        df_player[col] = pd.to_numeric(df_player[col], errors="coerce")
+    # One definition of player form for training and live inference (cross-season, shift(1)).
+    df_player = add_player_form_features(df_player, player_col).reset_index(drop=True)
+    for raw, kept in RAW_GAME_COLUMNS.items():
+        df_player[kept] = df_player[raw]
     
     df_player = df_player.merge(
         df_team_feats[["GAME_ID", "TEAM_ABBREVIATION", "TEAM_PACE", "TEAM_ELO", "OPP_ELO"]],

@@ -100,11 +100,15 @@ def load_training_manifest(path: str | Path | None = None, *, root: Path | None 
     test_size = float(holdout.get("test_size", 0.2))
     if not 0 < test_size < 1:
         raise TrainingManifestError("`holdout.test_size` must be between 0 and 1.")
+    final_refit_scope = holdout.get("final_refit_scope", "all_eligible_rows")
+    if final_refit_scope not in {"train_only", "all_eligible_rows"}:
+        raise TrainingManifestError("`holdout.final_refit_scope` must be `train_only` or `all_eligible_rows`.")
     holdout = {
         "strategy": holdout.get("strategy"),
         "test_size": test_size,
         "date_col": holdout.get("date_col", "GAME_DATE"),
         "calibration_season": calibration_season,
+        "final_refit_scope": final_refit_scope,
     }
 
     models = raw.get("models") or {}

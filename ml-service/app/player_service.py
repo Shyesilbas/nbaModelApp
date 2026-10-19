@@ -1,9 +1,16 @@
+import logging
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.features.player_form import pregame_player_rows
+
+logger = logging.getLogger(__name__)
 
 _player_df_cache = {}
 
@@ -67,6 +74,12 @@ def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
             df = df.drop(columns=["Game_ID"])
         else:
             df = df.rename(columns={"Game_ID": "GAME_ID"})
+
+    # The model-ready dataset and the current season's feature file overlap; a game
+    # counted twice would double-weight it in rolled-forward form.
+    if {"PLAYER_ID", "GAME_ID"} <= set(df.columns):
+        gid = df["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+        df = df.loc[~pd.DataFrame({"p": df["PLAYER_ID"], "g": gid}).duplicated(keep="first")].copy()
 
     # Ensure TEAM_ABBREVIATION is populated
     if "MATCHUP" in df.columns:
@@ -328,7 +341,12 @@ def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, predictio
     if len(past_df) == 0:
         past_df = df
 
-    last_games = past_df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
+    try:
+        # Roll each player's form forward to include their latest game, as training rows do.
+        last_games = pregame_player_rows(past_df, "PLAYER_ID", pred_dt)
+    except ValueError as exc:
+        logger.warning("Player form not rolled forward (%s); using each player's last stored row.", exc)
+        last_games = past_df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
     season = date_to_season(pred_dt)
 
     home_active, home_roster_df = _active_roster_ids(home_team, season)
@@ -464,9 +482,10 @@ def get_player_predictions(
     features = player_loader.feature_cols
     
     # Ensure all columns exist
+    # A missing feature is unknown, not zero: NaN lets the model's imputer use its training mean.
     for f in features:
         if f not in full_X.columns:
-            full_X[f] = 0
+            full_X[f] = np.nan
             
     X_matrix = full_X[features]
     

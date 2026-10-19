@@ -12,7 +12,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
-                             roc_auc_score, brier_score_loss)
+                             roc_auc_score, brier_score_loss, log_loss)
 from src.training.feature_contract import load_feature_contract, resolve_feature_list
 from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split, expanding_window_date_splits
 from src.training.provenance import build_training_provenance
@@ -20,6 +20,7 @@ from src.training.provenance import build_training_provenance
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import get_default_season
 from src.features.win_strength_features import add_win_strength_features
+from src.training.feature_guards import check_feature_matrix, permutation_contribution
 
 warnings.filterwarnings("ignore")
 
@@ -115,7 +116,9 @@ class WinModelTrainer:
         self.holdout_config = holdout_config or {}
         self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/win_v10.yaml", root=root)
         self.target_col = self.feature_contract.raw.get("target", "WIN")
-        self.strength_features = self.feature_contract.list_value("derived_features")
+        excluded = set(self.feature_contract.list_value("excluded_features"))
+        # An excluded derived feature (SCORE_PRED_MARGIN) is never built, so it cannot be selected.
+        self.strength_features = [c for c in self.feature_contract.list_value("derived_features") if c not in excluded]
         self.static_venue_split_features = set(self.feature_contract.list_value("static_venue_split_features"))
         self.defaultable_required_features = self.feature_contract.dict_value("defaultable_features")
 
@@ -298,6 +301,9 @@ class WinModelTrainer:
         return df, projection_enrichment
 
     def apply_score_prediction_enrichment(self, df):
+        if "SCORE_PRED_MARGIN" in set(self.feature_contract.list_value("excluded_features")):
+            # The WIN model no longer reads the SCORE model, so it needs no SCORE OOF artifact.
+            return df.drop(columns=["SCORE_PRED_MARGIN"], errors="ignore")
         if "SCORE_PRED_MARGIN" in df.columns:
             # Never trust a precomputed margin column whose generation cutoff
             # and model snapshot are not recorded alongside the rows.
@@ -381,20 +387,11 @@ class WinModelTrainer:
             raise RuntimeError("Failed to attach time-safe SCORE OOF margins to WIN training rows") from exc
         return df
 
-    def train_and_export(self):
-        files = self.resolve_dataset_files()
-        df, row_counts_by_file = self.load_training_dataset(files)
-        self.validate_dataset_contract(df)
-        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
-        df = df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable").reset_index(drop=True)
-        # Historical predictions from a player model trained on overlapping
-        # outcomes are target leakage. Date-safe player OOF features are not
-        # available yet, so keep this feature family out of WIN inputs.
-        projection_enrichment = {
-            "applied": False,
-            "reason": "disabled_until_date_safe_player_oof_predictions_exist",
-        }
-        df = self.apply_score_prediction_enrichment(df)
+    def prepare_features(self, df):
+        """Turn a team-game frame (with SCORE_PRED_MARGIN attached) into the model matrix.
+
+        Shared by training and the backtest harness so both see identical features.
+        """
 
         df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
         df = df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable").reset_index(drop=True)
@@ -452,6 +449,28 @@ class WinModelTrainer:
             X[col] = self.defaultable_required_features[col]
         imputed_missing_required_features = missing_allowed
         X = X[required_feature_cols]
+        return X, y, df_meta, {
+            "dropped_static_venue_split_features": drop_static,
+            "imputed_missing_required_features": imputed_missing_required_features,
+        }
+
+    def train_and_export(self):
+        files = self.resolve_dataset_files()
+        df, row_counts_by_file = self.load_training_dataset(files)
+        self.validate_dataset_contract(df)
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
+        df = df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable").reset_index(drop=True)
+        # Historical predictions from a player model trained on overlapping
+        # outcomes are target leakage. Date-safe player OOF features are not
+        # available yet, so keep this feature family out of WIN inputs.
+        projection_enrichment = {
+            "applied": False,
+            "reason": "disabled_until_date_safe_player_oof_predictions_exist",
+        }
+        df = self.apply_score_prediction_enrichment(df)
+        X, y, df_meta, feature_info = self.prepare_features(df)
+        drop_static = feature_info["dropped_static_venue_split_features"]
+        imputed_missing_required_features = feature_info["imputed_missing_required_features"]
 
         if "SCORE_PRED_MARGIN" in X.columns:
             valid_oof = np.isfinite(pd.to_numeric(X["SCORE_PRED_MARGIN"], errors="coerce"))
@@ -491,6 +510,14 @@ class WinModelTrainer:
             ("clf", LogisticRegression(max_iter=1000, random_state=42))
         ])
 
+        # Sparse L1 logistic: in the audit two features carried almost all signal,
+        # so a model that can zero out the rest is a natural candidate.
+        l1_pipeline = Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(penalty="l1", C=0.05, solver="liblinear", max_iter=1000, random_state=42))
+        ])
+
         lgb_pipeline = Pipeline([
             ("imputer", SimpleImputer(strategy="mean")),
             ("clf", lgb.LGBMClassifier(
@@ -525,7 +552,7 @@ class WinModelTrainer:
 
         candidates = []
         selection_metrics = {}
-        for family_name, base_pipe in [("logistic_regression", lr_pipeline), ("lightgbm", lgb_pipeline)]:
+        for family_name, base_pipe in [("logistic_regression", lr_pipeline), ("logistic_l1", l1_pipeline), ("lightgbm", lgb_pipeline)]:
             uncalibrated = clone(base_pipe).fit(X_inner_train, y_inner_train)
             p_uncal = uncalibrated.predict_proba(X_inner_val)[:, 1]
             m_uncal = self.eval_metrics(y_inner_val, p_uncal)
@@ -552,24 +579,35 @@ class WinModelTrainer:
         )
 
         os.makedirs(self.output_dir, exist_ok=True)
-        final_X = X_train_full if self.holdout_config.get("final_refit_scope") == "train_only" else X
-        final_y = y_train_full if self.holdout_config.get("final_refit_scope") == "train_only" else y
+        refit_all = self.holdout_config.get("final_refit_scope") != "train_only"
+        final_X = X if refit_all else X_train_full
+        final_y = y if refit_all else y_train_full
 
-        final_base = clone(best_base_pipe)
-        if best_calib == "uncalibrated":
-            final_model = final_base.fit(final_X, final_y)
-        else:
-            final_meta = df_meta.loc[final_X.index]
-            final_splits = expanding_window_date_splits(
-                final_meta,
+        def fit_selected(X_fit, y_fit):
+            base = clone(best_base_pipe)
+            if best_calib == "uncalibrated":
+                return base.fit(X_fit, y_fit)
+            splits = expanding_window_date_splits(
+                df_meta.loc[X_fit.index],
                 date_col=self.holdout_config.get("date_col", "GAME_DATE"),
                 n_splits=3,
             )
-            final_model = CalibratedClassifierCV(estimator=final_base, method=best_calib, cv=final_splits)
-            final_model.fit(final_X, final_y)
+            return CalibratedClassifierCV(estimator=base, method=best_calib, cv=splits).fit(X_fit, y_fit)
 
-        holdout_probabilities = final_model.predict_proba(X_test)[:, 1]
+        # Holdout metrics always come from a model that never saw the holdout rows;
+        # the shipped model may then be refit on every eligible row.
+        eval_model = fit_selected(X_train_full, y_train_full)
+        holdout_probabilities = eval_model.predict_proba(X_test)[:, 1]
         holdout_metrics = self.eval_metrics(y_test, holdout_probabilities)
+        final_model = fit_selected(final_X, final_y) if refit_all else eval_model
+
+        feature_guard = check_feature_matrix(X_train_full, "WIN")
+        feature_guard["holdout_permutation_log_loss"] = permutation_contribution(
+            lambda frame: eval_model.predict_proba(frame)[:, 1],
+            X_test,
+            y_test,
+            lambda yt, p: float(log_loss(yt, np.clip(p, 1e-6, 1 - 1e-6))),
+        )
 
         model_path = self.output_dir / f"win_probability_model_{self.version}.pkl"
         joblib.dump(final_model, model_path)
@@ -621,6 +659,7 @@ class WinModelTrainer:
             "selected_family": best_family,
             "selected_calibration": best_calib,
             "selected_metrics": holdout_metrics,
+            "feature_guard": feature_guard,
             "target_column": self.target_col
         }
         

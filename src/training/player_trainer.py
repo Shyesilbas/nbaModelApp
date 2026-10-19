@@ -12,6 +12,7 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import lightgbm as lgb
 from src.training.feature_contract import load_feature_contract
+from src.training.feature_guards import check_feature_matrix
 from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split, expanding_window_date_splits
 from src.training.provenance import build_training_provenance
 
@@ -45,6 +46,23 @@ class PlayerModelTrainer:
                 continue
         return sorted(set(ids))
 
+    def _model_pipeline(self):
+        params = {
+            "n_estimators": 150,
+            "learning_rate": 0.05,
+            "max_depth": 5,
+            "random_state": 42,
+            "n_jobs": -1,
+            "verbose": -1,
+        }
+        # The contract can override LightGBM settings, e.g. objective: l1 to fit the
+        # conditional median, which is what an MAE-scored prop line needs.
+        params.update(self.feature_contract.dict_value("lgb_params"))
+        return Pipeline([
+            ('imputer', SimpleImputer(strategy='mean')),
+            ('lgb', lgb.LGBMRegressor(**params)),
+        ])
+
     def load_dataset(self):
         if not self.data_path.exists():
             raise FileNotFoundError(f"Dataset path {self.data_path} does not exist.")
@@ -69,6 +87,7 @@ class PlayerModelTrainer:
             "FGM", "FGA", "FG_PCT", "FG3M", "FG3A", "FG3_PCT",
             "FTM", "FTA", "FT_PCT", "OREB", "DREB", "STL", "BLK",
             "TOV", "PF", "TARGET_PTS", "TARGET_REB", "TARGET_AST",
+            "GAME_PTS", "GAME_REB", "GAME_AST", "GAME_MIN", "GAME_USG_PCT", "GAME_PLUS_MINUS",
         }
         leaked = sorted(set(features) & postgame_columns)
         if leaked:
@@ -98,6 +117,7 @@ class PlayerModelTrainer:
         train_df["GAME_DATE"] = pd.to_datetime(train_df["GAME_DATE"], errors="coerce")
         train_df = train_df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE"], kind="stable").reset_index(drop=True)
         X, features = self.build_feature_matrix(train_df)
+        feature_guard = check_feature_matrix(X, "PLAYER")
         os.makedirs(self.output_dir, exist_ok=True)
         
         feature_path = self.output_dir / f"player_{self.version}_features.pkl"
@@ -112,17 +132,7 @@ class PlayerModelTrainer:
             X_target = X.loc[target_df.index]
             y = pd.to_numeric(target_df[target], errors="coerce")
             
-            pipeline = Pipeline([
-                ('imputer', SimpleImputer(strategy='mean')),
-                ('lgb', lgb.LGBMRegressor(
-                    n_estimators=150, 
-                    learning_rate=0.05, 
-                    max_depth=5, 
-                    random_state=42, 
-                    n_jobs=-1, 
-                    verbose=-1
-                ))
-            ])
+            pipeline = self._model_pipeline()
             
             if self.holdout_config.get("strategy") == "season_holdout":
                 X_train, X_test, y_train, y_test, split_meta = season_holdout_train_test_split(
@@ -175,17 +185,7 @@ class PlayerModelTrainer:
             temporal_splits = expanding_window_date_splits(fit_df, date_col="GAME_DATE", n_splits=3)
             oof_preds = pd.Series(index=fit_df.index, dtype=float)
             for f_tr, f_val in temporal_splits:
-                fold_pipe = Pipeline([
-                    ('imputer', SimpleImputer(strategy='mean')),
-                    ('lgb', lgb.LGBMRegressor(
-                        n_estimators=150, 
-                        learning_rate=0.05, 
-                        max_depth=5, 
-                        random_state=42, 
-                        n_jobs=-1, 
-                        verbose=-1
-                    ))
-                ])
+                fold_pipe = self._model_pipeline()
                 fold_pipe.fit(X_fit.iloc[f_tr], y_fit.iloc[f_tr])
                 oof_preds.iloc[f_val] = fold_pipe.predict(X_fit.iloc[f_val])
 
@@ -234,6 +234,7 @@ class PlayerModelTrainer:
             "evaluation_training_rows": int(len(final_X)),
             "training_season_ids": self.training_season_ids,
             "season_coverage": sorted(pd.to_numeric(df["SEASON_ID"], errors="coerce").dropna().astype(int).unique().tolist()) if "SEASON_ID" in df.columns else [],
+            "feature_guard": feature_guard,
             "final_refit": {
                 "enabled": True,
                 "rows": int(len(final_X)),

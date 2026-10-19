@@ -8,9 +8,13 @@ import pandas as pd
 
 
 INITIAL_ELO = 1500.0
-BASE_K_FACTOR = 20.0
-HOME_COURT_ADVANTAGE = 100.0
-SEASON_REGRESSION = 0.75
+# Tuned on 2020-21..2025-26 home-win log-loss (grid over K, HCA, carryover):
+# K=10/HCA=50/carryover=0.6 scored 0.625 vs 0.648 for the old K=20/HCA=100/0.75.
+# The MOV multiplier already scales updates up to ~3.5x, so K=20 overreacted, and
+# home teams win ~55% of games, which is ~35-50 Elo points, not 100.
+BASE_K_FACTOR = 10.0
+HOME_COURT_ADVANTAGE = 50.0
+SEASON_REGRESSION = 0.6
 
 
 def _calc_season_key(date_val: pd.Timestamp) -> str:
@@ -39,9 +43,9 @@ class ContinuousEloEngine:
     """
     Chronological, leakage-safe multi-season Elo engine for the NBA.
     Maintains persistent franchise strength across seasons with:
-    - Home court advantage (+100 Elo points)
-    - Margin of victory (MOV) adaptive updates
-    - Inter-season mean reversion (0.75 Elo + 0.25 * 1500)
+    - Home court advantage (HOME_COURT_ADVANTAGE Elo points)
+    - Margin of victory (MOV) adaptive updates, damped by the winner's pregame edge
+    - Inter-season mean reversion (SEASON_REGRESSION * Elo + rest * 1500)
     """
 
     def __init__(
@@ -151,7 +155,9 @@ class ContinuousEloEngine:
 
             # Effective home Elo with home court advantage boost
                 home_effective = home_elo + self.home_advantage
-                elo_diff = abs(home_effective - away_elo)
+                # MOV dampening uses the winner's edge: a favourite's blowout moves
+                # ratings less, an upset moves them more.
+                elo_diff = (home_effective - away_elo) if home_won == 1.0 else (away_elo - home_effective)
 
                 expected_home = 1.0 / (1.0 + 10.0 ** ((away_elo - home_effective) / 400.0))
                 mov_mult = compute_mov_multiplier(margin, elo_diff)
@@ -257,7 +263,7 @@ def build_season_opening_elo(
 ) -> Dict[str, float]:
     """
     Calculates season opening Elo ratings by chaining historical seasons,
-    applying offseason mean-reversion (0.75 * Elo + 0.25 * 1500),
+    applying offseason mean-reversion (SEASON_REGRESSION * Elo + rest * 1500),
     and applying offseason roster turnover adjustments if roster data is provided.
     """
     _, end_ratings = build_continuous_elo_dataset(prev_seasons)

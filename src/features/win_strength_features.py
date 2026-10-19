@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 
+from src.processing.season_type_normalizer import drop_preseason
 from src.features.continuous_elo import ContinuousEloEngine, INITIAL_ELO, BASE_K_FACTOR, SEASON_REGRESSION, HOME_COURT_ADVANTAGE
 
 K_FACTOR = BASE_K_FACTOR
@@ -148,12 +149,50 @@ def add_win_strength_features(df: pd.DataFrame) -> pd.DataFrame:
 _elo_state_cache: dict[tuple, dict[str, float]] = {}
 
 
+_opening_cache: dict[str, dict[str, float]] = {}
+
+
+def season_opening_ratings(season: str) -> dict[str, float]:
+    """Opening Elo for ``season``: the published file if there is one, otherwise
+    the ratings carried over from every earlier season on disk (same procedure
+    as ``scripts/feature_engineering/build_initial_season_elo.py``)."""
+    from pathlib import Path
+    import json
+
+    if season in _opening_cache:
+        return _opening_cache[season]
+    root = Path(__file__).resolve().parents[2]
+    token = season.replace("-", "_")
+    for init_path in [root / f"data/production/team_elo_initial_{token}.json", root / f"data/season={season}/analysis/team_elo_initial.json"]:
+        if init_path.exists():
+            try:
+                _opening_cache[season] = json.loads(init_path.read_text())
+                return _opening_cache[season]
+            except Exception:
+                pass
+    prior = sorted(
+        p.parent.parent.name.split("=", 1)[1]
+        for p in root.glob("data/season=*/raw/team_games.csv")
+        if p.parent.parent.name.split("=", 1)[1] < season
+    )
+    ratings = {}
+    if prior:
+        from src.features.continuous_elo import build_season_opening_elo
+        try:
+            ratings = build_season_opening_elo(prior)
+        except Exception:
+            ratings = {}
+    _opening_cache[season] = ratings
+    return ratings
+
+
 def compute_current_elo_state(team_games: pd.DataFrame, season: str = None) -> dict[str, float]:
     initial_ratings = None
     from pathlib import Path
     import json
 
     root = Path(__file__).resolve().parents[2]
+    team_games = drop_preseason(team_games)
 
     if not season and not team_games.empty and "GAME_DATE" in team_games.columns:
         try:
@@ -166,18 +205,7 @@ def compute_current_elo_state(team_games: pd.DataFrame, season: str = None) -> d
             season = None
 
     if team_games.empty:
-        if season:
-            season_token = season.replace("-", "_")
-            init_path = root / f"data/production/team_elo_initial_{season_token}.json"
-            if not init_path.exists():
-                init_path = root / f"data/season={season}/analysis/team_elo_initial.json"
-            if init_path.exists():
-                try:
-                    with open(init_path, "r") as f:
-                        return json.load(f)
-                except Exception:
-                    pass
-        return {}
+        return dict(season_opening_ratings(season)) if season else {}
 
     last_game_token = None
     if "GAME_DATE" in team_games.columns:
@@ -190,16 +218,7 @@ def compute_current_elo_state(team_games: pd.DataFrame, season: str = None) -> d
         return dict(_elo_state_cache[cache_key])
 
     if season:
-        season_token = season.replace("-", "_")
-        init_path = root / f"data/production/team_elo_initial_{season_token}.json"
-        if not init_path.exists():
-            init_path = root / f"data/season={season}/analysis/team_elo_initial.json"
-        if init_path.exists():
-            try:
-                with open(init_path, "r") as f:
-                    initial_ratings = json.load(f)
-            except Exception:
-                initial_ratings = None
+        initial_ratings = season_opening_ratings(season) or None
 
     engine = ContinuousEloEngine(initial_ratings=initial_ratings)
     engine.transform_games(team_games)

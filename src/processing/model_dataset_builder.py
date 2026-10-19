@@ -148,15 +148,10 @@ ROLLING_FEATURE_COLUMNS_V2 = ROLLING_FEATURE_COLUMNS + [
     "OPP_CURRENT_VENUE_PTS_LAST_5",
     "OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5",
     
-    # Drop NaNs if H2H stats are NaN (we only require H2H winrate to be valid, 
-    # since early season H2H may not have occurred yet, we drop games where H2H is not established)
-    "H2H_WINRATE_LAST_5",
-    "H2H_PTS_LAST_5",
-    "H2H_PTS_ALLOWED_LAST_5",
-    
-    "OPP_H2H_WINRATE_LAST_5",
-    "OPP_H2H_PTS_LAST_5",
-    "OPP_H2H_PTS_ALLOWED_LAST_5"
+    # H2H columns are deliberately not here: a first meeting has no H2H history,
+    # and dropping those rows removed roughly a third of every season from
+    # training while live predictions still had to cover them. The models'
+    # imputers handle the missing H2H values.
 ]
 
 def build_team_model_dataset_v2(team_features_with_opp_df: pd.DataFrame) -> Tuple[pd.DataFrame, int]:

@@ -79,6 +79,20 @@ excluded_features:
   - ABS_WINRATE_DIFF_LAST_10
   - PRE_GAME_ELO
   - OPP_PRE_GAME_ELO
+  # Exact duplicates (OPP_H2H_* mirrors H2H_*), near-duplicates (|r| >= 0.98)
+  # and features with no permutation contribution in walk-forward tests.
+  - OPP_H2H_PTS_ALLOWED_LAST_5
+  - OPP_H2H_PTS_LAST_5
+  - NET_RTG_DIFF_LAST_10
+  - CLUTCH_NET_RTG_DIFF_LAST_10
+  - IS_PLAYOFF
+  - PTS_LAST_10
+  - PTS_ALLOWED_LAST_10
+  - OPP_PTS_LAST_10
+  - OPP_PTS_ALLOWED_LAST_10
+  # Removing the SCORE model's margin makes WIN independent of SCORE: it added
+  # nothing in walk-forward tests and forced WIN to drop rows without SCORE OOF.
+  - SCORE_PRED_MARGIN
   - WINRATE_LAST_5
   - OPP_WINRATE_LAST_5
   - FG3_REGRESSION_DELTA
