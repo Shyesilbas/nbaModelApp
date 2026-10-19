@@ -36,11 +36,6 @@ import {
   LineupInjuryHub,
 } from "./prediction";
 
-
-// ---------------------------------------------------------------------------
-// Main Component
-// ---------------------------------------------------------------------------
-
 interface NbaPredictionProps {
   initialGame?: {
     home: string;
@@ -99,9 +94,9 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         setSeasonGames(scheduleGames);
         const gamesByWeek = new Map<string, { start: string; end: string; count: number }>();
         for (const game of scheduleGames) {
-          const date = game.GAME_DATE?.slice(0, 10);
-          if (!date) continue;
-          const dateUtc = new Date(`${date}T00:00:00Z`);
+          const gameDate = game.GAME_DATE?.slice(0, 10);
+          if (!gameDate) continue;
+          const dateUtc = new Date(`${gameDate}T00:00:00Z`);
           if (Number.isNaN(dateUtc.getTime())) continue;
           const monday = new Date(dateUtc);
           monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
@@ -119,11 +114,10 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
             week_number: index + 1,
             start_date: week.start,
             end_date: week.end,
-            label: `Week ${index + 1} (${week.start.slice(5)} to ${week.end.slice(5)})`,
+            label: `Hafta ${index + 1} (${week.start.slice(5)} - ${week.end.slice(5)})`,
             game_count: week.count,
           }));
 
-        // The endpoint remains a fallback for older static archives without a game feed.
         if (weekList.length === 0) {
           try {
             weekList = await loadPrivateApiFresh<SeasonWeek[]>(`/frontend-data-api/weeks?season=${encodeURIComponent(CURRENT_SEASON)}`);
@@ -144,7 +138,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
               week_number: i,
               start_date: sStr,
               end_date: eStr,
-              label: `Week ${i} (${sStr.slice(5)} to ${eStr.slice(5)})`,
+              label: `Hafta ${i} (${sStr.slice(5)} - ${eStr.slice(5)})`,
               game_count: 45,
             });
           }
@@ -165,7 +159,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         setSelectedWeekNum(targetWeek);
       } catch (err: any) {
         console.error("Error loading schedule weeks:", err);
-        if (active) setDataError("Failed to initialize schedule weeks.");
+        if (active) setDataError("Takvim haftaları yüklenemedi.");
       } finally {
         if (active) setLoadingData(false);
       }
@@ -184,8 +178,8 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
       setLoadingWeek(true);
       try {
         const data = seasonGames.filter((g) => {
-          const date = g.GAME_DATE?.slice(0, 10);
-          return date && date >= currentWeek.start_date && date <= currentWeek.end_date;
+          const gDate = g.GAME_DATE?.slice(0, 10);
+          return gDate && gDate >= currentWeek.start_date && gDate <= currentWeek.end_date;
         });
         if (!isMounted) return;
 
@@ -255,12 +249,12 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
       setError(null);
       setLoading(true);
       try {
-        if (!h || !a) throw new Error("Please select both a home and away team.");
-        if (h === a) throw new Error("Home and away teams cannot be the same.");
-        if (!d) throw new Error("Please select a date for the matchup.");
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error("Invalid date format. Please use YYYY-MM-DD.");
+        if (!h || !a) throw new Error("Lütfen ev sahibi ve deplasman takımlarını seçin.");
+        if (h === a) throw new Error("Ev sahibi ve deplasman aynı takım olamaz.");
+        if (!d) throw new Error("Lütfen maç tarihini seçin.");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error("Geçersiz tarih formatı (YYYY-MM-DD olmalı).");
         if (d < MIN_PREDICTION_DATE) {
-          throw new Error(`Predictions are only enabled for unplayed upcoming games (${CURRENT_SEASON} season and onward). Past completed games cannot be predicted.`);
+          throw new Error(`Tahminler sadece henüz oynanmamış gelecek maçlar (${CURRENT_SEASON} sezonu ve sonrası) için geçerlidir.`);
         }
 
         const overridesList = Object.values(overridesMap);
@@ -275,7 +269,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         setActiveResultTab("overview");
         setSelectorOpen(false);
       } catch (e: any) {
-        setError(e.message || "Unknown error");
+        setError(e.message || "Bilinmeyen bir hata oluştu.");
       } finally {
         setLoading(false);
       }
@@ -337,7 +331,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   }, []);
 
   const getTeamInfo = (abbr: string) =>
-    NBA_TEAMS.find((t) => t.abbr === abbr) || { abbr, name: abbr, color: "#475569" };
+    NBA_TEAMS.find((t) => t.abbr === abbr) || { abbr, name: abbr, color: NBA_TEAMS[0]?.color || "" };
 
   const teamAbbr = (abbr: string) => abbr?.toUpperCase?.() || "";
 
@@ -378,7 +372,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
     try {
-      return new Date(dateStr).toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
+      return new Date(dateStr).toLocaleDateString("tr-TR", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
     } catch {
       return dateStr;
     }
@@ -389,83 +383,80 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
   if (loadingData) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-        <RefreshCw size={28} className="animate-spin text-indigo-600" />
-        <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Loading prediction engine...</span>
+      <div className="flex flex-col items-center justify-center h-64 gap-3 bg-background-primary rounded border border-border p-8">
+        <RefreshCw size={24} className="animate-spin text-primary" />
+        <span className="text-xs font-medium text-text-secondary">
+          Tahmin motoru yükleniyor
+        </span>
       </div>
     );
   }
 
-  // -------------------------------------------------------------------------
-  // Render
-  // -------------------------------------------------------------------------
-
   return (
     <div className="space-y-5">
-
-      {/* ── Data error notice ── */}
+      {/* Data error notice */}
       {dataError && (
-        <div className="flex items-start gap-3 rounded-xl bg-amber-50 text-amber-800 border border-amber-200/80 p-4 shadow-xs">
-          <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
-          <p className="text-xs font-semibold m-0">{dataError}</p>
+        <div className="flex items-start gap-3 rounded border border-status-warning/20 bg-status-warning/10 text-status-warning p-4">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <p className="text-xs font-medium m-0">{dataError}</p>
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          SECTION 1 — COMPACT SELECTION PANEL
-      ═══════════════════════════════════════════════════════════════════ */}
-      <div className="surface rounded-[1.5rem] overflow-hidden">
+      {/* SECTION 1: SELECTION PANEL */}
+      <div className="bg-background-primary border border-border rounded overflow-hidden">
         <div
           id="selector-toggle"
           onClick={() => setSelectorOpen((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 cursor-pointer"
+          className="w-full flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-background-secondary/50 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <Calendar size={15} className="text-slate-500" />
+            <Calendar size={16} className="text-text-secondary" />
             <div className="text-left">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                Game Selection
+              <p className="text-xs font-semibold text-text-primary">
+                Karşılaşma seçimi
               </p>
               {home && away && date ? (
-                <p className="text-sm font-black text-slate-800 mt-0.5">
+                <p className="text-sm font-semibold text-text-primary mt-0.5">
                   {homeInfo.name} vs {awayInfo.name} · {formatDate(date)}
                 </p>
               ) : (
-                <p className="text-sm font-black text-slate-400 mt-0.5">No game selected</p>
+                <p className="text-sm text-text-secondary mt-0.5">Henüz maç seçilmedi</p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-3">
             {home && away && date && !result && !loading && (
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); submit(); }}
                 id="run-prediction-btn"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black uppercase tracking-wider transition-colors shadow-md shadow-indigo-200"
+                className="flex items-center gap-1.5 h-8 px-3 rounded bg-primary hover:bg-primary/90 text-white text-xs font-medium transition-colors cursor-pointer"
               >
-                <Sparkles size={11} />
-                Run Model
+                <Sparkles size={12} />
+                <span>Tahmin Üret</span>
               </button>
             )}
-            {selectorOpen ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+            {selectorOpen ? <ChevronUp size={16} className="text-text-secondary" /> : <ChevronDown size={16} className="text-text-secondary" />}
           </div>
         </div>
 
         {selectorOpen && (
-          <div className="border-t border-slate-100 px-5 pb-5 pt-4 space-y-4 animate-fade-in">
+          <div className="border-t border-border-light px-5 pb-5 pt-4 space-y-4">
             {/* Mode tabs */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-              <div className="flex border border-slate-200 bg-slate-50 p-1 rounded-xl w-fit gap-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-light pb-3">
+              <div className="flex border border-border bg-background-secondary p-0.5 rounded gap-1">
                 {(["scheduled", "custom"] as const).map((m) => (
                   <button
                     key={m}
+                    type="button"
                     onClick={() => { setMode(m); setResult(null); setError(null); }}
-                    className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200 ${
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
                       mode === m
-                        ? "bg-white text-slate-900 shadow-xs border border-slate-200/50"
-                        : "text-slate-500 hover:text-slate-800"
+                        ? "bg-background-primary text-text-primary border border-border shadow-xs"
+                        : "text-text-secondary hover:text-text-primary"
                     }`}
                   >
-                    {m === "scheduled" ? "Upcoming Schedule" : "Custom Matchup"}
+                    {m === "scheduled" ? "Gelecek Fikstür" : "Özel Karşılaşma"}
                   </button>
                 ))}
               </div>
@@ -475,14 +466,14 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
             {mode === "scheduled" && (
               <div className="space-y-4">
                 {/* Week Selector Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-slate-50 p-2.5 sm:p-3 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-background-secondary p-3">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setSelectedWeekNum((w) => Math.max(1, w - 1))}
                       disabled={selectedWeekNum <= 1 || loadingWeek}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-xs transition-all hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-white"
-                      title="Previous Week"
+                      className="flex h-8 w-8 items-center justify-center rounded border border-border bg-background-primary text-text-primary transition-colors hover:bg-background-secondary disabled:opacity-30 cursor-pointer"
+                      title="Önceki Hafta"
                     >
                       <ChevronLeft size={16} />
                     </button>
@@ -490,11 +481,11 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                     <select
                       value={selectedWeekNum}
                       onChange={(e) => setSelectedWeekNum(Number(e.target.value))}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-800 shadow-xs focus:border-indigo-500 focus:outline-none"
+                      className="h-8 rounded border border-border bg-background-primary px-3 text-xs font-medium text-text-primary focus:border-border-focus focus:outline-none"
                     >
                       {weeks.map((w) => (
                         <option key={w.week_number} value={w.week_number}>
-                          {w.label} ({w.game_count} games)
+                          {w.label} ({w.game_count} maç)
                         </option>
                       ))}
                     </select>
@@ -503,21 +494,21 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                       type="button"
                       onClick={() => setSelectedWeekNum((w) => Math.min(weeks.length, w + 1))}
                       disabled={selectedWeekNum >= weeks.length || loadingWeek}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-xs transition-all hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-white"
-                      title="Next Week"
+                      className="flex h-8 w-8 items-center justify-center rounded border border-border bg-background-primary text-text-primary transition-colors hover:bg-background-secondary disabled:opacity-30 cursor-pointer"
+                      title="Sonraki Hafta"
                     >
                       <ChevronRight size={16} />
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                  <div className="flex items-center gap-2 text-xs text-text-secondary">
                     {loadingWeek ? (
-                      <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-600">
-                        <RefreshCw size={12} className="animate-spin" /> Fetching games...
+                      <span className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                        <RefreshCw size={12} className="animate-spin" /> Maçlar yükleniyor...
                       </span>
                     ) : (
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        {upcomingGames.length} Matchups in Week {selectedWeekNum}
+                      <span className="text-xs text-text-secondary">
+                        {upcomingGames.length} Karşılaşma ({selectedWeekNum}. Hafta)
                       </span>
                     )}
                   </div>
@@ -527,21 +518,21 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                   {/* Upcoming games quick list */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                        Week {selectedWeekNum} Schedule
+                      <p className="text-xs font-semibold text-text-primary">
+                        {selectedWeekNum}. Hafta Fikstürü
                       </p>
-                      {loadingWeek && <RefreshCw size={12} className="animate-spin text-slate-400" />}
+                      {loadingWeek && <RefreshCw size={12} className="animate-spin text-text-secondary" />}
                     </div>
 
                     <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                       {loadingWeek ? (
-                        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 p-8 text-center text-xs font-semibold text-slate-400">
-                          <RefreshCw size={16} className="animate-spin text-indigo-500" />
-                          <span>Loading week fixtures...</span>
+                        <div className="flex flex-col items-center justify-center gap-2 rounded border border-border bg-background-secondary p-8 text-center text-xs text-text-secondary">
+                          <RefreshCw size={16} className="animate-spin text-primary" />
+                          <span>Fikstür yükleniyor</span>
                         </div>
                       ) : upcomingGames.length === 0 ? (
-                        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-6 text-center text-xs font-semibold text-slate-400">
-                          No upcoming matches found for Week {selectedWeekNum}.
+                        <div className="rounded border border-border bg-background-secondary p-6 text-center text-xs text-text-secondary">
+                          {selectedWeekNum}. hafta için oynanmamış maç bulunamadı.
                         </div>
                       ) : (
                         upcomingGames.map((g: any) => {
@@ -549,11 +540,12 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                           return (
                             <button
                               key={g.GAME_ID}
+                              type="button"
                               onClick={() => handleSelectGame(g)}
-                              className={`w-full text-left p-2.5 rounded-xl border transition-all duration-200 flex items-center justify-between gap-3 ${
+                              className={`w-full text-left p-2.5 rounded border transition-colors flex items-center justify-between gap-3 cursor-pointer ${
                                 isSelected
-                                  ? "bg-indigo-50/60 border-indigo-400 shadow-xs"
-                                  : "bg-white border-slate-200/80 hover:border-slate-300"
+                                  ? "bg-background-secondary border-primary"
+                                  : "bg-background-primary border-border hover:border-card-border-hover"
                               }`}
                             >
                               <div className="flex items-center gap-2.5">
@@ -561,20 +553,14 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                                   <TeamLogo abbr={teamAbbr(g.HOME_TEAM_ABBREVIATION)} name={g.HOME_TEAM_ABBREVIATION} size={20} />
                                   <TeamLogo abbr={teamAbbr(g.AWAY_TEAM_ABBREVIATION)} name={g.AWAY_TEAM_ABBREVIATION} size={20} />
                                 </div>
-                                <span className="text-xs font-black text-slate-800">
+                                <span className="text-xs font-semibold text-text-primary">
                                   {g.HOME_TEAM_ABBREVIATION} vs {g.AWAY_TEAM_ABBREVIATION}
                                 </span>
-                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                                  g.SEASON_TYPE === "NBA Finals"
-                                    ? "bg-amber-100 text-amber-800"
-                                    : (g.SEASON_TYPE === "Pre Season" || g.SEASON_TYPE === "Preseason")
-                                    ? "bg-purple-100 text-purple-800 font-extrabold"
-                                    : "text-slate-400 bg-slate-100"
-                                }`}>
+                                <span className="text-xs px-1.5 py-0.2 rounded-sm bg-background-secondary border border-border text-text-secondary">
                                   {g.SEASON_TYPE}
                                 </span>
                               </div>
-                              <span className="text-[10px] font-mono text-slate-400 font-bold">{g.GAME_DATE}</span>
+                              <span className="text-xs tabular-nums text-text-secondary">{g.GAME_DATE}</span>
                             </button>
                           );
                         })
@@ -584,55 +570,56 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
                   {/* Filter by team */}
                   <div className="space-y-2">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Filter Week by Team</p>
+                    <p className="text-xs font-semibold text-text-primary">Takıma göre filtrele</p>
                     <div className="grid grid-cols-2 gap-2">
                       <select
-                        className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-xs"
+                        className="w-full h-8 rounded border border-border bg-background-primary px-2.5 text-xs font-medium text-text-primary focus:border-border-focus focus:outline-none"
                         value={filterTeam1}
                         onChange={(e) => { setFilterTeam1(e.target.value); if (!e.target.value) setFilterTeam2(""); }}
                       >
-                        <option value="">Team 1</option>
+                        <option value="">Takım 1</option>
                         {NBA_TEAMS.map((t) => <option key={t.abbr} value={t.abbr}>{t.abbr} — {t.name}</option>)}
                       </select>
                       <select
-                        className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-xs disabled:opacity-50"
+                        className="w-full h-8 rounded border border-border bg-background-primary px-2.5 text-xs font-medium text-text-primary focus:border-border-focus focus:outline-none disabled:opacity-50"
                         value={filterTeam2}
                         onChange={(e) => setFilterTeam2(e.target.value)}
                         disabled={!filterTeam1}
                       >
-                        <option value="">Team 2 (optional)</option>
+                        <option value="">Takım 2 (isteğe bağlı)</option>
                         {NBA_TEAMS.map((t) => <option key={t.abbr} value={t.abbr} disabled={t.abbr === filterTeam1}>{t.abbr} — {t.name}</option>)}
                       </select>
                     </div>
-                    <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-xs max-h-56 overflow-y-auto divide-y divide-slate-100">
+                    <div className="border border-border rounded overflow-hidden bg-background-primary max-h-56 overflow-y-auto divide-y divide-border-light">
                       {!filterTeam1 ? (
-                        <div className="p-4 text-center text-xs text-slate-400 font-semibold">Select a team to filter Week {selectedWeekNum} matches</div>
+                        <div className="p-4 text-center text-xs text-text-secondary">
+                          {selectedWeekNum}. hafta maçlarını filtrelemek için takım seçin
+                        </div>
                       ) : filteredSchedule.length === 0 ? (
-                        <div className="p-4 text-center text-xs text-slate-400 font-semibold">No matchups for {filterTeam1} in Week {selectedWeekNum}</div>
+                        <div className="p-4 text-center text-xs text-text-secondary">
+                          {selectedWeekNum}. haftada {filterTeam1} için eşleşme bulunamadı
+                        </div>
                       ) : (
                         filteredSchedule.map((g: any) => {
                           const isSelected = home === g.HOME_TEAM_ABBREVIATION && away === g.AWAY_TEAM_ABBREVIATION && date === g.GAME_DATE;
                           return (
                             <button
                               key={g.GAME_ID}
+                              type="button"
                               onClick={() => handleSelectGame(g)}
-                              className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 transition-colors flex items-center justify-between text-xs ${isSelected ? "bg-indigo-50/30 text-indigo-900 font-bold" : "text-slate-600 font-medium"}`}
+                              className={`w-full text-left px-3.5 py-2 hover:bg-background-secondary transition-colors flex items-center justify-between text-xs cursor-pointer ${
+                                isSelected ? "bg-background-secondary text-text-primary font-semibold" : "text-text-secondary"
+                              }`}
                             >
                               <div className="flex items-center gap-2">
-                                <span className="font-extrabold">{g.HOME_TEAM_ABBREVIATION}</span>
-                                <span className="text-slate-300">vs</span>
-                                <span className="font-extrabold">{g.AWAY_TEAM_ABBREVIATION}</span>
-                                <span className={`text-[8px] uppercase font-black tracking-wider px-1 py-0.5 rounded border ${
-                                  g.SEASON_TYPE === "NBA Finals"
-                                    ? "bg-amber-50 text-amber-700 border-amber-200"
-                                    : (g.SEASON_TYPE === "Pre Season" || g.SEASON_TYPE === "Preseason")
-                                    ? "bg-purple-50 text-purple-700 border-purple-200 font-extrabold"
-                                    : "bg-slate-50 text-slate-400 border-slate-150"
-                                }`}>
-                                  {g.SEASON_TYPE === "NBA Finals" ? "Finals" : (g.SEASON_TYPE === "Pre Season" || g.SEASON_TYPE === "Preseason" ? "Preseason" : "Regular")}
+                                <span className="font-semibold text-text-primary">{g.HOME_TEAM_ABBREVIATION}</span>
+                                <span className="text-text-muted">vs</span>
+                                <span className="font-semibold text-text-primary">{g.AWAY_TEAM_ABBREVIATION}</span>
+                                <span className="text-xs px-1 py-0.2 rounded-sm bg-background-secondary border border-border text-text-secondary">
+                                  {g.SEASON_TYPE === "NBA Finals" ? "Finals" : (g.SEASON_TYPE === "Pre Season" || g.SEASON_TYPE === "Preseason" ? "Preseason" : "Normal")}
                                 </span>
                               </div>
-                              <span className="text-[10px] text-slate-400 font-bold font-mono">{g.GAME_DATE}</span>
+                              <span className="text-xs text-text-secondary tabular-nums">{g.GAME_DATE}</span>
                             </button>
                           );
                         })
@@ -647,33 +634,33 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
             {mode === "custom" && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Home Team</label>
+                  <label className="text-xs font-medium text-text-secondary block">Ev sahibi</label>
                   <select
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-xs"
+                    className="w-full h-8 rounded border border-border bg-background-primary px-3 text-xs font-medium text-text-primary focus:border-border-focus focus:outline-none"
                     value={home}
                     onChange={(e) => { setHome(e.target.value); setResult(null); setError(null); }}
                   >
-                    <option value="">Select Home</option>
+                    <option value="">Ev Sahibi Seç</option>
                     {NBA_TEAMS.map((t) => <option key={t.abbr} value={t.abbr}>{t.abbr} — {t.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Away Team</label>
+                  <label className="text-xs font-medium text-text-secondary block">Deplasman</label>
                   <select
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-xs"
+                    className="w-full h-8 rounded border border-border bg-background-primary px-3 text-xs font-medium text-text-primary focus:border-border-focus focus:outline-none"
                     value={away}
                     onChange={(e) => { setAway(e.target.value); setResult(null); setError(null); }}
                   >
-                    <option value="">Select Away</option>
+                    <option value="">Deplasman Seç</option>
                     {NBA_TEAMS.map((t) => <option key={t.abbr} value={t.abbr} disabled={t.abbr === home}>{t.abbr} — {t.name}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Date</label>
+                  <label className="text-xs font-medium text-text-secondary block">Tarih</label>
                   <input
                     type="date"
                     min="2026-10-01"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-indigo-500 focus:outline-none shadow-xs"
+                    className="w-full h-8 rounded border border-border bg-background-primary px-3 text-xs font-medium text-text-primary focus:border-border-focus focus:outline-none"
                     value={date}
                     onChange={(e) => { setDate(e.target.value); setResult(null); setError(null); }}
                   />
@@ -683,19 +670,19 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
             {/* Pre-prediction Lineup & Injury Configuration */}
             {home && away && date && home !== away && (
-              <div className="pt-2 border-t border-slate-100">
+              <div className="pt-2 border-t border-border-light">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                    Sakatlık & Rotasyon Ayarları (Tahmin Öncesi / Canlı)
+                  <span className="text-xs font-semibold text-text-primary">
+                    Sakatlık ve rotasyon ayarları (tahmin öncesi / canlı)
                   </span>
                   {Object.keys(playerOverrides).length > 0 && (
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-sm bg-status-warning/10 text-status-warning border border-status-warning/20">
                       {Object.keys(playerOverrides).length} Oyuncu Durumu Değiştirildi
                     </span>
                   )}
                 </div>
                 {loadingPreview && !previewRosters && !result ? (
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 text-center text-xs text-slate-400">
+                  <div className="p-4 bg-background-secondary rounded border border-border text-center text-xs text-text-secondary">
                     Kadro ve rotasyon bilgileri yükleniyor...
                   </div>
                 ) : (
@@ -714,30 +701,34 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
               </div>
             )}
 
-            {/* CTA */}
+            {/* CTA Buttons */}
             {home && away && date && (
               <div className="flex items-center gap-3 pt-1">
                 <button
+                  type="button"
                   onClick={submit}
                   disabled={loading}
                   id="run-prediction-main-btn"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-black uppercase tracking-wider transition-colors shadow-md shadow-indigo-200"
+                  className="flex items-center gap-2 h-9 px-5 rounded bg-primary hover:bg-primary/90 disabled:opacity-60 text-white text-xs font-medium transition-colors cursor-pointer"
                 >
-                  {loading ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                  {loading
-                    ? "Analyzing..."
-                    : Object.keys(playerOverrides).length > 0
-                    ? "Run Prediction (With Lineup Changes)"
-                    : "Run Prediction Model"}
+                  {loading ? <RefreshCw size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  <span>
+                    {loading
+                      ? "Hesaplanıyor..."
+                      : Object.keys(playerOverrides).length > 0
+                      ? "Tahmini Çalıştır (Kadro Değişiklikleriyle)"
+                      : "Tahmin Modelini Çalıştır"}
+                  </span>
                 </button>
                 {result && (
                   <button
+                    type="button"
                     onClick={submit}
                     disabled={loading}
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-slate-600 text-[11px] font-bold uppercase tracking-wider transition-colors"
+                    className="flex items-center gap-1.5 h-9 px-3.5 rounded border border-border bg-background-primary hover:bg-background-secondary text-text-primary text-xs font-medium transition-colors cursor-pointer"
                   >
-                    <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
-                    Refresh
+                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                    <span>Yenile</span>
                   </button>
                 )}
               </div>
@@ -748,63 +739,59 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
       {/* Error message */}
       {error && (
-        <div className="p-4 bg-rose-50 text-rose-700 rounded-xl border border-rose-200 text-xs font-semibold flex items-center gap-2 animate-fade-in">
-          <AlertTriangle size={14} />
-          {error}
+        <div className="p-4 bg-status-error/10 text-status-error rounded border border-status-error/20 text-xs font-medium flex items-center gap-2">
+          <AlertTriangle size={15} />
+          <span>{error}</span>
         </div>
       )}
 
       {/* Loading state */}
       {loading && (
-        <div className="surface rounded-[1.5rem] p-12 flex flex-col items-center justify-center gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-indigo-100" />
-            <div className="w-16 h-16 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin absolute inset-0" />
-          </div>
-          <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Analyzing matchup statistics...</p>
+        <div className="bg-background-primary border border-border rounded p-12 flex flex-col items-center justify-center gap-3">
+          <RefreshCw size={24} className="animate-spin text-primary" />
+          <p className="text-xs font-medium text-text-secondary">
+            Karşılaşma istatistikleri ve modeller analiz ediliyor
+          </p>
         </div>
       )}
 
       {/* Empty state */}
       {!home || !away || !date ? (
-        <div className="surface rounded-[1.5rem] p-14 text-center flex flex-col items-center justify-center gap-4 min-h-[300px]">
-          <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center">
-            <Activity size={28} className="text-slate-300 animate-pulse" />
+        <div className="bg-background-primary border border-border rounded p-12 text-center flex flex-col items-center justify-center gap-3 min-h-[260px]">
+          <div className="w-12 h-12 rounded border border-border bg-background-secondary flex items-center justify-center text-text-secondary">
+            <Activity size={22} />
           </div>
           <div>
-            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest">Select a Matchup</h4>
-            <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto leading-relaxed">
-              Choose a scheduled game or build a custom matchup using the controls above to run the prediction engine.
+            <h4 className="text-sm font-semibold text-text-primary">Karşılaşma Seçin</h4>
+            <p className="text-xs text-text-secondary mt-1 max-w-sm mx-auto leading-relaxed">
+              Model simülasyonunu çalıştırmak için yukarıdaki fikstürden bir maç seçin veya özel takım eşleşmesi belirleyin.
             </p>
           </div>
         </div>
       ) : null}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          RESULT SECTIONS — only shown when result is available
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* RESULT SECTIONS */}
       {result && !loading && (
         <div className="space-y-5">
-
           {/* Partial failure warnings */}
           {(result.win_probability?.error || result.score_prediction?.error || result.score_prediction?.confidence_warning) && (
-            <div className="p-4 bg-amber-50 border border-amber-200/50 rounded-2xl text-xs text-amber-800 font-semibold space-y-1.5">
+            <div className="p-4 bg-status-warning/10 border border-status-warning/20 rounded text-xs text-status-warning font-medium space-y-1">
               {result.win_probability?.error && (
                 <p className="flex items-center gap-1.5 m-0">
-                  <AlertTriangle size={13} className="text-amber-600" />
-                  Win Probability Model: {result.win_probability.error}
+                  <AlertTriangle size={13} />
+                  Kazanma Olasılığı Modeli: {result.win_probability.error}
                 </p>
               )}
               {result.score_prediction?.error && (
                 <p className="flex items-center gap-1.5 m-0">
-                  <AlertTriangle size={13} className="text-amber-600" />
-                  Score Prediction Model: {result.score_prediction.error}
+                  <AlertTriangle size={13} />
+                  Skor Tahmini Modeli: {result.score_prediction.error}
                 </p>
               )}
               {result.score_prediction?.confidence_warning && (
                 <p className="flex items-center gap-1.5 m-0">
-                  <AlertTriangle size={13} className="text-amber-600" />
-                  Prediction Warning: {result.score_prediction.confidence_warning}
+                  <AlertTriangle size={13} />
+                  Tahmin Uyarısı: {result.score_prediction.confidence_warning}
                 </p>
               )}
             </div>
@@ -812,20 +799,20 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
           {/* Pre-Season Calibration Info Banner */}
           {(result.is_preseason || result.season_type === "Pre Season" || result.season_type === "Preseason") && (
-            <div className="p-4 bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border border-purple-200/90 rounded-2xl flex items-center gap-3.5 text-xs text-purple-900 shadow-xs">
-              <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 font-black text-[11px] shadow-sm tracking-wide">
+            <div className="p-4 bg-background-secondary border border-border rounded flex items-center gap-3 text-xs text-text-primary">
+              <div className="w-8 h-8 rounded border border-border bg-background-primary flex items-center justify-center shrink-0 font-semibold text-xs text-primary">
                 PRE
               </div>
               <div className="space-y-0.5">
-                <p className="font-bold text-purple-950 m-0 text-xs">Hazırlık Maçı (Pre-Season) Kalibrasyonu Devrede</p>
-                <p className="text-[11px] text-purple-800/85 m-0 leading-relaxed">
-                  Koç rotasyonları ve kısıtlı süreler nedeniyle as oyuncuların dakika tavanı (maks 22 dk) ve istatistik projeksiyonları otomatik olarak ölçeklenmiş, galibiyet olasılığı hazırlık maçı varyansına göre dengelenmiştir.
+                <p className="font-semibold text-text-primary m-0 text-xs">Hazırlık Maçı (Pre-Season) Kalibrasyonu Devrede</p>
+                <p className="text-xs text-text-secondary m-0 leading-relaxed">
+                  Koç rotasyonları ve kısıtlı süreler nedeniyle as oyuncuların dakika tavanı (maks 22 dk) ve istatistik projeksiyonları otomatik olarak ölçeklenmiştir.
                 </p>
               </div>
             </div>
           )}
 
-          {/* ── SECTION 2: HERO PREDICTION CARD & STADIUM HUB ── */}
+          {/* SECTION 2: HERO PREDICTION CARD */}
           {result.win_probability && !result.win_probability.error && winnerInfo && (
             <MatchupHeroCard
               result={result}
@@ -838,8 +825,9 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
             />
           )}
 
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div role="tablist" aria-label="Tahmin raporu bölümleri" className="grid grid-cols-2 border-b border-slate-200 bg-slate-50/80 sm:grid-cols-4">
+          {/* Result Tabs Panel */}
+          <section className="overflow-hidden rounded border border-border bg-background-primary">
+            <div role="tablist" aria-label="Tahmin raporu bölümleri" className="grid grid-cols-2 border-b border-border bg-background-secondary sm:grid-cols-4">
               {([
                 { id: "overview", label: "Genel Bakış", icon: LayoutDashboard, detail: "Maç senaryosu" },
                 { id: "explanation", label: "Modelin Gerekçesi", icon: Sparkles, detail: "Öne çıkan 5 neden" },
@@ -855,12 +843,16 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                     role="tab"
                     aria-selected={selected}
                     onClick={() => setActiveResultTab(tab.id)}
-                    className={`flex min-h-16 items-center gap-2.5 border-b-2 px-3 py-3 text-left transition-colors sm:px-4 ${selected ? "border-indigo-600 bg-white text-indigo-700" : "border-transparent text-slate-500 hover:bg-white hover:text-slate-800"}`}
+                    className={`flex min-h-14 items-center gap-2.5 border-b-2 px-3 py-2.5 text-left transition-colors sm:px-4 cursor-pointer ${
+                      selected
+                        ? "border-primary bg-background-primary text-text-primary"
+                        : "border-transparent text-text-secondary hover:text-text-primary"
+                    }`}
                   >
-                    <Icon size={16} className={selected ? "shrink-0 text-indigo-600" : "shrink-0 text-slate-400"} />
+                    <Icon size={16} className={selected ? "shrink-0 text-primary" : "shrink-0 text-text-secondary"} />
                     <span className="min-w-0">
-                      <span className="block text-[11px] font-black leading-tight">{tab.label}</span>
-                      <span className="mt-0.5 block text-[9px] font-medium text-slate-400">{tab.detail}</span>
+                      <span className="block text-xs font-semibold leading-tight">{tab.label}</span>
+                      <span className="mt-0.5 block text-xs text-text-secondary">{tab.detail}</span>
                     </span>
                   </button>
                 );
@@ -873,10 +865,10 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                   {result.win_probability && !result.win_probability.error && winnerInfo && (
                     <MatchupTacticalHub result={result} homeInfo={homeInfo} awayInfo={awayInfo} winnerInfo={winnerInfo} />
                   )}
-                  <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-[11px] leading-relaxed text-slate-500">
+                  <div className="rounded border border-border bg-background-secondary p-3.5 text-xs leading-relaxed text-text-secondary">
                     Tahminler istatistiksel model çıktılarıdır; kesin sonuç değildir. Skor tahminleri doğal olarak daha yüksek belirsizlik taşır.
                     {result.final_display_recommendation?.warning && (
-                      <span className="mt-1 block font-semibold text-amber-700">{result.final_display_recommendation.warning}</span>
+                      <span className="mt-1 block font-medium text-status-warning">{result.final_display_recommendation.warning}</span>
                     )}
                   </div>
                 </>
@@ -900,7 +892,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                       onApplyChanges={handleApplyOverrides}
                       loading={loading}
                     />
-                    <div className="surface rounded-[1.75rem] border border-slate-200/80 bg-white p-5 shadow-sm lg:p-7">
+                    <div className="bg-background-primary border border-border rounded p-5">
                       <PlayerSpotlight
                         players={result.player_predictions}
                         homeInfo={homeInfo}
@@ -911,7 +903,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                  <div className="rounded border border-border bg-background-secondary p-6 text-center text-xs text-text-secondary">
                     Bu tahminde oyuncu projeksiyonları oluşturulamadı.
                   </div>
                 )
@@ -920,7 +912,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
               {activeResultTab === "technical" && (
                 <div className="space-y-5">
                   <ModelDiagnostics modelStatus={modelStatus} result={result} />
-                  <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-[11px] leading-relaxed text-slate-500">
+                  <div className="rounded border border-border bg-background-secondary p-3.5 text-xs leading-relaxed text-text-secondary">
                     Kazanma olasılığı ve skor projeksiyonu ayrı modellerden gelir; yakın maçlarda favorileri farklı olabilir. SHAP açıklamaları model girdilerinin bu tek tahmine katkı yönünü gösterir, nedensellik veya garanti ifade etmez.
                   </div>
                 </div>

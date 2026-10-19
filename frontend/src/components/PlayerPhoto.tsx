@@ -21,7 +21,7 @@ function PlayerPhotoComponent({ playerId, name, size = 44, className = "", style
   if (!playerId || failed) {
     return (
       <div
-        className={`flex items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 ${className}`}
+        className={`flex items-center justify-center rounded-full border border-border bg-background-tertiary text-xs font-medium uppercase text-text-muted ${className}`}
         style={{ width: size, height: size, ...style }}
         title={name}
       >
@@ -40,7 +40,7 @@ function PlayerPhotoComponent({ playerId, name, size = 44, className = "", style
       loading="lazy"
       decoding="async"
       style={style}
-      className={`rounded-full object-cover ring-1 ring-slate-200 bg-white ${className}`}
+      className={`rounded-full object-cover ring-1 ring-border bg-background-primary ${className}`}
 
       onError={() => setFailed(true)}
     />

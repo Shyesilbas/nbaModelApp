@@ -1,73 +1,36 @@
-/**
- * GameDetailPanel
- *
- * Self-contained game box-score detail panel.
- * Loads its own data (team + player boxscores) based on season.
- * Designed to be embedded in PlayerPage when a game row is clicked.
- *
- * GAME_ID normalization: player_season_games uses 8-digit IDs (e.g. "22200002"),
- * boxscore files use 10-digit zero-padded IDs (e.g. "0022200002").
- * We normalize both to 10-digit for matching.
- */
-
-import { useEffect, useState } from "react";
-import {
-  ArrowLeft,
-  Star,
-} from "lucide-react";
-import PlayerPhoto from "./PlayerPhoto";
-import { loadArchivedGameBoxscores, loadArchivedPlayByPlay } from "../lib/archiveData";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Star } from "lucide-react";
 import TeamLogo from "./TeamLogo";
+import PlayerPhoto from "./PlayerPhoto";
+import { loadArchivedPlayByPlay, loadArchivedGameBoxscores } from "../lib/archiveData";
 
-/* ── Types ── */
-interface GameRow {
-  GAME_ID: string;
-  GAME_DATE: string | null;
-  SEASON: string;
-  TEAM_ABBREVIATION: string | null;
-  MATCHUP: string | null;
-  WL: string | null;
-  SEASON_TYPE: string | null;
-  DID_NOT_PLAY: boolean;
-  HOME_TEAM_ABBREVIATION: string | null;
-  HOME_TEAM_NAME: string | null;
-  HOME_SCORE: number | null;
-  AWAY_TEAM_ABBREVIATION: string | null;
-  AWAY_TEAM_NAME: string | null;
-  AWAY_SCORE: number | null;
-  WINNER_TEAM_ABBREVIATION: string | null;
-  IS_PLAYOFF: boolean;
-}
-
+/* ── Data Interfaces ── */
 interface TBS {
   GAME_ID: string;
   TEAM_ABBREVIATION: string;
-  TEAM_NAME?: string | null;
+  TEAM_NAME?: string;
   PTS?: number | null;
   REB?: number | null;
   AST?: number | null;
   STL?: number | null;
   BLK?: number | null;
   TOV?: number | null;
+  FG_PCT?: number | null;
+  FG3_PCT?: number | null;
+  FT_PCT?: number | null;
   FGM?: number | null;
   FGA?: number | null;
-  FG_PCT?: number | null;
   FG3M?: number | null;
   FG3A?: number | null;
-  FG3_PCT?: number | null;
   FTM?: number | null;
   FTA?: number | null;
-  FT_PCT?: number | null;
-  OREB?: number | null;
-  DREB?: number | null;
-  PLUS_MINUS?: number | null;
 }
 
 interface PBS {
   GAME_ID: string;
-  PLAYER_ID?: number | string;
-  PLAYER_NAME?: string | null;
-  TEAM_ABBREVIATION?: string | null;
+  PLAYER_ID: number;
+  PLAYER_NAME: string;
+  TEAM_ABBREVIATION: string;
   MIN?: number | null;
   PTS?: number | null;
   REB?: number | null;
@@ -84,9 +47,24 @@ interface PBS {
   FTM?: number | null;
   FTA?: number | null;
   FT_PCT?: number | null;
-  OREB?: number | null;
-  DREB?: number | null;
   PLUS_MINUS?: number | null;
+  START_POSITION?: string | null;
+}
+
+interface GameRow {
+  GAME_ID: string;
+  GAME_DATE: string;
+  HOME_TEAM_ABBREVIATION: string;
+  AWAY_TEAM_ABBREVIATION: string;
+  HOME_TEAM_NAME?: string;
+  AWAY_TEAM_NAME?: string;
+  HOME_SCORE?: number | null;
+  AWAY_SCORE?: number | null;
+  WINNER_TEAM_ABBREVIATION?: string | null;
+  SEASON?: string;
+  SEASON_TYPE?: string | null;
+  IS_PLAYOFF?: boolean | number;
+  MATCHUP?: string;
   WL?: string | null;
 }
 
@@ -98,7 +76,6 @@ interface GameDetailPanelProps {
 }
 
 /* ── Helpers ── */
-/** Normalize any GAME_ID to 10-digit zero-padded string for comparison */
 const normId = (id: string | number): string =>
   String(parseInt(String(id), 10)).padStart(10, "0");
 
@@ -119,10 +96,10 @@ const fmtDate = (d: string | null) => {
 };
 
 const pmClass = (pm: number | null | undefined) => {
-  if (pm == null) return "text-slate-400";
-  if (pm > 0) return "text-emerald-600 font-bold";
-  if (pm < 0) return "text-rose-500 font-bold";
-  return "text-slate-500";
+  if (pm == null) return "text-text-muted";
+  if (pm > 0) return "text-status-success font-medium";
+  if (pm < 0) return "text-status-error font-medium";
+  return "text-text-secondary";
 };
 
 /* ── Player list for a team ── */
@@ -136,61 +113,60 @@ function PlayerTable({
   const sorted = [...players].sort((a, b) => (b.MIN ?? 0) - (a.MIN ?? 0));
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/80">
-      <table className="w-full text-[11px]">
+    <div className="overflow-x-auto rounded border border-border bg-background-primary">
+      <table className="w-full text-xs">
         <thead>
-          <tr className="border-b border-slate-200">
-            <th className="sticky left-0 bg-slate-50 px-3 py-2.5 text-left text-[8px] font-black uppercase tracking-[0.24em] text-slate-400 min-w-[160px]">Player</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">MIN</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">PTS</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">REB</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">AST</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">STL</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">BLK</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">TOV</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">FG%</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">3P%</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">FT%</th>
-            <th className="px-2 py-2.5 text-right text-[8px] font-black uppercase tracking-[0.24em] text-slate-400">+/-</th>
+          <tr className="border-b border-border bg-background-tertiary">
+            <th className="sticky left-0 bg-background-tertiary px-3 py-2 text-left text-xs font-medium text-text-secondary min-w-[160px]">Player</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">MIN</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">PTS</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">REB</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">AST</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">STL</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">BLK</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">TOV</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">FG%</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">3P%</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">FT%</th>
+            <th className="px-2 py-2 text-right text-xs font-medium text-text-secondary">+/-</th>
           </tr>
         </thead>
-        <tbody>
-          {sorted.map((p, i) => {
+        <tbody className="divide-y divide-border-light">
+          {sorted.map((p) => {
             const pid = p.PLAYER_ID != null ? Number(p.PLAYER_ID) : null;
             const isHighlight = highlightId != null && pid === highlightId;
+
             return (
               <tr
-                key={i}
-                className={[
-                  "border-t border-slate-100 transition-colors",
-                  isHighlight
-                    ? "bg-[#1d428a]/5 ring-inset ring-1 ring-[#1d428a]/20"
-                    : "bg-white hover:bg-slate-50",
-                ].join(" ")}
+                key={p.PLAYER_ID}
+                className={`transition-colors hover:bg-background-tertiary ${
+                  isHighlight ? "bg-background-tertiary" : ""
+                }`}
               >
-                <td className="sticky left-0 bg-inherit px-3 py-2.5">
+                <td className="sticky left-0 bg-background-primary px-3 py-2 transition-colors">
                   <div className="flex items-center gap-2">
-                    <PlayerPhoto playerId={pid ?? 0} name={p.PLAYER_NAME ?? ""} size={24} />
+                    <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME} size={28} />
                     <div className="min-w-0">
-                      <p className={`truncate text-[11px] font-bold leading-tight ${isHighlight ? "text-[#1d428a]" : "text-slate-800"}`}>
-                        {p.PLAYER_NAME ?? "—"}
-                        {isHighlight && <Star size={9} className="inline ml-1 mb-0.5 text-[#1d428a]" />}
+                      <p className={`truncate text-xs ${isHighlight ? "font-semibold text-text-primary" : "font-medium text-text-primary"}`}>
+                        {p.PLAYER_NAME}
+                        {isHighlight && <Star size={11} className="inline ml-1 mb-0.5 text-text-primary" />}
                       </p>
+                      <p className="text-xs text-text-muted">{p.START_POSITION || "Bench"}</p>
                     </div>
                   </div>
                 </td>
-                <td className="px-2 py-2.5 text-right font-medium text-slate-500 tabular-nums">{p.MIN != null ? Math.round(p.MIN) : "—"}</td>
-                <td className="px-2 py-2.5 text-right font-black text-slate-900 tabular-nums">{fmtN(p.PTS)}</td>
-                <td className="px-2 py-2.5 text-right font-medium text-slate-700 tabular-nums">{fmtN(p.REB)}</td>
-                <td className="px-2 py-2.5 text-right font-medium text-slate-700 tabular-nums">{fmtN(p.AST)}</td>
-                <td className="px-2 py-2.5 text-right font-medium text-slate-600 tabular-nums">{fmtN(p.STL)}</td>
-                <td className="px-2 py-2.5 text-right font-medium text-slate-600 tabular-nums">{fmtN(p.BLK)}</td>
-                <td className="px-2 py-2.5 text-right font-medium text-slate-600 tabular-nums">{fmtN(p.TOV)}</td>
-                <td className="px-2 py-2.5 text-right font-medium text-slate-500 tabular-nums">{fmtPct(p.FG_PCT)}</td>
-                <td className="px-2 py-2.5 text-right font-medium text-slate-500 tabular-nums">{fmtPct(p.FG3_PCT)}</td>
-                <td className="px-2 py-2.5 text-right font-medium text-slate-500 tabular-nums">{fmtPct(p.FT_PCT)}</td>
-                <td className={`px-2 py-2.5 text-right tabular-nums ${pmClass(p.PLUS_MINUS)}`}>
-                  {p.PLUS_MINUS != null ? `${p.PLUS_MINUS > 0 ? "+" : ""}${p.PLUS_MINUS}` : "—"}
+                <td className="px-2 py-2 text-right tabular-nums text-xs text-text-muted">{p.MIN != null ? Math.round(p.MIN) : "—"}</td>
+                <td className="px-2 py-2 text-right font-semibold tabular-nums text-xs text-text-primary">{fmtN(p.PTS)}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-xs text-text-secondary">{fmtN(p.REB)}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-xs text-text-secondary">{fmtN(p.AST)}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-xs text-text-secondary">{fmtN(p.STL)}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-xs text-text-secondary">{fmtN(p.BLK)}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-xs text-text-secondary">{fmtN(p.TOV)}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-xs text-text-secondary">{fmtPct(p.FG_PCT)}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-xs text-text-secondary">{fmtPct(p.FG3_PCT)}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-xs text-text-secondary">{fmtPct(p.FT_PCT)}</td>
+                <td className={`px-2 py-2 text-right tabular-nums text-xs ${pmClass(p.PLUS_MINUS)}`}>
+                  {p.PLUS_MINUS != null ? (p.PLUS_MINUS > 0 ? `+${p.PLUS_MINUS}` : p.PLUS_MINUS) : "—"}
                 </td>
               </tr>
             );
@@ -205,8 +181,8 @@ function PlayerTable({
 function TeamTotals({ tbs, abbr, name, score, won }: {
   tbs: TBS | null;
   abbr: string | null;
-  name: string | null;
-  score: number | null;
+  name?: string | null;
+  score?: number | null;
   won: boolean;
 }) {
   const stats = [
@@ -221,29 +197,26 @@ function TeamTotals({ tbs, abbr, name, score, won }: {
     { label: "FT%", value: fmtPct(tbs?.FT_PCT) },
   ];
   return (
-    <div className="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+    <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
+      <div className="mb-4 flex items-center justify-between border-b border-border-light pb-3">
+        <div className="flex items-center gap-2.5">
           <TeamLogo abbr={abbr ?? ""} name={name ?? ""} size={36} />
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
-              {abbr} · {won ? "WIN" : "LOSS"}
+            <h3 className="text-sm font-semibold text-text-primary">{name ?? abbr}</h3>
+            <p className="mt-0.5 text-xs text-text-secondary">
+              {abbr} · {won ? "Win" : "Loss"}
             </p>
-            <p className="mt-0.5 text-sm font-bold text-slate-800">{name ?? abbr}</p>
           </div>
         </div>
-        <p
-          className={`text-4xl font-black leading-none ${won ? "text-slate-900" : "text-slate-400"}`}
-          style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-        >
+        <p className={`text-2xl font-semibold tabular-nums leading-none ${won ? "text-text-primary" : "text-text-secondary"}`}>
           {score ?? "—"}
         </p>
       </div>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">
-        {stats.map(({ label, value }) => (
-          <div key={label} className="rounded-xl border border-slate-100 bg-slate-50 px-2 py-2 text-center">
-            <p className="text-sm font-black leading-none text-slate-900" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>{value}</p>
-            <p className="mt-0.5 text-[7px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <div className="grid grid-cols-3 gap-y-2 sm:grid-cols-5 lg:grid-cols-9 divide-y sm:divide-y-0 sm:divide-x divide-border-light">
+        {stats.map(({ label, value }, idx) => (
+          <div key={label} className={`text-center ${idx > 0 ? "sm:px-1" : ""}`}>
+            <p className="text-sm font-semibold tabular-nums text-text-primary">{value}</p>
+            <p className="text-xs text-text-muted">{label}</p>
           </div>
         ))}
       </div>
@@ -269,7 +242,6 @@ export default function GameDetailPanel({
   const normGameId = normId(game.GAME_ID);
 
   useEffect(() => {
-    setLoading(true);
     loadArchivedGameBoxscores(season, game.GAME_ID).then(({ team_boxscores: teamData, player_boxscores: playerData }) => {
       const gameTeams: TBS[] = (teamData as TBS[]).filter(
         (t) => normId(t.GAME_ID) === normGameId
@@ -326,90 +298,80 @@ export default function GameDetailPanel({
   ] as const;
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4">
       {/* Back button */}
       <button
         onClick={onBack}
-        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
+        className="inline-flex items-center gap-1.5 rounded border border-border bg-background-primary px-3 py-1.5 text-xs font-medium text-text-primary transition-colors hover:bg-background-tertiary"
       >
-        <ArrowLeft size={11} />
+        <ArrowLeft size={13} />
         Back to game log
       </button>
 
       {/* Header card */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="p-5 sm:p-6">
-          {/* Date + type */}
-          <div className="mb-4 flex items-center gap-2">
-            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
-              {fmtDate(game.GAME_DATE)}
+      <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
+        <div className="mb-3 flex items-center gap-2 text-xs">
+          <span className="text-text-muted">{fmtDate(game.GAME_DATE)}</span>
+          {game.IS_PLAYOFF ? (
+            <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 font-medium text-text-secondary">
+              Playoff
             </span>
-            {game.IS_PLAYOFF && (
-              <span className="rounded-full bg-[#1d428a]/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-[#1d428a]">
-                Playoff
-              </span>
-            )}
-            {game.SEASON_TYPE && !game.IS_PLAYOFF && (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-slate-500">
-                {game.SEASON_TYPE}
-              </span>
-            )}
-          </div>
-
-          {/* Teams + Score */}
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-            {/* Away */}
-            <div className="flex items-center gap-3">
-              <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION ?? ""} name={game.AWAY_TEAM_NAME ?? ""} size={48} />
-              <div>
-                <p className={`text-lg font-black leading-tight ${awayWon ? "text-slate-900" : "text-slate-400"}`}
-                  style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  {game.AWAY_TEAM_NAME ?? game.AWAY_TEAM_ABBREVIATION}
-                </p>
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Away</p>
-              </div>
-            </div>
-
-            {/* Score */}
-            <div className="text-center">
-              <div className="flex items-baseline justify-center gap-2">
-                <span className={`text-5xl font-black leading-none ${awayWon ? "text-slate-900" : "text-slate-300"}`}
-                  style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  {game.AWAY_SCORE ?? "—"}
-                </span>
-                <span className="text-2xl font-light text-slate-200">–</span>
-                <span className={`text-5xl font-black leading-none ${homeWon ? "text-slate-900" : "text-slate-300"}`}
-                  style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  {game.HOME_SCORE ?? "—"}
-                </span>
-              </div>
-              {game.WINNER_TEAM_ABBREVIATION && (
-                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                  {game.WINNER_TEAM_ABBREVIATION} WIN
-                  {game.HOME_SCORE != null && game.AWAY_SCORE != null && (
-                    <span> · +{Math.abs(game.HOME_SCORE - game.AWAY_SCORE)}</span>
-                  )}
-                </p>
-              )}
-            </div>
-
-            {/* Home */}
-            <div className="flex items-center justify-end gap-3">
-              <div className="text-right">
-                <p className={`text-lg font-black leading-tight ${homeWon ? "text-slate-900" : "text-slate-400"}`}
-                  style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-                  {game.HOME_TEAM_NAME ?? game.HOME_TEAM_ABBREVIATION}
-                </p>
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Home</p>
-              </div>
-              <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION ?? ""} name={game.HOME_TEAM_NAME ?? ""} size={48} />
-            </div>
-          </div>
+          ) : game.SEASON_TYPE ? (
+            <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-text-secondary">
+              {game.SEASON_TYPE}
+            </span>
+          ) : null}
         </div>
 
+        {/* Teams + Score */}
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+          {/* Away */}
+          <div className="flex items-center gap-2.5">
+            <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION ?? ""} name={game.AWAY_TEAM_NAME ?? ""} size={40} />
+            <div className="min-w-0">
+              <p className={`truncate text-sm font-semibold ${awayWon ? "text-text-primary" : "text-text-secondary"}`}>
+                {game.AWAY_TEAM_NAME ?? game.AWAY_TEAM_ABBREVIATION}
+              </p>
+              <p className="text-xs text-text-muted">Away</p>
+            </div>
+          </div>
+
+          {/* Score */}
+          <div className="rounded border border-border bg-background-tertiary px-4 py-2 text-center">
+            <div className="flex items-baseline justify-center gap-1.5">
+              <span className={`text-xl font-semibold tabular-nums ${awayWon ? "text-text-primary" : "text-text-secondary"}`}>
+                {game.AWAY_SCORE ?? "—"}
+              </span>
+              <span className="text-xs text-text-muted">–</span>
+              <span className={`text-xl font-semibold tabular-nums ${homeWon ? "text-text-primary" : "text-text-secondary"}`}>
+                {game.HOME_SCORE ?? "—"}
+              </span>
+            </div>
+            {game.WINNER_TEAM_ABBREVIATION && (
+              <p className="text-xs tabular-nums text-text-muted">
+                {game.WINNER_TEAM_ABBREVIATION} Win
+                {game.HOME_SCORE != null && game.AWAY_SCORE != null && (
+                  <span> · +{Math.abs(game.HOME_SCORE - game.AWAY_SCORE)}</span>
+                )}
+              </p>
+            )}
+          </div>
+
+          {/* Home */}
+          <div className="flex items-center justify-end gap-2.5 text-right">
+            <div className="min-w-0">
+              <p className={`truncate text-sm font-semibold ${homeWon ? "text-text-primary" : "text-text-secondary"}`}>
+                {game.HOME_TEAM_NAME ?? game.HOME_TEAM_ABBREVIATION}
+              </p>
+              <p className="text-xs text-text-muted">Home</p>
+            </div>
+            <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION ?? ""} name={game.HOME_TEAM_NAME ?? ""} size={40} />
+          </div>
+        </div>
       </div>
 
-      <nav aria-label="Game details" className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1">
+      {/* Tabs */}
+      <nav aria-label="Game details" className="flex gap-1 border-b border-border bg-background-primary pb-px">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -417,7 +379,11 @@ export default function GameDetailPanel({
             role="tab"
             aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 rounded-lg px-3.5 py-2.5 text-xs font-semibold transition-colors sm:px-4 ${activeTab === tab.id ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+            className={`border-b-2 px-3 py-2 text-xs font-medium transition-colors ${
+              activeTab === tab.id
+                ? "border-primary text-text-primary"
+                : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
+            }`}
           >
             {tab.label}
           </button>
@@ -426,20 +392,18 @@ export default function GameDetailPanel({
 
       {/* Loading */}
       {loading && (
-        <div className="flex h-32 items-center justify-center gap-2">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-transparent" />
-          <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Loading box scores...
-          </span>
+        <div className="flex h-32 items-center justify-center gap-2 rounded border border-border bg-background-primary">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="text-xs text-text-secondary">Loading box scores...</span>
         </div>
       )}
 
       {/* General game information */}
       {!loading && activeTab === "info" && (
-        <section className="animate-fade-in rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <section className="rounded border border-border bg-background-primary p-4 sm:p-5">
           <div className="mb-4">
-            <h2 className="m-0 text-base font-semibold text-slate-900">General information</h2>
-            <p className="mt-1 text-xs text-slate-500">Match context and final result</p>
+            <h2 className="text-sm font-semibold text-text-primary">General information</h2>
+            <p className="mt-0.5 text-xs text-text-secondary">Match context and final result</p>
           </div>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
             {[
@@ -452,9 +416,9 @@ export default function GameDetailPanel({
               { label: "Margin", value: game.HOME_SCORE != null && game.AWAY_SCORE != null ? `${Math.abs(game.HOME_SCORE - game.AWAY_SCORE)} points` : "—" },
               { label: "Game ID", value: game.GAME_ID },
             ].map((item) => (
-              <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
-                <dt className="text-[10px] font-medium text-slate-500">{item.label}</dt>
-                <dd className="mt-1 text-sm font-semibold text-slate-900">{item.value}</dd>
+              <div key={item.label} className="rounded border border-border bg-background-tertiary p-3">
+                <dt className="text-xs font-medium text-text-muted">{item.label}</dt>
+                <dd className="mt-1 text-xs font-semibold tabular-nums text-text-primary">{item.value}</dd>
               </div>
             ))}
           </dl>
@@ -463,7 +427,7 @@ export default function GameDetailPanel({
 
       {/* Team box score */}
       {!loading && activeTab === "teams" && (
-        <div className="grid grid-cols-1 gap-3 animate-fade-in xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           <TeamTotals
             tbs={awayBS}
             abbr={game.AWAY_TEAM_ABBREVIATION}
@@ -483,18 +447,25 @@ export default function GameDetailPanel({
 
       {/* Player box score */}
       {!loading && activeTab === "players" && (
-        <section className="space-y-3 animate-fade-in rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section className="space-y-3 rounded border border-border bg-background-primary p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="m-0 text-base font-semibold text-slate-900">Player box score</h2>
-              <p className="mt-1 text-xs text-slate-500">Full individual game statistics</p>
+              <h2 className="text-sm font-semibold text-text-primary">Player box score</h2>
+              <p className="mt-0.5 text-xs text-text-secondary">Full individual game statistics</p>
             </div>
-            <div className="flex rounded-lg bg-slate-100 p-1">
+            <div className="flex rounded border border-border bg-background-primary p-0.5">
               {([
                 { side: "away", abbr: game.AWAY_TEAM_ABBREVIATION },
                 { side: "home", abbr: game.HOME_TEAM_ABBREVIATION },
               ] as const).map(({ side, abbr }) => (
-                <button key={side} type="button" onClick={() => setPlayerTeam(side)} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${playerTeam === side ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                <button
+                  key={side}
+                  type="button"
+                  onClick={() => setPlayerTeam(side)}
+                  className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                    playerTeam === side ? "bg-primary text-white" : "text-text-secondary hover:text-text-primary"
+                  }`}
+                >
                   {abbr}
                 </button>
               ))}
@@ -503,12 +474,14 @@ export default function GameDetailPanel({
           {(playerTeam === "home" ? homePlayers : awayPlayers).length > 0 ? (
             <PlayerTable players={playerTeam === "home" ? homePlayers : awayPlayers} highlightId={highlightPlayerId} />
           ) : (
-            <p className="rounded-xl bg-slate-50 py-10 text-center text-sm text-slate-500">Player box score data is not available for this team.</p>
+            <p className="rounded border border-border bg-background-tertiary py-8 text-center text-xs text-text-muted">
+              Player box score data is not available for this team.
+            </p>
           )}
         </section>
       )}
 
-      {/* Curated moments and complete play-by-play */}
+      {/* Highlights & play-by-play */}
       {!loading && (activeTab === "highlights" || activeTab === "pbp") && (
         <PlayByPlayTab
           gameId={game.GAME_ID}
@@ -548,8 +521,6 @@ interface PbpData {
     away_total: number;
   }[];
   events: PbpEvent[];
-  scoring_event_count?: number;
-  highlight_event_count?: number;
 }
 
 function PlayByPlayTab({
@@ -567,8 +538,6 @@ function PlayByPlayTab({
   const [filter, setFilter] = useState<"all" | "q1" | "q2" | "q3" | "q4" | "scoring">("all");
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
     const normGameId = String(gameId).replace(/\D/g, "").padStart(10, "0");
     loadArchivedPlayByPlay(normGameId, season)
       .then((pbp: PbpData) => {
@@ -583,20 +552,18 @@ function PlayByPlayTab({
 
   if (loading) {
     return (
-      <div className="flex h-32 items-center justify-center gap-2">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-transparent" />
-        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-          Loading game events...
-        </span>
+      <div className="flex h-32 items-center justify-center gap-2 rounded border border-border bg-background-primary">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <span className="text-xs text-text-secondary">Loading game events...</span>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center bg-slate-50/50">
-        <p className="text-xs font-semibold text-slate-400">
-          Play-by-play logs are not available for this game. Run the play-by-play ingestion command to cache detailed events.
+      <div className="rounded border border-border bg-background-primary p-6 text-center">
+        <p className="text-xs text-text-muted">
+          Play-by-play logs are not available for this game.
         </p>
       </div>
     );
@@ -622,88 +589,97 @@ function PlayByPlayTab({
   });
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      {mode === "pbp" && <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3">
-          Quarter Breakdown
-        </p>
-        <div className="grid grid-cols-5 gap-2 text-center text-xs font-bold">
-          <div className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 self-center">
-            Team
-          </div>
-          {data.quarter_scores.map((qs) => (
-            <div
-              key={qs.quarter}
-              className="bg-slate-50 rounded-xl py-2 border border-slate-100/50"
-            >
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                {qs.quarter}
-              </p>
-              <p className="text-slate-800 tabular-nums">
-                {qs.away} - {qs.home}
-              </p>
+    <div className="space-y-4">
+      {mode === "pbp" && (
+        <div className="rounded border border-border bg-background-primary p-4">
+          <h4 className="text-sm font-semibold text-text-primary mb-3">
+            Quarter breakdown
+          </h4>
+          <div className="grid grid-cols-5 gap-2 text-center text-xs">
+            <div className="text-left text-xs font-medium text-text-muted self-center">
+              Team
             </div>
+            {data.quarter_scores.map((qs) => (
+              <div
+                key={qs.quarter}
+                className="rounded border border-border bg-background-tertiary py-1.5"
+              >
+                <p className="text-xs font-medium text-text-muted uppercase">
+                  {qs.quarter}
+                </p>
+                <p className="text-xs font-semibold tabular-nums text-text-primary">
+                  {qs.away} - {qs.home}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      {mode === "pbp" && (
+        <div className="flex flex-wrap gap-1.5">
+          {(["all", "q1", "q2", "q3", "q4", "scoring"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                filter === f
+                  ? "bg-primary text-white"
+                  : "border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary"
+              }`}
+            >
+              {f.toUpperCase()}
+            </button>
           ))}
         </div>
-      </div>}
-
-      {/* Control panel / Filters */}
-      {mode === "pbp" && <div className="flex flex-wrap gap-1.5">
-        {(["all", "q1", "q2", "q3", "q4", "scoring"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={[
-              "rounded-full px-3.5 py-1 text-[9px] font-black uppercase tracking-widest transition-all",
-              filter === f
-                ? "bg-slate-800 text-white shadow-sm"
-                : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50",
-            ].join(" ")}
-          >
-            {f}
-          </button>
-        ))}
-      </div>}
+      )}
 
       {/* Events Log */}
-      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex items-end justify-between gap-3">
+      <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
+        <div className="flex items-end justify-between gap-3 border-b border-border-light pb-3 mb-3">
           <div>
-            <h2 className="m-0 text-base font-semibold text-slate-900">{mode === "highlights" ? "Game highlights" : "Play-by-play"}</h2>
-            <p className="mt-1 text-xs text-slate-500">{mode === "highlights" ? "Key moments, scoring runs and turning points" : "Chronological event log"}</p>
+            <h2 className="text-sm font-semibold text-text-primary">
+              {mode === "highlights" ? "Game highlights" : "Play-by-play"}
+            </h2>
+            <p className="text-xs text-text-secondary">
+              {mode === "highlights" ? "Key moments and turning points" : "Chronological event log"}
+            </p>
           </div>
-          <span className="text-xs tabular-nums text-slate-500">{filteredEvents.length} events</span>
+          <span className="text-xs tabular-nums text-text-muted">{filteredEvents.length} events</span>
         </div>
-        <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-100 scrollbar-thin">
+        <div className="max-h-[600px] overflow-y-auto divide-y divide-border-light">
           {filteredEvents.map((e, idx) => {
             return (
               <div
                 key={`${e.period}-${e.clock}-${idx}`}
-                className="grid grid-cols-[64px_1fr_auto] items-center gap-3 px-2 py-3 text-sm first:pt-1 last:pb-1"
+                className="grid grid-cols-[64px_1fr_auto] items-center gap-3 px-2 py-2 text-xs first:pt-1 last:pb-1"
               >
-                <div className="text-xs font-medium tabular-nums text-slate-400">
+                <div className="text-xs font-medium tabular-nums text-text-muted">
                   Q{e.period} {e.clock}
                 </div>
 
                 <div className="min-w-0">
-                  <p className="m-0 text-sm font-medium leading-snug text-slate-800">
-                    {e.player_name && <span className="font-semibold text-slate-900">{e.player_name} · </span>}
-                    {e.team && <span className="font-semibold text-slate-500">{e.team} · </span>}
+                  <p className="m-0 text-xs text-text-primary">
+                    {e.player_name && <span className="font-semibold">{e.player_name} · </span>}
+                    {e.team && <span className="text-text-muted">{e.team} · </span>}
                     {e.description || e.action_type}
                   </p>
                   {mode === "highlights" && (e.badges?.length || e.moment_reasons?.length) ? (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
+                    <div className="mt-1 flex flex-wrap gap-1">
                       {[...(e.badges ?? []), ...(e.moment_reasons ?? []).filter((reason) => keyMomentReasons.has(reason) && reason !== "badge")].slice(0, 3).map((reason) => (
-                        <span key={reason} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium capitalize text-slate-600">{reason.replaceAll("_", " ")}</span>
+                        <span key={reason} className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-secondary capitalize">
+                          {reason.replaceAll("_", " ")}
+                        </span>
                       ))}
                     </div>
                   ) : null}
                 </div>
 
-                <div className="whitespace-nowrap text-right text-xs font-semibold tabular-nums text-slate-600">
+                <div className="whitespace-nowrap text-right text-xs font-semibold tabular-nums text-text-primary">
                   {e.score_away} - {e.score_home}
                   {e.points_scored > 0 && (
-                    <span className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-700">
+                    <span className="ml-1 text-xs font-medium text-status-success">
                       +{e.points_scored}
                     </span>
                   )}
@@ -712,7 +688,7 @@ function PlayByPlayTab({
             );
           })}
           {filteredEvents.length === 0 && (
-            <p className="py-8 text-center text-[11px] text-slate-400">
+            <p className="py-8 text-center text-xs text-text-muted">
               {mode === "highlights" ? "No highlighted moments are available for this game." : "No events match the selected filter."}
             </p>
           )}

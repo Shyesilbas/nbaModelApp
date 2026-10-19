@@ -22,38 +22,29 @@ export function SignalCards({
   const signals = [
     {
       icon: <Home size={16} />,
-      label: "Home Court",
-      value: isHome ? `+${homeInfo.abbr} Edge` : "Neutral Factor",
-      detail: isHome ? "Home team favored" : "Away team overcoming",
-      color: winnerInfo.color,
+      label: "Saha Avantajı",
+      value: isHome ? `+${homeInfo.abbr} Üstünlüğü` : "Nötr / Denge",
+      detail: isHome ? "Ev sahibi faktörü" : "Deplasman direnci",
     },
     {
       icon: <TrendingUp size={16} />,
-      label: "Win Probability",
-      value: `${(winProb * 100).toFixed(1)}%`,
-      detail: "Model confidence",
-      color: winProb > 0.65 ? "#10b981" : winProb > 0.55 ? "#3b82f6" : "#f59e0b",
+      label: "Kazanma Olasılığı",
+      value: `%${(winProb * 100).toFixed(1)}`,
+      detail: "Model güveni",
     },
     {
       icon: <Target size={16} />,
-      label: "Confidence Tier",
-      value: win?.confidence_bucket || "MEDIUM",
-      detail: "Prediction strength",
-      color:
-        win?.confidence_bucket?.toUpperCase().includes("STRONG")
-          ? "#10b981"
-          : win?.confidence_bucket?.toUpperCase().includes("MODERATE")
-            ? "#3b82f6"
-            : "#f59e0b",
+      label: "Güven Seviyesi",
+      value: win?.confidence_bucket || "ORTA",
+      detail: "Tahmin gücü",
     },
     ...(margin !== null
       ? [
           {
             icon: <BarChart2 size={16} />,
-            label: "Expected Margin",
-            value: `${margin.toFixed(1)} pts`,
-            detail: `${winnerInfo.abbr} projected lead`,
-            color: winnerInfo.color,
+            label: "Beklenen Fark",
+            value: `+${margin.toFixed(1)} Sayı`,
+            detail: `${winnerInfo.abbr} öngörülen marj`,
           },
         ]
       : []),
@@ -61,19 +52,17 @@ export function SignalCards({
       ? [
           {
             icon: <Zap size={16} />,
-            label: "Total Points",
-            value: `${score.predicted_total_points.toFixed(0)} pts`,
-            detail: `Range: ${score.total_points_range[0]}-${score.total_points_range[1]}`,
-            color: "#8b5cf6",
+            label: "Toplam Sayı",
+            value: `${score.predicted_total_points.toFixed(0)} Sayı`,
+            detail: `Aralık: ${score.total_points_range[0]}–${score.total_points_range[1]}`,
           },
         ]
       : []),
     {
       icon: <Shield size={16} />,
-      label: "Model Signal",
+      label: "Model Kararı",
       value: result.final_display_recommendation?.primary_winner_signal || "WIN_PROB",
-      detail: "Primary decision source",
-      color: "#64748b",
+      detail: "Birincil sinyal",
     },
   ];
 
@@ -82,17 +71,18 @@ export function SignalCards({
       {signals.map((s, i) => (
         <div
           key={i}
-          className={`signal-card animate-fade-in-up stagger-${Math.min(i + 1, 8)}`}
-          style={{ borderLeftColor: s.color }}
+          className="bg-background-primary border border-border rounded p-3 flex flex-col justify-between gap-1.5"
         >
-          <div className="flex items-center gap-2" style={{ color: s.color }}>
+          <div className="flex items-center gap-1.5 text-text-secondary">
             {s.icon}
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{s.label}</span>
+            <span className="text-xs font-medium text-text-secondary truncate">
+              {s.label}
+            </span>
           </div>
-          <p className="text-sm font-black text-slate-900 leading-tight font-mono" style={{ color: s.color }}>
+          <p className="text-base font-semibold tabular-nums text-text-primary">
             {s.value}
           </p>
-          <p className="text-[10px] text-slate-400 font-medium">{s.detail}</p>
+          <p className="text-xs text-text-secondary truncate">{s.detail}</p>
         </div>
       ))}
     </div>

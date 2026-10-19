@@ -47,7 +47,6 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
     return p.status || "ACTIVE";
   };
 
-
   const handleStatusSelect = (p: RotationPlayer, status: "ACTIVE" | "RESTRICTED" | "OUT") => {
     const key = String(p.player_id ?? p.player_name);
     const factor = status === "OUT" ? 0.0 : status === "RESTRICTED" ? 0.6 : 1.0;
@@ -72,19 +71,19 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
       : players;
 
     return (
-      <div className="flex-1 bg-slate-900/60 rounded-2xl border border-slate-800/80 p-4 flex flex-col gap-3">
+      <div className="flex-1 bg-background-secondary rounded border border-border p-4 flex flex-col gap-3">
         {/* Team Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div className="flex items-center justify-between border-b border-border-light pb-3">
           <div className="flex items-center gap-2.5">
             <TeamLogo abbr={team.abbr} name={team.name} size={28} />
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-black text-white">{team.name}</span>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
-                  {isHome ? "HOME" : "AWAY"}
+                <span className="text-xs font-semibold text-text-primary">{team.name}</span>
+                <span className="text-xs font-medium px-1.5 py-0.5 rounded-sm bg-background-primary border border-border text-text-secondary uppercase">
+                  {isHome ? "Ev Sahibi" : "Deplasman"}
                 </span>
               </div>
-              <p className="text-[10px] font-medium text-slate-400">
+              <p className="text-xs text-text-secondary">
                 {players.filter((p) => getPlayerStatus(p) !== "DNP" && getPlayerStatus(p) !== "OUT").length} Aktif Rotasyon · {players.length} Kadro Oyuncusu
               </p>
             </div>
@@ -92,33 +91,33 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
 
           <div className="flex items-center gap-1.5">
             {outCount > 0 && (
-              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
+              <span className="text-xs font-medium px-2 py-0.5 rounded-sm bg-status-error/10 text-status-error border border-status-error/20">
                 {outCount} Out
               </span>
             )}
             {restCount > 0 && (
-              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                {restCount} Restricted
+              <span className="text-xs font-medium px-2 py-0.5 rounded-sm bg-status-warning/10 text-status-warning border border-status-warning/20">
+                {restCount} Kısıtlı
               </span>
             )}
             {outCount === 0 && restCount === 0 && (
-              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                Full Strength
+              <span className="text-xs font-medium px-2 py-0.5 rounded-sm bg-status-success/10 text-status-success border border-status-success/20">
+                Tam Kadro
               </span>
             )}
           </div>
         </div>
 
-        {/* Quick Search Filter */}
+        {/* Search */}
         {players.length > 8 && (
           <div className="relative">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary" />
             <input
               type="text"
-              placeholder={`Search ${team.name} roster (${players.length} players)...`}
+              placeholder={`${team.name} kadrosunda ara (${players.length} oyuncu)...`}
               value={isHome ? homeQuery : awayQuery}
               onChange={(e) => (isHome ? setHomeQuery(e.target.value) : setAwayQuery(e.target.value))}
-              className="w-full rounded-xl border border-slate-800 bg-slate-950/70 py-1.5 pl-8 pr-3 text-[11px] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50"
+              className="w-full h-8 rounded border border-border bg-background-primary pl-8 pr-3 text-xs text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-border-focus"
             />
           </div>
         )}
@@ -126,8 +125,8 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
         {/* Players List */}
         <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
           {displayedPlayers.length === 0 ? (
-            <div className="p-4 text-center text-xs text-slate-500">
-              {query ? `No players matching "${query}"` : "No rotation players listed"}
+            <div className="p-4 text-center text-xs text-text-secondary">
+              {query ? `"${query}" ile eşleşen oyuncu bulunamadı.` : "Kadro oyuncusu bulunamadı."}
             </div>
           ) : (
             displayedPlayers.map((p) => {
@@ -139,89 +138,96 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
               return (
                 <div
                   key={String(p.player_id ?? p.player_name)}
-                  className={`flex items-center justify-between p-2 rounded-xl transition-all border ${
+                  className={`flex items-center justify-between p-2 rounded border transition-colors ${
                     isOut
-                      ? "bg-rose-950/20 border-rose-900/40 opacity-75"
+                      ? "bg-background-primary/50 border-status-error/30 opacity-75"
                       : isRestricted
-                      ? "bg-amber-950/20 border-amber-900/40"
+                      ? "bg-background-primary border-status-warning/30"
                       : isDnp
-                      ? "bg-slate-950/25 border-slate-800/40 opacity-70 hover:opacity-100 hover:border-slate-700"
-                      : "bg-slate-950/40 border-slate-800/60 hover:border-slate-700"
+                      ? "bg-background-primary/40 border-border opacity-70"
+                      : "bg-background-primary border-border hover:border-card-border-hover"
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-xs font-black truncate ${isOut ? "line-through text-slate-400" : isDnp ? "text-slate-400" : "text-slate-100"}`}>
+                        <span
+                          className={`text-xs font-semibold truncate ${
+                            isOut
+                              ? "line-through text-text-muted"
+                              : isDnp
+                              ? "text-text-secondary"
+                              : "text-text-primary"
+                          }`}
+                        >
                           {p.player_name}
                         </span>
                         {p.position_group && (
-                          <span className="text-[8px] font-bold px-1 py-0.2 rounded bg-slate-800 text-slate-400">
+                          <span className="text-xs font-medium px-1 py-0.2 rounded-sm bg-background-secondary text-text-secondary uppercase">
                             {p.position_group}
                           </span>
                         )}
                         {isDnp && (
-                          <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-500 uppercase">
+                          <span className="text-xs font-medium px-1.5 py-0.2 rounded-sm bg-background-secondary text-text-muted uppercase">
                             DNP
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+                      <div className="flex items-center gap-2 text-xs text-text-secondary">
                         {!isOut && !isDnp && p.predicted_pts !== undefined && (
-                          <span>
-                            Proj: <strong className="text-indigo-300">{p.predicted_pts} Sayı</strong>
+                          <span className="tabular-nums">
+                            Proj: <strong className="text-text-primary font-medium">{p.predicted_pts} Sayı</strong>
                             {p.predicted_min !== undefined && (
-                              <span className="text-slate-400 font-sans font-medium"> · {p.predicted_min} Dk</span>
+                              <span className="text-text-secondary"> · {p.predicted_min} Dk</span>
                             )}
                           </span>
                         )}
-                        {isDnp && <span className="text-slate-500 font-sans font-medium">• 0 Dk (DNP / Rotasyon Dışı)</span>}
-                        {isRestricted && <span className="text-amber-400 font-sans font-bold">• Kısıtlı Süre (%60)</span>}
-                        {isOut && <span className="text-rose-400 font-sans font-bold">• 0 Dk (Rolü Dağıtıldı)</span>}
+                        {isDnp && <span>0 Dk (Rotasyon Dışı)</span>}
+                        {isRestricted && <span className="text-status-warning font-medium">Kısıtlı Süre (%60)</span>}
+                        {isOut && <span className="text-status-error font-medium">0 Dk (Sakat / Yok)</span>}
                       </div>
                     </div>
                   </div>
 
-
                   {/* 3-Way Status Toggle */}
-                  <div className="flex items-center bg-slate-900 border border-slate-700/80 rounded-lg p-0.5 shrink-0">
+                  <div className="flex items-center bg-background-secondary border border-border rounded p-0.5 shrink-0 gap-0.5">
                     <button
                       type="button"
-                      title="Full Available (100% Usage)"
+                      title="Tam Kadro (%100 Rol)"
                       onClick={() => handleStatusSelect(p, "ACTIVE")}
-                      className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all flex items-center gap-1 ${
+                      className={`px-2 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer ${
                         currentStatus === "ACTIVE"
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "text-slate-400 hover:text-slate-200"
+                          ? "bg-status-success text-white"
+                          : "text-text-secondary hover:text-text-primary"
                       }`}
                     >
-                      <CheckCircle2 size={10} />
+                      <CheckCircle2 size={12} />
                       Full
                     </button>
                     <button
                       type="button"
-                      title="Restricted / Minutes Cap (60% Usage)"
+                      title="Kısıtlı Süre (%60 Rol)"
                       onClick={() => handleStatusSelect(p, "RESTRICTED")}
-                      className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all flex items-center gap-1 ${
+                      className={`px-2 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer ${
                         currentStatus === "RESTRICTED"
-                          ? "bg-amber-600 text-white shadow-xs"
-                          : "text-slate-400 hover:text-slate-200"
+                          ? "bg-status-warning text-white"
+                          : "text-text-secondary hover:text-text-primary"
                       }`}
                     >
-                      <Clock size={10} />
-                      Restr.
+                      <Clock size={12} />
+                      Kısıtlı
                     </button>
                     <button
                       type="button"
-                      title="Out / Inactive (0% Usage)"
+                      title="Kadro Dışı / Sakat (0 Dk)"
                       onClick={() => handleStatusSelect(p, "OUT")}
-                      className={`px-2 py-1 rounded text-[9px] font-black uppercase transition-all flex items-center gap-1 ${
+                      className={`px-2 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer ${
                         currentStatus === "OUT"
-                          ? "bg-rose-600 text-white shadow-xs"
-                          : "text-slate-400 hover:text-slate-200"
+                          ? "bg-status-error text-white"
+                          : "text-text-secondary hover:text-text-primary"
                       }`}
                     >
-                      <UserX size={10} />
+                      <UserX size={12} />
                       Out
                     </button>
                   </div>
@@ -235,22 +241,22 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
   };
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border border-slate-800 p-5 shadow-xl space-y-4">
+    <div className="bg-background-primary border border-border rounded p-5 space-y-4">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-light pb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded border border-border bg-background-secondary flex items-center justify-center text-primary shrink-0">
             <Users size={16} />
           </div>
           <div>
-            <h3 className="text-sm font-black text-white tracking-wide flex items-center gap-2">
-              Interactive Lineup & Injury Hub
-              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                Live Simulation
+            <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+              İnteraktif Kadro ve Sakatlık Simülatörü
+              <span className="text-xs font-medium px-2 py-0.5 rounded-sm bg-background-secondary border border-border text-primary">
+                Canlı Simülasyon
               </span>
             </h3>
-            <p className="text-[11px] text-slate-400">
-              Set player injuries or minutes restrictions. Lost scoring usage is automatically redistributed to teammates.
+            <p className="text-xs text-text-secondary">
+              Oyuncu sakatlığı veya süre kısıtlaması belirleyin. Boşa çıkan hücum kullanım payı otomatik olarak takım arkadaşlarına dağıtılır.
             </p>
           </div>
         </div>
@@ -258,22 +264,24 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
         <div className="flex items-center gap-2">
           {overrideCount > 0 && (
             <button
+              type="button"
               onClick={onResetOverrides}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-[10px] font-bold uppercase tracking-wider transition-colors"
+              className="flex items-center gap-1.5 h-8 px-3 rounded border border-border bg-background-primary hover:bg-background-secondary text-text-primary text-xs font-medium transition-colors cursor-pointer"
             >
-              <RotateCcw size={11} />
-              Reset All ({overrideCount})
+              <RotateCcw size={12} />
+              <span>Sıfırla ({overrideCount})</span>
             </button>
           )}
 
           {onApplyChanges && (
             <button
+              type="button"
               onClick={onApplyChanges}
               disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-900/30"
+              className="flex items-center gap-1.5 h-8 px-3 rounded bg-primary hover:bg-primary/90 disabled:opacity-50 text-white text-xs font-medium transition-colors cursor-pointer"
             >
-              <Sparkles size={11} />
-              {loading ? "Recalculating..." : "Apply & Update Model"}
+              <Sparkles size={12} />
+              <span>{loading ? "Hesaplanıyor..." : "Uygula ve Modeli Güncelle"}</span>
             </button>
           )}
         </div>
@@ -286,10 +294,11 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
       </div>
 
       {/* Analytics Explainer Footer */}
-      <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-800/90 text-[11px] text-slate-400">
-        <AlertCircle size={13} className="text-indigo-400 shrink-0" />
+      <div className="flex items-center gap-2 px-3.5 py-2.5 rounded border border-border bg-background-secondary text-xs text-text-secondary">
+        <AlertCircle size={14} className="text-primary shrink-0" />
         <span>
-          <strong>Usage Redistribution Engine:</strong> When a key player is marked <em>OUT</em> or <em>RESTRICTED</em>, 35% of their lost scoring output is redistributed proportionally across active rotation teammates, dynamically updating team totals and win probabilities.
+          <strong className="text-text-primary font-medium">Kullanım Dağıtım Motoru:</strong> Bir oyuncu{" "}
+          <em>OUT</em> veya <em>KISITLI</em> olarak işaretlendiğinde, kayıp skor üretiminin %35&apos;i aktif rotasyon arkadaşlarına oransal olarak yeniden dağıtılır ve model tahminleri anında güncellenir.
         </span>
       </div>
     </div>

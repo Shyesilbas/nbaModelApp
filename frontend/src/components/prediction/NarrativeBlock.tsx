@@ -22,23 +22,20 @@ export function NarrativeBlock({ result, homeInfo, awayInfo, winnerInfo }: Narra
 
   const narrative = `The model projects ${winnerInfo.name} to control this matchup ${confStr}, assigning a ${(prob * 100).toFixed(1)}% win probability. ${
     margin !== null
-      ? `The expected winning margin of ${margin.toFixed(1)} points suggests ${winnerInfo.abbr} maintains a meaningful edge throughout, while ${loserInfo.abbr} will need to significantly outperform expectations to close the gap.`
+      ? `The expected winning margin of ${margin.toFixed(1)} points suggests ${winnerInfo.abbr} maintains an edge throughout, while ${loserInfo.abbr} will need to outperform baseline expectations.`
       : `${loserInfo.name} will need to overcome the model's assessment to secure the win.`
   }${
     score
-      ? ` Offensive efficiency and ${winnerInfo.abbr === homeInfo.abbr ? "home court advantage" : "road performance"} contribute significantly to the forecast.`
+      ? ` Offensive efficiency and ${winnerInfo.abbr === homeInfo.abbr ? "home court advantage" : "road performance"} contribute to the forecast.`
       : ""
   }`;
 
   return (
-    <div
-      className="narrative-block animate-fade-in-up stagger-3"
-      style={{ borderLeftColor: winnerInfo.color }}
-    >
-      <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: winnerInfo.color }}>
-        Predicted Game Script
+    <div className="rounded border border-border bg-background-primary p-4">
+      <p className="text-xs font-medium text-text-secondary mb-1.5">
+        Predicted game script
       </p>
-      <p className="text-sm text-slate-700 leading-relaxed font-medium">{narrative}</p>
+      <p className="text-xs text-text-secondary leading-relaxed">{narrative}</p>
     </div>
   );
 }

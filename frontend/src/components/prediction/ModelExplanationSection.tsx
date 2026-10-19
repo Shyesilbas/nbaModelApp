@@ -8,6 +8,7 @@ import {
   EyeOff,
   Home,
   Info,
+  Lightbulb,
   Scale,
   Shield,
   Sparkles,
@@ -31,57 +32,35 @@ type FeatureImpact = {
 function CategoryIcon({ type }: { type?: string }) {
   switch (type) {
     case "trophy":
-      return <Trophy size={14} className="text-amber-500" />;
+      return <Trophy size={14} className="text-status-warning" />;
     case "zap":
-      return <Zap size={14} className="text-indigo-500" />;
+      return <Zap size={14} className="text-primary" />;
     case "clock":
-      return <Clock size={14} className="text-emerald-500" />;
+      return <Clock size={14} className="text-status-success" />;
     case "home":
-      return <Home size={14} className="text-sky-500" />;
+      return <Home size={14} className="text-primary" />;
     case "target":
-      return <Target size={14} className="text-rose-500" />;
+      return <Target size={14} className="text-status-error" />;
     case "shield":
-      return <Shield size={14} className="text-blue-500" />;
+      return <Shield size={14} className="text-primary" />;
     case "scale":
-      return <Scale size={14} className="text-purple-500" />;
+      return <Scale size={14} className="text-primary" />;
     default:
-      return <Activity size={14} className="text-slate-500" />;
+      return <Activity size={14} className="text-text-secondary" />;
   }
 }
 
 // Sıraya gore etki derecesi rozeti
 function RankBadge({ rank }: { rank: number }) {
-  if (rank === 1) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 text-[10px] font-black text-amber-700 uppercase tracking-wide">
-        En Belirleyici Faktör
-      </span>
-    );
-  }
-  if (rank === 2) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 text-[10px] font-bold text-indigo-700">
-        Çok Yüksek Etki
-      </span>
-    );
-  }
-  if (rank === 3) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200/80 px-2.5 py-0.5 text-[10px] font-bold text-sky-700">
-        Yüksek Etki
-      </span>
-    );
-  }
-  if (rank === 4) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
-        Önemli Katkı
-      </span>
-    );
-  }
+  let label = "Destekleyici Faktör";
+  if (rank === 1) label = "En Belirleyici Faktör";
+  else if (rank === 2) label = "Çok Yüksek Etki";
+  else if (rank === 3) label = "Yüksek Etki";
+  else if (rank === 4) label = "Önemli Katkı";
+
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
-      Destekleyici Faktör
+    <span className="inline-flex items-center px-2 py-0.5 rounded-sm bg-background-secondary border border-border text-xs font-medium text-text-secondary">
+      {label}
     </span>
   );
 }
@@ -102,24 +81,16 @@ function TeamAdvantageBadge({
 
   if (!team) {
     return (
-      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500">
+      <span className="inline-flex items-center rounded-sm bg-background-secondary border border-border px-2 py-0.5 text-xs font-medium text-text-secondary">
         Dengeli / Nötr
       </span>
     );
   }
 
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wider shadow-xs"
-      style={{
-        color: team.color,
-        backgroundColor: `${team.color}14`,
-        borderColor: `${team.color}33`,
-        borderWidth: "1px",
-      }}
-    >
+    <span className="inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium bg-background-secondary border border-border text-text-primary">
       {isHome ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-      {team.name} ({team.abbr}) Lehine
+      <span>{team.name} ({team.abbr}) Lehine</span>
     </span>
   );
 }
@@ -161,34 +132,15 @@ function ReasonCard({
   const share = (contributionAbs / totalImpact) * 100;
   const relativePercent = Math.max(12, Math.round((contributionAbs / maxImpact) * 100));
 
-  // Rank numara stilleri
-  const rankColors = [
-    "bg-amber-500 text-white shadow-amber-500/20",
-    "bg-indigo-600 text-white shadow-indigo-500/20",
-    "bg-sky-600 text-white shadow-sky-500/20",
-    "bg-emerald-600 text-white shadow-emerald-500/20",
-    "bg-slate-700 text-white shadow-slate-500/20",
-  ];
-
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-xs transition-all hover:border-slate-300 hover:shadow-md">
-      {/* Sol kenar renk vurgusu */}
-      <div
-        className="absolute top-0 bottom-0 left-0 w-1.5"
-        style={{ backgroundColor: team?.color || "#6366f1" }}
-      />
-
+    <article className="relative bg-background-primary border border-border rounded p-4 space-y-3 hover:border-card-border-hover transition-colors">
       {/* Kart Ust Baslik Alani */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
-        <div className="flex items-center gap-2.5">
-          <div
-            className={`flex h-7 w-7 items-center justify-center rounded-xl text-xs font-black shadow-sm ${
-              rankColors[rank - 1] || "bg-slate-700 text-white"
-            }`}
-          >
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-border-light">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-sm border border-border bg-background-secondary flex items-center justify-center text-xs font-semibold text-text-primary">
             {rank}
           </div>
-          <div className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
+          <div className="flex items-center gap-1.5 rounded-sm bg-background-secondary border border-border px-2 py-0.5 text-xs font-medium text-text-secondary">
             <CategoryIcon type={formatted.categoryIcon} />
             <span>{formatted.category}</span>
           </div>
@@ -205,40 +157,46 @@ function ReasonCard({
       </div>
 
       {/* Aciklama Metni */}
-      <div className="pt-3">
-        <h4 className="m-0 text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
+      <div>
+        <h4 className="text-sm font-semibold text-text-primary">
           {formatted.title}
         </h4>
-        <p className="mt-1.5 mb-0 text-xs sm:text-sm leading-relaxed text-slate-600">
+        <p className="mt-1 text-xs leading-relaxed text-text-secondary">
           {formatted.insight}
         </p>
       </div>
 
-      {/* Sade Gorsel Etki Cubugu ve Ozet Veri */}
-      <div className="mt-4 pt-3 border-t border-slate-100/80">
-        <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-500 mb-1.5">
+      {/* Gorsel Etki Cubugu ve Ozet Veri */}
+      <div className="pt-2 border-t border-border-light">
+        <div className="flex items-center justify-between gap-2 text-xs text-text-secondary mb-1">
           <span>Model Ağırlık Seviyesi</span>
-          <span className="font-bold text-slate-700">
+          <span className="font-medium text-text-primary tabular-nums">
             {formatted.simpleValue ? `Ölçülen: ${formatted.simpleValue}` : `%${share.toFixed(0)} Model Payı`}
           </span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-background-tertiary">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
               width: `${relativePercent}%`,
-              backgroundColor: team?.color || "#4f46e5",
+              backgroundColor: team?.color || "currentColor",
             }}
           />
         </div>
       </div>
 
-      {/* Teknik Detay Alani (Sadece acildiginda gorunur) */}
+      {/* Teknik Detay Alani */}
       {showTech && (
-        <div className="mt-3 rounded-lg bg-slate-50 p-2.5 text-[10px] text-slate-500 flex flex-wrap items-center justify-between gap-2 font-mono">
+        <div className="mt-2 rounded border border-border bg-background-secondary p-2.5 text-xs text-text-secondary flex flex-wrap items-center justify-between gap-2 font-mono">
           <span>Değişken: <strong>{feature.feature_name}</strong></span>
           <span>Ham Değer: <strong>{feature.value}</strong></span>
-          <span>SHAP Katkısı: <strong className={feature.contribution >= 0 ? "text-indigo-600" : "text-rose-600"}>{feature.contribution >= 0 ? "+" : ""}{feature.contribution.toFixed(4)}</strong></span>
+          <span>
+            SHAP Katkısı:{" "}
+            <strong className={feature.contribution >= 0 ? "text-status-success" : "text-status-error"}>
+              {feature.contribution >= 0 ? "+" : ""}
+              {feature.contribution.toFixed(4)}
+            </strong>
+          </span>
         </div>
       )}
     </article>
@@ -316,12 +274,12 @@ export function ModelExplanationSection({
 
   if (!explanation || (!winTop5.length && !scoreTop5.length)) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-3">
-          <Info size={22} />
+      <div className="rounded border border-border bg-background-primary p-6 text-center">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded border border-border bg-background-secondary text-text-secondary mb-3">
+          <Info size={18} />
         </div>
-        <h3 className="m-0 text-sm font-bold text-slate-800">Model açıklaması bulunamadı</h3>
-        <p className="mt-1 mb-0 text-xs leading-relaxed text-slate-500">
+        <h3 className="text-sm font-semibold text-text-primary">Model açıklaması bulunamadı</h3>
+        <p className="mt-1 text-xs text-text-secondary leading-relaxed">
           Bu maç için etken analizi verisi üretilmedi. Ana tahmin sonuçları geçerlidir.
         </p>
       </div>
@@ -355,57 +313,48 @@ export function ModelExplanationSection({
 
   return (
     <section className="space-y-4">
-      {/* ── 1. Sade ve Şık Başlık Banner'ı ── */}
-      <header className="rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 text-white shadow-sm border border-slate-800/80">
+      {/* 1. Baslik Alani */}
+      <header className="rounded border border-border bg-background-primary p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-indigo-300 ring-1 ring-white/20">
-              <Sparkles size={20} />
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-background-secondary text-primary">
+              <Sparkles size={18} />
             </span>
             <div>
-              <h3 className="m-0 text-base font-black tracking-tight text-white">
+              <h3 className="text-sm font-semibold text-text-primary">
                 Modelin Karar Gerekçeleri
               </h3>
-              <p className="mt-1 mb-0 text-xs leading-relaxed text-slate-300">
-                Yapay zekanın bu maçı değerlendirirken en çok ağırlık verdiği ve tercihi belirleyen <strong>5 temel neden</strong>:
+              <p className="mt-0.5 text-xs text-text-secondary">
+                Modelin bu maçı değerlendirirken en çok ağırlık verdiği ve tercihi belirleyen <strong>5 temel neden</strong>:
               </p>
             </div>
           </div>
 
           {winnerName && (
-            <div
-              className="inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-black uppercase tracking-wider shadow-sm"
-              style={{
-                backgroundColor: `${favoredTeam.color}22`,
-                color: "#ffffff",
-                border: `1px solid ${favoredTeam.color}55`,
-              }}
-            >
-              <span>Favori:</span>
-              <span className="text-white underline decoration-2 underline-offset-4">
-                {favoredTeam.name}
-              </span>
+            <div className="inline-flex shrink-0 items-center gap-1.5 rounded-sm border border-border bg-background-secondary px-2.5 py-1 text-xs font-semibold text-text-primary">
+              <span className="text-text-secondary font-normal">Favori:</span>
+              <span>{favoredTeam.name}</span>
             </div>
           )}
         </div>
       </header>
 
-      {/* ── 2. Sekme Seçici (Kazanma vs Skor) ── */}
+      {/* 2. Sekme Seçici */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div
           role="tablist"
           aria-label="Sebep kategorileri"
-          className="inline-flex rounded-xl border border-slate-200 bg-slate-100/90 p-1"
+          className="inline-flex rounded border border-border bg-background-secondary p-0.5 gap-1"
         >
           <button
             type="button"
             role="tab"
             aria-selected={activeTab === "win"}
             onClick={() => setActiveTab("win")}
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
               activeTab === "win"
-                ? "bg-white text-indigo-700 shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-background-primary text-text-primary border border-border shadow-xs"
+                : "text-text-secondary hover:text-text-primary"
             }`}
           >
             <Trophy size={13} />
@@ -418,10 +367,10 @@ export function ModelExplanationSection({
               role="tab"
               aria-selected={activeTab === "score"}
               onClick={() => setActiveTab("score")}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                 activeTab === "score"
-                  ? "bg-white text-indigo-700 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-background-primary text-text-primary border border-border shadow-xs"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
             >
               <Zap size={13} />
@@ -430,18 +379,18 @@ export function ModelExplanationSection({
           )}
         </div>
 
-        {/* Teknik Değerleri Göster / Gizle Butonu */}
+        {/* Teknik Değerleri Göster / Gizle */}
         <button
           type="button"
           onClick={() => setShowTechDetails((prev) => !prev)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 hover:border-slate-300 hover:text-slate-800 transition-colors shadow-2xs"
+          className="inline-flex items-center gap-1.5 rounded border border-border bg-background-primary px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
         >
           {showTechDetails ? <EyeOff size={13} /> : <Eye size={13} />}
           <span>{showTechDetails ? "Teknik Değerleri Gizle" : "Teknik Verileri Göster"}</span>
         </button>
       </div>
 
-      {/* ── 3. Tam 5 Tane Öne Çıkan Sebep Kartı ── */}
+      {/* 3. Tam 5 Tane Öne Çıkan Sebep Kartı */}
       <div className="space-y-3">
         {activeFeatures.map((feature, index) => (
           <ReasonCard
@@ -457,21 +406,21 @@ export function ModelExplanationSection({
         ))}
       </div>
 
-      {/* ── 4. Herkesin Anlayacağı Özet Değerlendirme Kutusu ── */}
+      {/* 4. Özet Değerlendirme Kutusu */}
       {top1Insight && top2Insight && (
-        <footer className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-slate-50/80 p-4 sm:p-5">
+        <footer className="rounded border border-border bg-background-secondary p-4">
           <div className="flex items-start gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs">
-              💡
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-background-primary text-primary">
+              <Lightbulb size={16} />
             </span>
             <div className="min-w-0">
-              <h5 className="m-0 text-xs font-extrabold uppercase tracking-wider text-indigo-900">
+              <h5 className="text-xs font-semibold text-text-primary">
                 Genel Değerlendirme
               </h5>
-              <p className="mt-1 mb-0 text-xs sm:text-sm leading-relaxed text-slate-700">
+              <p className="mt-1 text-xs sm:text-sm leading-relaxed text-text-secondary">
                 Modelimiz bu karşılaşmada özellikle <strong>{favoredTeam.name}</strong> lehine olan{" "}
-                <strong className="text-indigo-900">{top1Insight.title}</strong> ve{" "}
-                <strong className="text-indigo-900">{top2Insight.title}</strong> avantajları sayesinde
+                <strong className="text-text-primary font-medium">{top1Insight.title}</strong> ve{" "}
+                <strong className="text-text-primary font-medium">{top2Insight.title}</strong> avantajları sayesinde
                 bu takımın galibiyete daha yakın olduğunu değerlendirmektedir.
               </p>
             </div>

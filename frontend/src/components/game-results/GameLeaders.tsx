@@ -1,7 +1,13 @@
+export interface LeaderStatItem {
+  player_name?: string;
+  n?: string;
+  value?: number | string | null;
+}
+
 export function GameLeaders({
   leaders,
 }: {
-  leaders: { points?: any; rebounds?: any; assists?: any } | null | undefined;
+  leaders?: { points?: LeaderStatItem; rebounds?: LeaderStatItem; assists?: LeaderStatItem } | null;
 }) {
   if (!leaders) return null;
 
@@ -14,23 +20,27 @@ export function GameLeaders({
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-[0_10px_40px_rgba(15,23,42,0.06)]">
+    <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
       <div className="mb-4">
-        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Game Leaders</p>
-        <p className="mt-0.5 text-sm font-semibold text-slate-700">Category leaders</p>
+        <h3 className="text-sm font-semibold text-text-primary">Game leaders</h3>
+        <p className="mt-0.5 text-xs text-text-secondary">Top performers by category</p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        {items.map((entry) => (
-          <div key={entry.label} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">{entry.label}</p>
-            <p className="mt-1.5 text-[13px] font-bold leading-tight text-slate-900">
-              {entry.data.player_name || entry.data.n}
-            </p>
-            {entry.data.value != null && (
-              <p className="mt-0.5 text-xl font-black text-[#1d428a]">{entry.data.value}</p>
-            )}
-          </div>
-        ))}
+      <div className="grid gap-2.5 sm:grid-cols-3">
+        {items.map((entry) => {
+          const data = entry.data;
+          if (!data) return null;
+          return (
+            <div key={entry.label} className="rounded border border-border bg-background-primary p-3">
+              <p className="text-xs font-medium text-text-muted">{entry.label}</p>
+              <p className="mt-1 truncate text-xs font-semibold leading-tight text-text-primary">
+                {data.player_name || data.n}
+              </p>
+              {data.value != null && (
+                <p className="mt-1 text-base font-semibold tabular-nums text-text-primary">{data.value}</p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

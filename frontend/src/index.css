@@ -1,11 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  * { box-sizing: border-box; }
+  * {
+    box-sizing: border-box;
+  }
 
   html {
     scroll-behavior: smooth;
@@ -13,12 +15,9 @@
 
   body {
     margin: 0;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     color: #0f172a;
-    background:
-      radial-gradient(circle at top left, rgba(29, 66, 138, 0.08), transparent 28%),
-      radial-gradient(circle at top right, rgba(15, 23, 42, 0.05), transparent 24%),
-      linear-gradient(180deg, #fbfcfe 0%, #f1f5f9 100%);
+    background-color: #f8fafc;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -29,136 +28,66 @@
 }
 
 @layer components {
-  .glass-card {
-    @apply bg-white/85 border border-white/60 shadow-[0_10px_35px_rgba(15,23,42,0.06)] backdrop-blur-md;
-  }
-
-  .surface {
-    @apply bg-white/90 border border-slate-200/70 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-md;
+  .surface-card {
+    @apply bg-background-primary border border-border rounded p-4;
   }
 
   .nav-btn {
-    @apply flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500 transition-all duration-150;
+    @apply flex w-full items-center gap-2 rounded px-3 py-2 text-left text-xs font-medium text-text-secondary transition-colors duration-150;
   }
 
   .nav-btn:hover {
-    @apply bg-slate-50 text-slate-800;
+    @apply bg-background-tertiary text-text-primary;
   }
 
   .nav-btn-active {
-    @apply bg-[#1d428a] text-white;
-    box-shadow: 0 8px 20px rgba(29, 66, 138, 0.20);
+    @apply bg-primary text-white;
+  }
+
+  .nav-btn-active:hover {
+    @apply bg-primary text-white;
   }
 
   .team-logo-image {
     display: block;
     object-fit: contain;
     border-radius: 9999px;
-    background: white;
+    background: #ffffff;
   }
 
   .team-logo-fallback {
-    @apply inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-[11px] font-black uppercase tracking-[0.18em] text-slate-600;
-  }
-
-  .kpi-card {
-    @apply rounded-[1.5rem] border border-slate-200/70 bg-white/85 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)] backdrop-blur-md;
+    @apply inline-flex items-center justify-center rounded-full border border-border bg-background-primary text-xs font-medium uppercase text-text-secondary;
   }
 }
 
 @layer utilities {
-  .animate-fade-in-up {
-    animation: fade-in-up 420ms ease-out both;
-  }
   .animate-fade-in {
-    animation: fade-in 360ms ease-out both;
+    animation: fade-in 180ms ease-out both;
   }
-  .animate-scale-in {
-    animation: scale-in 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  }
-
-  .stagger-1 { animation-delay: 40ms; }
-  .stagger-2 { animation-delay: 80ms; }
-  .stagger-3 { animation-delay: 120ms; }
-  .stagger-4 { animation-delay: 160ms; }
-  .stagger-5 { animation-delay: 200ms; }
-  .stagger-6 { animation-delay: 240ms; }
-  .stagger-7 { animation-delay: 280ms; }
-  .stagger-8 { animation-delay: 320ms; }
-}
-
-@layer components {
-  .prediction-hero {
-    background: linear-gradient(135deg, #0c1628 0%, #0f1f3d 40%, #1a1040 100%);
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 32px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,255,255,0.04) inset;
-  }
-
-  .signal-card {
-    @apply bg-white border border-slate-200/70 rounded-2xl p-4 flex flex-col gap-2 shadow-[0_4px_20px_rgba(15,23,42,0.06)] transition-all duration-200;
-  }
-  .signal-card:hover {
-    @apply shadow-[0_8px_30px_rgba(15,23,42,0.10)] -translate-y-0.5;
-  }
-
-  .player-spotlight-card {
-    background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
-    border: 1px solid rgba(255,255,255,0.07);
-    @apply rounded-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.2)];
-  }
-
-  .verdict-card-correct {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 1px solid #86efac;
-    @apply rounded-2xl p-5;
-  }
-
-  .verdict-card-wrong {
-    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
-    border: 1px solid #fca5a5;
-    @apply rounded-2xl p-5;
-  }
-
-  .diagnostics-card {
-    @apply bg-slate-50/80 border border-slate-200/60 rounded-2xl p-4;
-  }
-
-  .score-box {
-    @apply rounded-2xl border border-slate-200/70 bg-white/90 p-5 text-center shadow-[0_4px_16px_rgba(15,23,42,0.06)] backdrop-blur-sm;
-  }
-
-  .narrative-block {
-    background: linear-gradient(135deg, #f8faff 0%, #f1f5f9 100%);
-    border-left: 3px solid;
-    @apply rounded-r-2xl rounded-l-none p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)];
-  }
-}
-
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes scale-in {
-  from { opacity: 0; transform: scale(0.90); }
-  to { opacity: 1; transform: scale(1); }
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-
-.winner-pulse {
-  animation: pulse-glow 2s ease-in-out infinite;
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
 }
-
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: rgba(226, 232, 240, 0.8); }
-::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.8); border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.9); }
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

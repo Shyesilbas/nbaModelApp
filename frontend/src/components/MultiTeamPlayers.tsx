@@ -1,188 +1,176 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { 
-  ArrowRightLeft, 
-  Search, 
-  Flame, 
-  Crown, 
-  Sparkles, 
-  ShieldCheck, 
-  LayoutGrid, 
-  Table as TableIcon,
-  ArrowUpDown,
+import {
+  Search,
   Filter,
-  Calendar
+  ArrowRightLeft,
+  Crown,
+  Flame,
+  ShieldCheck,
+  Sparkles,
+  LayoutGrid,
+  Table as TableIcon,
+  Calendar,
+  ArrowUpDown,
 } from "lucide-react";
-import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
-import { loadJson, loadPrivateApi } from "../lib/dataCache";
-import { TEAM_NAME_BY_ABBR, type NbaTeamAbbr, NBA_TEAM_ABBRS } from "../lib/nbaTeams";
+import PlayerPhoto from "./PlayerPhoto";
+import { NBA_TEAM_ABBRS, TEAM_NAME_BY_ABBR, type NbaTeamAbbr } from "../lib/nbaTeams";
+import { loadJson } from "../lib/dataCache";
+import { CURRENT_SEASON } from "../lib/constants";
 
 export interface MultiTeamPlayer {
   PLAYER_ID: number;
   PLAYER_NAME: string;
+  NUM_TEAMS: number;
   TEAMS_PLAYED_FOR: string;
-  NUM_TEAMS?: number;
-  TEAM_COUNT?: number;
-  GP?: number;
-  AVG_MIN?: number;
-  AVG_PTS?: number;
-  AVG_REB?: number;
-  AVG_AST?: number;
-  IMPORTANCE_SCORE?: number;
+  FIRST_TEAM: string;
+  LATEST_TEAM: string;
+  FIRST_GAME_DATE: string;
+  LATEST_GAME_DATE: string;
+  DAYS_SPAN: number;
+  AVG_PTS: number;
+  AVG_REB: number;
+  AVG_AST: number;
+  AVG_MIN: number;
+  TOTAL_PTS: number;
+  TOTAL_REB: number;
+  TOTAL_AST: number;
+  TOTAL_GAMES: number;
   TRADE_DATE?: string;
   HOW_ACQUIRED?: string;
+  MOVE_TYPE?: "Trade" | "Non-rostered";
+  IMPORTANCE_SCORE?: number;
 }
 
-interface MultiTeamPlayersProps {
-  players: MultiTeamPlayer[];
-}
+type SortField =
+  | "IMPORTANCE_SCORE"
+  | "NUM_TEAMS"
+  | "AVG_PTS"
+  | "AVG_REB"
+  | "AVG_AST"
+  | "AVG_MIN"
+  | "TOTAL_GAMES"
+  | "TRADE_DATE";
 
-type SortField = "TRADE_DATE" | "IMPORTANCE_SCORE" | "AVG_PTS" | "AVG_REB" | "AVG_AST" | "AVG_MIN" | "NUM_TEAMS" | "GP";
 type TierFilter = "ALL" | "BLOCKBUSTER" | "STARTER" | "ROTATION" | "DEPTH";
 
-const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPlayers }) => {
-  const [seasonsList, setSeasonsList] = useState<string[]>(["2026-27", "2025-26", "2024-25", "2023-24"]);
-  const [selectedSeason, setSelectedSeason] = useState<string>("2026-27");
-  const [seasonData, setSeasonData] = useState<Record<string, MultiTeamPlayer[]>>({ "2026-27": initialPlayers });
-  const [loadingSeason, setLoadingSeason] = useState(false);
-
+export default function MultiTeamPlayers({ players }: { players: MultiTeamPlayer[] }) {
+  const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
+  const [seasonPlayers, setSeasonPlayers] = useState<MultiTeamPlayer[]>(players);
+  const [loadingSeason, setLoadingSeason] = useState<boolean>(false);
   const [search, setSearch] = useState("");
-  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>("ALL");
-  const [selectedTier, setSelectedTier] = useState<TierFilter>("ALL");
-  const [sortBy, setSortBy] = useState<SortField>("IMPORTANCE_SCORE");
-  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [sortBy, setSortBy] = useState<SortField>("TRADE_DATE");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>("ALL");
+  const [moveFilter, setMoveFilter] = useState<"ALL" | "Trade" | "Non-rostered">("ALL");
+  const [selectedTier, setSelectedTier] = useState<TierFilter>("ALL");
 
-  // Keep initial data in sync
-  useEffect(() => {
-    if (initialPlayers && initialPlayers.length > 0) {
-      setSeasonData((prev) => ({ ...prev, [selectedSeason]: initialPlayers }));
-    }
-  }, [initialPlayers, selectedSeason]);
+  const seasonsList = useMemo(() => [CURRENT_SEASON, "2025-26", "2024-25", "2023-24", "2022-23", "2021-22", "2020-21"], []);
 
-  // Load seasons list
   useEffect(() => {
-    loadJson<string[]>("/data/seasons.json", [])
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setSeasonsList(data);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // Fetch season trade data if not cached
-  useEffect(() => {
-    if (seasonData[selectedSeason] && seasonData[selectedSeason].length > 0) return;
+    let isMounted = true;
     setLoadingSeason(true);
-    
-    // Attempt to load from public cache or private api
-    loadJson<MultiTeamPlayer[]>("/data/multi_team_players.json", [])
-      .then((rows) => {
-        if (rows && rows.length > 0) {
-          setSeasonData((prev) => ({ ...prev, [selectedSeason]: rows }));
+
+    const path =
+      selectedSeason === CURRENT_SEASON
+        ? "/data/multi_team_players.json"
+        : `/data/seasons/${selectedSeason}/multi_team_players.json`;
+
+    loadJson<MultiTeamPlayer[]>(path)
+      .then((data) => {
+        if (isMounted) {
+          setSeasonPlayers(data || []);
+          setLoadingSeason(false);
         }
       })
       .catch(() => {
-        // Fallback to load from api
-        loadPrivateApi<any[]>(`/frontend-data-api/team-rosters?season=${encodeURIComponent(selectedSeason)}`)
-          .catch(() => []);
-      })
-      .finally(() => {
-        setLoadingSeason(false);
+        if (isMounted) {
+          setSeasonPlayers(selectedSeason === CURRENT_SEASON ? players : []);
+          setLoadingSeason(false);
+        }
       });
-  }, [selectedSeason, seasonData]);
 
-  const rawPlayers = seasonData[selectedSeason] ?? initialPlayers ?? [];
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedSeason, players]);
 
-  // Normalize players and calculate score if missing
   const normalizedPlayers = useMemo(() => {
-    return rawPlayers.map((p) => {
-      const min = p.AVG_MIN ?? 20.0;
-      const pts = p.AVG_PTS ?? 10.0;
-      const reb = p.AVG_REB ?? 4.0;
-      const ast = p.AVG_AST ?? 2.5;
-      const calcScore = (min * 0.5) + (pts * 1.0) + (reb * 1.2) + (ast * 1.5);
-      const score = p.IMPORTANCE_SCORE != null && p.IMPORTANCE_SCORE > 0 ? p.IMPORTANCE_SCORE : calcScore;
-      const teamCount = p.NUM_TEAMS ?? p.TEAM_COUNT ?? (p.TEAMS_PLAYED_FOR ? p.TEAMS_PLAYED_FOR.split(",").length : 2);
+    return seasonPlayers.map((p) => {
+      const pts = Number(p.AVG_PTS || 0);
+      const reb = Number(p.AVG_REB || 0);
+      const ast = Number(p.AVG_AST || 0);
+      const min = Number(p.AVG_MIN || 0);
+      const games = Number(p.TOTAL_GAMES || 0);
+
+      let calcScore = p.IMPORTANCE_SCORE;
+      if (calcScore === undefined || calcScore === null) {
+        const baseImpact = pts * 1.0 + reb * 1.2 + ast * 1.5;
+        const volumeFactor = Math.min(1.0, min / 25.0);
+        const sampleConfidence = Math.min(1.0, games / 10.0);
+        calcScore = Math.round((baseImpact * volumeFactor * sampleConfidence) * 10) / 10;
+      }
+
       return {
         ...p,
-        AVG_MIN: min,
         AVG_PTS: pts,
         AVG_REB: reb,
         AVG_AST: ast,
-        IMPORTANCE_SCORE: Number(score.toFixed(1)),
-        NUM_TEAMS: teamCount,
-        TEAM_COUNT: teamCount,
-        GP: p.GP ?? 10,
-        TRADE_DATE: p.TRADE_DATE,
-        HOW_ACQUIRED: p.HOW_ACQUIRED,
+        AVG_MIN: min,
+        TOTAL_GAMES: games,
+        IMPORTANCE_SCORE: calcScore,
       };
     });
-  }, [rawPlayers]);
+  }, [seasonPlayers]);
 
-  // Filtered & Sorted Players
   const processedPlayers = useMemo(() => {
-    let list = [...normalizedPlayers];
+    return normalizedPlayers
+      .filter((p) => {
+        const matchesSearch =
+          search === "" ||
+          p.PLAYER_NAME.toLowerCase().includes(search.toLowerCase()) ||
+          p.TEAMS_PLAYED_FOR.toLowerCase().includes(search.toLowerCase()) ||
+          String(p.PLAYER_ID).includes(search);
 
-    // Search query
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.PLAYER_NAME.toLowerCase().includes(q) ||
-          p.TEAMS_PLAYED_FOR.toLowerCase().includes(q) ||
-          String(p.PLAYER_ID).includes(q) ||
-          (p.TRADE_DATE && p.TRADE_DATE.includes(q)) ||
-          (p.HOW_ACQUIRED && p.HOW_ACQUIRED.toLowerCase().includes(q))
-      );
-    }
+        const matchesTeam =
+          selectedTeamFilter === "ALL" ||
+          p.TEAMS_PLAYED_FOR.split(",")
+            .map((t) => t.trim().toUpperCase())
+            .includes(selectedTeamFilter.toUpperCase());
 
-    // Team Filter
-    if (selectedTeamFilter !== "ALL") {
-      list = list.filter((p) =>
-        p.TEAMS_PLAYED_FOR.toUpperCase().includes(selectedTeamFilter.toUpperCase())
-      );
-    }
+        const matchesMove = moveFilter === "ALL" || (p.MOVE_TYPE ?? "Trade") === moveFilter;
 
-    // Tier Filter
-    if (selectedTier !== "ALL") {
-      if (selectedTier === "BLOCKBUSTER") {
-        list = list.filter((p) => (p.IMPORTANCE_SCORE ?? 0) >= 40.0);
-      } else if (selectedTier === "STARTER") {
-        list = list.filter((p) => (p.IMPORTANCE_SCORE ?? 0) >= 28.0 && (p.IMPORTANCE_SCORE ?? 0) < 40.0);
-      } else if (selectedTier === "ROTATION") {
-        list = list.filter((p) => (p.IMPORTANCE_SCORE ?? 0) >= 18.0 && (p.IMPORTANCE_SCORE ?? 0) < 28.0);
-      } else if (selectedTier === "DEPTH") {
-        list = list.filter((p) => (p.IMPORTANCE_SCORE ?? 0) < 18.0);
-      }
-    }
+        let matchesTier = true;
+        const score = p.IMPORTANCE_SCORE ?? 0;
+        if (selectedTier === "BLOCKBUSTER") matchesTier = score >= 45.0;
+        else if (selectedTier === "STARTER") matchesTier = score >= 32.0 && score < 45.0;
+        else if (selectedTier === "ROTATION") matchesTier = score >= 20.0 && score < 32.0;
+        else if (selectedTier === "DEPTH") matchesTier = score < 20.0;
 
-    // Sorting
-    list.sort((a, b) => {
-      if (sortBy === "TRADE_DATE") {
-        const dateA = a.TRADE_DATE || "1970-01-01";
-        const dateB = b.TRADE_DATE || "1970-01-01";
-        const cmp = dateB.localeCompare(dateA);
-        if (cmp !== 0) {
-          return sortOrder === "desc" ? cmp : -cmp;
+        return matchesSearch && matchesTeam && matchesTier && matchesMove;
+      })
+      .sort((a, b) => {
+        let valA: any = a[sortBy];
+        let valB: any = b[sortBy];
+
+        if (sortBy === "TRADE_DATE") {
+          valA = a.TRADE_DATE || a.LATEST_GAME_DATE || "";
+          valB = b.TRADE_DATE || b.LATEST_GAME_DATE || "";
         }
-        return (b.IMPORTANCE_SCORE ?? 0) - (a.IMPORTANCE_SCORE ?? 0);
-      }
-      const valA = a[sortBy] ?? 0;
-      const valB = b[sortBy] ?? 0;
-      if (sortOrder === "desc") {
-        return (valB as number) - (valA as number);
-      }
-      return (valA as number) - (valB as number);
-    });
 
-    return list;
-  }, [normalizedPlayers, search, selectedTeamFilter, selectedTier, sortBy, sortOrder]);
+        if (valA === undefined || valA === null) return 1;
+        if (valB === undefined || valB === null) return -1;
+
+        if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+        if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+        return 0;
+      });
+  }, [normalizedPlayers, search, selectedTeamFilter, selectedTier, moveFilter, sortBy, sortOrder]);
 
   const toggleSort = (field: SortField) => {
     if (sortBy === field) {
-      setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortBy(field);
       setSortOrder("desc");
@@ -196,7 +184,7 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
       if (parts.length !== 3) return dateStr;
       const [y, m, d] = parts;
       const dt = new Date(Number(y), Number(m) - 1, Number(d));
-      return dt.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" });
+      return dt.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
     } catch {
       return dateStr;
     }
@@ -206,76 +194,75 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
     if (score >= 45.0) {
       return {
         label: "Franchise Cornerstone",
-        bg: "bg-slate-100 border-slate-200 text-slate-600",
         icon: Crown,
-        color: "#d97706"
       };
     }
     if (score >= 32.0) {
       return {
         label: "All-Star / Co-Star",
-        bg: "bg-slate-100 border-slate-200 text-slate-600",
         icon: Flame,
-        color: "#4f46e5"
       };
     }
     if (score >= 22.0) {
       return {
         label: "Key Starter",
-        bg: "bg-slate-100 border-slate-200 text-slate-600",
         icon: ShieldCheck,
-        color: "#2563eb"
       };
     }
     return {
       label: "Rotation Piece",
-      bg: "bg-slate-100 border-slate-200 text-slate-600",
       icon: Sparkles,
-      color: "#64748b"
     };
   };
 
   return (
-    <div className="space-y-5 pb-8">
-      {/* 1. Header Banner */}
-      <section className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <section className="flex flex-col gap-3 border-b border-border-light pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="mb-1 text-xs font-medium text-slate-500">Player movement · {selectedSeason}</p>
-          <h1 className="m-0 text-3xl font-semibold tracking-tight text-slate-900">Trade Discovery</h1>
+          <h1 className="text-2xl font-semibold text-text-primary">Trade Discovery</h1>
+          <p className="mt-0.5 text-xs text-text-secondary">Player movement and mid-season roster transitions · {selectedSeason}</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-500">{normalizedPlayers.length} players</span>
-          <select value={selectedSeason} onChange={(e) => setSelectedSeason(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200">
-            {seasonsList.map((s) => <option key={s} value={s}>{s} Season</option>)}
+          <span className="text-xs text-text-secondary">{normalizedPlayers.length} players</span>
+          <select
+            value={selectedSeason}
+            onChange={(e) => setSelectedSeason(e.target.value)}
+            className="rounded border border-border bg-background-primary px-3 py-1.5 text-xs font-medium text-text-primary focus:border-border-focus"
+          >
+            {seasonsList.map((s) => (
+              <option key={s} value={s}>
+                {s} Season
+              </option>
+            ))}
           </select>
         </div>
       </section>
 
-      {/* Player filters */}
-      <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Search Bar */}
+      {/* Filters card */}
+      <section className="rounded border border-border bg-background-primary p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search player, team or ID..."
-              className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50/80 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-400/20 focus:border-slate-400 font-medium placeholder:text-slate-400"
+              className="w-full rounded border border-border bg-background-primary py-1.5 pl-9 pr-3 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-border-focus"
             />
           </div>
 
-          {/* Franchise & View Controls */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Franchise Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-600">
-              <Filter size={13} className="text-slate-400" />
+          {/* Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded border border-border bg-background-tertiary px-2.5 py-1 text-xs text-text-secondary">
+              <Filter size={12} className="text-text-muted" />
               <span>Team:</span>
               <select
                 value={selectedTeamFilter}
                 onChange={(e) => setSelectedTeamFilter(e.target.value)}
-                className="bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs font-medium text-text-primary focus:outline-none cursor-pointer"
               >
                 <option value="ALL">All 30 Teams</option>
                 {NBA_TEAM_ABBRS.map((t) => (
@@ -287,59 +274,93 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+            <div className="flex items-center rounded border border-border bg-background-primary p-0.5">
               <button
                 onClick={() => setViewMode("grid")}
-                className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`rounded p-1 text-xs transition-colors ${
                   viewMode === "grid"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-900"
+                    ? "bg-primary text-white"
+                    : "text-text-secondary hover:text-text-primary"
                 }`}
                 title="Grid Cards"
               >
-                <LayoutGrid size={15} />
+                <LayoutGrid size={14} />
               </button>
               <button
                 onClick={() => setViewMode("table")}
-                className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`rounded p-1 text-xs transition-colors ${
                   viewMode === "table"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-900"
+                    ? "bg-primary text-white"
+                    : "text-text-secondary hover:text-text-primary"
                 }`}
                 title="Table Registry"
               >
-                <TableIcon size={15} />
+                <TableIcon size={14} />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-        <select value={selectedTier} onChange={(e) => setSelectedTier(e.target.value as TierFilter)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200">
-          <option value="ALL">All impact tiers</option><option value="BLOCKBUSTER">Blockbuster</option><option value="STARTER">Starter</option><option value="ROTATION">Rotation</option><option value="DEPTH">Depth</option>
-        </select>
-        <select value={sortBy} onChange={(e) => { setSortBy(e.target.value as SortField); setSortOrder("desc"); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-200">
-          <option value="TRADE_DATE">Sort: Trade date</option><option value="IMPORTANCE_SCORE">Sort: Impact</option><option value="AVG_PTS">Sort: Points</option><option value="AVG_REB">Sort: Rebounds</option><option value="AVG_AST">Sort: Assists</option><option value="AVG_MIN">Sort: Minutes</option><option value="NUM_TEAMS">Sort: Teams</option>
-        </select>
-        <button onClick={() => setSortOrder((current) => current === "desc" ? "asc" : "desc")} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50" aria-label={`Sort ${sortOrder === "desc" ? "ascending" : "descending"}`}>
-          {sortOrder === "desc" ? "↓" : "↑"}
-        </button>
+        <div className="mt-2.5 flex flex-wrap gap-2 border-t border-border-light pt-2.5">
+          <select
+            value={moveFilter}
+            onChange={(e) => setMoveFilter(e.target.value as "ALL" | "Trade" | "Non-rostered")}
+            className="rounded border border-border bg-background-primary px-2.5 py-1 text-xs text-text-primary focus:border-border-focus"
+          >
+            <option value="ALL">All moves</option>
+            <option value="Trade">Trades</option>
+            <option value="Non-rostered">Non-rostered</option>
+          </select>
+          <select
+            value={selectedTier}
+            onChange={(e) => setSelectedTier(e.target.value as TierFilter)}
+            className="rounded border border-border bg-background-primary px-2.5 py-1 text-xs text-text-primary focus:border-border-focus"
+          >
+            <option value="ALL">All impact tiers</option>
+            <option value="BLOCKBUSTER">Blockbuster</option>
+            <option value="STARTER">Starter</option>
+            <option value="ROTATION">Rotation</option>
+            <option value="DEPTH">Depth</option>
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value as SortField);
+              setSortOrder("desc");
+            }}
+            className="rounded border border-border bg-background-primary px-2.5 py-1 text-xs text-text-primary focus:border-border-focus"
+          >
+            <option value="TRADE_DATE">Sort: Trade date</option>
+            <option value="IMPORTANCE_SCORE">Sort: Impact</option>
+            <option value="AVG_PTS">Sort: Points</option>
+            <option value="AVG_REB">Sort: Rebounds</option>
+            <option value="AVG_AST">Sort: Assists</option>
+            <option value="AVG_MIN">Sort: Minutes</option>
+            <option value="NUM_TEAMS">Sort: Teams</option>
+          </select>
+          <button
+            onClick={() => setSortOrder((current) => (current === "desc" ? "asc" : "desc"))}
+            className="rounded border border-border bg-background-primary px-2.5 py-1 text-xs text-text-secondary hover:bg-background-tertiary"
+            aria-label={`Sort ${sortOrder === "desc" ? "ascending" : "descending"}`}
+          >
+            {sortOrder === "desc" ? "↓ Descending" : "↑ Ascending"}
+          </button>
         </div>
       </section>
 
-      {/* 4. Traded Players Main Display */}
+      {/* Main Display */}
       {loadingSeason ? (
-        <div className="py-16 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-slate-700 border-r-transparent align-[-0.125em]" />
-          <p className="mt-3 text-xs font-semibold text-slate-400">Loading {selectedSeason} mobility data...</p>
+        <div className="py-12 text-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
+          <p className="mt-2 text-xs text-text-secondary">Loading mobility data...</p>
         </div>
       ) : processedPlayers.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
-          <p className="text-base font-bold text-slate-700">No traded players found</p>
-          <p className="text-xs text-slate-400 mt-1">Try adjusting your search query, team filter, or tier selection.</p>
+        <div className="rounded border border-border bg-background-primary p-8 text-center">
+          <p className="text-sm font-semibold text-text-primary">No traded players found</p>
+          <p className="mt-1 text-xs text-text-secondary">Try adjusting your search query, team filter, or tier selection.</p>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {processedPlayers.map((player) => {
             const teams = (player.TEAMS_PLAYED_FOR || "").split(",").map((t) => t.trim() as NbaTeamAbbr);
             const primaryTeam = teams[teams.length - 1] || "MIA";
@@ -349,54 +370,52 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
             return (
               <div
                 key={player.PLAYER_ID}
-                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                className="flex flex-col justify-between rounded border border-border bg-background-primary p-4 transition-colors hover:border-card-border-hover"
               >
-                {/* Header Profile Row */}
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${tier.bg}`}>
-                      <TierIcon size={10} />
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-text-secondary">
+                      <TierIcon size={12} className="text-text-muted" />
                       {tier.label}
                     </span>
-                    <span className="text-xs font-medium tabular-nums text-slate-400">
+                    <span className="text-xs tabular-nums text-text-muted">
                       ID: {player.PLAYER_ID}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3.5 mb-4">
+                  <div className="mb-3 flex items-center gap-3">
                     <div className="relative">
                       <PlayerPhoto
                         playerId={player.PLAYER_ID}
                         name={player.PLAYER_NAME}
-                        size={56}
-                        className="h-14 w-14 rounded-full border-2 border-slate-100 shadow-xs object-cover bg-slate-50"
+                        size={48}
                       />
                       <div className="absolute -bottom-1 -right-1">
-                        <TeamLogo abbr={primaryTeam} size={20} />
+                        <TeamLogo abbr={primaryTeam} size={18} />
                       </div>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-base font-semibold text-slate-900 truncate m-0">
+                      <h3 className="truncate text-sm font-semibold text-text-primary">
                         {player.PLAYER_NAME}
                       </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs font-medium text-slate-500">Impact</span>
-                        <span className="text-sm font-semibold tabular-nums text-slate-800">
+                      <div className="mt-0.5 flex items-center gap-2 text-xs">
+                        <span className="text-text-muted">Impact Score:</span>
+                        <span className="font-semibold tabular-nums text-text-primary">
                           {player.IMPORTANCE_SCORE}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Transfer Flow Route */}
-                  <div className="mb-4 bg-slate-50 border border-slate-100 rounded-xl p-2.5">
-                    <div className="flex items-center justify-between gap-1 mb-1.5">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                  {/* Transfer Route */}
+                  <div className="mb-3 rounded border border-border-light bg-background-tertiary p-2.5">
+                    <div className="mb-1.5 flex items-center justify-between gap-1 text-xs">
+                      <span className="font-medium text-text-muted">
                         Team journey · {teams.length} stops
                       </span>
                       {player.TRADE_DATE && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium tabular-nums text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
-                          <Calendar size={11} className="text-slate-400" />
+                        <span className="inline-flex items-center gap-1 text-xs tabular-nums text-text-secondary">
+                          <Calendar size={11} className="text-text-muted" />
                           {formatTradeDate(player.TRADE_DATE)}
                         </span>
                       )}
@@ -407,22 +426,24 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                         return (
                           <React.Fragment key={t + i}>
                             <span
-                              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 ${
-                                isCurrent ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-600"
+                              className={`rounded-sm border px-2 py-0.5 text-xs font-medium ${
+                                isCurrent
+                                  ? "border-primary bg-primary text-white"
+                                  : "border-border bg-background-primary text-text-secondary"
                               }`}
                             >
                               {t}
-                                {isCurrent && <span className="text-[9px] text-slate-300 font-sans">•</span>}
                             </span>
                             {i < teams.length - 1 && (
-                              <ArrowRightLeft size={11} className="text-slate-400" />
+                              <ArrowRightLeft size={11} className="text-text-muted" />
                             )}
                           </React.Fragment>
                         );
                       })}
                     </div>
                     {player.HOW_ACQUIRED && (
-                      <div className="mt-2 pt-1.5 border-t border-slate-200/60 text-[10px] font-medium text-slate-500 truncate" title={player.HOW_ACQUIRED}>
+                      <div className="mt-1.5 border-t border-border-light pt-1 text-xs text-text-muted truncate" title={player.HOW_ACQUIRED}>
+                        {player.MOVE_TYPE === "Non-rostered" && <span className="mr-1.5 rounded-sm border border-border px-1 text-[10px] uppercase">Non-rostered</span>}
                         {player.HOW_ACQUIRED}
                       </div>
                     )}
@@ -430,22 +451,22 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
                 </div>
 
                 {/* Box Score Stats Bar */}
-                <div className="grid grid-cols-4 gap-1.5 text-center bg-slate-50 rounded-lg p-2 border border-slate-100 text-slate-700">
+                <div className="grid grid-cols-4 gap-1 rounded border border-border bg-background-tertiary p-2 text-center">
                   <div>
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase">PTS</span>
-                    <span className="text-xs font-semibold tabular-nums">{player.AVG_PTS}</span>
+                    <span className="block text-xs font-medium text-text-muted">PTS</span>
+                    <span className="text-xs font-semibold tabular-nums text-text-primary">{player.AVG_PTS}</span>
                   </div>
                   <div>
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase">REB</span>
-                    <span className="text-xs font-semibold tabular-nums">{player.AVG_REB}</span>
+                    <span className="block text-xs font-medium text-text-muted">REB</span>
+                    <span className="text-xs font-semibold tabular-nums text-text-primary">{player.AVG_REB}</span>
                   </div>
                   <div>
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase">AST</span>
-                    <span className="text-xs font-semibold tabular-nums">{player.AVG_AST}</span>
+                    <span className="block text-xs font-medium text-text-muted">AST</span>
+                    <span className="text-xs font-semibold tabular-nums text-text-primary">{player.AVG_AST}</span>
                   </div>
                   <div>
-                    <span className="block text-[9px] font-bold text-slate-400 uppercase">MIN</span>
-                    <span className="text-xs font-semibold tabular-nums">{player.AVG_MIN}m</span>
+                    <span className="block text-xs font-medium text-text-muted">MIN</span>
+                    <span className="text-xs font-semibold tabular-nums text-text-primary">{player.AVG_MIN}m</span>
                   </div>
                 </div>
               </div>
@@ -454,138 +475,82 @@ const MultiTeamPlayers: React.FC<MultiTeamPlayersProps> = ({ players: initialPla
         </div>
       ) : (
         /* Table Registry View */
-        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold border-b border-slate-200">
-                <tr>
-                  <th className="p-4">Rank</th>
-                  <th className="p-4">Player</th>
-                  <th className="p-4 cursor-pointer hover:text-slate-900" onClick={() => toggleSort("TRADE_DATE")}>
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={12} className="text-slate-400" />
-                      <span>Tarih</span>
-                      <ArrowUpDown size={12} />
-                      {sortBy === "TRADE_DATE" && (
-                        <span className="text-slate-600 text-[10px] ml-0.5">
-                          {sortOrder === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th className="p-4 cursor-pointer hover:text-slate-900" onClick={() => toggleSort("IMPORTANCE_SCORE")}>
-                    <div className="flex items-center gap-1">
-                      <span>Impact Score</span>
-                      <ArrowUpDown size={12} />
-                      {sortBy === "IMPORTANCE_SCORE" && (
-                        <span className="text-slate-600 text-[10px] ml-0.5">
-                          {sortOrder === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th className="p-4">Trade Route</th>
-                  <th className="p-4 text-center cursor-pointer hover:text-slate-900" onClick={() => toggleSort("AVG_PTS")}>
-                    PTS
-                  </th>
-                  <th className="p-4 text-center cursor-pointer hover:text-slate-900" onClick={() => toggleSort("AVG_REB")}>
-                    REB
-                  </th>
-                  <th className="p-4 text-center cursor-pointer hover:text-slate-900" onClick={() => toggleSort("AVG_AST")}>
-                    AST
-                  </th>
-                  <th className="p-4 text-center cursor-pointer hover:text-slate-900" onClick={() => toggleSort("AVG_MIN")}>
-                    MIN
-                  </th>
-                  <th className="p-4 text-center">Teams</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {processedPlayers.map((player, idx) => {
-                  const teams = (player.TEAMS_PLAYED_FOR || "").split(",").map((t) => t.trim() as NbaTeamAbbr);
-                  const tier = getTierBadge(player.IMPORTANCE_SCORE ?? 0);
-                  const TierIcon = tier.icon;
-
-                  return (
-                    <tr key={player.PLAYER_ID} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-4 font-medium tabular-nums text-slate-400 text-xs">
-                        #{idx + 1}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <PlayerPhoto
-                            playerId={player.PLAYER_ID}
-                            name={player.PLAYER_NAME}
-                            size={40}
-                            className="h-10 w-10 rounded-full border border-slate-200 object-cover bg-slate-100"
-                          />
-                          <div>
-                            <span className="font-bold text-slate-900 block">{player.PLAYER_NAME}</span>
-                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${tier.bg} px-1.5 py-0.2 rounded border`}>
-                              <TierIcon size={9} />
-                              {tier.label}
-                            </span>
-                          </div>
+        <div className="overflow-x-auto rounded border border-border bg-background-primary">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-border bg-background-tertiary">
+                <th className="p-3 font-medium text-text-secondary">Rank</th>
+                <th className="p-3 font-medium text-text-secondary">Player</th>
+                <th className="p-3 font-medium text-text-secondary cursor-pointer" onClick={() => toggleSort("TRADE_DATE")}>
+                  <div className="flex items-center gap-1">
+                    <Calendar size={12} className="text-text-muted" />
+                    <span>Date</span>
+                    <ArrowUpDown size={11} />
+                  </div>
+                </th>
+                <th className="p-3 font-medium text-text-secondary cursor-pointer" onClick={() => toggleSort("IMPORTANCE_SCORE")}>
+                  <div className="flex items-center gap-1">
+                    <span>Impact</span>
+                    <ArrowUpDown size={11} />
+                  </div>
+                </th>
+                <th className="p-3 font-medium text-text-secondary">Trade Route</th>
+                <th className="p-3 text-right font-medium text-text-secondary cursor-pointer" onClick={() => toggleSort("AVG_PTS")}>PTS</th>
+                <th className="p-3 text-right font-medium text-text-secondary cursor-pointer" onClick={() => toggleSort("AVG_REB")}>REB</th>
+                <th className="p-3 text-right font-medium text-text-secondary cursor-pointer" onClick={() => toggleSort("AVG_AST")}>AST</th>
+                <th className="p-3 text-right font-medium text-text-secondary cursor-pointer" onClick={() => toggleSort("AVG_MIN")}>MIN</th>
+                <th className="p-3 text-center font-medium text-text-secondary">Teams</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-light">
+              {processedPlayers.map((player, idx) => {
+                const teams = (player.TEAMS_PLAYED_FOR || "").split(",").map((t) => t.trim() as NbaTeamAbbr);
+                return (
+                  <tr key={player.PLAYER_ID} className="transition-colors hover:bg-background-tertiary">
+                    <td className="p-3 font-mono tabular-nums text-text-muted">
+                      #{idx + 1}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2.5">
+                        <PlayerPhoto
+                          playerId={player.PLAYER_ID}
+                          name={player.PLAYER_NAME}
+                          size={32}
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-text-primary">{player.PLAYER_NAME}</p>
+                          <p className="text-xs text-text-muted">ID: {player.PLAYER_ID}</p>
                         </div>
-                      </td>
-                      <td className="p-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
-                            <Calendar size={12} className="text-slate-400" />
-                            <span>{formatTradeDate(player.TRADE_DATE) || "—"}</span>
-                          </div>
-                          {player.HOW_ACQUIRED && (
-                            <span className="text-[10px] text-slate-400 font-medium truncate max-w-[170px]" title={player.HOW_ACQUIRED}>
-                              {player.HOW_ACQUIRED}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-semibold tabular-nums text-slate-800 text-sm">
-                          {player.IMPORTANCE_SCORE}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1.5">
-                          {teams.map((t, i) => {
-                            return (
-                              <React.Fragment key={t + i}>
-                                <span
-                                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${i === teams.length - 1 ? "bg-slate-800 text-white" : "bg-slate-200 text-slate-600"}`}
-                                >
-                                  {t}
-                                </span>
-                                {i < teams.length - 1 && (
-                                  <ArrowRightLeft size={10} className="text-slate-400" />
-                                )}
-                              </React.Fragment>
-                            );
-                          })}
-                        </div>
-                      </td>
-                      <td className="p-4 text-center tabular-nums font-semibold text-slate-800">{player.AVG_PTS}</td>
-                      <td className="p-4 text-center tabular-nums font-semibold text-slate-800">{player.AVG_REB}</td>
-                      <td className="p-4 text-center tabular-nums font-semibold text-slate-800">{player.AVG_AST}</td>
-                      <td className="p-4 text-center tabular-nums text-slate-600">{player.AVG_MIN}m</td>
-                      <td className="p-4 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
-                          (player.NUM_TEAMS ?? 1) >= 3 ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-600"
-                        }`}>
-                          {player.NUM_TEAMS ?? 2}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </td>
+                    <td className="p-3 tabular-nums text-text-secondary">
+                      {formatTradeDate(player.TRADE_DATE) || "—"}
+                    </td>
+                    <td className="p-3 font-semibold tabular-nums text-text-primary">
+                      {player.IMPORTANCE_SCORE}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-1 text-xs">
+                        {teams.map((t, i) => (
+                          <React.Fragment key={t + i}>
+                            <span className="font-medium text-text-primary">{t}</span>
+                            {i < teams.length - 1 && <ArrowRightLeft size={10} className="text-text-muted" />}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="p-3 text-right font-semibold tabular-nums text-text-primary">{player.AVG_PTS}</td>
+                    <td className="p-3 text-right tabular-nums text-text-secondary">{player.AVG_REB}</td>
+                    <td className="p-3 text-right tabular-nums text-text-secondary">{player.AVG_AST}</td>
+                    <td className="p-3 text-right tabular-nums text-text-secondary">{player.AVG_MIN}m</td>
+                    <td className="p-3 text-center tabular-nums text-text-muted">{teams.length}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
-
     </div>
   );
-};
-
-export default MultiTeamPlayers;
+}

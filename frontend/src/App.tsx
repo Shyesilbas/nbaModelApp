@@ -94,30 +94,30 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen text-slate-900">
-      <div className="mx-auto flex min-h-screen max-w-[1800px] gap-5 p-4 lg:p-5">
+    <div className="min-h-screen bg-background-secondary text-text-primary">
+      <div className="mx-auto flex min-h-screen max-w-7xl gap-4 p-4 lg:p-6">
 
         {/* ── Sidebar ── */}
-        <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-56 shrink-0 flex-col overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white text-slate-900 shadow-[0_16px_50px_rgba(15,23,42,0.07)] lg:flex">
+        <aside className="sticky top-4 hidden h-[calc(100vh-2rem)] w-56 shrink-0 flex-col overflow-hidden rounded border border-border bg-background-primary text-text-primary lg:flex">
           {/* Logo / Brand */}
-          <div className="border-b border-slate-100 px-4 py-3.5">
+          <div className="border-b border-border px-4 py-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-white">
                 <BarChart2 size={16} className="text-white" />
               </div>
               <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-400">NBA Intel</p>
-                <p className="text-[13px] font-bold text-slate-800">Model dashboard</p>
+                <p className="text-xs font-semibold text-text-primary">NBA Intel</p>
+                <p className="text-xs text-text-secondary">Model dashboard</p>
               </div>
             </div>
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 overflow-y-auto px-2.5 py-2">
+          <nav className="flex-1 overflow-y-auto p-2">
             {MENU.map((item) => (
               <div key={item.id}>
                 {item.section && (
-                  <p className="px-2 pb-1 pt-3 text-[9px] font-black uppercase tracking-[0.28em] text-slate-400">
+                  <p className="px-3 pb-1 pt-3 text-xs font-medium text-text-muted">
                     {item.section}
                   </p>
                 )}
@@ -125,7 +125,7 @@ export default function App() {
                   onClick={() => setActiveTab(item.id)}
                   className={activeTab === item.id ? "nav-btn-active nav-btn" : "nav-btn"}
                 >
-                  <span className={activeTab === item.id ? "text-white" : "text-slate-400"}>{item.icon}</span>
+                  <span className={activeTab === item.id ? "text-white" : "text-text-secondary"}>{item.icon}</span>
                   <span>{item.label}</span>
                 </button>
               </div>
@@ -139,25 +139,25 @@ export default function App() {
 
           <div>
             {loading ? (
-              <div className="flex h-72 flex-col items-center justify-center gap-4">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-900 border-t-transparent" />
-                <p className="text-[10px] font-black uppercase tracking-[0.32em] text-slate-400">Loading stats and models...</p>
+              <div className="flex h-72 flex-col items-center justify-center gap-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <p className="text-xs font-medium text-text-secondary">Loading stats and models...</p>
               </div>
             ) : error ? (
-              <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-4 rounded-[2rem] border border-rose-200 bg-white p-8 text-center shadow-lg">
-                <div className="rounded-2xl bg-rose-50 p-4 text-rose-600">
-                  <RefreshCw size={28} className="animate-spin" />
+              <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-4 rounded border border-border bg-background-primary p-6 text-center">
+                <div className="text-status-error">
+                  <RefreshCw size={24} className="animate-spin" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-900">Failed to load data</h2>
-                  <p className="mt-2 text-sm text-slate-500">{error}</p>
+                  <h2 className="text-base font-semibold text-text-primary">Failed to load data</h2>
+                  <p className="mt-1 text-sm text-text-secondary">{error}</p>
                 </div>
-                <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-[11px] text-slate-500">
+                <p className="rounded border border-border bg-background-tertiary px-3 py-2 font-mono text-xs text-text-secondary">
                   python3 scripts/export_frontend_data.py
                 </p>
               </div>
             ) : (
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {activeTab === "game-results" && (
                   <GameResults
                     onNavigateToPrediction={(game) => {
@@ -173,8 +173,8 @@ export default function App() {
                 <Suspense
                   fallback={
                     <div className="flex h-64 flex-col items-center justify-center gap-3">
-                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Loading module...</p>
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      <p className="text-xs font-medium text-text-secondary">Loading module...</p>
                     </div>
                   }
                 >

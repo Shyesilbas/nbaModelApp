@@ -11,10 +11,10 @@ export function TabButton({
     <button
       onClick={onClick}
       className={[
-        "rounded-full px-5 py-2 text-[11px] font-bold uppercase tracking-[0.18em] transition-all duration-200",
+        "rounded px-4 py-2 text-xs font-medium transition-colors",
         active
-          ? "bg-[#1d428a] text-white shadow-md shadow-[#1d428a]/20"
-          : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700",
+          ? "bg-primary text-white"
+          : "border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary",
       ].join(" ")}
     >
       {label}

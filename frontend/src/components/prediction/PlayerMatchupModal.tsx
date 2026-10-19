@@ -4,7 +4,6 @@ import PlayerPhoto from "../PlayerPhoto";
 import { loadJson, loadPrivateApi } from "../../lib/dataCache";
 import type { TeamInfo } from "./types";
 
-
 export interface PlayerMatchupData {
   player_id: number | string;
   player_name: string;
@@ -18,7 +17,6 @@ export interface PlayerMatchupData {
   status?: "ACTIVE" | "RESTRICTED" | "OUT" | "DNP";
   predicted_min?: number;
 }
-
 
 interface PlayerMatchupModalProps {
   player: PlayerMatchupData | null;
@@ -118,31 +116,28 @@ export function PlayerMatchupModal({
           // Fallback to static JSON
         }
 
-        // 2. Static JSON fallback
-        const [playerGamesMap, playerAveragesMap] = await Promise.all([
-          loadJson<Record<string, GameRow[]>>(`/data/player_games/${encodeURIComponent(playerId)}.json`, {}),
-          loadJson<Record<string, Record<string, SeasonAverages>>>("/data/player_season_averages.json", {}),
-        ]);
+        // 2. Fallback to static bundle
+        const staticBundle = await loadJson<{
+          players: Record<string, { games?: GameRow[]; averages?: SeasonAverages }>;
+        }>(`/data/static_bundles/players_preview_${season}.json`);
 
         if (!isMounted) return;
 
-        const availableSeasons = Object.keys(playerGamesMap).sort();
-        const latestSeason = availableSeasons.length > 0 ? availableSeasons[availableSeasons.length - 1] : "";
-        const targetSeason = playerGamesMap[season]?.length ? season : latestSeason;
-
-        const allPlayedGames = Object.values(playerGamesMap).flat().filter((g) => !g.DID_NOT_PLAY);
-        allPlayedGames.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
-
-        const seasonAvg = playerAveragesMap[playerId]?.[targetSeason] || playerAveragesMap[playerId]?.[latestSeason] || null;
-
-        setGames(allPlayedGames);
-        setSeasonAverages(seasonAvg);
+        const playerEntry = staticBundle?.players?.[playerId];
+        if (playerEntry) {
+          const played = (playerEntry.games || []).filter((g) => !g.DID_NOT_PLAY);
+          played.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
+          setGames(played);
+          setSeasonAverages(playerEntry.averages || null);
+        } else {
+          setGames([]);
+          setSeasonAverages(null);
+        }
+        setLoading(false);
       } catch (err: any) {
         if (!isMounted) return;
-        console.error("Failed to load player history:", err);
-        setError("Oyuncu geçmiş maç verileri yüklenemedi.");
-      } finally {
-        if (isMounted) setLoading(false);
+        setError(err.message || "Oyuncu verisi yüklenemedi.");
+        setLoading(false);
       }
     };
 
@@ -153,50 +148,40 @@ export function PlayerMatchupModal({
     };
   }, [player, season]);
 
-  // Calculate recent stats (Last 5 games before gameDate if given)
-  const { recentGames, stats5 } = useMemo(() => {
-    if (!games || games.length === 0) {
-      return { recentGames: [], stats5: null };
-    }
-
-    // Filter games prior to prediction date if available
-    let eligibleGames = [...games];
+  // Filter games before the target gameDate if supplied, otherwise take latest
+  const recentGames = useMemo(() => {
+    if (!games || games.length === 0) return [];
+    let filtered = games;
     if (gameDate) {
-      eligibleGames = eligibleGames.filter((g) => g.GAME_DATE <= gameDate);
+      filtered = filtered.filter((g) => g.GAME_DATE <= gameDate);
     }
-    // Sort descending by date
-    eligibleGames.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
-
-    const g5 = eligibleGames.slice(0, 5);
-
-    const calcAvg = (rows: GameRow[]) => {
-      if (rows.length === 0) return null;
-      const n = rows.length;
-      const pts = rows.reduce((s, r) => s + (r.PTS ?? 0), 0) / n;
-      const reb = rows.reduce((s, r) => s + (r.REB ?? 0), 0) / n;
-      const ast = rows.reduce((s, r) => s + (r.AST ?? 0), 0) / n;
-      const min = rows.reduce((s, r) => s + (r.MIN ?? 0), 0) / n;
-      const fgPct = rows.reduce((s, r) => s + (r.FG_PCT ?? 0), 0) / n;
-      const pra = pts + reb + ast;
-      return { pts, reb, ast, min, fgPct, pra, count: n };
-    };
-
-    return {
-      recentGames: eligibleGames.slice(0, 10),
-      stats5: calcAvg(g5),
-    };
+    return filtered.slice(0, 5);
   }, [games, gameDate]);
 
-  // Build automated data-driven insights narrative
+  // Compute last 5 averages
+  const stats5 = useMemo(() => {
+    if (recentGames.length === 0) return null;
+    const count = recentGames.length;
+    const pts = recentGames.reduce((acc, g) => acc + (g.PTS || 0), 0) / count;
+    const reb = recentGames.reduce((acc, g) => acc + (g.REB || 0), 0) / count;
+    const ast = recentGames.reduce((acc, g) => acc + (g.AST || 0), 0) / count;
+    const min = recentGames.reduce((acc, g) => acc + (g.MIN || 0), 0) / count;
+    const pra = pts + reb + ast;
+    const fgPctSum = recentGames.reduce((acc, g) => acc + (g.FG_PCT || 0), 0);
+    const fgPct = count > 0 ? fgPctSum / count : 0;
+
+    return { pts, reb, ast, min, pra, fgPct, count };
+  }, [recentGames]);
+
+  // Synthesize narrative scouting commentary
   const narrative = useMemo(() => {
     if (!player) return [];
     const parts: string[] = [];
 
     const ptsProj = player.predicted_pts;
-    const pts5 = stats5?.pts ?? seasonAverages?.PTS ?? 0;
-    const ptsSeason = seasonAverages?.PTS ?? pts5;
+    const ptsSeason = seasonAverages?.PTS || 0;
 
-    // 1. Scoring trend insight
+    // 1. Scoring & recent trend analysis
     if (stats5 && stats5.count >= 3) {
       const diffPct = ptsSeason > 0 ? ((ptsProj - ptsSeason) / ptsSeason) * 100 : 0;
       const formDiff = ((stats5.pts - ptsSeason) / Math.max(ptsSeason, 1)) * 100;
@@ -249,83 +234,83 @@ export function PlayerMatchupModal({
   if (!player) return null;
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40"
       onClick={onClose}
     >
-      <div 
-        className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden text-slate-800"
+      <div
+        className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-background-primary rounded-md shadow-md border border-border overflow-hidden text-text-primary"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── HEADER ── */}
-        <div 
-          className="relative px-6 py-5 border-b border-slate-100 flex items-center justify-between text-white"
-          style={{
-            background: `linear-gradient(135deg, ${teamInfo.color || "#1e293b"} 0%, #0f172a 100%)`
-          }}
-        >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between bg-background-secondary">
           <div className="flex items-center gap-4">
-            <PlayerPhoto playerId={player.player_id} name={player.player_name} size={56} className="ring-2 ring-white/30 shadow-md" />
+            <PlayerPhoto
+              playerId={player.player_id}
+              name={player.player_name}
+              size={52}
+              className="rounded-full border border-border"
+            />
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-white/20 text-white">
+                <span className="text-xs font-medium px-2 py-0.5 rounded-sm bg-background-primary border border-border text-text-secondary">
                   {player.position_group}
                 </span>
-                <span className="text-[10px] font-bold text-white/70 uppercase">
+                <span className="text-xs font-medium text-text-secondary uppercase">
                   {teamInfo.abbr} vs {opponentInfo.abbr}
                 </span>
               </div>
-              <h3 className="text-xl font-black text-white mt-1 leading-tight tracking-tight">
+              <h3 className="text-lg font-semibold text-text-primary mt-0.5 leading-tight">
                 {player.player_name}
               </h3>
-              <p className="text-xs text-white/70 font-semibold mt-0.5">
-                Veriye Dayalı Maç Raporu & Projeksiyon Detayı
+              <p className="text-xs text-text-secondary">
+                Veriye Dayalı Maç Raporu ve Projeksiyon Detayı
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded border border-border bg-background-primary hover:bg-background-secondary text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors cursor-pointer"
             title="Kapat (ESC)"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* ── BODY (Scrollable) ── */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-
-          {/* ── PROJECTION KPI CARDS ── */}
+          {/* KPI Cards */}
           <div className="grid grid-cols-4 gap-3">
             {[
-              { label: "Öngörülen Sayı", val: player.predicted_pts, unit: "PTS", icon: <Trophy size={13} className="text-amber-500" />, color: "text-amber-600 bg-amber-50/70 border-amber-200" },
-              { label: "Öngörülen Ribaund", val: player.predicted_reb, unit: "REB", icon: <Shield size={13} className="text-blue-500" />, color: "text-blue-600 bg-blue-50/70 border-blue-200" },
-              { label: "Öngörülen Asist", val: player.predicted_ast, unit: "AST", icon: <Users size={13} className="text-emerald-500" />, color: "text-emerald-600 bg-emerald-50/70 border-emerald-200" },
-              { label: "Toplam PRA", val: player.predicted_pra, unit: "PRA", icon: <Flame size={13} className="text-violet-500" />, color: "text-violet-600 bg-violet-50/70 border-violet-200" },
+              { label: "Öngörülen Sayı", val: player.predicted_pts, unit: "PTS", icon: <Trophy size={14} /> },
+              { label: "Öngörülen Ribaund", val: player.predicted_reb, unit: "REB", icon: <Shield size={14} /> },
+              { label: "Öngörülen Asist", val: player.predicted_ast, unit: "AST", icon: <Users size={14} /> },
+              { label: "Toplam PRA", val: player.predicted_pra, unit: "PRA", icon: <Flame size={14} /> },
             ].map((kpi, i) => (
-              <div key={i} className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center ${kpi.color}`}>
-                <div className="flex items-center gap-1 mb-1">
+              <div key={i} className="p-3 rounded border border-border bg-background-secondary flex flex-col items-center justify-center text-center">
+                <div className="flex items-center gap-1 text-text-secondary mb-1">
                   {kpi.icon}
-                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">{kpi.unit}</span>
+                  <span className="text-xs font-medium text-text-secondary">{kpi.unit}</span>
                 </div>
-                <p className="text-2xl font-black font-mono leading-none">
+                <p className="text-2xl font-semibold tabular-nums text-text-primary leading-none">
                   {kpi.val?.toFixed(1)}
                 </p>
-                <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase">{kpi.label}</span>
+                <span className="text-xs text-text-secondary mt-1">{kpi.label}</span>
               </div>
             ))}
           </div>
 
-          {/* ── DATA-DRIVEN NARRATIVE SCOUTING REPORT ── */}
-          <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/40 via-white to-indigo-50/20 p-4 space-y-2.5 shadow-2xs">
-            <div className="flex items-center gap-2 text-indigo-700">
-              <Info size={16} />
-              <h4 className="text-xs font-black uppercase tracking-wider">
-                Veriye Dayalı Maç & Form Analizi
+          {/* Narrative Scouting Report */}
+          <div className="rounded border border-border bg-background-secondary p-4 space-y-2">
+            <div className="flex items-center gap-2 text-text-primary">
+              <Info size={16} className="text-primary" />
+              <h4 className="text-xs font-semibold text-text-primary">
+                Veriye Dayalı Maç ve Form Analizi
               </h4>
             </div>
-            <div className="space-y-2 text-xs text-slate-700 leading-relaxed font-normal">
+            <div className="space-y-1.5 text-xs text-text-secondary leading-relaxed">
               {narrative.map((paragraph, i) => (
                 <p key={i} className="m-0">
                   {paragraph}
@@ -334,33 +319,33 @@ export function PlayerMatchupModal({
             </div>
           </div>
 
-          {/* ── STAT COMPARISON MATRIX: Season vs Last 5 vs Model ── */}
+          {/* Stat Comparison Matrix */}
           {stats5 && (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BarChart2 size={15} className="text-slate-600" />
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-700">
-                    İstatistiksel Karşılaştırma & Trend
+                <div className="flex items-center gap-2 text-text-primary">
+                  <BarChart2 size={16} />
+                  <h4 className="text-xs font-semibold text-text-primary">
+                    İstatistiksel Karşılaştırma ve Trend
                   </h4>
                 </div>
-                <span className="text-[10px] font-bold text-slate-400">
+                <span className="text-xs text-text-secondary">
                   Son 5 Maç vs Sezon Ort. vs Model
                 </span>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-slate-200 shadow-2xs">
+              <div className="overflow-hidden rounded border border-border bg-background-primary">
                 <table className="w-full text-xs">
-                  <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-200">
+                  <thead className="bg-background-secondary text-xs font-medium text-text-secondary border-b border-border">
                     <tr>
                       <th className="px-3 py-2 text-left">Metrik</th>
                       <th className="px-3 py-2 text-right">Sezon Ort.</th>
                       <th className="px-3 py-2 text-right">Son 5 Maç</th>
-                      <th className="px-3 py-2 text-right text-indigo-600">Model Tahmini</th>
-                      <th className="px-3 py-2 text-right">Trend / Fark</th>
+                      <th className="px-3 py-2 text-right text-primary">Model Tahmini</th>
+                      <th className="px-3 py-2 text-right">Fark / Trend</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-semibold">
+                  <tbody className="divide-y divide-border-light">
                     {[
                       {
                         metric: "Sayı (PTS)",
@@ -393,28 +378,28 @@ export function PlayerMatchupModal({
                       const isDown = diff < -0.5;
 
                       return (
-                        <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                          <td className="px-3 py-2 text-slate-800 font-bold">{row.metric}</td>
-                          <td className="px-3 py-2 text-right text-slate-500 font-mono">
+                        <tr key={idx} className="hover:bg-background-secondary/60 transition-colors">
+                          <td className="px-3 py-2 text-text-primary font-medium">{row.metric}</td>
+                          <td className="px-3 py-2 text-right text-text-secondary tabular-nums">
                             {row.season != null ? row.season.toFixed(1) : "-"}
                           </td>
-                          <td className="px-3 py-2 text-right text-slate-700 font-mono font-bold">
+                          <td className="px-3 py-2 text-right text-text-primary font-medium tabular-nums">
                             {row.l5.toFixed(1)}
                           </td>
-                          <td className="px-3 py-2 text-right text-indigo-700 font-mono font-black">
+                          <td className="px-3 py-2 text-right text-primary font-semibold tabular-nums">
                             {row.model.toFixed(1)}
                           </td>
-                          <td className="px-3 py-2 text-right font-mono">
+                          <td className="px-3 py-2 text-right tabular-nums">
                             <span
-                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm text-xs font-medium ${
                                 isUp
-                                  ? "text-emerald-700 bg-emerald-50"
+                                  ? "text-status-success bg-status-success/10"
                                   : isDown
-                                  ? "text-rose-700 bg-rose-50"
-                                  : "text-slate-500 bg-slate-100"
+                                  ? "text-status-error bg-status-error/10"
+                                  : "text-text-secondary bg-background-secondary"
                               }`}
                             >
-                              {isUp ? <TrendingUp size={11} /> : isDown ? <TrendingDown size={11} /> : <Minus size={11} />}
+                              {isUp ? <TrendingUp size={12} /> : isDown ? <TrendingDown size={12} /> : <Minus size={12} />}
                               {diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1)}
                             </span>
                           </td>
@@ -427,68 +412,68 @@ export function PlayerMatchupModal({
             </div>
           )}
 
-          {/* ── RECENT GAMES LOG (Son Maçlar) ── */}
-          <div className="space-y-3">
+          {/* Recent Games Log */}
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock size={15} className="text-slate-600" />
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700">
+              <div className="flex items-center gap-2 text-text-primary">
+                <Clock size={16} />
+                <h4 className="text-xs font-semibold text-text-primary">
                   Son Maç Performansları ({recentGames.length} Maç)
                 </h4>
               </div>
-              <span className="text-[10px] font-bold text-slate-400">
+              <span className="text-xs text-text-secondary">
                 Tarih Sıralı Gerçekleşen İstatistikler
               </span>
             </div>
 
             {loading ? (
-              <div className="p-8 text-center text-xs text-slate-400">
-                Maç geçmişi yükleniyor...
+              <div className="p-8 text-center text-xs text-text-secondary">
+                Maç geçmişi yükleniyor
               </div>
             ) : error ? (
-              <div className="p-4 rounded-xl bg-amber-50 text-amber-700 text-xs font-medium">
+              <div className="p-4 rounded border border-status-warning/20 bg-status-warning/10 text-status-warning text-xs font-medium">
                 {error}
               </div>
             ) : recentGames.length === 0 ? (
-              <div className="p-4 rounded-xl bg-slate-50 text-slate-400 text-xs text-center">
+              <div className="p-4 rounded border border-border bg-background-secondary text-text-secondary text-xs text-center">
                 Bu sezon için oynanmış maç kaydı bulunamadı.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-slate-200 shadow-2xs">
+              <div className="overflow-hidden rounded border border-border bg-background-primary">
                 <table className="w-full text-xs">
-                  <thead className="bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-200">
+                  <thead className="bg-background-secondary text-xs font-medium text-text-secondary border-b border-border">
                     <tr>
                       <th className="px-2.5 py-2 text-left">Tarih</th>
                       <th className="px-2.5 py-2 text-left">Eşleşme</th>
                       <th className="px-2 py-2 text-center">Sonuç</th>
                       <th className="px-2 py-2 text-right">Dk</th>
-                      <th className="px-2.5 py-2 text-right text-slate-800">PTS</th>
+                      <th className="px-2.5 py-2 text-right text-text-primary">PTS</th>
                       <th className="px-2 py-2 text-right">REB</th>
                       <th className="px-2 py-2 text-right">AST</th>
-                      <th className="px-2 py-2 text-right">PRA</th>
+                      <th className="px-2 py-2 text-right text-primary">PRA</th>
                       <th className="px-2 py-2 text-right">FG%</th>
                       <th className="px-2 py-2 text-right">+/-</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-border-light">
                     {recentGames.map((g, idx) => {
                       const isWin = g.WL === "W";
-                      const fgPctText = g.FG_PCT != null ? `${(g.FG_PCT * 100).toFixed(0)}%` : "-";
+                      const fgPctText = g.FG_PCT != null ? `%${(g.FG_PCT * 100).toFixed(0)}` : "-";
                       const praVal = (g.PTS ?? 0) + (g.REB ?? 0) + (g.AST ?? 0);
 
                       return (
-                        <tr key={idx} className="hover:bg-slate-50/80 transition-colors font-medium">
-                          <td className="px-2.5 py-2 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                        <tr key={idx} className="hover:bg-background-secondary/60 transition-colors">
+                          <td className="px-2.5 py-2 text-text-secondary tabular-nums whitespace-nowrap">
                             {g.GAME_DATE}
                           </td>
-                          <td className="px-2.5 py-2 font-bold text-slate-700 whitespace-nowrap">
+                          <td className="px-2.5 py-2 font-medium text-text-primary whitespace-nowrap">
                             {g.MATCHUP || "-"}
                           </td>
                           <td className="px-2 py-2 text-center">
                             {g.WL ? (
                               <span
-                                className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                                  isWin ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                                className={`px-1.5 py-0.5 rounded-sm text-xs font-semibold uppercase ${
+                                  isWin ? "bg-status-success/10 text-status-success" : "bg-status-error/10 text-status-error"
                                 }`}
                               >
                                 {g.WL}
@@ -497,25 +482,25 @@ export function PlayerMatchupModal({
                               "-"
                             )}
                           </td>
-                          <td className="px-2 py-2 text-right font-mono text-slate-500">
+                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
                             {g.MIN ?? "-"}
                           </td>
-                          <td className="px-2.5 py-2 text-right font-black font-mono text-slate-900">
+                          <td className="px-2.5 py-2 text-right font-semibold tabular-nums text-text-primary">
                             {g.PTS ?? "-"}
                           </td>
-                          <td className="px-2 py-2 text-right font-semibold font-mono text-slate-600">
+                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
                             {g.REB ?? "-"}
                           </td>
-                          <td className="px-2 py-2 text-right font-semibold font-mono text-slate-600">
+                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
                             {g.AST ?? "-"}
                           </td>
-                          <td className="px-2 py-2 text-right font-bold font-mono text-slate-700">
+                          <td className="px-2 py-2 text-right font-semibold tabular-nums text-primary">
                             {praVal}
                           </td>
-                          <td className="px-2 py-2 text-right font-mono text-slate-500">
+                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
                             {fgPctText}
                           </td>
-                          <td className="px-2 py-2 text-right font-mono text-slate-500">
+                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
                             {g.PLUS_MINUS != null ? (g.PLUS_MINUS > 0 ? `+${g.PLUS_MINUS}` : g.PLUS_MINUS) : "-"}
                           </td>
                         </tr>
@@ -526,15 +511,15 @@ export function PlayerMatchupModal({
               </div>
             )}
           </div>
-
         </div>
 
-        {/* ── FOOTER ── */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+        {/* Footer */}
+        <div className="px-6 py-3 bg-background-secondary border-t border-border-light flex items-center justify-between text-xs text-text-secondary">
           <span>Veriler resmi NBA maç kayıtları ve LightGBM model tahminlerine dayanır.</span>
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-slate-800 text-white font-bold hover:bg-slate-700 transition-colors"
+            className="h-8 px-4 rounded border border-border bg-background-primary hover:bg-background-secondary text-text-primary font-medium text-xs transition-colors cursor-pointer"
           >
             Kapat
           </button>

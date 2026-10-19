@@ -13,37 +13,35 @@ export function OfficialsCard({
   }
 
   return (
-    <div className={`rounded-[1.5rem] border border-slate-200/80 bg-white p-5 sm:p-6 shadow-[0_8px_30px_rgba(15,23,42,0.04)] ${className || ""}`}>
-      <div className="flex items-center justify-between mb-4 border-b border-slate-100/80 pb-3">
+    <div className={`rounded border border-border bg-background-primary p-4 sm:p-5 ${className || ""}`}>
+      <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-white shadow-xs">
-            <Shield size={15} />
-          </div>
+          <Shield size={16} className="text-text-secondary" />
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-400">Hakem Kadrosu</p>
-            <h3 className="text-sm font-bold text-slate-900">Resmi Karşılaşma Hakemleri</h3>
+            <h3 className="text-sm font-semibold text-text-primary">Game officials</h3>
+            <p className="mt-0.5 text-xs text-text-secondary">Assigned referee crew</p>
           </div>
         </div>
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100/90 border border-slate-200/70 px-2.5 py-1 rounded-full">
-          <Award size={11} className="text-slate-500" />
-          {officials.length} Hakem Atandı
+        <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-text-secondary">
+          <Award size={12} className="text-text-muted" />
+          {officials.length} Assigned
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         {officials.map((o, idx) => (
           <div
             key={idx}
-            className="group relative flex items-center gap-3.5 rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50/80 to-white p-3.5 transition-all hover:border-slate-300 hover:shadow-xs"
+            className="flex items-center gap-3 rounded border border-border bg-background-primary p-3 transition-colors hover:border-card-border-hover"
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-900 font-mono text-sm font-black text-white shadow-sm transition-transform group-hover:scale-105">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border-light bg-background-tertiary font-mono text-xs font-semibold tabular-nums text-text-primary">
               {o.jerseyNum ? `#${o.jerseyNum}` : `#${idx + 1}`}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-slate-900 truncate tracking-tight">{o.cleanName}</p>
+              <p className="text-xs font-medium text-text-primary truncate">{o.cleanName}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                <p className="text-[10px] font-medium text-slate-500">{o.role}</p>
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-status-success" />
+                <p className="text-xs text-text-secondary">{o.role}</p>
               </div>
             </div>
           </div>

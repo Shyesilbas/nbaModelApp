@@ -2,14 +2,25 @@ import type { GameFeedRow } from "../../types/gameFeed";
 import type { TeamBoxScore } from "./types";
 import { teamFull } from "./utils";
 
+export interface SummaryPlayerItem {
+  PLAYER_NAME?: string;
+  player_name?: string;
+  PTS?: number | null;
+  pts?: number | null;
+  REB?: number | null;
+  reb?: number | null;
+  AST?: number | null;
+  ast?: number | null;
+}
+
 export function GameSummaryBlock({
   game,
   topPlayers,
 }: {
   game: GameFeedRow;
-  home: TeamBoxScore | null;
-  away: TeamBoxScore | null;
-  topPlayers: any[];
+  home?: TeamBoxScore | null;
+  away?: TeamBoxScore | null;
+  topPlayers: SummaryPlayerItem[];
 }) {
   const margin = Math.abs((game.HOME_SCORE ?? 0) - (game.AWAY_SCORE ?? 0));
   const winnerAbbr = game.WINNER_TEAM_ABBREVIATION ?? "";
@@ -43,28 +54,29 @@ export function GameSummaryBlock({
   ].filter((item) => item.show && item.value);
 
   return (
-    <div className="relative h-full overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white p-5 shadow-sm">
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#c9082a] via-slate-200 to-[#1d428a]" />
-      <div className="mb-4 flex items-start justify-between gap-3 pt-1">
+    <div className="h-full rounded border border-border bg-background-primary p-4 sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">Game at a glance</p>
-          <p className="mt-1 text-sm font-semibold text-slate-700">The story behind the final score</p>
+          <h4 className="text-sm font-semibold text-text-primary">Game recap</h4>
+          <p className="mt-0.5 text-xs text-text-secondary">Summary and top category contributors</p>
         </div>
-        <div className="shrink-0 rounded-xl bg-slate-50 px-3 py-2 text-right ring-1 ring-slate-100">
-          <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400">Margin</p>
-          <p className="text-lg font-black leading-tight text-slate-900">{margin}<span className="ml-1 text-[9px] font-bold text-slate-400">PTS</span></p>
+        <div className="shrink-0 rounded border border-border bg-background-tertiary px-3 py-1.5 text-right">
+          <p className="text-xs font-medium text-text-secondary">Final margin</p>
+          <p className="text-base font-semibold tabular-nums leading-tight text-text-primary">{margin} <span className="text-xs font-normal text-text-secondary">PTS</span></p>
         </div>
       </div>
-      {winnerFull && <div className="mb-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800 ring-1 ring-emerald-100">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-        <span className="font-bold">{winnerFull}</span>
-        <span className="text-emerald-700/70">{isClose ? "held on in a close finish" : margin >= 20 ? "pulled away for a big win" : "came away with the win"}</span>
-      </div>}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      {winnerFull && (
+        <div className="mb-3 flex items-center gap-2 rounded border border-border bg-background-tertiary px-3 py-2 text-xs text-text-secondary">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-status-success" />
+          <span className="font-semibold text-text-primary">{winnerFull}</span>
+          <span>{isClose ? "held on in a close finish" : margin >= 20 ? "pulled away for a big win" : "came away with the win"}</span>
+        </div>
+      )}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
         {summaryItems.map((item) => (
-          <div key={item.label} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5">
-            <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">{item.label}</p>
-            <p className="mt-1 truncate text-[12px] font-bold leading-tight text-slate-800">{item.value}</p>
+          <div key={item.label} className="min-w-0 rounded border border-border bg-background-primary p-3">
+            <p className="text-xs font-medium text-text-secondary">{item.label}</p>
+            <p className="mt-1 truncate text-xs font-semibold tabular-nums leading-tight text-text-primary">{item.value}</p>
           </div>
         ))}
       </div>
