@@ -33,6 +33,13 @@ exclude_columns:
   - PLAYER_POSITION_GROUP
   - PLAYOFF_ROUND
   - SERIES_GAME_NUMBER
+  # Raw stats of the row's own game, kept only so inference can roll form forward.
+  - GAME_PTS
+  - GAME_REB
+  - GAME_AST
+  - GAME_MIN
+  - GAME_USG_PCT
+  - GAME_PLUS_MINUS
   # Zero-importance, dead regular season, and cross-positional noise columns:
   - CAN_CLINCH_SERIES
   - IS_ELIMINATION_GAME
@@ -43,6 +50,24 @@ exclude_columns:
   - OPP_WING_PTS_ALLOWED_LAST_10
   - TEAM_ELO
   - OPP_ELO
+  # No holdout permutation contribution for PTS, REB or AST (2026-10 audit),
+  # most of them near-duplicates of a kept MIN/USG average.
+  - ELO_DIFF
+  - BLOWOUT_RISK_PROXY
+  - TEAM_PACE
+  - OPP_TEAM_PACE
+  - OPP_BIG_PTS_ALLOWED_LAST_10
+  - OPP_BIG_REB_ALLOWED_LAST_10
+  - OPP_GUARD_PTS_ALLOWED_LAST_10
+  - OPP_WING_AST_ALLOWED_LAST_10
+  - OPP_GUARD_AST_ALLOWED_LAST_10
+  - USG_PCT_LAST_3
+  - USG_PCT_EMA_5
+  - USG_PCT_STD_LAST_10
+  - USG_PCT_TREND
+  - MIN_LAST_10
+  - MIN_STD_LAST_10
+  - PLUS_MINUS_LAST_5
 required_context_columns:
   - SEASON_ID
   - GAME_DATE
