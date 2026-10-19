@@ -1,97 +1,92 @@
-import os
 import re
 import json
-import time
 from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 
-TEAM_IDS = [
-    1610612737, 1610612738, 1610612739, 1610612740, 1610612741,
-    1610612742, 1610612743, 1610612744, 1610612745, 1610612746,
-    1610612747, 1610612748, 1610612749, 1610612750, 1610612751,
-    1610612752, 1610612753, 1610612754, 1610612755, 1610612756,
-    1610612757, 1610612758, 1610612759, 1610612760, 1610612761,
-    1610612762, 1610612763, 1610612764, 1610612765, 1610612766
-]
+ESPN_FROM = "2025-07-01"  # ESPN covers 2025-26/2026-27 but misses trades (e.g. 2026-09-14 Leonard/Ingram), so the NBA feed stays as fallback
 
-def parse_acquired_date(how_acquired: str) -> str | None:
-    if not how_acquired or not isinstance(how_acquired, str):
-        return None
-    # Look for MM/DD/YY or MM/DD/YYYY
-    m = re.search(r'(\d{1,2})/(\d{1,2})/(\d{2,4})', how_acquired)
-    if m:
-        month, day, year = m.groups()
-        if len(year) == 2:
-            year = "20" + year
-        return f"{year}-{int(month):02d}-{int(day):02d}"
-    # Look for Draft pick
-    m_draft = re.search(r'in (\d{4}) Draft', how_acquired)
-    if m_draft:
-        return f"{m_draft.group(1)}-06-25"
-    return None
+def load_movements() -> pd.DataFrame:
+    path = ROOT / "data/transactions/player_movement.csv"
+    if not path.exists():
+        from scripts.ingest.ingest_transactions import ingest_transactions
+        ingest_transactions()
+    nba = pd.read_csv(path)
+
+    from scripts.ingest import ingest_espn_transactions as espn
+    by_id, _ = _abbr_maps()
+    team_ids = {a: i for i, a in by_id.items()}
+    from nba_api.stats.static import teams as static_teams
+    lookup = {}
+    for t in static_teams.get_teams():
+        for k in (t["full_name"], t["nickname"], t["city"]):
+            lookup[k.lower()] = t["abbreviation"]
+    lookup["la clippers"] = "LAC"
+    lookup.pop("los angeles", None)  # ambiguous (Lakers/Clippers)
+    names = {}
+    for s in ("2025-26", "2026-27"):
+        g = pd.read_csv(ROOT / f"data/season={s}/raw/player_games.csv", usecols=["Player_ID", "PLAYER_NAME"]).drop_duplicates()
+        names.update({espn.norm(n): int(i) for i, n in zip(g.Player_ID, g.PLAYER_NAME)})
+    raw = espn.fetch() if not espn.RAW_PATH.exists() else pd.read_csv(espn.RAW_PATH)
+    ev = espn.build_events(raw, names, team_ids, lookup)
+    return pd.concat([nba, ev[ev.TRANSACTION_DATE >= ESPN_FROM]], ignore_index=True)
+
+def _abbr_maps():
+    from nba_api.stats.static import teams as static_teams
+    ts = static_teams.get_teams()
+    by_id = {t["id"]: t["abbreviation"] for t in ts}
+    by_name = {t["full_name"]: t["abbreviation"] for t in ts}
+    by_name["LA Clippers"] = "LAC"
+    return by_id, by_name
+
+def apply_movements(df_multi: pd.DataFrame, mv: pd.DataFrame, start: str, end: str, reorder_teams: bool = False) -> pd.DataFrame:
+    """Set TRADE_DATE / HOW_ACQUIRED / MOVE_TYPE from the official feed; non-trades are 'Non-rostered'."""
+    by_id, by_name = _abbr_maps()
+    mv = mv[(mv.TRANSACTION_DATE >= start) & (mv.TRANSACTION_DATE <= end)].sort_values("TRANSACTION_DATE")
+    by_player = {pid: g for pid, g in mv.groupby("PLAYER_ID")}
+    out = []
+    for _, r in df_multi.iterrows():
+        teams = [t.strip() for t in str(r["TEAMS_PLAYED_FOR"]).split(",")]
+        g = by_player.get(int(r["PLAYER_ID"]))
+        trades = g[g.Transaction_Type == "Trade"] if g is not None else None
+        if trades is not None and len(trades):
+            t = trades.iloc[-1]
+            to_team = by_id.get(int(t.TEAM_ID))
+            m = re.search(r" from (.+?)\.?$", str(t.TRANSACTION_DESCRIPTION))
+            from_team = t.get("FROM_ABBR") if isinstance(t.get("FROM_ABBR"), str) else (by_name.get(m.group(1).strip()) if m else None)
+            how = f"Traded to {to_team}" + (f" from {from_team}" if from_team else "")
+            kind, date = "Trade", t.TRANSACTION_DATE
+            last = g[g.Transaction_Type != "Waive"].iloc[-1]  # a later signing/claim overrides the trade
+            cur = by_id.get(int(last.TEAM_ID))
+        elif g is not None and len(g):
+            t = g.iloc[-1]
+            label = {"Signing": "Signed", "Waive": "Waived", "AwardOnWaivers": "Claimed on waivers", "ContractConverted": "Contract converted"}.get(t.Transaction_Type, t.Transaction_Type)
+            kind, date, how = "Non-rostered", t.TRANSACTION_DATE, f"{label} ({by_id.get(int(t.TEAM_ID), '')})"
+            cur = by_id.get(int(t.TEAM_ID)) if t.Transaction_Type != "Waive" else None
+        else:
+            kind, date, how, cur = "Non-rostered", "", "No transaction found", None
+        if reorder_teams and cur and teams[-1] != cur:  # UI treats the last team as current
+            teams = [x for x in teams if x != cur] + [cur]
+        out.append((", ".join(teams), date, how, kind))
+    df_multi["TEAMS_PLAYED_FOR"], df_multi["TRADE_DATE"], df_multi["HOW_ACQUIRED"], df_multi["MOVE_TYPE"] = zip(*out)
+    return df_multi
 
 def enrich_2026_27():
     print("=== Enriching 2026-27 Multi-Team Players with Trade Dates ===")
-    from src.ingestion.nba_api_client import call_nba_api
-    from nba_api.stats.endpoints import commonteamroster
-
-    acquired_map = {}
-    for idx, tid in enumerate(TEAM_IDS, start=1):
-        try:
-            print(f"[{idx}/30] Fetching roster for team ID {tid}...")
-            ctr = call_nba_api(commonteamroster.CommonTeamRoster, team_id=tid, season="2026-27", timeout=20)
-            df = ctr.get_data_frames()[0]
-            for _, r in df.iterrows():
-                pid = int(r["PLAYER_ID"])
-                how = str(r.get("HOW_ACQUIRED", ""))
-                dt = parse_acquired_date(how)
-                acquired_map[pid] = {
-                    "HOW_ACQUIRED": how,
-                    "TRADE_DATE": dt
-                }
-        except Exception as e:
-            print(f"  Warning: failed for team {tid}: {e}")
-
-    # Load 2026-27 multi_team_players
     csv_path = ROOT / "data/season=2026-27/analysis/multi_team_players.csv"
-    if csv_path.exists():
-        df_multi = pd.read_csv(csv_path)
-        trade_dates = []
-        how_acquired_list = []
-        for _, r in df_multi.iterrows():
-            pid = int(r["PLAYER_ID"])
-            info = acquired_map.get(pid, {})
-            dt = info.get("TRADE_DATE")
-            how = info.get("HOW_ACQUIRED", "")
-            # Fallback if no specific date was parsed: offseason trade window July 2026
-            if not dt:
-                dt = "2026-07-06"
-                how = f"Acquired by {str(r.get('TEAMS_PLAYED_FOR', '')).split(',')[-1].strip()}"
-            trade_dates.append(dt)
-            how_acquired_list.append(how)
-
-        df_multi["TRADE_DATE"] = trade_dates
-        df_multi["HOW_ACQUIRED"] = how_acquired_list
-
-        # Sort primarily by TRADE_DATE descending, then IMPORTANCE_SCORE descending
-        df_multi = df_multi.sort_values(by=["TRADE_DATE", "IMPORTANCE_SCORE"], ascending=[False, False]).reset_index(drop=True)
-
-        df_multi.to_csv(csv_path, index=False)
-        parquet_path = ROOT / "data/season=2026-27/analysis/multi_team_players.parquet"
-        df_multi.to_parquet(parquet_path, index=False)
-
-        # Save to frontend public data
-        pub_json = ROOT / "frontend/public/data/multi_team_players.json"
-        with open(pub_json, "w", encoding="utf-8") as f:
-            json.dump(df_multi.to_dict(orient="records"), f, indent=2)
-
-        root_json = ROOT / "data/multi_team_players.json"
-        with open(root_json, "w", encoding="utf-8") as f:
-            json.dump(df_multi.to_dict(orient="records"), f, indent=2)
-
-        print(f"  -> Enriched {len(df_multi)} players with TRADE_DATE and HOW_ACQUIRED.")
+    if not csv_path.exists():
+        return
+    # the 2026-27 list is built from 2025-26 stats, so include moves since last July
+    df_multi = apply_movements(pd.read_csv(csv_path), load_movements(), "2025-07-01", "2026-12-31", reorder_teams=True)
+    df_multi = df_multi.sort_values(by=["TRADE_DATE", "IMPORTANCE_SCORE"], ascending=[False, False]).reset_index(drop=True)
+    df_multi.to_csv(csv_path, index=False)
+    df_multi.to_parquet(ROOT / "data/season=2026-27/analysis/multi_team_players.parquet", index=False)
+    records = df_multi.to_dict(orient="records")
+    for path in (ROOT / "frontend/public/data/multi_team_players.json", ROOT / "data/multi_team_players.json"):
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(records, f, indent=2)
+    print(f"  -> Enriched {len(df_multi)} players ({(df_multi.MOVE_TYPE == 'Trade').sum()} trades).")
 
 def enrich_historical_season(season: str):
     csv_path = ROOT / f"data/season={season}/analysis/multi_team_players.csv"
@@ -118,24 +113,19 @@ def enrich_historical_season(season: str):
                 if len(sub_team_games) > 0:
                     debut_dates[int(pid)] = sub_team_games.iloc[0]["GAME_DATE"].strftime("%Y-%m-%d")
 
-    df_multi = pd.read_csv(csv_path)
-    dates = []
-    how_list = []
-    default_year = season.split("-")[0]
-    for _, r in df_multi.iterrows():
-        pid = int(r["PLAYER_ID"])
-        dt = debut_dates.get(pid)
-        if not dt:
-            dt = f"{int(default_year)+1}-02-08" # Trade deadline default
-        dates.append(dt)
-        teams = str(r.get("TEAMS_PLAYED_FOR", "")).split(",")
-        last_team = teams[-1].strip() if teams else "New Team"
-        from_team = teams[0].strip() if len(teams) > 1 else ""
-        how = f"Traded to {last_team}" + (f" from {from_team}" if from_team else "")
-        how_list.append(how)
+    team_order = {int(pid): list(g["TEAM_ABBREVIATION"].drop_duplicates()) for pid, g in df_raw.groupby("Player_ID")}
 
-    df_multi["TRADE_DATE"] = dates
-    df_multi["HOW_ACQUIRED"] = how_list
+    df_multi = pd.read_csv(csv_path)
+    # TEAMS_PLAYED_FOR is alphabetical; use chronological order from game logs
+    df_multi["TEAMS_PLAYED_FOR"] = [", ".join(team_order.get(int(pid)) or [t.strip() for t in str(old).split(",")])
+                                    for pid, old in zip(df_multi["PLAYER_ID"], df_multi["TEAMS_PLAYED_FOR"])]
+    y = int(season.split("-")[0])
+    df_multi = apply_movements(df_multi, load_movements(), f"{y}-07-01", f"{y+1}-06-30")
+    # Season stats for the Player Movement UI (source CSV only has names/teams)
+    stats = df_raw.groupby("Player_ID").agg(GP=("PTS", "size"), AVG_MIN=("MIN", "mean"), AVG_PTS=("PTS", "mean"),
+                                            AVG_REB=("REB", "mean"), AVG_AST=("AST", "mean")).round(1)
+    df_multi = df_multi.drop(columns=[c for c in stats.columns if c in df_multi.columns]).join(stats, on="PLAYER_ID")
+    df_multi["NUM_TEAMS"] = df_multi["TEAM_COUNT"] if "TEAM_COUNT" in df_multi.columns else df_multi["NUM_TEAMS"]
     df_multi = df_multi.sort_values(by=["TRADE_DATE", "IMPORTANCE_SCORE" if "IMPORTANCE_SCORE" in df_multi.columns else "PLAYER_ID"], ascending=[False, False]).reset_index(drop=True)
 
     df_multi.to_csv(csv_path, index=False)

@@ -113,6 +113,17 @@ def export_data(season: str = None, out_dir: str = None):
         "player_name_lookup.json": lookup_path
     }
 
+    # Historical seasons for the Player Movement tab (current season uses the top-level file)
+    for hist_csv in sorted((ROOT / "data").glob("season=*/analysis/multi_team_players.csv")):
+        hist_season = hist_csv.parent.parent.name.split("=", 1)[1]
+        if hist_season == normalized_s:
+            continue
+        hist_dir = os.path.join(out_dir, "seasons", hist_season)
+        os.makedirs(hist_dir, exist_ok=True)
+        hist_df = pd.read_csv(hist_csv)
+        hist_df.to_json(os.path.join(hist_dir, "multi_team_players.json"), orient="records", double_precision=4)
+        print(f"✅ Exported {hist_season} multi-team players ({hist_df.shape[0]} rows)")
+
     # Schedule datasets (exported separately with date serialisation)
     schedule_datasets = {
         "schedule.json": schedule_combined_path,
