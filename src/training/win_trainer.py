@@ -12,7 +12,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
-                             roc_auc_score, brier_score_loss)
+                             roc_auc_score, brier_score_loss, log_loss)
 from src.training.feature_contract import load_feature_contract, resolve_feature_list
 from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split, expanding_window_date_splits
 from src.training.provenance import build_training_provenance
@@ -20,6 +20,7 @@ from src.training.provenance import build_training_provenance
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import get_default_season
 from src.features.win_strength_features import add_win_strength_features
+from src.training.feature_guards import check_feature_matrix, permutation_contribution
 
 warnings.filterwarnings("ignore")
 
@@ -298,6 +299,9 @@ class WinModelTrainer:
         return df, projection_enrichment
 
     def apply_score_prediction_enrichment(self, df):
+        if "SCORE_PRED_MARGIN" in set(self.feature_contract.list_value("excluded_features")):
+            # The WIN model no longer reads the SCORE model, so it needs no SCORE OOF artifact.
+            return df.drop(columns=["SCORE_PRED_MARGIN"], errors="ignore")
         if "SCORE_PRED_MARGIN" in df.columns:
             # Never trust a precomputed margin column whose generation cutoff
             # and model snapshot are not recorded alongside the rows.
@@ -504,6 +508,14 @@ class WinModelTrainer:
             ("clf", LogisticRegression(max_iter=1000, random_state=42))
         ])
 
+        # Sparse L1 logistic: in the audit two features carried almost all signal,
+        # so a model that can zero out the rest is a natural candidate.
+        l1_pipeline = Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(penalty="l1", C=0.05, solver="liblinear", max_iter=1000, random_state=42))
+        ])
+
         lgb_pipeline = Pipeline([
             ("imputer", SimpleImputer(strategy="mean")),
             ("clf", lgb.LGBMClassifier(
@@ -538,7 +550,7 @@ class WinModelTrainer:
 
         candidates = []
         selection_metrics = {}
-        for family_name, base_pipe in [("logistic_regression", lr_pipeline), ("lightgbm", lgb_pipeline)]:
+        for family_name, base_pipe in [("logistic_regression", lr_pipeline), ("logistic_l1", l1_pipeline), ("lightgbm", lgb_pipeline)]:
             uncalibrated = clone(base_pipe).fit(X_inner_train, y_inner_train)
             p_uncal = uncalibrated.predict_proba(X_inner_val)[:, 1]
             m_uncal = self.eval_metrics(y_inner_val, p_uncal)
@@ -565,24 +577,35 @@ class WinModelTrainer:
         )
 
         os.makedirs(self.output_dir, exist_ok=True)
-        final_X = X_train_full if self.holdout_config.get("final_refit_scope") == "train_only" else X
-        final_y = y_train_full if self.holdout_config.get("final_refit_scope") == "train_only" else y
+        refit_all = self.holdout_config.get("final_refit_scope") != "train_only"
+        final_X = X if refit_all else X_train_full
+        final_y = y if refit_all else y_train_full
 
-        final_base = clone(best_base_pipe)
-        if best_calib == "uncalibrated":
-            final_model = final_base.fit(final_X, final_y)
-        else:
-            final_meta = df_meta.loc[final_X.index]
-            final_splits = expanding_window_date_splits(
-                final_meta,
+        def fit_selected(X_fit, y_fit):
+            base = clone(best_base_pipe)
+            if best_calib == "uncalibrated":
+                return base.fit(X_fit, y_fit)
+            splits = expanding_window_date_splits(
+                df_meta.loc[X_fit.index],
                 date_col=self.holdout_config.get("date_col", "GAME_DATE"),
                 n_splits=3,
             )
-            final_model = CalibratedClassifierCV(estimator=final_base, method=best_calib, cv=final_splits)
-            final_model.fit(final_X, final_y)
+            return CalibratedClassifierCV(estimator=base, method=best_calib, cv=splits).fit(X_fit, y_fit)
 
-        holdout_probabilities = final_model.predict_proba(X_test)[:, 1]
+        # Holdout metrics always come from a model that never saw the holdout rows;
+        # the shipped model may then be refit on every eligible row.
+        eval_model = fit_selected(X_train_full, y_train_full)
+        holdout_probabilities = eval_model.predict_proba(X_test)[:, 1]
         holdout_metrics = self.eval_metrics(y_test, holdout_probabilities)
+        final_model = fit_selected(final_X, final_y) if refit_all else eval_model
+
+        feature_guard = check_feature_matrix(X_train_full, "WIN")
+        feature_guard["holdout_permutation_log_loss"] = permutation_contribution(
+            lambda frame: eval_model.predict_proba(frame)[:, 1],
+            X_test,
+            y_test,
+            lambda yt, p: float(log_loss(yt, np.clip(p, 1e-6, 1 - 1e-6))),
+        )
 
         model_path = self.output_dir / f"win_probability_model_{self.version}.pkl"
         joblib.dump(final_model, model_path)
@@ -634,6 +657,7 @@ class WinModelTrainer:
             "selected_family": best_family,
             "selected_calibration": best_calib,
             "selected_metrics": holdout_metrics,
+            "feature_guard": feature_guard,
             "target_column": self.target_col
         }
         
