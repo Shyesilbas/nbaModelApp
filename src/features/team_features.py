@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from src.processing.pbp_integration import integrate_pbp_features
+from src.processing.season_type_normalizer import drop_preseason
 
 def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFrame:
     """
@@ -27,7 +28,7 @@ def build_team_features(df: pd.DataFrame, season_dir: str = None) -> pd.DataFram
     Returns:
         pd.DataFrame: DataFrame with engineered features.
     """
-    df = df.copy()
+    df = drop_preseason(df)
     
     # 1. Sort to ensure chronological order for time-based features
     team_col = "TEAM_ID" if "TEAM_ID" in df.columns else "TEAM_ABBREVIATION"

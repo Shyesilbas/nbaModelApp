@@ -21,7 +21,8 @@ def parse_game_id_metadata(game_id: Any) -> Dict[str, Optional[Any]]:
           2: Conference Semifinals
           3: Conference Finals
           4: NBA Finals
-        Digits 8-9: Game number in series (1 to 7)
+        Digit 8: Series within the round
+        Digit 9: Game number in series (1 to 7)
     """
     if pd.isna(game_id):
         return {
@@ -66,7 +67,7 @@ def parse_game_id_metadata(game_id: Any) -> Dict[str, Optional[Any]]:
         playoff_round = round_map.get(round_char, "Playoffs")
         season_type = "NBA Finals" if round_char == "4" else "Playoffs"
         
-        game_num_str = gid_str[8:10] if len(gid_str) >= 10 else ""
+        game_num_str = gid_str[9] if len(gid_str) >= 10 else ""
         series_game_number = int(game_num_str) if game_num_str.isdigit() and int(game_num_str) > 0 else None
         
         return {
@@ -82,6 +83,26 @@ def parse_game_id_metadata(game_id: Any) -> Dict[str, Optional[Any]]:
             "PLAYOFF_ROUND": None,
             "SERIES_GAME_NUMBER": None
         }
+
+
+def is_preseason_mask(df: pd.DataFrame) -> pd.Series:
+    """Rows that belong to preseason games (GAME_ID 001..., SEASON_ID 1YYYY or a 'Pre Season' label)."""
+    mask = pd.Series(False, index=df.index)
+    if "GAME_ID" in df.columns:
+        gid = df["GAME_ID"].astype(str).str.split(".").str[0].str.strip().str.zfill(10)
+        mask |= gid.str.startswith("001")
+    if "SEASON_ID" in df.columns:
+        mask |= df["SEASON_ID"].astype(str).str.strip().str.startswith("1")
+    if "SEASON_TYPE" in df.columns:
+        mask |= df["SEASON_TYPE"].astype(str).str.lower().str.contains("pre")
+    return mask
+
+
+def drop_preseason(df: pd.DataFrame) -> pd.DataFrame:
+    """Preseason games are exhibitions: they must not feed rolling form, Elo or game counts."""
+    if df.empty:
+        return df
+    return df[~is_preseason_mask(df)].copy()
 
 
 def normalize_season_metadata_columns(df: pd.DataFrame, game_id_col: str = "GAME_ID") -> pd.DataFrame:

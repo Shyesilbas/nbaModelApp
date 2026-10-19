@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from src.processing.cleaning import clean_minutes_column
+from src.processing.season_type_normalizer import drop_preseason
 
 def build_player_features(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -30,7 +31,7 @@ def build_player_features(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: DataFrame with engineered features.
     """
-    df = df.copy()
+    df = drop_preseason(df)
     
     # Ensure minutes column is properly parsed as a float
     df = clean_minutes_column(df, "MIN")
