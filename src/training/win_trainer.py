@@ -116,7 +116,9 @@ class WinModelTrainer:
         self.holdout_config = holdout_config or {}
         self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/win_v10.yaml", root=root)
         self.target_col = self.feature_contract.raw.get("target", "WIN")
-        self.strength_features = self.feature_contract.list_value("derived_features")
+        excluded = set(self.feature_contract.list_value("excluded_features"))
+        # An excluded derived feature (SCORE_PRED_MARGIN) is never built, so it cannot be selected.
+        self.strength_features = [c for c in self.feature_contract.list_value("derived_features") if c not in excluded]
         self.static_venue_split_features = set(self.feature_contract.list_value("static_venue_split_features"))
         self.defaultable_required_features = self.feature_contract.dict_value("defaultable_features")
 
