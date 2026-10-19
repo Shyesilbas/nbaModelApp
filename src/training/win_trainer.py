@@ -381,20 +381,11 @@ class WinModelTrainer:
             raise RuntimeError("Failed to attach time-safe SCORE OOF margins to WIN training rows") from exc
         return df
 
-    def train_and_export(self):
-        files = self.resolve_dataset_files()
-        df, row_counts_by_file = self.load_training_dataset(files)
-        self.validate_dataset_contract(df)
-        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
-        df = df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable").reset_index(drop=True)
-        # Historical predictions from a player model trained on overlapping
-        # outcomes are target leakage. Date-safe player OOF features are not
-        # available yet, so keep this feature family out of WIN inputs.
-        projection_enrichment = {
-            "applied": False,
-            "reason": "disabled_until_date_safe_player_oof_predictions_exist",
-        }
-        df = self.apply_score_prediction_enrichment(df)
+    def prepare_features(self, df):
+        """Turn a team-game frame (with SCORE_PRED_MARGIN attached) into the model matrix.
+
+        Shared by training and the backtest harness so both see identical features.
+        """
 
         df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
         df = df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable").reset_index(drop=True)
@@ -452,6 +443,28 @@ class WinModelTrainer:
             X[col] = self.defaultable_required_features[col]
         imputed_missing_required_features = missing_allowed
         X = X[required_feature_cols]
+        return X, y, df_meta, {
+            "dropped_static_venue_split_features": drop_static,
+            "imputed_missing_required_features": imputed_missing_required_features,
+        }
+
+    def train_and_export(self):
+        files = self.resolve_dataset_files()
+        df, row_counts_by_file = self.load_training_dataset(files)
+        self.validate_dataset_contract(df)
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
+        df = df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable").reset_index(drop=True)
+        # Historical predictions from a player model trained on overlapping
+        # outcomes are target leakage. Date-safe player OOF features are not
+        # available yet, so keep this feature family out of WIN inputs.
+        projection_enrichment = {
+            "applied": False,
+            "reason": "disabled_until_date_safe_player_oof_predictions_exist",
+        }
+        df = self.apply_score_prediction_enrichment(df)
+        X, y, df_meta, feature_info = self.prepare_features(df)
+        drop_static = feature_info["dropped_static_venue_split_features"]
+        imputed_missing_required_features = feature_info["imputed_missing_required_features"]
 
         if "SCORE_PRED_MARGIN" in X.columns:
             valid_oof = np.isfinite(pd.to_numeric(X["SCORE_PRED_MARGIN"], errors="coerce"))

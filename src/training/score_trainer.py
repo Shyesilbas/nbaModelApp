@@ -292,13 +292,8 @@ class ScoreModelTrainer:
         if df.empty:
             raise ValueError("Score dataset is empty after load.")
 
-    def train_and_export(self):
-        from sklearn.linear_model import Ridge
-            
-        files = self.resolve_dataset_files()
-        df, row_counts_by_file = self.load_training_dataset(files)
-        # The saved player model was fit on overlapping game outcomes. Until
-        # temporal player OOF projections exist, exclude this entire family.
+    def prepare_frame(self, df):
+        """Strength, location and date preparation shared by training and the backtest harness."""
         df = self.apply_strength_features(df)
         self.validate_dataset_contract(df)
         
@@ -310,7 +305,16 @@ class ScoreModelTrainer:
         if "GAME_DATE" not in df.columns:
             raise ValueError("Score training requires GAME_DATE for time-safe evaluation.")
         df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
-        df = df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable")
+        return df.dropna(subset=["GAME_DATE"]).sort_values(["GAME_DATE", "GAME_ID"], kind="stable")
+
+    def train_and_export(self):
+        from sklearn.linear_model import Ridge
+            
+        files = self.resolve_dataset_files()
+        df, row_counts_by_file = self.load_training_dataset(files)
+        # The saved player model was fit on overlapping game outcomes. Until
+        # temporal player OOF projections exist, exclude this entire family.
+        df = self.prepare_frame(df)
         df_home = df[df["IS_HOME"] == True].copy()
         df_away = df[df["IS_HOME"] == False].copy()
         
