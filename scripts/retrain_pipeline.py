@@ -445,7 +445,6 @@ def main():
         win_holdout_config.update({
             "strategy": "external_season_holdout",
             "calibration_season": validation_season,
-            "final_refit_scope": "train_only",
             "policy": "train_completed_seasons_before_external_validation",
         })
         win_trainer = WinModelTrainer(

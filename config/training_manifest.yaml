@@ -10,7 +10,9 @@ holdout:
   strategy: season_holdout
   test_size: 0.2
   date_col: GAME_DATE
-  final_refit_scope: train_only
+  # Metrics come from the model fitted before the holdout; the shipped model is
+  # refit on every eligible row so it has seen the most recent completed season.
+  final_refit_scope: all_eligible_rows
 
 models:
   win:
