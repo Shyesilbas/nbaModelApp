@@ -1,4 +1,7 @@
 schema_version: score_v10
+# Standardized RidgeCV beat the tuned XGBRegressor on every target in
+# walk-forward tests (pace 3.62 vs 3.75, rating 9.31 vs 9.45 MAE).
+estimator: ridge
 targets:
   pace: TARGET_PACE
   home_off_rtg: TARGET_HOME_OFF_RTG
@@ -46,6 +49,15 @@ base_off_rtg_features:
 away_extra_features:
   - TRAVEL_DISTANCE
   - TIMEZONE_DIFF
+# Margin uses its own short list: ELO_DIFF and CLEAN_NET_RTG_DIFF_LAST_10 carry
+# almost all of the signal; a 5-feature Ridge scored 11.86 margin MAE vs 12.27
+# for the 40-feature XGB. margin_extra_features is ignored when this is set.
+margin_features:
+  - ELO_DIFF
+  - CLEAN_NET_RTG_DIFF_LAST_10
+  - NET_RTG_LAST_10
+  - DAYS_REST
+  - OPP_DAYS_REST
 margin_extra_features:
   - DEF_RTG_LAST_5
   - DEF_RTG_LAST_10
