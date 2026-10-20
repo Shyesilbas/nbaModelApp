@@ -762,12 +762,14 @@ def _parse_player_overrides(overrides):
             status = str(item.get("status", "ACTIVE")).upper()
             minute_limit = item.get("minute_limit")
             factor = item.get("status_factor")
+            is_starter = item.get("is_starter")
         else:
             pid = getattr(item, "player_id", None)
             pname = getattr(item, "player_name", None)
             status = str(getattr(item, "status", "ACTIVE")).upper()
             minute_limit = getattr(item, "minute_limit", None)
             factor = getattr(item, "status_factor", None)
+            is_starter = getattr(item, "is_starter", None)
 
         if factor is None:
             if status in ("OUT", "INACTIVE"):
@@ -781,6 +783,7 @@ def _parse_player_overrides(overrides):
             "status": status,
             "factor": float(factor),
             "minute_limit": minute_limit,
+            "is_starter": is_starter,
         }
         if pid is not None:
             try:

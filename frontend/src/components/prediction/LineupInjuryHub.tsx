@@ -31,6 +31,8 @@ interface LineupInjuryHubProps {
   loading?: boolean;
 }
 
+const MAX_STARTERS = 5;
+
 export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
   homeInfo,
   awayInfo,
@@ -62,7 +64,28 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
       status,
       minute_limit: minLimit,
       status_factor: factor,
-    }, status === "ACTIVE" && Boolean(p.assumed_out));
+      is_starter: overrides[key]?.is_starter,
+    }, status === "ACTIVE" && (Boolean(p.assumed_out) || overrides[key]?.is_starter !== undefined));
+  };
+
+  // Aynı seçeneğe tekrar basmak seçimi kaldırır (undefined = modelin kendi tahmini)
+  const countStarters = (players: RotationPlayer[]) =>
+    players.filter((q) => overrides[String(q.player_id ?? q.player_name)]?.is_starter === true).length;
+
+  const handleStarterSelect = (p: RotationPlayer, isStarter: boolean, teamPlayers: RotationPlayer[]) => {
+    const key = String(p.player_id ?? p.player_name);
+    if (isStarter && overrides[key]?.is_starter !== true && countStarters(teamPlayers) >= MAX_STARTERS) return;
+    const existing = overrides[key];
+    const status = existing?.status ?? (p.status === "RESTRICTED" ? "RESTRICTED" : "ACTIVE");
+    const nextStarter = existing?.is_starter === isStarter ? undefined : isStarter;
+    onOverrideChange(key, {
+      player_id: typeof p.player_id === "number" ? p.player_id : undefined,
+      player_name: p.player_name,
+      status,
+      minute_limit: existing?.minute_limit,
+      status_factor: existing?.status_factor ?? (status === "RESTRICTED" ? 0.6 : 1.0),
+      is_starter: nextStarter,
+    }, status === "ACTIVE" && (Boolean(p.assumed_out) || nextStarter !== undefined));
   };
 
   const overrideCount = Object.keys(overrides).length;
@@ -71,6 +94,7 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
     const outCount = players.filter((p) => getPlayerStatus(p) === "OUT").length;
     const restCount = players.filter((p) => getPlayerStatus(p) === "RESTRICTED").length;
     const query = (isHome ? homeQuery : awayQuery).toLowerCase().trim();
+    const starterLimitReached = countStarters(players) >= MAX_STARTERS;
     const displayedPlayers = query
       ? players.filter((p) => p.player_name.toLowerCase().includes(query))
       : players;
@@ -197,6 +221,33 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
                         {isDnp && <span>{p.assumed_out ? "Son maçta oynamadı · model oynamıyor sayıyor (Full ile ekle)" : "Rotasyon dışı: dakika sıralamasında ilk 10 dışında · Full ile ekle"}</span>}
                         {isRestricted && <span className="text-status-warning font-medium">Kısıtlı Süre (%60)</span>}
                         {isOut && <span className="text-status-error font-medium">0 Dk (Sakat / Yok)</span>}
+                        {!isOut && (
+                          <span className="inline-flex items-center border border-border rounded overflow-hidden">
+                            {([true, false] as const).map((value) => {
+                              const selected = overrides[String(p.player_id ?? p.player_name)]?.is_starter === value;
+                              const blocked = value && !selected && starterLimitReached;
+                              return (
+                                <button
+                                  key={String(value)}
+                                  type="button"
+                                  title={
+                                    blocked
+                                      ? `Takımda en fazla ${MAX_STARTERS} starter seçilebilir`
+                                      : value ? "Maça starter başlıyor (en az ~26 dk)" : "Yedekten çıkıyor (en fazla ~22 dk)"
+                                  }
+                                  aria-pressed={selected}
+                                  disabled={blocked}
+                                  onClick={() => handleStarterSelect(p, value, players)}
+                                  className={`px-1.5 py-0.5 text-xs font-medium transition-colors ${
+                                    blocked ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+                                  } ${selected ? "bg-primary text-white" : "text-text-secondary hover:text-text-primary"}`}
+                                >
+                                  {value ? "Starter" : "Yedek"}
+                                </button>
+                              );
+                            })}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

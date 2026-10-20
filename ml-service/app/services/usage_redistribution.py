@@ -3,6 +3,11 @@ import numpy as np
 import pandas as pd
 
 
+from src.features.roster_absence import BENCH_MIN_CAP
+
+# shortcut: fixed role minutes, replace with per-player starter/bench history once STARTER is merged.
+STARTER_MIN_FLOOR = 26.0
+
 POSITION_AFFINITY: Dict[str, Dict[str, float]] = {
     "GUARD": {"GUARD": 1.0, "WING": 0.5, "BIG": 0.1},
     "WING": {"GUARD": 0.5, "WING": 1.0, "BIG": 0.5},
@@ -58,6 +63,7 @@ def redistribute_usage_and_minutes(
     df["STATUS_FACTOR"] = 1.0
     df["MINUTE_LIMIT"] = None
     df["HAS_USER_OVERRIDE"] = False
+    df["STARTER_OVERRIDE"] = pd.Series([None] * len(df), index=df.index, dtype=object)
 
     for idx, row in df.iterrows():
         pid = row.get("PLAYER_ID")
@@ -76,6 +82,7 @@ def redistribute_usage_and_minutes(
             df.at[idx, "STATUS"] = str(entry.get("status", "ACTIVE")).upper()
             df.at[idx, "STATUS_FACTOR"] = float(entry.get("factor", 1.0))
             df.at[idx, "MINUTE_LIMIT"] = entry.get("minute_limit")
+            df.at[idx, "STARTER_OVERRIDE"] = entry.get("is_starter")
 
     teams = df["TEAM_ABBREVIATION"].unique() if "TEAM_ABBREVIATION" in df.columns else [None]
     max_active_rotation = 12 if is_preseason else 10
@@ -120,6 +127,11 @@ def redistribute_usage_and_minutes(
         # Baseline minutes for active rotation
         for idx in active_indices:
             b_min = max(6.0, float(df.at[idx, "BASE_MIN"]))
+            starter = df.at[idx, "STARTER_OVERRIDE"]
+            if starter is False:
+                b_min = min(b_min, BENCH_MIN_CAP)
+            elif starter is True:
+                b_min = max(b_min, STARTER_MIN_FLOOR)
             factor = float(df.at[idx, "STATUS_FACTOR"])
             min_limit = df.at[idx, "MINUTE_LIMIT"]
 
@@ -139,7 +151,7 @@ def redistribute_usage_and_minutes(
         # Redistribute minutes from players who have explicit OUT or RESTRICTED user overrides
         out_players = [
             idx for idx in team_indices
-            if df.at[idx, "HAS_USER_OVERRIDE"] and (df.at[idx, "STATUS"] == "OUT" or df.at[idx, "STATUS_FACTOR"] < 1.0)
+            if df.at[idx, "HAS_USER_OVERRIDE"] and (df.at[idx, "STATUS"] == "OUT" or df.at[idx, "STATUS_FACTOR"] < 1.0 or df.at[idx, "STARTER_OVERRIDE"] is False)
         ]
         lost_minutes = 0.0
         pos_weights = {"GUARD": 0.0, "WING": 0.0, "BIG": 0.0}

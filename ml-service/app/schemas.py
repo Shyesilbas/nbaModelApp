@@ -9,6 +9,7 @@ class PlayerStatusOverride(BaseModel):
     status: str = "ACTIVE"  # "ACTIVE", "RESTRICTED", "OUT"
     minute_limit: Optional[float] = None
     status_factor: Optional[float] = None
+    is_starter: Optional[bool] = None  # None = use the model's own guess
 
 
 class WinProbRequest(BaseModel):

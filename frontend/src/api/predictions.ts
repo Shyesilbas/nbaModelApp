@@ -7,6 +7,7 @@ export type PlayerStatusOverride = {
   status: "ACTIVE" | "RESTRICTED" | "OUT";
   minute_limit?: number;
   status_factor?: number;
+  is_starter?: boolean;
 };
 
 export type GameFullRequest = {

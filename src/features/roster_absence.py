@@ -123,6 +123,18 @@ def _live_rotation(player_games: pd.DataFrame, team: str, pred_date, preseason: 
     return rot, set(last["Player_ID"])
 
 
+# Minutes a benched (is_starter=False) player is capped at; shared with the player minutes engine.
+BENCH_MIN_CAP = 22.0
+
+
+def _override_availability(hit, avg_min):
+    """Availability for an override: its factor, lowered to the bench-minutes share when the user benches the player."""
+    avail = float(hit["factor"])
+    if hit.get("is_starter") is False:
+        avail = min(avail, BENCH_MIN_CAP / max(float(avg_min), 1.0))
+    return avail
+
+
 def _override_for(overrides, pid, name):
     if not overrides:
         return None
@@ -149,7 +161,7 @@ def live_absence_delta(
     total = 0.0
     for pid, row in rot.iterrows():
         hit = _override_for(overrides, pid, row["name"])
-        avail = float(hit["factor"]) if hit is not None else (1.0 if pid in last_game else 0.0)
+        avail = _override_availability(hit, row["msum"] / row["gp"]) if hit is not None else (1.0 if pid in last_game else 0.0)
         total += (avail - row["presence"]) * row["gs"]
     return float(total)
 
