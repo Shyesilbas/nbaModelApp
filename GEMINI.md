@@ -27,9 +27,9 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 - Experiment reports must be registered before they are treated as active outputs.
 
 ## Current Production Decision
-- Win Probability: Calibrated Cross-Season LightGBM (Isotonic) with player projections is the active production model.
-- Score Prediction: Score Prediction V4 (XGBoost models for Pace, Home/Away Off_Rtg, Margin) is the active production model.
-- Player Prediction: Player Prediction V4 (LightGBM models for PTS, REB, AST) is the active production model.
+- Win Probability: Win Probability V10 (Uncalibrated Logistic Regression on 7-8 features) is the active production model.
+- Score Prediction: Score Prediction V10 (Standardized Ridge models for Pace, Home/Away Off_Rtg, Margin with Ridge residual correction) is the active production model.
+- Player Prediction: Player Prediction V9 (LightGBM models for PTS with L1 objective, REB, AST on 21 features) is the active production model.
 
 ## Common Pipelines and CLI Commands
 
@@ -43,7 +43,7 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 ### Daily Operations & Data Freshness
 - Daily Data Update (fetches latest completed game logs): `PYTHONPATH=. python3 main.py --update-data`
 - Package Frontend Schedule Context: `PYTHONPATH=. python3 main.py --build-schedule-context`
-- Compile Frontend SQLite Store: `PYTHONPATH=. python3 scripts/build_frontend_db.py`
+- Build Frontend Store (per-season SQLite, closed seasons skipped): `PYTHONPATH=. python3 scripts/build_frontend_store.py`
 - Roster & Core Player Analysis: `PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis`
 - Daily Schedule Matchups Predictor: `PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY [--model v10]`
 

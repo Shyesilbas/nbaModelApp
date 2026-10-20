@@ -34,13 +34,13 @@ All three are trained on 2020-21..2025-26. Honest walk-forward (2021-22..2025-26
 - [X] Validate generated datasets
 - [X] Merge 2024-25 experimental datasets with 2025-26 production datasets
 - [X] Train cross-season baseline WIN/SCORE models (strict season split)
-- [X] WIN promotion compatibility audit (`reports/audits/win_model_promotion_report.md`)
+- [X] WIN promotion compatibility audit (rapor silindi)
 - [X] Promote cross-season WIN candidate to production
 - [X] Retrain WIN/SCORE/PLAYER v8 production artifacts
 - [X] Remove service-side sklearn warning for WIN artifact load
 - [X] Remove static home/away split features from WIN model schema
 - [X] Promote WIN v9 strength-aware candidate after segment evaluation
-- [X] Comprehensive cross-season model quality, leakage and train-serve skew audit (`reports/audits/model_quality_leakage_and_governance_audit.md`)
+- [X] Comprehensive cross-season model quality, leakage and train-serve skew audit (rapor silindi)
 - [X] Fix ContinuousEloEngine margin calculation scale mismatch between training and live inference
 - [X] Remove box-score `PLAYED_COUNT` leakage from score model contract (`score_v10.yaml`)
 - [X] Export and integrate 5-Fold OOF score margins into WIN probability model

@@ -10,7 +10,10 @@ This document describes the end-to-end data flow, feature engineering, model dat
 - **Team Game Logs**: Fetched via `LeagueGameLog` (`nba_api`) into `team_games.csv` and `team_boxscores.csv`.
 - **Player Game Logs**: Fetched via `LeagueGameLog` into `player_games.csv` and `player_boxscores.csv`.
 - **Schedule**: Stored in `schedule.csv` and combined with upcoming fixtures into `schedule_combined.csv` and `.parquet`.
-- **Dynamic Updates**: Daily updates run via `python3 main.py --update-data`, detecting missing completed games with randomized jitter and exponential backoff to handle API limits.
+- **Starter Flags**: `LeagueGameLog` has no starter column; `src/ingestion/starters_fetcher.py` reads per-game starters from `BoxScoreTraditionalV3` (append-only, next to `player_games.csv`). Historical seasons: `scripts/backfill_starters.py`.
+- **Transactions**: `scripts/ingest/ingest_transactions.py` (official NBA player movement feed, refreshed by `--update-data`) and `scripts/ingest/ingest_espn_transactions.py` write to `data/transactions/`. `src/analysis/roster_transactions.py` applies trades, signings and waivers to the season roster for live player predictions and the frontend live roster.
+- **Write safety and contracts**: ingestion writes go through `src/ingestion/atomic_io.py` (temp file + `os.replace`). Raw team/player logs and team model-ready datasets are checked by `src/validation/contracts.py` before they are written; a violation stops the run and keeps the previous file.
+- **Dynamic Updates**: Daily updates run via `python3 main.py --update-data`, detecting missing completed games with randomized jitter and exponential backoff to handle API limits. The update also records starters and then runs `scripts/refresh_current_season_views.py` (live roster, frontend JSON, player profiles, SQLite store).
 
 ---
 
@@ -23,16 +26,15 @@ This document describes the end-to-end data flow, feature engineering, model dat
 
 ---
 
-## 3. High-Performance Data Layer (Parquet & SQLite)
+## 3. Data Layer (Parquet & Frontend Store)
 
-The platform utilizes a dual storage architecture for speed and efficiency:
-1. **ZSTD-Compressed Parquet Layer**:
-   - `team_model_ready_v3_{YYYY_YY}.parquet`: 12x faster read throughput and 76% disk compression.
-   - `player_model_ready_v4_usg.parquet`: 165,988 player-game records optimized for vectorized column scans.
-2. **High-Speed SQLite Store (`data/frontend/nba_frontend.db`)**:
-   - Compiled via `scripts/build_frontend_db.py`.
-   - Uses Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) and indexed B-trees (`idx_tb_game_season`, `idx_pb_game_player`).
-   - Powers sub-millisecond (<1ms) lookups for game details, team box scores, and historical player logs with zero startup memory overhead.
+1. **Parquet Layer**:
+   - `team_model_ready_v3_{YYYY_YY}.parquet` (Snappy): measured 4.5x faster reads than CSV (95 → 21 ms) and 55% smaller (5.9 → 2.7 MB) for 2025-26.
+   - `player_model_ready_v4_usg.csv`: 165,988 player-game records (active CSV dataset; stale parquet copy was retired on 2026-10-20).
+2. **Frontend Store (`data/frontend_store/`)**, the frontend's only data source:
+   - One SQLite file per season (`season_YYYY_YY.db`: games feed, box scores, game details, player game logs and averages, PBP moments, rosters, movers) plus `global.db` (seasons, player profiles, season averages, trades). Built by `scripts/build_frontend_store.py` (`src/frontend_store/`) straight from `data/`; each file is built in a temp file and swapped in atomically.
+   - A season is **closed** once a team has won four Finals games. A closed season's file is built once and then skipped (unless `STORE_VERSION` changes or `--force`), so past seasons cost nothing on daily updates. Measured: closed season ~20-30 s once, active season ~3 s, global ~2 s.
+   - Served by `ml-service/app/services/frontend_data.py` under `/frontend-data-api/*` (games, weeks, game detail, play-by-play, players, player profiles/averages, seasons, rosters, movers, trades, game results). Not tracked in git; `frontend/public/data/` no longer exists.
 
 ---
 
@@ -43,7 +45,7 @@ The platform utilizes a dual storage architecture for speed and efficiency:
 - **Dean Oliver Four Factors**: Rolling eFG%, turnover percentage, offensive rebound rate, and free throw rate.
 - **Shooting & Pace Metrics**: 3-point regression delta, havoc rate, foul rate, FT margin, and paint share.
 - **Schedule Fatigue**: Days rest, back-to-back flags, travel distance (Haversine formula), and timezone differentials.
-- **Core Player Availability**: Real-time availability rates for Top 3 and Top 5 core players.
+- **Core Player Availability** (`TEAM_CORE_*` / `OPP_CORE_*`, not used by production models): per game, the top 3/5 players by importance over the team's previous 20 games (min 3 played, traded players excluded), whether each plays, their expected (window-average) minutes and their shift(1) rolling stats. Rewritten on 2026-10-21; the previous version picked cores from full-season averages and used the game's actual minutes.
 
 ### Player Features (V4 USG)
 - **Usage Rate Trends**: Rolling 5, 10, and 20-game Exponential Moving Averages (`USG_PCT_EMA_5`, `USG_PCT_TREND`).
@@ -58,7 +60,7 @@ The platform utilizes a dual storage architecture for speed and efficiency:
 
 ## 5. Dataset Assembly Layers
 
-- **Team Model-Ready V3**: `data/processed/team_model_ready_v3_{YYYY_YY}.csv` (and `.parquet`).
+- **Team Model-Ready V3**: `data/processed/team_model_ready_v3_{YYYY_YY}.csv` (and `.parquet`). Built by `scripts/rebuild_training_data.py` for all seasons, by `--bootstrap-season` for a new season, and refreshed daily for the in-progress season by `--update-data`.
 - **Player Model-Ready V4**: `data/experimental/player_model_ready_v4_usg.csv` (CSV only; inference reads the newer of any CSV/parquet pair).
 - **Score Model Dataset**: Joint features combining pace, ratings, travel, and rest indicators.
 
@@ -71,5 +73,5 @@ The platform utilizes a dual storage architecture for speed and efficiency:
    - **SCORE Prediction (v10)**: Ridge regressors for pace and each side's offensive rating (2 features each) and for the margin (WIN inputs), with a Ridge residual correction; trained on actual points.
    - **PLAYER Projection (v9)**: LightGBM regressors for PTS (L1), REB, AST on 21 features including position flags and the opponent's allowance to the player's position.
 2. **Serving**:
-   - FastAPI ML service (`ml-service/app`) providing sub-20ms point inference.
-   - React 19 dashboard with week-by-week lazy fetching (~25 KB payload vs 1.2 MB full season).
+   - FastAPI ML service (`ml-service/app`). Measured warm WIN prediction: p50 ~430 ms, p95 ~820 ms, dominated by feature building (log loading and form roll-forward), not the model call.
+   - React 19 dashboard; all data requests go to `/frontend-data-api/*` (`frontend/src/lib/dataCache.ts`).

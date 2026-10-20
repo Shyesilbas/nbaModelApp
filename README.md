@@ -25,8 +25,8 @@ Against simple pregame baselines over five walk-forward seasons (`reports/evalua
 ## High-Performance Engineering
 
 ### 1. High-Speed Data Engine (Parquet & SQLite)
-- **ZSTD-Compressed Parquet Layer**: Replaced bloated raw CSVs with Parquet datasets, delivering **12x faster load times** and **~76% disk footprint reduction**.
-- **Embedded SQLite Store (`nba_frontend.db`)**: Indexed WAL-mode SQLite database providing **sub-millisecond (<1ms)** point lookups for game details, team box scores, and historical player logs with zero startup memory overhead.
+- **Parquet Layer**: Snappy-compressed Parquet copies of the model-ready datasets (measured 4.5x faster reads and 55% smaller than CSV for `team_model_ready_v3_2025_26`).
+- **Frontend Store**: one SQLite file per season under `data/frontend_store/` plus `global.db`, built by `scripts/build_frontend_store.py`. A season is sealed once its Finals are decided and never rebuilt; the daily refresh only rebuilds the active season (~3 s). The frontend reads everything through `/frontend-data-api/*`.
 - **In-Memory Caching**: State-cached Continuous Elo engine and memoized joblib models eliminate redundant filesystem I/O during real-time schedule predictions.
 
 ### 2. Hardened FastAPI ML Inference Service
@@ -46,7 +46,7 @@ Against simple pregame baselines over five walk-forward seasons (`reports/evalua
 ├── data/
 │   ├── processed/         # Team model-ready datasets (V3, 2020-21 to 2025-26) in Parquet/CSV
 │   ├── experimental/      # Player model-ready datasets (V4 USG, 165K rows)
-│   ├── frontend/          # High-performance nba_frontend.db SQLite store
+│   ├── frontend_store/    # Per-season SQLite store served by the API to the frontend
 │   └── season=YYYY-YY/    # Season-scoped raw box scores, schedules, and rolling features
 ├── ml-service/
 │   ├── app/               # FastAPI prediction service, schemas, and rate limiters
@@ -101,7 +101,7 @@ PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date 2026-10-08 --seaso
 | Task | Command | Description |
 | :--- | :--- | :--- |
 | **Ingest Latest Data** | `PYTHONPATH=. python3 main.py --update-data` | Fetches latest completed box scores and schedule updates |
-| **Build Frontend SQLite Store** | `PYTHONPATH=. python3 scripts/build_frontend_db.py` | Compiles raw JSON/logs into indexed `nba_frontend.db` |
+| **Build Frontend Store** | `PYTHONPATH=. python3 scripts/build_frontend_store.py [--season YYYY-YY] [--force]` | Builds the per-season SQLite store; sealed (closed) seasons are skipped |
 | **Roster & Core Player Audit** | `PYTHONPATH=. python3 main.py --season 2026-27 --run-roster-analysis` | Computes player minutes share, rotation depth, and trade stints |
 | **Retraining Pipeline** | `PYTHONPATH=. python3 scripts/retrain_pipeline.py --season 2025-26 --dry-run` | Audits champion vs challenger models before promotion |
 | **Quality & Structure Audit** | `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py` | Validates file integrity, feature alignment, and path refactoring |
@@ -113,6 +113,4 @@ PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date 2026-10-08 --seaso
 - [ARTIFACT_REGISTRY.md](ARTIFACT_REGISTRY.md) — Single source of truth for all active models, datasets, and paths.
 - [PROJECT_STATUS.md](PROJECT_STATUS.md) — Current development phase, active production configurations, and backlog.
 - [reports/production/model_performance_and_architecture_report.md](reports/production/model_performance_and_architecture_report.md) — Active model architecture, the 2026-10-20 review changes and walk-forward benchmarks.
-- [reports/audits/model_quality_leakage_and_governance_audit.md](reports/audits/model_quality_leakage_and_governance_audit.md) — Comprehensive audit of V10.1 out-of-sample performance, leakage prevention, and metric verification.
 - [docs/season_onboarding_guide.md](docs/season_onboarding_guide.md) — Step-by-step workflow for ingesting new NBA seasons.
-- [reports/production/v8_vs_v9_model_comparisons.md](reports/production/v8_vs_v9_model_comparisons.md) — Historical model evolution and calibration notes.

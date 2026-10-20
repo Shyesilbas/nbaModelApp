@@ -1,6 +1,6 @@
 # Çok Sezonlu Expanding-Window Walk-Forward Backtest Raporu
 
-**Rapor Tarihi:** 2026-10-20T10:54:14.579563Z  
+**Rapor Tarihi:** 2026-10-20T22:42:58.017673Z  
 **Yöntem:** Kesintisiz Genişleyen Zaman Pencereleri (Expanding Window). Her sezon yalnızca önceki tamamlanmış sezonlarla eğitilen modellerle test edilmiştir; geleceğe dönük hiçbir bilgi sızıntısı (leakage) bulunmamaktadır.  
 **Toplam Görülmemiş Test Maçı:** 6276 maç (5 ayrı NBA sezonu)
 

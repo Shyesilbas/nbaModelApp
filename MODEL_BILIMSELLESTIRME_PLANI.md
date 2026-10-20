@@ -24,7 +24,7 @@ Planın uygulamasına başlandı. Kaynak kodda aşağıdaki değişiklikler yap�
 
 ### İlk aday koşusu sonucu
 
-İlk dry-run raporu [training_run_20261004_124239.md](reports/evaluation/training_run_20261004_124239.md) içindedir. Daha sonra temiz adaylar için yeniden eğitim yapıldı; son ölçüm ve üretime alınan release kaydı [training_run_20261004_130707.md](reports/evaluation/training_run_20261004_130707.md) ve [leakage_clean_release.json](models/production/leakage_clean_release.json) içindedir. Son ölçümde WIN Brier/AUC 0.2136/0.7186; SCORE total/margin MAE 15.5896/12.4897; PLAYER PTS/REB/AST MAE 4.5392/1.9507/1.3619.
+İlk dry-run raporu `training_run_20261004_124239.md` (silindi) içindedir. Daha sonra temiz adaylar için yeniden eğitim yapıldı; son ölçüm ve üretime alınan release kaydı `training_run_20261004_130707.md` (silindi) ve [leakage_clean_release.json](models/production/leakage_clean_release.json) içindedir. Son ölçümde WIN Brier/AUC 0.2136/0.7186; SCORE total/margin MAE 15.5896/12.4897; PLAYER PTS/REB/AST MAE 4.5392/1.9507/1.3619.
 
 | Model | Ölçü | Üretim | Yeni aday | Değişim |
 |---|---:|---:|---:|---:|
@@ -287,11 +287,11 @@ Sabit eşikleri bir defa belirleyip sonsuza dek korumak yerine, mevcut şampiyon
 - Tarihsel core availability üretimi: [src/features/core_player_availability_features.py](src/features/core_player_availability_features.py)
 - Üretim WIN metadata’sı: [models/production/model_metadata.json](models/production/model_metadata.json)
 - Üretim SCORE metadata’sı: [models/production/score_model_v10_metadata.json](models/production/score_model_v10_metadata.json)
-- Önceki kalite/leakage denetimi: [reports/audits/model_quality_leakage_and_governance_audit.md](reports/audits/model_quality_leakage_and_governance_audit.md)
-- Eğitim governance özeti: [reports/operations/training_governance_status.md](reports/operations/training_governance_status.md)
+- Önceki kalite/leakage denetimi: `reports/audits/model_quality_leakage_and_governance_audit.md` (silindi)
+- Eğitim governance özeti: `reports/operations/training_governance_status.md` (silindi)
 # Uygulama durumu — 2026-10-04
 
-Leakage azaltma ve üretim adayı değerlendirmesi [reports/evaluation/training_run_20261004_130707.md](reports/evaluation/training_run_20261004_130707.md) içinde kayıtlı. Bilinen sızıntılı eski şampiyon yedeklenerek temiz aday üretime alınmış; geri dönüş kopyası [models/production/replaced_leaky/20261004_130707/](models/production/replaced_leaky/20261004_130707/) altında tutulmuştur.
+Leakage azaltma ve üretim adayı değerlendirmesi `reports/evaluation/training_run_20261004_130707.md` (silindi) içinde kayıtlı. Bilinen sızıntılı eski şampiyon yedeklenerek temiz aday üretime alınmış; geri dönüş kopyası [models/production/replaced_leaky/20261004_130707/](models/production/replaced_leaky/20261004_130707/) altında tutulmuştur.
 
 ## 1. Tam Üretim Yığını Çok Sezonlu Walk-Forward Backtest (WIN, SCORE, PLAYER)
 
@@ -312,7 +312,7 @@ Leakage azaltma ve üretim adayı değerlendirmesi [reports/evaluation/training_
 
 [scripts/run_feature_ablations.py](scripts/run_feature_ablations.py) ile aday özellik aileleri 5 dış test sezonunda katı expanding window kuralıyla test edildi:
 
-* **Rapor:** [reports/evaluation/feature_ablation_study.md](reports/evaluation/feature_ablation_study.md) ve [feature_ablation_study.json](reports/evaluation/feature_ablation_study.json)
+* **Rapor:** `reports/evaluation/feature_ablation_study.md` (silindi) ve `feature_ablation_study.json` (silindi)
 * **Temel Bulgular:** 
   * Core Baseline (Elo + Rest + Form): 0.2250 Brier / 0.6749 AUC.
   * Dean Oliver Four Factors (+ Net Rtg, eFG%, Tov, Rebound): Olasılık kalibrasyonuna ve takım gücü temsiline pozitif katkı.
@@ -321,7 +321,7 @@ Leakage azaltma ve üretim adayı değerlendirmesi [reports/evaluation/training_
 ## 3. Canlı Shadow Modu ve Drift İzleme Altyapısı (Aşama 4)
 
 * **Shadow Logger:** [ml-service/app/services/shadow_logger.py](ml-service/app/services/shadow_logger.py) ile canlı servise gelen her tam tahmin `prediction_id`, zaman damgası, model sürümü, conformal aralıklar ve girdi snapshot'ı ile `data/predictions/shadow_predictions_log.jsonl` dosyasına yazılacak şekilde entegre edildi ([ml-service/app/services/game_full.py](ml-service/app/services/game_full.py)).
-* **Drift & Kalibrasyon Monitörü:** [scripts/monitor_shadow_and_drift.py](scripts/monitor_shadow_and_drift.py) ile loglanan tahminlerin tamamlanmış maçlarla eşleştirilip Brier, MAE, Conformal kapsama ve Kolmogorov-Smirnov girdi kayma testlerini yürüten otomatik raporlama hattı kuruldu ([reports/operations/live_shadow_and_drift_report.md](reports/operations/live_shadow_and_drift_report.md)).
+* **Drift & Kalibrasyon Monitörü:** [scripts/monitor_shadow_and_drift.py](scripts/monitor_shadow_and_drift.py) ile loglanan tahminlerin tamamlanmış maçlarla eşleştirilip Brier, MAE, Conformal kapsama ve Kolmogorov-Smirnov girdi kayma testlerini yürüten otomatik raporlama hattı kuruldu (`reports/operations/live_shadow_and_drift_report.md` (silindi)).
 
 ## Kapsam ve Tasarım Kararları
 

@@ -17,20 +17,13 @@ The **NBA Intelligence Lab** is a high-performance, polished, React-based dashbo
 
 ## 🚀 Getting Started
 
-### 1. Prerequisite: Export JSON Datasets
-Before running the frontend, make sure to generate the static JSON data files from the project's CSVs. Run the following command from the **root directory** of the project:
+### 1. Prerequisite: Frontend Store and API
+The frontend has no static data files; everything comes from the ML service (`/frontend-data-api/*`, default `http://localhost:8001`, override with `VITE_API_BASE_URL`), which reads the SQLite store under `data/frontend_store/`. Build the store once from the **root directory**, then start the API:
 
 ```bash
-python3 scripts/export_frontend_data.py
+PYTHONPATH=. python3 scripts/build_frontend_store.py
+python3 -m uvicorn app.main:app --app-dir ml-service --port 8001
 ```
-
-This will read datasets under `data/` and serialize them as optimized JSON records inside the frontend assets directory:
-- `frontend/public/data/team_rosters.json`
-- `frontend/public/data/core_players.json`
-- `frontend/public/data/star_candidates.json`
-- `frontend/public/data/multi_team_players.json`
-- `frontend/public/data/player_name_lookup.json`
-- `frontend/public/data/dataset_summary.json`
 
 ### 2. Launch Local Dev Server
 Navigate into the `frontend/` directory, install package dependencies, and spin up the Vite development server:

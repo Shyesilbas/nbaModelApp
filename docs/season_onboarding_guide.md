@@ -60,12 +60,12 @@ PYTHONPATH=. python3 main.py --season YYYY-YY --bootstrap-season
 
 ---
 
-### Step 5: Compile High-Speed Frontend SQLite Store
-Compiles raw JSON files and game logs into an indexed, zero-overhead SQLite database:
+### Step 5: Build the Frontend Store
+Builds the SQLite files the API serves the frontend from:
 ```bash
-PYTHONPATH=. python3 scripts/build_frontend_db.py
+PYTHONPATH=. python3 scripts/build_frontend_store.py --season YYYY-YY
 ```
-- **What it does**: Creates `data/frontend/nba_frontend.db` with WAL mode and B-tree indexes, enabling sub-millisecond (<1ms) point lookups for game details and historical logs.
+- **What it does**: Writes `data/frontend_store/season_YYYY_YY.db` (games, box scores, details, player logs, PBP moments, rosters) and refreshes `global.db`. The previous season is sealed automatically once its Finals are decided; `--update-data` keeps the new season's file current.
 
 ---
 
@@ -87,7 +87,7 @@ PYTHONPATH=. python3 scripts/build_play_by_play.py --season YYYY-YY --dry-run
 # Ingest and cache playoff / Finals games
 PYTHONPATH=. python3 scripts/build_play_by_play.py --season YYYY-YY --season-type "NBA Finals"
 ```
-- **What it does**: Writes source caches to `data/season=YYYY-YY/raw/play_by_play/{GAME_ID}.json` and exports copies to `frontend/public/data/play_by_play/`.
+- **What it does**: Writes source caches to `data/season=YYYY-YY/raw/play_by_play/{GAME_ID}.json`. The frontend store condenses them into PBP moments on its next build.
 
 ---
 

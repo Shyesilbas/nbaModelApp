@@ -20,11 +20,7 @@ Example:
 /frontend-data-api/play-by-play/0042500405?season=2025-26
 ```
 
-The endpoint reads:
-
-```text
-data/season=<season>/raw/play_by_play/<GAME_ID>.json
-```
+The endpoint returns the condensed "moments" payload stored in the season's frontend store (`data/frontend_store/season_YYYY_YY.db`, table `pbp_moments`, built from `data/season=<season>/raw/play_by_play/<GAME_ID>.json`). A game fetched after the last store build is condensed from the raw file on the fly. (Updated 2026-10-21: before this, the endpoint returned the raw payload and the frontend first tried a static `play_by_play_moments` copy.)
 
 If `season` is omitted, the service attempts to infer it from the NBA `GAME_ID`.
 

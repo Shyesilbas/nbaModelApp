@@ -12,8 +12,8 @@ React 19 Frontend (Vite)
        ▼ (HTTP / REST)
 FastAPI ML Service (Port 8001)
        │
-       ├──► SQLite Store (`data/frontend/nba_frontend.db` - Sub-1ms Box Scores & Logs)
-       ├──► Model Predictors (WIN v10.1, SCORE v10, PLAYER v9 - Sub-20ms Inference)
+       ├──► Frontend Store (`data/frontend_store/season_YYYY_YY.db` + `global.db`)
+       ├──► Model Predictors (WIN v10.1, SCORE v10, PLAYER v9; warm WIN p50 ~430 ms)
        └──► Continuous Elo & Roster Snapshot Caches
 ```
 
@@ -60,9 +60,9 @@ npm run dev
 - `GET /frontend-data-api/games?season=YYYY-YY&start_date=...&end_date=...`:
   - Date-bounded game indexing for week-by-week lazy fetching (~25 KB payload).
 - `GET /frontend-data-api/games/{game_id}`:
-  - Fetches complete box score, quarter lines, and individual player stats from `nba_frontend.db`.
-- `GET /frontend-data-api/players/{player_id}/history?season=YYYY-YY`:
-  - Sub-millisecond player game logs retrieved directly from SQLite.
+  - Game header, team and player box scores from the season's store.
+- `GET /frontend-data-api/players/{player_id}`:
+  - The player's game logs and averages from every season store.
 
 ### Matchup & Prediction APIs
 - `POST /predict/win-probability`:
