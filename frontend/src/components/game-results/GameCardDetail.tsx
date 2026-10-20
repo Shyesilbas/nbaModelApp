@@ -16,7 +16,7 @@ import TeamLogo from "../TeamLogo";
 import PlayerPhoto from "../PlayerPhoto";
 import type { GameFeedRow } from "../../types/gameFeed";
 import type { TeamBoxScore, PlayerBoxScore } from "./types";
-import { fmtDate, fmtInt, teamFull, teamCity, parseOfficials } from "./utils";
+import { fmtDate, fmtInt, fmtTipoffTR, teamFull, teamCity, parseOfficials, sortPlayersByMinutes } from "./utils";
 import { loadArchivedPlayByPlay } from "../../lib/archiveData";
 import { QuarterScores } from "./QuarterScores";
 import { TeamComparisonBars } from "./TeamComparisonBars";
@@ -75,8 +75,12 @@ export function GameCardDetail({
   const homeBS = initialHomeBS ?? (gameDetail?.team_stats ?? []).find((t: any) => t.TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION || t.team_abbreviation === game.HOME_TEAM_ABBREVIATION) ?? null;
   const awayBS = initialAwayBS ?? (gameDetail?.team_stats ?? []).find((t: any) => t.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION || t.team_abbreviation === game.AWAY_TEAM_ABBREVIATION) ?? null;
 
-  const topHome: PlayerBoxScore[] = initialHomePlayers && initialHomePlayers.length > 0 ? initialHomePlayers : (gameDetail?.home_team?.players ?? []);
-  const topAway: PlayerBoxScore[] = initialAwayPlayers && initialAwayPlayers.length > 0 ? initialAwayPlayers : (gameDetail?.away_team?.players ?? []);
+  const topHome: PlayerBoxScore[] = sortPlayersByMinutes(
+    initialHomePlayers && initialHomePlayers.length > 0 ? initialHomePlayers : (gameDetail?.home_team?.players ?? [])
+  );
+  const topAway: PlayerBoxScore[] = sortPlayersByMinutes(
+    initialAwayPlayers && initialAwayPlayers.length > 0 ? initialAwayPlayers : (gameDetail?.away_team?.players ?? [])
+  );
   const topGame = [...topHome, ...topAway].sort((a, b) => ((b.PTS ?? (b as any).pts) ?? 0) - ((a.PTS ?? (a as any).pts) ?? 0));
 
   const officials = parseOfficials(game.OFFICIALS);
@@ -124,7 +128,7 @@ export function GameCardDetail({
             ) : (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary">
                 <Clock size={12} className="text-text-muted" />
-                {game.GAME_STATUS || "Scheduled"}
+                {fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Scheduled")}
               </span>
             )}
             <span>•</span>
@@ -165,6 +169,9 @@ export function GameCardDetail({
                       {homeScore ?? "—"}
                     </span>
                   </div>
+                  {fmtTipoffTR(game.GAME_START_UTC) && (
+                    <p className="text-[11px] tabular-nums text-text-muted">{fmtTipoffTR(game.GAME_START_UTC)}</p>
+                  )}
                   {winnerAbbr && (
                     <p className="text-xs tabular-nums text-text-secondary">
                       <span className="font-semibold text-text-primary">{winnerAbbr}</span> by {margin} pts
@@ -175,6 +182,9 @@ export function GameCardDetail({
                 <div className="flex flex-col items-center justify-center">
                   <span className="text-sm font-semibold text-text-secondary">vs</span>
                   <span className="mt-0.5 text-xs text-text-secondary">Upcoming</span>
+                  {fmtTipoffTR(game.GAME_START_UTC) && (
+                    <span className="text-xs font-semibold tabular-nums text-text-primary">{fmtTipoffTR(game.GAME_START_UTC)}</span>
+                  )}
                 </div>
               )}
               {!isCompleted && onPredict && (
@@ -339,7 +349,7 @@ export function GameCardDetail({
                   </div>
                   <div className="rounded border border-border bg-background-tertiary p-3">
                     <p className="text-xs font-medium text-text-muted">Status</p>
-                    <p className="mt-1 text-xs font-semibold text-text-primary">{game.GAME_STATUS || "Upcoming / Scheduled"}</p>
+                    <p className="mt-1 text-xs font-semibold text-text-primary">{fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Upcoming / Scheduled")}</p>
                     <p className="text-xs text-text-secondary">Box scores recorded post-game</p>
                   </div>
                 </div>

@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.features.roster_absence import BENCH_MIN_CAP
 
-# shortcut: fixed role minutes, replace with per-player starter/bench history once STARTER is merged.
+# Fixed role minutes, used only while there is too little recorded starter data to fit starter_history's model.
 STARTER_MIN_FLOOR = 26.0
 
 POSITION_AFFINITY: Dict[str, Dict[str, float]] = {
@@ -30,6 +30,7 @@ def redistribute_usage_and_minutes(
     target_team_minutes: float = 240.0,
     minute_elasticity: float = 0.85,
     is_preseason: bool = False,
+    role_model=None,
 ) -> pd.DataFrame:
     df = roster_df.copy()
 
@@ -128,10 +129,14 @@ def redistribute_usage_and_minutes(
         for idx in active_indices:
             b_min = max(6.0, float(df.at[idx, "BASE_MIN"]))
             starter = df.at[idx, "STARTER_OVERRIDE"]
-            if starter is False:
-                b_min = min(b_min, BENCH_MIN_CAP)
-            elif starter is True:
-                b_min = max(b_min, STARTER_MIN_FLOOR)
+            if starter is not None:
+                learned = role_model.minutes(df.at[idx, "PLAYER_ID"], b_min, bool(starter)) if role_model is not None and pd.notna(df.at[idx, "PLAYER_ID"]) else None
+                if learned is not None:
+                    b_min = learned
+                elif starter is False:
+                    b_min = min(b_min, BENCH_MIN_CAP)
+                else:
+                    b_min = max(b_min, STARTER_MIN_FLOOR)
             factor = float(df.at[idx, "STATUS_FACTOR"])
             min_limit = df.at[idx, "MINUTE_LIMIT"]
 

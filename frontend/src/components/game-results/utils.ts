@@ -18,8 +18,50 @@ export const fmtDate = (d: string) =>
     year: "numeric",
   });
 
+export const parseMinutes = (val: number | string | null | undefined): number => {
+  if (val == null) return -1;
+  if (typeof val === "number") return isNaN(val) ? -1 : val;
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (!trimmed || trimmed === "—" || trimmed.toUpperCase().startsWith("DNP") || trimmed.toUpperCase() === "NWT") {
+      return -1;
+    }
+    if (trimmed.includes(":")) {
+      const parts = trimmed.split(":");
+      const m = parseFloat(parts[0]) || 0;
+      const s = parseFloat(parts[1]) || 0;
+      return m + s / 60;
+    }
+    const parsed = parseFloat(trimmed);
+    return isNaN(parsed) ? -1 : parsed;
+  }
+  return -1;
+};
+
+type LoosePlayer = PlayerBoxScore & {
+  min?: number | string | null;
+  pts?: number | null;
+  player_name?: string | null;
+};
+
+export const sortPlayersByMinutes = (players: PlayerBoxScore[]): PlayerBoxScore[] => {
+  return [...players].sort((a, b) => {
+    const pA = a as LoosePlayer;
+    const pB = b as LoosePlayer;
+    const minA = parseMinutes(pA.MIN ?? pA.min);
+    const minB = parseMinutes(pB.MIN ?? pB.min);
+    if (minB !== minA) return minB - minA;
+    const ptsA = Number(pA.PTS ?? pA.pts) || 0;
+    const ptsB = Number(pB.PTS ?? pB.pts) || 0;
+    if (ptsB !== ptsA) return ptsB - ptsA;
+    const nameA = pA.PLAYER_NAME ?? pA.player_name ?? "";
+    const nameB = pB.PLAYER_NAME ?? pB.player_name ?? "";
+    return nameA.localeCompare(nameB);
+  });
+};
+
 export const playerTeamFilter = (players: PlayerBoxScore[], abbr: string) =>
-  players.filter((p) => p.TEAM_ABBREVIATION === abbr);
+  sortPlayersByMinutes(players.filter((p) => p.TEAM_ABBREVIATION === abbr));
 
 const TEAM_FULL: Record<string, string> = {
   ATL: "Hawks",
@@ -133,6 +175,14 @@ export function parseOfficials(rawList: unknown): ParsedOfficial[] {
     .filter((o): o is ParsedOfficial => Boolean(o && o.cleanName));
 }
 
+/** Scheduled tip-off in Turkey time (HH:mm), or null when the feed has no start time. */
+export function fmtTipoffTR(startUtc?: string | null): string | null {
+  if (!startUtc) return null;
+  const t = new Date(startUtc);
+  if (isNaN(t.getTime())) return null;
+  return `${t.toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", hour12: false })} TSİ`;
+}
+
 export function isGameEligibleForRefresh(game: {
   GAME_STATUS?: string | null;
   HOME_SCORE?: number | null;
@@ -153,15 +203,15 @@ export function isGameEligibleForRefresh(game: {
     return false;
   }
 
-  // 2. Only active if game scheduled tip-off was at least 4 hours ago
+  // 2. Only active if game scheduled tip-off was at least 2.5 hours ago
   const now = Date.now();
-  const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+  const MIN_ELAPSED_MS = 2.5 * 60 * 60 * 1000;
 
   // Case A: exact UTC tip-off timestamp
   if (game.GAME_START_UTC) {
     const tipoff = new Date(game.GAME_START_UTC).getTime();
     if (!isNaN(tipoff)) {
-      return (now - tipoff) >= FOUR_HOURS_MS;
+      return (now - tipoff) >= MIN_ELAPSED_MS;
     }
   }
 
@@ -179,18 +229,18 @@ export function isGameEligibleForRefresh(game: {
       const etDateStr = `${game.GAME_DATE}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00-04:00`;
       const tipoff = new Date(etDateStr).getTime();
       if (!isNaN(tipoff)) {
-        return (now - tipoff) >= FOUR_HOURS_MS;
+        return (now - tipoff) >= MIN_ELAPSED_MS;
       }
     }
   }
 
   // Case C: only GAME_DATE is available
   // NBA evening games typically start around 7:00 pm ET (23:00 UTC).
-  // 4 hours after tip-off is 03:00 UTC the following day.
+  // 2.5 hours after tip-off is 01:30 UTC the following day.
   if (game.GAME_DATE) {
     const defaultTipoff = new Date(`${game.GAME_DATE}T23:00:00Z`).getTime();
     if (!isNaN(defaultTipoff)) {
-      return (now - defaultTipoff) >= FOUR_HOURS_MS;
+      return (now - defaultTipoff) >= MIN_ELAPSED_MS;
     }
   }
 

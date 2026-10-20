@@ -2,6 +2,7 @@ import React from "react";
 import { ChevronRight, Clock, Sparkles } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
+import { fmtTipoffTR } from "../game-results/utils";
 import { TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../../lib/nbaTeams";
 
 interface FixtureMatchRowProps {
@@ -47,7 +48,7 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
         ) : (
           <div className="flex items-center gap-1 text-[11px] font-semibold text-text-secondary sm:text-xs">
             <Clock className="hidden h-3 w-3 shrink-0 text-text-muted sm:inline" />
-            <span className="truncate">{game.GAME_STATUS || "vs"}</span>
+            <span className="truncate">{fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "vs")}</span>
           </div>
         )}
       </div>

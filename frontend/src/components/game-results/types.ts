@@ -25,6 +25,7 @@ export interface PlayerBoxScore {
   TEAM_ABBREVIATION: string;
   PLAYER_ID: number;
   PLAYER_NAME: string;
+  IS_STARTER?: number | null;
   MIN: number | null;
   PTS: number | null;
   FGM?: number | null;

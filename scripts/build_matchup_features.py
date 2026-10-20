@@ -227,6 +227,10 @@ def _ensure_datetime(df, col):
         df[col] = pd.to_datetime(df[col], errors="coerce")
 
 
+# Walk-forward on 2021-22..2025-26: a 6-game window costs +0.0007 log loss vs 12 (within noise).
+EARLY_SEASON_BLEND_GAMES = 6
+
+
 def _raw_season_games(season: str) -> pd.DataFrame:
     """Completed regular-season and playoff team games of one season (no preseason)."""
     paths = get_data_paths(season)
@@ -616,6 +620,8 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     out["CLUTCH_NET_RTG_DIFF_LAST_10"] = clutch_h - clutch_a
 
     # Final mapping and missing-column handling for the original required cols
+    # (roster absence features are filled in further down, from player logs and overrides)
+    LIVE_ROSTER_FEATURES = {"ABS_DELTA", "OPP_ABS_DELTA", "ABS_DIFF"}
     res = {}
     missing_cols = []
     for c in feat_cols:
@@ -627,7 +633,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
         else:
             # If a required model feature is not computed above, attempt to pull from home_row
             val = safe_get(home_row, c, np.nan)
-            if pd.isna(val):
+            if pd.isna(val) and c not in LIVE_ROSTER_FEATURES:
                 missing_cols.append(c)
             res[c] = float(val) if pd.notna(val) else np.nan
 
@@ -705,11 +711,12 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
         res["GAMES_PLAYED_HOME_SEASON"] = n_home
         res["GAMES_PLAYED_AWAY_SEASON"] = n_away
 
-        # Prediction-level Pure Elo blend weight for early season (< 12 games).
+        # Prediction-level Pure Elo blend weight until both teams have played
+        # EARLY_SEASON_BLEND_GAMES regular-season games (preseason is not counted).
         # Features themselves stay raw: the models were trained on raw early-season
         # rows, and shrinking them here raised walk-forward log loss in every 0-20 game bucket.
-        if n_min < 12:
-            res["EARLY_SEASON_ELO_BLEND_WEIGHT"] = float(max(0.0, 1.0 - (n_min / 12.0)) * 0.40)
+        if n_min < EARLY_SEASON_BLEND_GAMES:
+            res["EARLY_SEASON_ELO_BLEND_WEIGHT"] = float(max(0.0, 1.0 - (n_min / EARLY_SEASON_BLEND_GAMES)) * 0.40)
         else:
             res["EARLY_SEASON_ELO_BLEND_WEIGHT"] = 0.0
     except Exception:

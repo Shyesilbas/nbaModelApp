@@ -3,6 +3,7 @@ import { ArrowLeft, Star } from "lucide-react";
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { loadArchivedPlayByPlay, loadArchivedGameBoxscores } from "../lib/archiveData";
+import { parseMinutes } from "./game-results/utils";
 
 /* ── Data Interfaces ── */
 interface TBS {
@@ -110,7 +111,15 @@ function PlayerTable({
   players: PBS[];
   highlightId?: number;
 }) {
-  const sorted = [...players].sort((a, b) => (b.MIN ?? 0) - (a.MIN ?? 0));
+  const sorted = [...players].sort((a, b) => {
+    const minA = parseMinutes(a.MIN);
+    const minB = parseMinutes(b.MIN);
+    if (minB !== minA) return minB - minA;
+    const ptsA = Number(a.PTS) || 0;
+    const ptsB = Number(b.PTS) || 0;
+    if (ptsB !== ptsA) return ptsB - ptsA;
+    return (a.PLAYER_NAME || "").localeCompare(b.PLAYER_NAME || "");
+  });
 
   return (
     <div className="overflow-x-auto rounded border border-border bg-background-primary">

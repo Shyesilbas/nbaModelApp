@@ -1,7 +1,7 @@
 import { Sparkles, ChevronRight, Calendar, Clock, RefreshCw, Shield } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
-import { fmtDate, isGameEligibleForRefresh, parseOfficials } from "./utils";
+import { fmtDate, fmtTipoffTR, isGameEligibleForRefresh, parseOfficials } from "./utils";
 
 export function GameCard({
   game,
@@ -54,12 +54,12 @@ export function GameCard({
           {isCompleted ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary">
               <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
-              {game.GAME_STATUS || "Final"}
+              {game.GAME_STATUS || "Final"}{fmtTipoffTR(game.GAME_START_UTC) ? ` · ${fmtTipoffTR(game.GAME_START_UTC)}` : ""}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary">
               <Clock size={12} className="text-text-muted" />
-              {game.GAME_STATUS || "Scheduled"}
+              {fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Scheduled")}
             </span>
           )}
         </div>

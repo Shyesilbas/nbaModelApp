@@ -3,7 +3,7 @@ import { Sparkles, ChevronRight, Clock, RefreshCw, Shield, MapPin } from "lucide
 import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../../lib/nbaTeams";
-import { isGameEligibleForRefresh, parseOfficials } from "../game-results/utils";
+import { fmtTipoffTR, isGameEligibleForRefresh, parseOfficials } from "../game-results/utils";
 
 interface FixtureMatchCardProps {
   game: GameFeedRow;
@@ -60,11 +60,12 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
             <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-status-success">
               <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
               {game.GAME_STATUS || "Final"}
+              {fmtTipoffTR(game.GAME_START_UTC) && <span className="font-normal text-text-muted">· {fmtTipoffTR(game.GAME_START_UTC)}</span>}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 font-semibold text-text-muted text-[11px]">
               <Clock className="h-3 w-3" />
-              <span>{game.GAME_STATUS || "Programda"}</span>
+              <span>{fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Programda")}</span>
             </span>
           )}
           {game.SERIES_GAME_NUMBER != null && (

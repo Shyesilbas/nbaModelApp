@@ -54,3 +54,28 @@ def test_benched_player_lowers_team_availability_like_restricted():
     assert _override_availability({**full, "is_starter": False}, 35.0) == BENCH_MIN_CAP / 35.0
     assert _override_availability({**full, "is_starter": False}, 15.0) == 1.0  # already a bench-level role
     assert _override_availability({"factor": 0.0, "is_starter": False}, 35.0) == 0.0
+
+
+def test_role_model_replaces_fixed_rule_when_fitted():
+    import numpy as np
+    from src.features.starter_history import RoleMinutesModel
+
+    # minutes = 0 + 1.0 * base + 5 * started: a starter is a shift, not a floor
+    model = RoleMinutesModel(coef=np.array([0.0, 1.0, 5.0, 0.0, 0.0]))
+    assert model.minutes(1, 10.0, True) == 15.0
+    assert model.minutes(1, 30.0, False) == 30.0
+    assert RoleMinutesModel().minutes(1, 30.0, True) is None  # unfitted: caller keeps the fixed rule
+
+    ov = {2: _entry(is_starter=False), 9: _entry(is_starter=True)}
+    fixed = redistribute_usage_and_minutes(_roster(), ov).set_index("PLAYER_ID")["PROJ_MIN"]
+    learned = redistribute_usage_and_minutes(_roster(), ov, role_model=model).set_index("PLAYER_ID")["PROJ_MIN"]
+    assert learned[9] < fixed[9]  # a 10-minute player flagged starter gets 15, not the 26 floor
+    assert learned[2] > fixed[2]  # the benched 30-minute player keeps 30, not the 22 cap
+
+
+def test_role_model_fit_and_fallback_on_small_data():
+    from src.features.starter_history import fit_role_model
+    gids = [f"00226000{i:02d}" for i in range(4)]
+    starters = pd.DataFrame({"Game_ID": gids, "Player_ID": [7] * 4, "IS_STARTER": [1] * 4})
+    games = pd.DataFrame({"Game_ID": gids, "Player_ID": [7] * 4, "GAME_DATE": "2026-10-20", "MIN": [32.0] * 4})
+    assert fit_role_model(starters, games).coef is None  # too little data: the fixed rule stays
