@@ -50,9 +50,9 @@ npm run dev
 ### Production & Governance
 - `GET /health`: Liveness and readiness probe.
 - `GET /model-status`: Returns metadata for active production models:
-  - **WIN Probability**: `LightGBM Isotonic (v10.1)` (ROC-AUC `0.7391` unseen, `0.7918` refit).
-  - **SCORE Model**: `XGBoost + Ridge (v10)` (Total Points MAE `14.75`).
-  - **PLAYER Model**: `LightGBM + Ridge (v9)` (PTS $R^2$ `0.50`, AST $R^2$ `0.46`).
+  - **WIN Probability**: logistic regression, 7 features (2025-26 holdout ROC-AUC `0.745`, Brier `0.205`).
+  - **SCORE Model**: Ridge pace / rating / margin models + Ridge residual correction (2025-26 holdout total MAE `15.31`, margin MAE `11.45`).
+  - **PLAYER Model**: LightGBM per target (2025-26 holdout MAE PTS `4.51`, REB `1.89`, AST `1.33`).
 
 ### Schedule & Frontend Data APIs
 - `GET /frontend-data-api/weeks?season=YYYY-YY`:

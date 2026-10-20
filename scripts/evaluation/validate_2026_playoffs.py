@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import math
+from src.features.win_strength_features import attach_actual_points
 
 def load_team_model_ready() -> pd.DataFrame:
     return pd.read_csv(ROOT / "data" / "processed" / "team_model_ready_v3_2025_26.csv")
@@ -119,8 +120,9 @@ def run_evaluation() -> None:
     playoff_26 = playoff_26.dropna(subset=["PACE", "OFF_RTG", "DEF_RTG", "PACE_LAST_5", "OFF_RTG_LAST_5", "DEF_RTG_LAST_5"])
     
     # Compute actual scores
-    playoff_26["ACTUAL_HOME_PTS"] = playoff_26["PACE"] * playoff_26["OFF_RTG"] / 100.0
-    playoff_26["ACTUAL_AWAY_PTS"] = playoff_26["PACE"] * playoff_26["DEF_RTG"] / 100.0
+    playoff_26 = attach_actual_points(playoff_26).dropna(subset=["ACTUAL_PTS", "ACTUAL_OPP_PTS"])
+    playoff_26["ACTUAL_HOME_PTS"] = playoff_26["ACTUAL_PTS"]
+    playoff_26["ACTUAL_AWAY_PTS"] = playoff_26["ACTUAL_OPP_PTS"]
     playoff_26["ACTUAL_TOTAL"] = playoff_26["ACTUAL_HOME_PTS"] + playoff_26["ACTUAL_AWAY_PTS"]
     playoff_26["ACTUAL_MARGIN"] = playoff_26["ACTUAL_HOME_PTS"] - playoff_26["ACTUAL_AWAY_PTS"]
 

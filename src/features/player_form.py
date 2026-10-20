@@ -10,6 +10,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from scripts.season_utils import SEASON_START_MONTH, date_to_season
+
 # Raw per-game columns the form features are built from. The model-ready dataset
 # keeps them under GAME_* names so inference can roll the history forward.
 RAW_GAME_COLUMNS = {
@@ -67,6 +69,22 @@ def add_player_form_features(df: pd.DataFrame, player_col: str) -> pd.DataFrame:
     return df
 
 
+def add_player_matchup_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Position flags and what the opponent allowed to this player's position group.
+
+    The dataset stores OPP_{GUARD,WING,BIG}_*_ALLOWED_LAST_10 for every row; the model
+    needs only the one matching the player, so training and inference both call this.
+    """
+    out = df.copy()
+    pos = out["PLAYER_POSITION_GROUP"].fillna("WING").astype(str).str.upper()
+    out["IS_GUARD"] = (pos == "GUARD").astype(int)
+    out["IS_BIG"] = (pos == "BIG").astype(int)
+    for stat in ("PTS", "REB", "AST"):
+        by_pos = {g: pd.to_numeric(out.get(f"OPP_{g}_{stat}_ALLOWED_LAST_10", np.nan), errors="coerce") for g in ("GUARD", "WING", "BIG")}
+        out[f"OPP_POS_{stat}_ALLOWED_LAST_10"] = np.select([pos == "GUARD", pos == "BIG"], [by_pos["GUARD"], by_pos["BIG"]], by_pos["WING"])
+    return out
+
+
 def pregame_player_rows(history: pd.DataFrame, player_col: str, prediction_date) -> pd.DataFrame:
     """One row per player with form features for a game on ``prediction_date``.
 
@@ -100,7 +118,7 @@ def pregame_player_rows(history: pd.DataFrame, player_col: str, prediction_date)
     days = (pred_dt - last_dates.set_axis(last[player_col]).reindex(out.index)).dt.days.to_numpy()
     # Training rows reset DAYS_REST at each season's first game, so a gap that
     # crosses the offseason is unknown, not "rested".
-    season_start = pd.Timestamp(year=pred_dt.year if pred_dt.month >= 9 else pred_dt.year - 1, month=9, day=1)
+    season_start = pd.Timestamp(year=int(date_to_season(pred_dt)[:4]), month=SEASON_START_MONTH, day=1)
     prev_dates = last_dates.set_axis(last[player_col]).reindex(out.index)
     out["DAYS_REST"] = np.where(prev_dates.to_numpy() >= np.datetime64(season_start), days, np.nan)
     out["IS_B2B"] = out["DAYS_REST"] == 1

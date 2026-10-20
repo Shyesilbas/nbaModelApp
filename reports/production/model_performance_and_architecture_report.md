@@ -47,7 +47,7 @@ Since the official NBA transactions API is stubbed out, we reconstruct the trans
 ### 2.3 Pre-Game Feature Boundaries
 In player prediction modeling, using the actual minutes played in the game being predicted as a feature is a critical post-tipoff leakage. In our production pipeline, all post-tipoff metrics are strictly dropped:
 - Projected minutes for player models are estimated using an Exponential Moving Average (EMA) of previous games.
-- Projected team statistics for win models are derived from player projections of available players on roster snapshot $T$, rather than actual game statistics.
+- Game-level models (WIN, SCORE) use no player projections: aggregated player projections were trained on overlapping outcomes and are excluded until date-safe out-of-fold versions exist.
 
 ---
 
@@ -61,8 +61,8 @@ Rolling features are computed over 5-game and 10-game historical windows (shifte
 - **Pace**: Possessions per 48 minutes.
 - **Days Rest & Back-to-Back (B2B)**: Days of rest since the last game, and binary indicators for back-to-back schedules.
 
-### 3.2 Core Player Availability Features
-We join dynamic availability indicators of top 3 and top 5 core players to the team feature vectors:
+### 3.2 Core Player Availability Features (not used by the production models)
+These indicators exist in the team datasets but are excluded from every production feature contract:
 - `TEAM_CORE_TOP3_AVAILABLE_RATE`: Ratio of top 3 core players who actually played.
 - `TEAM_CORE_TOP3_PTS_LAST_5_SUM`: Sum of points scored by available top 3 players in their last 5 games.
 
@@ -81,81 +81,83 @@ For player prediction models:
 
 ## 4. Model Architectures & Training Pipelines
 
-### 4.1 Win Probability Model (V10 / V9 Production Artifact)
-- **Active Production Artifact**: `models/production/win_probability_model_v10.pkl` (and `v9` alias).
-- **Algorithm**: LightGBM Classifier wrapped in `CalibratedClassifierCV(method='isotonic', cv=3)`.
-- **Feature Set**: 87 pre-game features (`feature_columns_v10.json`), including `SCORE_PRED_MARGIN` (22.2% gain), `NET_RTG_DIFF_LAST_10` (20.6% gain), `ELO_DIFF` (12.7% gain), plus team-level bottom-up player projected totals (`TEAM_V3_PROJ_*`, `OPP_V3_PROJ_*`), Four Factors deltas, havoc rates, and playoff interaction features.
-- **Venue Sanitization**: Dropped 12 static venue split features (`HOME_PTS_LAST_5`, `AWAY_PTS_LAST_5`, etc.) in favor of symmetric venue delta terms.
+All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a holdout copy without the validation season (2025-26) for the promotion gate, then a release model on every eligible season (2020-21..2025-26). The gate compares the holdout copy with the metrics recorded at the previous promotion (`models/production/clean_holdout_metrics.json`) and with simple pregame baselines.
 
-### 4.2 Score Prediction Model (V10 / V9 Production Artifact)
-- **Structure**: Four independent XGBoost regression models:
-  1. `score_model_v10_pace.pkl`: Pace estimator (possessions per 48 min).
-  2. `score_model_v10_home_rtg.pkl`: Home Offensive Rating estimator.
-  3. `score_model_v10_away_rtg.pkl`: Away Offensive Rating estimator.
-  4. `score_model_v10_margin.pkl`: Expected Margin estimator.
-- **Post-Processing Calibration**: Two Out-Of-Fold (OOF) trained Ridge regression residual models:
-  - `score_model_v10_ridge_total.pkl`: Calibrates game total residuals based on schedule fatigue, back-to-backs, and playoff indicators.
-  - `score_model_v10_ridge_margin.pkl`: Calibrates margin residuals based on rest advantage differentials.
+### 4.1 Win Probability Model
+- **Artifact**: `models/production/win_probability_model_v10.pkl` (and `v9` alias), features in `feature_columns_v10.json`, contract `config/features/win_v10.yaml`.
+- **Algorithm**: `SimpleImputer -> StandardScaler -> LogisticRegression(C=1)`, uncalibrated. Logistic, L1 logistic and LightGBM are compared on expanding-window Brier; logistic wins and isotonic/sigmoid calibration does not improve it.
+- **Features (7)**: `ELO_DIFF`, `IS_HOME`, `CLEAN_NET_RTG_DIFF_LAST_10`, `WINRATE_DIFF_LAST_10`, `REST_DIFF`, `IS_B2B`, `OPP_IS_B2B`, chosen by forward selection on walk-forward folds. `WINRATE_DIFF_LAST_10` has a negative coefficient on purpose: at equal Elo and net rating a higher win rate reflects close-game luck that regresses.
+- **Elo**: pre-game Elo comes from the complete raw game log (the same chain live inference uses), not from the model-ready rows, which lack each team's first games of a season.
+- **Serving**: the first 12 games of a season blend in the pure Elo probability (weight 0.4 decaying to 0); features themselves are not shrunk.
 
-### 4.3 Player Performance Model (V9 Production Artifact)
-- **Structure**: LightGBM regressors trained independently for PTS, REB, and AST:
-  - `player_v9_lgb_pts.pkl`, `player_v9_lgb_reb.pkl`, `player_v9_lgb_ast.pkl`
-- **Features**: 38 pre-game player features (`player_v9_features.pkl`) including usage rate exponential moving averages (`USG_PCT_EMA_5`, `USG_PCT_EMA_10`), minutes expectations (`MIN_EMA_10`), and opponent defensive allowances by position group.
-- **Post-Processing Calibration**: OOF Ridge regression models (`player_v9_ridge_pts.pkl`, etc.) adjusting for player position group, minutes tier, and playoff intensity.
+### 4.2 Score Prediction Model
+- **Artifacts**: `score_model_v10_{pace,home_rtg,away_rtg,margin,ridge_total,ridge_margin}.pkl` and metadata; contract `config/features/score_v10.yaml`.
+- **Structure**: standardized `RidgeCV` models
+  1. Pace: `PACE_LAST_10`, `OPP_PACE_LAST_10`.
+  2. Home and away offensive rating: `OFF_RTG_LAST_10`, `OPP_DEF_RTG_LAST_10` (from each side's row).
+  3. Margin: the WIN inputs (`ELO_DIFF`, `CLEAN_NET_RTG_DIFF_LAST_10`, `WINRATE_DIFF_LAST_10`, rest days, back-to-backs).
+- **Total** = pace x (home rating + away rating) / 100; home/away scores = (total +/- margin) / 2.
+- **Residual correction**: Ridge models on playoff, back-to-back and rest-advantage indicators, fit on temporal out-of-fold residuals.
+- **Targets** are actual final points from the box scores. `PACE x OFF_RTG / 100` was used before and undercounted overtime games by ~13 points because PACE is per 48 minutes.
+- **Intervals**: conformal offsets from out-of-fold residuals against actual points (80%: total +/-24, margin +/-17.7).
 
----
-
-## 5. Model Performance Evolution
-
-Transition from V8 to V10 focused on eliminating feature leakage, expanding the cross-season training baseline across 6 seasons, and incorporating bottom-up player projections into game-level models.
-
-### 5.1 Key Improvements
-- **Bottom-Up Roster Integration**: Incorporating player projection aggregations directly into team match-up models dynamically captures the scoring gap caused by injuries.
-- **Post-Processing Ridge Layer**: Corrects systematic bias in schedule-dense weeks (e.g. back-to-back rest disadvantages) and playoff pace reduction.
-- **Reciprocal Mirror Consistency**: Validated that $P(\text{home}) + P(\text{away}) \approx 1.0$ across 5,140 game pairs with mean absolute discrepancy of only 0.018.
+### 4.3 Player Performance Model
+- **Artifacts**: `player_v9_lgb_{pts,reb,ast}.pkl`, `player_v9_features.pkl`; contract `config/features/player_v9.yaml` (explicit feature list).
+- **Structure**: one LightGBM regressor per target (L1 objective for PTS, which is right-skewed and scored on MAE).
+- **Features (21)**: last-5 and EMA-10 per stat, per-minute production, minutes (last 3, EMA-10, trend), usage EMA-10, rest, home, playoff, position flags (`IS_GUARD`, `IS_BIG`) and the opponent's last-10 allowance to the player's position group (`OPP_POS_{PTS,REB,AST}_ALLOWED_LAST_10`, built by `add_player_matchup_features` for training and inference alike).
+- **Positions** come from `data/canonical/player_metadata.csv`; the primary (first listed) official position decides (F-G -> WING).
+- **No residual correction**: the former Ridge layer raised PTS MAE in every walk-forward season and was retired.
 
 ---
 
-## 6. Empirical Performance Metrics Across 6 Seasons
+## 5. Changes in the 2026-10-20 Review
 
-All metrics below are computed directly on the active production artifacts evaluated across each complete NBA season.
-
-### 6.1 Win Probability Model Performance
-
-| Season | Evaluated Rows | Accuracy | ROC-AUC | Brier Score | Log Loss | ELO-Only Baseline AUC | Score Margin AUC | Home Win% |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **2020-21** | 1,456 | 68.96% | 0.7802 | 0.1947 | 0.5691 | 0.6438 | 0.6674 | 56.59% |
-| **2021-22** | 1,766 | 69.08% | 0.7820 | 0.1917 | 0.5620 | 0.6179 | 0.6606 | 53.68% |
-| **2022-23** | 1,760 | 71.19% | 0.7728 | 0.1965 | 0.5734 | 0.6463 | 0.6608 | 57.39% |
-| **2023-24** | 1,766 | 71.52% | 0.7941 | 0.1862 | 0.5481 | 0.6190 | 0.6516 | 53.91% |
-| **2024-25** | 1,760 | 71.82% | 0.8116 | 0.1799 | 0.5332 | 0.6388 | 0.6602 | 54.72% |
-| **2025-26** | 1,772 | **70.94%** | **0.8028** | **0.1828** | **0.5393** | 0.6419 | 0.6604 | 55.76% |
-
-### 6.2 Score Model Performance (XGBoost + Ridge Calibration)
-
-| Season | Games | Pace MAE | Home RTG MAE | Away RTG MAE | Raw Total MAE | Calibrated Total MAE | Raw Margin MAE | Calibrated Margin MAE | Naive Margin Baseline |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **2020-21** | 728 | 3.32 | 8.51 | 8.12 | 13.94 | 14.01 | 10.58 | 10.61 | 12.42 |
-| **2021-22** | 883 | 3.20 | 8.29 | 8.25 | 13.66 | 13.45 | 10.93 | 10.88 | 12.80 |
-| **2022-23** | 880 | 3.32 | 8.13 | 8.34 | 13.97 | 13.86 | 10.04 | 10.00 | 11.67 |
-| **2023-24** | 883 | 3.11 | 8.26 | 8.65 | 13.63 | 13.49 | 11.19 | 11.16 | 13.29 |
-| **2024-25** | 877 | 3.40 | 8.58 | 8.35 | 13.93 | 13.89 | 10.67 | 10.63 | 13.22 |
-| **2025-26** | 884 | 3.60 | 8.96 | 9.54 | 15.55 | 15.43 | 12.15 | 12.14 | 13.87 |
-
-### 6.3 Player Prediction Model Performance (LightGBM + Ridge Calibration)
-
-| Target Metric | 2020-21 MAE (R²) | 2021-22 MAE (R²) | 2022-23 MAE (R²) | 2023-24 MAE (R²) | 2024-25 MAE (R²) | 2025-26 MAE (R²) | 5-Game Rolling Baseline MAE |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **PTS** | 4.48 (0.554) | 4.51 (0.538) | 4.56 (0.570) | 4.45 (0.584) | 4.53 (0.553) | 4.54 (0.531) | 4.65 |
-| **REB** | 1.92 (0.465) | 1.93 (0.455) | 1.93 (0.449) | 1.90 (0.475) | 1.93 (0.459) | 1.94 (0.405) | 1.98 |
-| **AST** | 1.29 (0.537) | 1.30 (0.528) | 1.31 (0.539) | 1.34 (0.532) | 1.33 (0.516) | 1.36 (0.474) | 1.39 |
+- WIN: 32 -> 7 features (two exact linear dependencies removed), early-season feature shrink removed from serving (it raised log loss in every bucket), training Elo aligned with live Elo (up to 13 points apart before).
+- SCORE: actual-point targets, 2-feature pace/rating models (collinear pairs cancelled in SHAP), margin on the WIN inputs, release model now includes the validation season.
+- PLAYER: explicit feature list, opponent position allowance and position flags, Ridge layer retired, F-G position mapping fixed, release model includes the validation season.
+- Serving: stale parquet copies are no longer read when the CSV is newer, the player dataset cache refreshes with the data, explanations work for the linear models.
 
 ---
 
-## 7. Audit Findings & Known Limitations
+## 6. Empirical Performance (Walk-Forward)
 
-Detailed diagnostics and shift tests are tracked in `reports/audits/model_quality_leakage_and_governance_audit.md`.
+Each season is predicted by models fitted only on earlier seasons (`python -m scripts.walk_forward_benchmark`, full report in `reports/evaluation/multi_season_walk_forward_backtest.md`). Baselines: Elo with home-court advantage; each side's last-10 points scored and allowed; each player's EMA-10.
 
-1. **Clean Feature Boundaries**: Shift tests confirmed that all rolling features in team and player models strictly precede game time via `shift(1)`.
-2. **Train-Serve Elo Discrepancy**: Due to a missing single-game `PTS` column in `team_model_ready_v3_*.csv`, training Elo updates defaulted to zero margin, suppressing the MOV multiplier to `0.2` ($\sigma = 59.14$). In live inference, real `PTS` is used, producing a wider Elo spread ($\sigma = 191.31$).
-3. **Score Model Coupling in WIN**: The WIN model derives 22.2% of its feature gain from `SCORE_PRED_MARGIN`, linking game outcome probability directly to the score component engine.
+### 6.1 Win Probability
+
+| Season | Games | Accuracy | ROC-AUC | Brier | Elo AUC | Elo Brier |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| 2021-22 | 1,256 | 65.13% | 0.6903 | 0.2210 | 0.6919 | 0.2206 |
+| 2022-23 | 1,248 | 62.74% | 0.6502 | 0.2277 | 0.6443 | 0.2290 |
+| 2023-24 | 1,259 | 65.77% | 0.7271 | 0.2090 | 0.7169 | 0.2114 |
+| 2024-25 | 1,256 | 66.48% | 0.7289 | 0.2084 | 0.7187 | 0.2118 |
+| 2025-26 | 1,257 | 67.94% | 0.7389 | 0.2046 | 0.7362 | 0.2058 |
+
+### 6.2 Score
+
+| Season | Total MAE | Baseline Total MAE | Margin MAE | Baseline Margin MAE | 80% coverage (total) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| 2021-22 | 14.68 | 14.62 | 11.15 | 11.56 | 80.5% |
+| 2022-23 | 14.89 | 14.97 | 10.29 | 10.57 | 80.3% |
+| 2023-24 | 14.72 | 14.78 | 11.04 | 11.58 | 82.5% |
+| 2024-25 | 14.92 | 15.02 | 10.97 | 11.50 | 80.5% |
+| 2025-26 | 15.30 | 15.38 | 11.40 | 11.86 | 79.0% |
+
+### 6.3 Player (MAE, model / EMA-10 baseline)
+
+| Season | PTS | REB | AST |
+| :--- | :---: | :---: | :---: |
+| 2021-22 | 4.55 / 4.63 | 1.93 / 1.94 | 1.30 / 1.30 |
+| 2022-23 | 4.59 / 4.69 | 1.92 / 1.94 | 1.30 / 1.31 |
+| 2023-24 | 4.47 / 4.57 | 1.89 / 1.90 | 1.34 / 1.35 |
+| 2024-25 | 4.56 / 4.66 | 1.92 / 1.94 | 1.33 / 1.35 |
+| 2025-26 | 4.51 / 4.61 | 1.89 / 1.92 | 1.34 / 1.35 |
+
+---
+
+## 7. Known Limitations
+
+1. **Near the pregame ceiling**: WIN beats Elo + home court by only ~0.002 Brier on average and SCORE totals match a last-10-points baseline; the margin model and player PTS carry the real gains. Further accuracy needs new information (injury/lineup data, market lines).
+2. **Player opponent context is one game stale at serving time**: `_defense_context` takes the opponent's allowance from its last stored row, which excludes that opponent's most recent game.
+3. **Opening 2026-27 Elo** includes a roster-turnover adjustment that the training seasons never had; early-season WIN predictions rely on it.
+4. **The 2025-26 holdout has been used for many decisions**; the walk-forward averages above are the more reliable estimate.

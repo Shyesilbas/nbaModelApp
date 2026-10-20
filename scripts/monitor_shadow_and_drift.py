@@ -39,9 +39,10 @@ def load_actual_results() -> pd.DataFrame:
             path = ROOT / f"data/processed/team_model_ready_v3_{season}.csv"
             if path.exists():
                 df = pd.read_csv(path)
-                home = df[df["IS_HOME"] == 1].copy()
-                home["HOME_SCORE"] = home["PACE"] * home["OFF_RTG"] / 100.0
-                home["AWAY_SCORE"] = home["PACE"] * home["DEF_RTG"] / 100.0
+                from src.features.win_strength_features import attach_actual_points
+                home = attach_actual_points(df[df["IS_HOME"] == 1])
+                home["HOME_SCORE"] = home["ACTUAL_PTS"]
+                home["AWAY_SCORE"] = home["ACTUAL_OPP_PTS"]
                 home["HOME_WIN"] = home["WIN"]
                 frames.append(home[["GAME_ID", "GAME_DATE", "HOME_SCORE", "AWAY_SCORE", "HOME_WIN"]])
     if not frames:

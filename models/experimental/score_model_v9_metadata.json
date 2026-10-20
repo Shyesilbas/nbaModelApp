@@ -1,6 +1,6 @@
 {
     "version": "v10_temporal_Ridge_candidate",
-    "updated_at": "2026-10-19T20:47:04.229148Z",
+    "updated_at": "2026-10-19T22:37:33.704888Z",
     "training_manifest": {
         "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
         "train_seasons": [
@@ -32,56 +32,22 @@
                 "margin": "TARGET_MARGIN"
             },
             "pace_features": [
-                "PACE_LAST_5",
                 "PACE_LAST_10",
-                "OPP_PACE_LAST_5",
-                "OPP_PACE_LAST_10",
-                "OFF_RTG_LAST_5",
-                "DEF_RTG_LAST_5",
-                "OPP_OFF_RTG_LAST_5",
-                "OPP_DEF_RTG_LAST_5",
-                "DAYS_REST",
-                "OPP_DAYS_REST",
-                "IS_3_IN_4",
-                "OPP_IS_3_IN_4",
-                "PACE_COLLISION",
-                "FG3A_RATE_LAST_5",
-                "OPP_FG3A_RATE_LAST_5"
+                "OPP_PACE_LAST_10"
             ],
             "base_off_rtg_features": [
-                "OFF_RTG_LAST_5",
                 "OFF_RTG_LAST_10",
-                "PACE_LAST_5",
-                "WINRATE_LAST_5",
-                "OPP_DEF_RTG_LAST_5",
-                "OPP_DEF_RTG_LAST_10",
-                "OPP_PACE_LAST_5",
-                "DAYS_REST",
-                "OPP_DAYS_REST",
-                "EFG_PCT_LAST_5",
-                "EFG_PCT_LAST_10",
-                "DEF_EFG_PCT_LAST_5",
-                "FT_RATE_LAST_5",
-                "TOV_PCT_LAST_5",
-                "FG3A_RATE_LAST_5",
-                "FG3A_RATE_LAST_10",
-                "ORB_PCT_LAST_5",
-                "DEF_TOV_PCT_LAST_5",
-                "DEF_ORB_PCT_LAST_5",
-                "AST_TO_TOV_LAST_5",
-                "PTS_SHARE_3PT_LAST_5",
-                "PTS_SHARE_PAINT_LAST_5"
+                "OPP_DEF_RTG_LAST_10"
             ],
-            "away_extra_features": [
-                "TRAVEL_DISTANCE",
-                "TIMEZONE_DIFF"
-            ],
+            "away_extra_features": [],
             "margin_features": [
                 "ELO_DIFF",
                 "CLEAN_NET_RTG_DIFF_LAST_10",
-                "NET_RTG_LAST_10",
+                "WINRATE_DIFF_LAST_10",
                 "DAYS_REST",
-                "OPP_DAYS_REST"
+                "OPP_DAYS_REST",
+                "IS_B2B",
+                "OPP_IS_B2B"
             ],
             "margin_extra_features": [
                 "DEF_RTG_LAST_5",
@@ -100,7 +66,7 @@
         }
     },
     "provenance": {
-        "code_revision": "eef7687efbb512b6c9bb51dde438785a231ea4b8",
+        "code_revision": "b1eebcdf9d9b29ea4aa1a0bedcce07d2b66b9608",
         "python_version": "3.12.4",
         "packages": {
             "numpy": "1.26.4",
@@ -111,8 +77,8 @@
         },
         "feature_contract": {
             "path": "config/features/score_v10.yaml",
-            "sha256": "2c4573dc01d38c9e6b5ffe7c1b463a9d9e462425369d7e60619b6a0f0a1d999a",
-            "bytes": 1778
+            "sha256": "b540c81c69d6388f4a6b42cb1e8ae50b6414d64be9378089889efddcacb27720",
+            "bytes": 1660
         },
         "input_snapshots": [
             {
@@ -139,6 +105,11 @@
                 "path": "data/processed/team_model_ready_v3_2024_25.csv",
                 "sha256": "d5d56f17916f749b7f278129e3f0a64208d679ab211413f2e3152f46e21cabe3",
                 "bytes": 5719984
+            },
+            {
+                "path": "data/processed/team_model_ready_v3_2025_26.csv",
+                "sha256": "4902e7f85c5efe1a0a05fa679facfd8d274be0848a09691fe841f558547171eb",
+                "bytes": 5679093
             }
         ],
         "training_manifest": {
@@ -148,44 +119,44 @@
         },
         "trainer_source": {
             "path": "src/training/score_trainer.py",
-            "sha256": "a204ea3fe90ecc977032a0c2761394652c7e869e954e4eab1a946d6e16e671e1",
-            "bytes": 32793
+            "sha256": "ac0f1a2deafce29a2479533a772888f90473cd7748ebaf82026b23a4e657f3ab",
+            "bytes": 32832
         },
         "artifacts": [
             {
                 "path": "models/experimental/score_model_v10_pace.pkl",
-                "sha256": "321da5c4cc55f785859fdec270099fd4fc89ccb7ca74f43cee40f302cff87559",
-                "bytes": 2794
+                "sha256": "c74527d349af29a787f622a7a60f1d8af32abe08f5172f649fc33b9828ce3211",
+                "bytes": 2018
             },
             {
                 "path": "models/experimental/score_model_v10_home_rtg.pkl",
-                "sha256": "5939eae1a29271be9f3548dc3af959b426ac9204556116c5f3cf65e22d4e738c",
-                "bytes": 3266
+                "sha256": "3a149ff585cd76941620fdc6eaa78b22ddb969c69a571b11cdecfb8e8fb0891a",
+                "bytes": 2018
             },
             {
                 "path": "models/experimental/score_model_v10_away_rtg.pkl",
-                "sha256": "292dc11270c3bbfcf2f30389b2e6bceeb6705f67405aa3d83251a1107e2ba1ec",
-                "bytes": 3394
+                "sha256": "4c5ab7825fce1f9d669e0641bceb96742bf8d12e5ec7e13e867b5f235624c83e",
+                "bytes": 2018
             },
             {
                 "path": "models/experimental/score_model_v10_margin.pkl",
-                "sha256": "e79991ad665069b8abbfc71fd2b1b6ba6b52fc60c209b7c5cd66458086e3291b",
-                "bytes": 2186
+                "sha256": "1a5d17059731a9d660a436856e71b7751fc4b1e197a3f7cd8126aaa0aca365eb",
+                "bytes": 2298
             },
             {
                 "path": "models/experimental/score_model_v10_ridge_total.pkl",
-                "sha256": "f10762f1ccaf89ee15c4a9316dd07b2a457550509a07c3ba78608da3b949c8ec",
+                "sha256": "c50cdd92c993dd612e4a08488ad24f0683df195d26f6560b5c340a096ecc170c",
                 "bytes": 992
             },
             {
                 "path": "models/experimental/score_model_v10_ridge_margin.pkl",
-                "sha256": "128eb2ab54a87b004bfdc234be607aaa9d369410c0998b77b0fc562a02c87434",
+                "sha256": "20b96f23b9c34a21c53fb7fd77af21a175cbc1c7344776791e8995de0a5f1381",
                 "bytes": 992
             },
             {
                 "path": "models/experimental/score_model_v10_oof_margins.parquet",
-                "sha256": "6be40cbee3322d399add958c23307655db9858156c00a128b849674ac72b095e",
-                "bytes": 60389
+                "sha256": "cdbb12aa21c0b13cc693de6c955e27544a911b37cf17ba0f03908e913189f534",
+                "bytes": 75645
             }
         ]
     },
@@ -194,30 +165,32 @@
         "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv",
         "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv",
         "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv",
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv"
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv",
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv"
     ],
     "row_counts_by_file": {
         "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv": 2210,
         "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv": 2512,
         "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv": 2496,
         "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv": 2518,
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv": 2522
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv": 2522,
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv": 2522
     },
     "final_refit": {
         "enabled": true,
-        "rows": 12258,
+        "rows": 14780,
         "note": "Holdout metrics are computed before final submodels are refit on all eligible rows."
     },
     "evaluation": "time_ordered_inner_search_and_season_holdout",
     "evaluation_scope": "independent_holdout_predictions_from_pre_holdout_models",
     "training_date_min": "2020-12-30",
-    "training_date_max": "2025-06-22",
-    "pace_mae": 3.5251143397101887,
-    "home_rtg_mae": 9.031728571469085,
-    "away_rtg_mae": 9.1328837034566,
-    "margin_mae": 11.604697091851138,
-    "derived_home_score_mae": 9.37740694467632,
-    "derived_away_score_mae": 9.795338764663997,
+    "training_date_max": "2026-06-13",
+    "pace_mae": 3.5446544168848466,
+    "home_rtg_mae": 9.042848099940537,
+    "away_rtg_mae": 9.130558971185588,
+    "margin_mae": 10.972819922198967,
+    "derived_home_score_mae": 9.46551424201686,
+    "derived_away_score_mae": 9.559559546829707,
     "splits": {
         "pace": {
             "strategy": "season_holdout",
@@ -283,21 +256,21 @@
     },
     "ridge_coefs": {
         "total": [
-            5.707048147404729,
-            0.8497769622243018,
-            0.9971903508538801,
-            0.08193052978156627,
-            -0.6945904528417323
+            6.341508875557872,
+            0.6941727923643336,
+            0.035872064574451294,
+            -0.19671751612893237,
+            -0.45705722885958844
         ],
-        "total_intercept": -0.5224866754757922,
+        "total_intercept": -1.792057477063714,
         "margin": [
-            -1.6633497930944392,
-            2.4868619016889038,
-            -3.8114276927081563,
-            1.6798953821247866,
-            -0.22590805196707917
+            -1.7621185959267733,
+            0.49537823140812354,
+            -1.0627232555294808,
+            0.42874943262544074,
+            0.1448230578726126
         ],
-        "margin_intercept": -0.2262392629765925,
+        "margin_intercept": -0.03626471540022072,
         "features": [
             "is_playoff",
             "home_b2b",
@@ -307,301 +280,252 @@
         ]
     },
     "pace_features": [
-        "PACE_LAST_5",
         "PACE_LAST_10",
-        "OPP_PACE_LAST_5",
-        "OPP_PACE_LAST_10",
-        "OFF_RTG_LAST_5",
-        "DEF_RTG_LAST_5",
-        "OPP_OFF_RTG_LAST_5",
-        "OPP_DEF_RTG_LAST_5",
-        "DAYS_REST",
-        "OPP_DAYS_REST",
-        "IS_3_IN_4",
-        "OPP_IS_3_IN_4",
-        "PACE_COLLISION",
-        "FG3A_RATE_LAST_5",
-        "OPP_FG3A_RATE_LAST_5"
+        "OPP_PACE_LAST_10"
     ],
     "home_off_rtg_features": [
-        "OFF_RTG_LAST_5",
         "OFF_RTG_LAST_10",
-        "PACE_LAST_5",
-        "WINRATE_LAST_5",
-        "OPP_DEF_RTG_LAST_5",
-        "OPP_DEF_RTG_LAST_10",
-        "OPP_PACE_LAST_5",
-        "DAYS_REST",
-        "OPP_DAYS_REST",
-        "EFG_PCT_LAST_5",
-        "EFG_PCT_LAST_10",
-        "DEF_EFG_PCT_LAST_5",
-        "FT_RATE_LAST_5",
-        "TOV_PCT_LAST_5",
-        "FG3A_RATE_LAST_5",
-        "FG3A_RATE_LAST_10",
-        "ORB_PCT_LAST_5",
-        "DEF_TOV_PCT_LAST_5",
-        "DEF_ORB_PCT_LAST_5",
-        "AST_TO_TOV_LAST_5",
-        "PTS_SHARE_3PT_LAST_5",
-        "PTS_SHARE_PAINT_LAST_5"
+        "OPP_DEF_RTG_LAST_10"
     ],
     "away_off_rtg_features": [
-        "OFF_RTG_LAST_5",
         "OFF_RTG_LAST_10",
-        "PACE_LAST_5",
-        "WINRATE_LAST_5",
-        "OPP_DEF_RTG_LAST_5",
-        "OPP_DEF_RTG_LAST_10",
-        "OPP_PACE_LAST_5",
-        "DAYS_REST",
-        "OPP_DAYS_REST",
-        "EFG_PCT_LAST_5",
-        "EFG_PCT_LAST_10",
-        "DEF_EFG_PCT_LAST_5",
-        "FT_RATE_LAST_5",
-        "TOV_PCT_LAST_5",
-        "FG3A_RATE_LAST_5",
-        "FG3A_RATE_LAST_10",
-        "ORB_PCT_LAST_5",
-        "DEF_TOV_PCT_LAST_5",
-        "DEF_ORB_PCT_LAST_5",
-        "AST_TO_TOV_LAST_5",
-        "PTS_SHARE_3PT_LAST_5",
-        "PTS_SHARE_PAINT_LAST_5",
-        "TRAVEL_DISTANCE",
-        "TIMEZONE_DIFF"
+        "OPP_DEF_RTG_LAST_10"
     ],
     "margin_features": [
         "ELO_DIFF",
         "CLEAN_NET_RTG_DIFF_LAST_10",
-        "NET_RTG_LAST_10",
+        "WINRATE_DIFF_LAST_10",
         "DAYS_REST",
-        "OPP_DAYS_REST"
+        "OPP_DAYS_REST",
+        "IS_B2B",
+        "OPP_IS_B2B"
     ],
     "feature_guard": {
         "pace": {
-            "n_features": 15,
+            "n_features": 2,
             "constant_features": [],
             "mostly_missing_features": [],
             "near_duplicate_pairs": [],
-            "near_duplicate_threshold": 0.98
+            "near_duplicate_threshold": 0.98,
+            "linear_dependent_features": []
         },
         "home_off_rtg": {
-            "n_features": 22,
+            "n_features": 2,
             "constant_features": [],
             "mostly_missing_features": [],
             "near_duplicate_pairs": [],
-            "near_duplicate_threshold": 0.98
+            "near_duplicate_threshold": 0.98,
+            "linear_dependent_features": []
         },
         "away_off_rtg": {
-            "n_features": 24,
+            "n_features": 2,
             "constant_features": [],
             "mostly_missing_features": [],
             "near_duplicate_pairs": [],
-            "near_duplicate_threshold": 0.98
+            "near_duplicate_threshold": 0.98,
+            "linear_dependent_features": []
         },
         "margin": {
-            "n_features": 5,
+            "n_features": 7,
             "constant_features": [],
             "mostly_missing_features": [],
             "near_duplicate_pairs": [],
-            "near_duplicate_threshold": 0.98
+            "near_duplicate_threshold": 0.98,
+            "linear_dependent_features": []
         }
     },
     "estimator": "ridge",
     "prediction_interval_offsets_80pct": {
         "total": [
-            -23.2,
-            23.2
+            -24.0,
+            24.0
         ],
         "margin": [
-            -18.1,
-            18.1
+            -17.6,
+            17.6
         ],
         "home": [
-            -14.6,
-            14.6
-        ],
-        "away": [
             -15.2,
             15.2
+        ],
+        "away": [
+            -14.9,
+            14.9
         ]
     },
     "prediction_interval_offsets_90pct": {
         "total": [
-            -29.8,
-            29.8
+            -30.8,
+            30.8
         ],
         "margin": [
-            -23.3,
-            23.3
+            -22.9,
+            22.9
         ],
         "home": [
-            -18.9,
-            18.9
+            -19.3,
+            19.3
         ],
         "away": [
-            -19.2,
-            19.2
+            -19.1,
+            19.1
         ]
     },
     "prediction_interval_offsets_50pct": {
         "total": [
-            -12.0,
-            12.0
+            -12.6,
+            12.6
         ],
         "margin": [
-            -9.4,
-            9.4
+            -8.9,
+            8.9
         ],
         "home": [
-            -7.6,
-            7.6
+            -8.0,
+            8.0
         ],
         "away": [
-            -7.8,
-            7.8
+            -7.7,
+            7.7
         ]
     },
     "conformal_prediction_intervals": {
         "offsets_80pct": {
             "total": [
-                -23.2,
-                23.2
+                -24.0,
+                24.0
             ],
             "margin": [
-                -18.1,
-                18.1
+                -17.6,
+                17.6
             ],
             "home": [
-                -14.6,
-                14.6
-            ],
-            "away": [
                 -15.2,
                 15.2
+            ],
+            "away": [
+                -14.9,
+                14.9
             ]
         },
         "offsets_90pct": {
             "total": [
-                -29.8,
-                29.8
+                -30.8,
+                30.8
             ],
             "margin": [
-                -23.3,
-                23.3
+                -22.9,
+                22.9
             ],
             "home": [
-                -18.9,
-                18.9
+                -19.3,
+                19.3
             ],
             "away": [
-                -19.2,
-                19.2
+                -19.1,
+                19.1
             ]
         },
         "offsets_50pct": {
             "total": [
-                -12.0,
-                12.0
+                -12.6,
+                12.6
             ],
             "margin": [
-                -9.4,
-                9.4
+                -8.9,
+                8.9
             ],
             "home": [
-                -7.6,
-                7.6
+                -8.0,
+                8.0
             ],
             "away": [
-                -7.8,
-                7.8
+                -7.7,
+                7.7
             ]
         },
         "empirical_quantiles_80pct": {
             "total": [
-                -23.1,
-                23.4
+                -23.7,
+                24.5
             ],
             "margin": [
-                -18.2,
-                17.9
+                -17.9,
+                17.3
             ],
             "home": [
-                -14.5,
-                14.5
-            ],
-            "away": [
                 -15.1,
                 15.2
+            ],
+            "away": [
+                -14.8,
+                14.9
             ]
         },
         "empirical_quantiles_90pct": {
             "total": [
-                -29.6,
-                29.9
+                -30.2,
+                31.7
             ],
             "margin": [
-                -23.4,
-                23.2
+                -22.7,
+                23.0
             ],
             "home": [
-                -18.9,
-                18.7
+                -19.1,
+                19.5
             ],
             "away": [
-                -19.2,
+                -19.0,
                 19.2
             ]
         },
         "coverage_report": {
             "total": {
-                "std_dev": 18.11,
-                "mae": 14.41,
+                "std_dev": 18.79,
+                "mae": 14.9,
                 "bias": 0.0,
-                "conformal_80_radius": 23.2,
+                "conformal_80_radius": 24.0,
                 "conformal_80_empirical_coverage": 80.0,
-                "conformal_90_radius": 29.8,
+                "conformal_90_radius": 30.8,
                 "conformal_90_empirical_coverage": 90.0,
-                "conformal_50_radius": 12.0,
+                "conformal_50_radius": 12.6,
                 "conformal_50_empirical_coverage": 50.0
             },
             "margin": {
-                "std_dev": 14.3,
-                "mae": 11.34,
+                "std_dev": 14.02,
+                "mae": 10.96,
                 "bias": 0.0,
-                "conformal_80_radius": 18.1,
+                "conformal_80_radius": 17.6,
                 "conformal_80_empirical_coverage": 80.0,
-                "conformal_90_radius": 23.3,
+                "conformal_90_radius": 22.9,
                 "conformal_90_empirical_coverage": 90.0,
-                "conformal_50_radius": 9.4,
+                "conformal_50_radius": 8.9,
                 "conformal_50_empirical_coverage": 50.0
             },
             "home": {
-                "std_dev": 11.35,
-                "mae": 9.06,
-                "bias": 0.0,
-                "conformal_80_radius": 14.6,
-                "conformal_80_empirical_coverage": 80.0,
-                "conformal_90_radius": 18.9,
-                "conformal_90_empirical_coverage": 90.0,
-                "conformal_50_radius": 7.6,
-                "conformal_50_empirical_coverage": 50.0
-            },
-            "away": {
-                "std_dev": 11.73,
-                "mae": 9.36,
+                "std_dev": 11.76,
+                "mae": 9.39,
                 "bias": 0.0,
                 "conformal_80_radius": 15.2,
                 "conformal_80_empirical_coverage": 80.0,
-                "conformal_90_radius": 19.2,
+                "conformal_90_radius": 19.3,
                 "conformal_90_empirical_coverage": 90.0,
-                "conformal_50_radius": 7.8,
+                "conformal_50_radius": 8.0,
+                "conformal_50_empirical_coverage": 50.0
+            },
+            "away": {
+                "std_dev": 11.68,
+                "mae": 9.29,
+                "bias": 0.0,
+                "conformal_80_radius": 14.9,
+                "conformal_80_empirical_coverage": 80.0,
+                "conformal_90_radius": 19.1,
+                "conformal_90_empirical_coverage": 90.0,
+                "conformal_50_radius": 7.7,
                 "conformal_50_empirical_coverage": 50.0
             }
         },
-        "calibration_samples": 3833
+        "calibration_samples": 4781
     }
 }

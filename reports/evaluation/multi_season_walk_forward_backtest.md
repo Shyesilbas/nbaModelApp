@@ -1,8 +1,8 @@
 # Çok Sezonlu Expanding-Window Walk-Forward Backtest Raporu
 
-**Rapor Tarihi:** 2026-10-04T14:15:30.097171Z  
+**Rapor Tarihi:** 2026-10-19T22:40:02.367859Z  
 **Yöntem:** Kesintisiz Genişleyen Zaman Pencereleri (Expanding Window). Her sezon yalnızca önceki tamamlanmış sezonlarla eğitilen modellerle test edilmiştir; geleceğe dönük hiçbir bilgi sızıntısı (leakage) bulunmamaktadır.  
-**Toplam Görülmemiş Test Maçı:** 4407 maç (5 ayrı NBA sezonu)
+**Toplam Görülmemiş Test Maçı:** 6276 maç (5 ayrı NBA sezonu)
 
 ---
 
@@ -11,36 +11,36 @@
 ### Galibiyet Olasılığı (WIN Model) vs. Pregame Elo Baseline
 | Model / Taban Çizgisi | Brier Score (Düşük = İyi) | ROC-AUC | Doğruluk (Accuracy) |
 |---|---:|---:|---:|
-| **LightGBM (Üretim Mimarisi)** | **0.2263** | **0.6716** | **%63.17** |
-| **Lojistik Regresyon Benchmark** | 0.2220 | 0.6843 | %64.06 |
-| **Saf Elo Baseline** | 0.2258 | 0.6913 | %63.90 |
-| **Elo Karşısında Kazanım (LGB)** | **-0.0005 (Daha Kalibre)** | **+-0.0197** | **+-0.73 puan** |
+| **Logistic Regression (Üretim Mimarisi)** | **0.2141** | **0.7072** | **%65.62** |
+| **Lojistik Regresyon Benchmark** | 0.2141 | 0.7078 | %65.89 |
+| **Saf Elo Baseline** | 0.2157 | 0.7017 | %65.54 |
+| **Elo Karşısında Kazanım (Üretim)** | **+0.0016 (Daha Kalibre)** | **+0.0055** | **+0.08 puan** |
 
-### Takım Skoru (SCORE Model) vs. Rolling Ratings Baseline
-| Metrik | Model (Çok Sezonlu) | Rolling Taban Çizgisi | Fark / Kazanım |
+### Takım Skoru (SCORE Model) vs. Son 10 Maç Sayıları Baseline
+| Metrik | Model (Çok Sezonlu) | Son 10 Maç Taban Çizgisi | Fark / Kazanım |
 |---|---:|---:|---:|
-| **Toplam Skor MAE** | **14.83 sayı** | 16.18 sayı | **-1.35 sayı daha az hata** |
-| **Sayı Farkı (Margin) MAE** | **11.93 sayı** | 12.63 sayı | **-0.70 sayı daha az hata** |
-| **Conformal %80 Kapsama** | **%79.5** | Sabit ±12 (~%47) | **Tam İstatistiksel Kalibrasyon** |
+| **Toplam Skor MAE** | **14.90 sayı** | 14.95 sayı | **-0.05 sayı daha az hata** |
+| **Sayı Farkı (Margin) MAE** | **10.97 sayı** | 11.41 sayı | **-0.44 sayı daha az hata** |
+| **Conformal %80 Kapsama** | **%80.6** | Sabit ±12 (~%47) | **Tam İstatistiksel Kalibrasyon** |
 
-### Oyuncu Tahminleri (PLAYER Model) vs. Son 5 Maç Ortalaması
-| Hedef İstatistik | LightGBM Modeli MAE | Son 5 Maç Taban Çizgisi | MAE İyileşmesi | Toplam Test Satırı |
+### Oyuncu Tahminleri (PLAYER Model) vs. EMA-10 Ortalaması
+| Hedef İstatistik | LightGBM Modeli MAE | EMA-10 Taban Çizgisi | MAE İyileşmesi | Toplam Test Satırı |
 |---|---:|---:|---:|---:|
-| **Sayı (PTS)** | **4.59** | 4.80 | **-0.20 sayı** | 137,540 |
-| **Ribaund (REB)** | **1.97** | 2.00 | **-0.03 rib** | 137,540 |
-| **Asist (AST)** | **1.35** | 1.38 | **-0.02 ast** | 137,540 |
+| **Sayı (PTS)** | **4.54** | 4.63 | **-0.09 sayı** | 140,378 |
+| **Ribaund (REB)** | **1.91** | 1.93 | **-0.02 rib** | 140,378 |
+| **Asist (AST)** | **1.32** | 1.33 | **-0.01 ast** | 140,378 |
 
 ---
 
 ## 2. Sezon Bazında Ayrıntılı Walk-Forward Sonuçları
 
-| Sezon | Test Maçı | WIN Brier (LGB / Elo) | WIN AUC (LGB / Elo) | SCORE Total MAE (Mod / Base) | SCORE Margin MAE (Mod / Base) | Conformal 80% | PTS MAE (Mod / Base) | REB MAE (Mod / Base) | AST MAE (Mod / Base) |
+| Sezon | Test Maçı | WIN Brier (Üretim / Elo) | WIN AUC (Üretim / Elo) | SCORE Total MAE (Mod / Base) | SCORE Margin MAE (Mod / Base) | Conformal 80% | PTS MAE (Mod / Base) | REB MAE (Mod / Base) | AST MAE (Mod / Base) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| **2021-22** | 883 | 0.2391 / 0.2300 | 0.6334 / 0.6793 | 14.80 / 15.71 | 12.06 / 12.53 | %81.1 | 4.61 / 4.79 | 1.99 / 2.02 | 1.33 / 1.35 |
-| **2022-23** | 880 | 0.2317 / 0.2396 | 0.6394 / 0.6520 | 14.79 / 16.21 | 11.10 / 11.56 | %78.9 | 4.65 / 4.86 | 1.98 / 2.01 | 1.34 / 1.36 |
-| **2023-24** | 883 | 0.2249 / 0.2236 | 0.6832 / 0.6953 | 14.28 / 15.55 | 12.12 / 12.88 | %81.7 | 4.55 / 4.73 | 1.94 / 1.97 | 1.37 / 1.40 |
-| **2024-25** | 877 | 0.2191 / 0.2162 | 0.7017 / 0.7198 | 14.79 / 15.96 | 11.89 / 12.73 | %80.0 | 4.62 / 4.83 | 1.97 / 2.01 | 1.37 / 1.40 |
-| **2025-26** | 884 | 0.2168 / 0.2194 | 0.7005 / 0.7101 | 15.48 / 17.46 | 12.45 / 13.43 | %76.0 | 4.55 / 4.78 | 1.95 / 1.98 | 1.36 / 1.39 |
+| **2021-22** | 1256 | 0.2210 / 0.2206 | 0.6903 / 0.6919 | 14.68 / 14.62 | 11.15 / 11.56 | %80.5 | 4.55 / 4.63 | 1.93 / 1.94 | 1.30 / 1.30 |
+| **2022-23** | 1248 | 0.2277 / 0.2290 | 0.6502 / 0.6443 | 14.89 / 14.97 | 10.29 / 10.57 | %80.3 | 4.59 / 4.69 | 1.92 / 1.94 | 1.30 / 1.31 |
+| **2023-24** | 1259 | 0.2090 / 0.2114 | 0.7271 / 0.7169 | 14.72 / 14.78 | 11.04 / 11.58 | %82.5 | 4.47 / 4.57 | 1.89 / 1.90 | 1.34 / 1.35 |
+| **2024-25** | 1256 | 0.2084 / 0.2118 | 0.7289 / 0.7187 | 14.92 / 15.02 | 10.97 / 11.50 | %80.5 | 4.56 / 4.66 | 1.92 / 1.94 | 1.33 / 1.35 |
+| **2025-26** | 1257 | 0.2046 / 0.2058 | 0.7389 / 0.7362 | 15.30 / 15.38 | 11.40 / 11.86 | %79.0 | 4.51 / 4.61 | 1.89 / 1.92 | 1.34 / 1.35 |
 
 ---
 

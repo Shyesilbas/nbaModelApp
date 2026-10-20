@@ -40,12 +40,37 @@ static_venue_split_features:
   - OPP_AWAY_WINRATE_LAST_5
   - OPP_AWAY_PTS_LAST_5
   - OPP_AWAY_PTS_ALLOWED_LAST_5
-required_features:
-  - PTS_SHARE_3PT_LAST_5
-  - OPP_PTS_SHARE_3PT_LAST_5
-  - PTS_SHARE_PAINT_LAST_5
-  - OPP_PTS_SHARE_PAINT_LAST_5
+required_features: []
 excluded_features:
+  # 2026-10-20 forward selection on walk-forward folds 2021-24 (2025-26 held out)
+  # kept 7 features: ELO_DIFF, IS_HOME, REST_DIFF, CLEAN_NET_RTG_DIFF_LAST_10,
+  # WINRATE_DIFF_LAST_10, IS_B2B, OPP_IS_B2B. They beat the 32-feature set on both
+  # (log loss 0.6217 vs 0.6225; 2025-26 0.5981 vs 0.6002). The rest were noise or
+  # exact linear combinations (WINRATE_DIFF = WINRATE - OPP_WINRATE, REST_DIFF =
+  # DAYS_REST - OPP_DAYS_REST) that flipped coefficient signs in SHAP output.
+  # WINRATE_DIFF_LAST_10 keeps a negative coefficient on purpose: at equal Elo and
+  # net rating a higher win rate means close-game luck, which regresses.
+  - DAYS_REST
+  - OPP_DAYS_REST
+  - WINRATE_LAST_10
+  - OPP_WINRATE_LAST_10
+  - PTS_LAST_5
+  - OPP_PTS_LAST_5
+  - PTS_ALLOWED_LAST_5
+  - OPP_PTS_ALLOWED_LAST_5
+  - H2H_WINRATE_LAST_5
+  - H2H_PTS_LAST_5
+  - H2H_PTS_ALLOWED_LAST_5
+  - CURRENT_VENUE_WINRATE_LAST_5
+  - CURRENT_VENUE_PTS_LAST_5
+  - CURRENT_VENUE_PTS_ALLOWED_LAST_5
+  - OPP_CURRENT_VENUE_WINRATE_LAST_5
+  - OPP_CURRENT_VENUE_PTS_LAST_5
+  - OPP_CURRENT_VENUE_PTS_ALLOWED_LAST_5
+  - EFG_DIFF_LAST_10
+  - THREE_POINT_RATE_DIFF
+  - TOV_FORCED_DIFF
+  - REBOUND_CONTROL_DIFF
   # Built from a player model trained on overlapping historical outcomes;
   # until date-safe player OOF predictions are available these are not valid inputs.
   - TEAM_V3_PROJ_PTS_SUM

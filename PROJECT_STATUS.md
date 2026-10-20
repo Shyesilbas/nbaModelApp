@@ -12,9 +12,11 @@ This file tracks the overall status of the project.
 
 | Model | Artifact | Status |
 |-------|----------|--------|
-| WIN | `models/production/win_probability_model_v10.pkl` (and `v9` alias) | **ACTIVE** — v11 LightGBM Isotonic (PBP Clean Net Rating, Clutch Net Rating, garbage time filtering, Continuous Elo aligned, OOF score margin integration) |
-| SCORE home/away/total/margin | `models/production/score_model_v10_*.pkl` (and `v9` alias) | **ACTIVE** — v11 XGBoost + Ridge calibration (Clean Net Rating margin differential, OOF residual calibration) |
-| PLAYER PTS/REB/AST | `models/production/player_v9_lgb_*.pkl` and `player_v9_ridge_*.pkl` | **ACTIVE** — v9 LightGBM + Ridge calibration (6-season V4 datasets: 2020-21 to 2025-26) |
+| WIN | `models/production/win_probability_model_v10.pkl` (and `v9` alias) | **ACTIVE** — uncalibrated logistic regression, 7 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs) |
+| SCORE home/away/total/margin | `models/production/score_model_v10_*.pkl` (and `v9` alias) | **ACTIVE** — Ridge pace and offensive-rating models (2 features each), Ridge margin on the WIN inputs, Ridge residual correction; actual-point targets |
+| PLAYER PTS/REB/AST | `models/production/player_v9_lgb_*.pkl` | **ACTIVE** — LightGBM per target, 21 features incl. position flags and opponent allowance to the position; no residual correction |
+
+All three are trained on 2020-21..2025-26. Honest walk-forward (2021-22..2025-26): WIN Brier 0.2141 vs 0.2157 for Elo + home court; SCORE total MAE 14.90 vs 14.95 and margin MAE 10.97 vs 11.41 for last-10 real points; PLAYER MAE PTS 4.54 / REB 1.91 / AST 1.32 vs EMA-10 4.63 / 1.93 / 1.33 (`reports/evaluation/multi_season_walk_forward_backtest.md`).
 
 ## Phase Status
 
@@ -43,12 +45,14 @@ This file tracks the overall status of the project.
 - [X] Remove box-score `PLAYED_COUNT` leakage from score model contract (`score_v10.yaml`)
 - [X] Export and integrate 5-Fold OOF score margins into WIN probability model
 - [X] Promote V10.1 production models (WIN & SCORE) upon explicit user approval
-- [X] Multi-season expanding-window walk-forward backtest (WIN LightGBM, SCORE XGBoost, PLAYER LightGBM across 5 unseen seasons: 2021-22 to 2025-26)
+- [X] Multi-season expanding-window walk-forward backtest across 5 unseen seasons (2021-22 to 2025-26), now on the production configurations with strong baselines
+- [X] 2026-10-20 model review: pruned WIN to 7 features, removed early-season feature shrink (train-serve skew), actual-point SCORE targets (overtime was undercounted ~13 pts), 2-feature SCORE sub-models, PLAYER explicit feature list + opponent position allowance, retired PLAYER Ridge correction, fixed F-G position mapping, release models now include the validation season, training Elo computed from the full raw game log (matches live Elo), stale parquet caches no longer served, SHAP explanations fixed for linear models
 - [X] Multi-season feature ablation study across 4,407 test games
 - [X] Live shadow prediction logging store (`shadow_logger.py`) and KS-test drift monitor (`monitor_shadow_and_drift.py`)
 
 ## Next Steps
 
-1. Monitor live WIN v10.1 and SCORE v10.1 shadow predictions and feature drift in ml-service.
-2. Phase 7 efficiency/strength feature work remains parked until explicitly resumed.
+1. Monitor live shadow predictions and feature drift in ml-service for the 2026-27 season.
+2. Next accuracy gains need new information (injury/lineup data, market lines); feature pruning has reached the pregame-data ceiling.
+3. Phase 7 efficiency/strength feature work remains parked until explicitly resumed.
 

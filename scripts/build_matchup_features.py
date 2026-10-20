@@ -21,20 +21,15 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.data_paths import get_data_paths
+from scripts.season_utils import SEASON_START_MONTH, date_to_season
 from scripts.artifact_paths import resolve_artifact_path
 from src.features.win_strength_features import build_matchup_strength_features, compute_current_elo_state
 
 from functools import lru_cache
 import math
 
-p_v10 = ROOT / "models/production/feature_columns_v10.json"
-p_v9 = ROOT / "models/production/feature_columns_v9.json"
-if p_v10.exists():
-    MODEL_FEATURE_COLS = p_v10
-elif p_v9.exists():
-    MODEL_FEATURE_COLS = p_v9
-else:
-    MODEL_FEATURE_COLS = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v10.json")
+# Same file the WIN loader reads, so the feature order always matches the loaded model.
+MODEL_FEATURE_COLS = resolve_artifact_path("win_model", "feature_columns_path", "models/production/feature_columns_v10.json")
 
 NBA_TEAMS_LOCATIONS = {
     "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
@@ -100,6 +95,10 @@ def is_preseason_game(game_id=None, season_type=None, season_id=None) -> bool:
 
 
 def _read_frame(path: Path):
+    # Some updaters rewrite only the CSV; never serve a parquet copy older than it.
+    csv = path.with_suffix(".csv")
+    if path.suffix == ".parquet" and csv.exists() and csv.stat().st_mtime_ns > path.stat().st_mtime_ns:
+        path = csv
     stat = path.stat()
     return _read_frame_cached(str(path.resolve()), stat.st_mtime_ns, stat.st_size)
 
@@ -182,33 +181,6 @@ def _load_team_games(season: str = None):
     return pd.DataFrame()
 
 
-@lru_cache(maxsize=4)
-def _load_v3_matchups():
-    p = ROOT / "data/experimental/player_model_ready_v3_matchups.csv"
-    if p.exists():
-        df = pd.read_csv(p)
-        df['GAME_DATE'] = pd.to_datetime(df['GAME_DATE'])
-        return df
-    return pd.DataFrame()
-
-
-@lru_cache(maxsize=4)
-def _load_v4_matchups():
-    p_parq = ROOT / "data/experimental/player_model_ready_v4_usg.parquet"
-    if p_parq.exists():
-        df = pd.read_parquet(p_parq)
-        if not pd.api.types.is_datetime64_any_dtype(df["GAME_DATE"]):
-            df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
-        return df
-    p_csv = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
-    if p_csv.exists():
-        df = pd.read_csv(p_csv)
-        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
-        return df
-    return pd.DataFrame()
-
-
-
 def _load_combined_schedule(season: str = None):
     paths = get_data_paths(season)
     p_parq = Path(paths.schedule_combined.replace(".csv", ".parquet"))
@@ -241,48 +213,6 @@ def load_cached_json(path: Path):
     if not path or not path.exists():
         return None
     return _load_json_cached(str(path.resolve()), path.stat().st_mtime_ns)
-
-
-@lru_cache(maxsize=16)
-def _get_latest_player_snapshots(pred_date_str: str) -> pd.DataFrame:
-    p_parq = ROOT / "data/experimental/player_model_ready_v4_usg.parquet"
-    if p_parq.exists():
-        try:
-            import duckdb
-            query = f"""
-                WITH ranked AS (
-                    SELECT *,
-                           ROW_NUMBER() OVER (PARTITION BY PLAYER_ID ORDER BY GAME_DATE DESC) as rn
-                    FROM '{p_parq.resolve()}'
-                    WHERE GAME_DATE < '{pred_date_str}'
-                )
-                SELECT * EXCLUDE (rn)
-                FROM ranked
-                WHERE rn = 1
-            """
-            return duckdb.query(query).df()
-        except Exception:
-            pass
-
-    df = _load_v4_matchups()
-    if df.empty:
-        return pd.DataFrame()
-    pred_dt = pd.to_datetime(pred_date_str)
-    sub = df[df["GAME_DATE"] < pred_dt]
-    if sub.empty:
-        return pd.DataFrame()
-    return sub.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
-
-
-@lru_cache(maxsize=8)
-def _load_team_rosters(season_str: str) -> pd.DataFrame:
-    roster_path = ROOT / f"data/season={season_str}/analysis/team_rosters.csv"
-    if roster_path.exists():
-        try:
-            return pd.read_csv(roster_path)
-        except Exception:
-            pass
-    return pd.DataFrame()
 
 
 def _ensure_datetime(df, col):
@@ -383,14 +313,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     the away scoring model, which was trained on visiting-team rows).
     """
     if not season:
-        pred_dt_temp = pd.to_datetime(prediction_date)
-        year = pred_dt_temp.year
-        month = pred_dt_temp.month
-        if month < 10:
-            start_year = year - 1
-        else:
-            start_year = year
-        season = f"{start_year}-{str(start_year+1)[-2:]}"
+        season = date_to_season(pd.to_datetime(prediction_date))
 
     pred_dt = pd.to_datetime(prediction_date)
 
@@ -522,7 +445,7 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
             ((playoffs["HOME_TEAM_ABBREVIATION"] == away_team) & (playoffs["AWAY_TEAM_ABBREVIATION"] == home_team))
         ]
         
-        series_start = pd.Timestamp(f"{int(season.split('-')[0])}-09-01")
+        series_start = pd.Timestamp(f"{int(season.split('-')[0])}-{SEASON_START_MONTH:02d}-01")
         prior_h2h = h2h_playoffs[
             (h2h_playoffs["GAME_DATE"] < pred_dt) & (h2h_playoffs["GAME_DATE"] >= series_start)
         ].sort_values("GAME_DATE")
@@ -676,22 +599,6 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
         out[col] = float(safe_get(home_row, col, np.nan))
         out[f"OPP_{col}"] = float(safe_get(away_row, col, np.nan))
 
-    try:
-        player_feats = compute_player_features_for_inference(
-            home_team, away_team, prediction_date, season=season, player_status_overrides=player_status_overrides
-        )
-        out.update(player_feats)
-    except Exception as e:
-        print(f"Warning: failed to compute player features for inference: {e}")
-
-    try:
-        ridge_feats = compute_ridge_player_features_for_inference(
-            home_team, away_team, prediction_date, player_status_overrides=player_status_overrides
-        )
-        out.update(ridge_feats)
-    except Exception as e:
-        print(f"Warning: failed to compute ridge player features for inference: {e}")
-
     # Situational and Advanced Net Rating Differentials
     clean_h = float(safe_get(home_row, "CLEAN_NET_RTG_LAST_10", safe_get(home_row, "NET_RTG_LAST_10", 0.0)))
     clean_a = float(safe_get(away_row, "CLEAN_NET_RTG_LAST_10", safe_get(away_row, "NET_RTG_LAST_10", 0.0)))
@@ -773,10 +680,10 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     res["OPP_CORE_TOP3_PLAYED_COUNT"] = res.get("AWAY_TOP3_AVAILABLE", 0.0)
     res["TEAM_CORE_TOP3_AVAILABLE_RATE"] = res.get("HOME_TOP3_AVAILABLE", 0.0) / 3.0
 
-    # Early Season Bayesian Dynamic Shrinkage & Roster-Adjusted Baseline Adapter (0-20 games transition)
+    # Early season: games played this season and the Elo blend weight
     try:
         season_start_year = int(season.split("-")[0])
-        season_start_dt = pd.Timestamp(f"{season_start_year}-09-01")
+        season_start_dt = pd.Timestamp(f"{season_start_year}-{SEASON_START_MONTH:02d}-01")
         raw_tg = _raw_season_games(season)
         if not raw_tg.empty and "GAME_DATE" in raw_tg.columns:
             _ensure_datetime(raw_tg, "GAME_DATE")
@@ -786,68 +693,18 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
             n_home = 0
             n_away = 0
 
-        # Bayesian shrinkage: w = n / (n + 10.0), smoothly weights sample size vs franchise prior
-        w_home = float(n_home / (n_home + 10.0))
-        w_away = float(n_away / (n_away + 10.0))
         n_min = min(n_home, n_away)
-        w_min = min(w_home, w_away)
 
         res["GAMES_PLAYED_HOME_SEASON"] = n_home
         res["GAMES_PLAYED_AWAY_SEASON"] = n_away
 
-        # Prediction-level Pure Elo blend weight for early season (< 12 games)
+        # Prediction-level Pure Elo blend weight for early season (< 12 games).
+        # Features themselves stay raw: the models were trained on raw early-season
+        # rows, and shrinking them here raised walk-forward log loss in every 0-20 game bucket.
         if n_min < 12:
             res["EARLY_SEASON_ELO_BLEND_WEIGHT"] = float(max(0.0, 1.0 - (n_min / 12.0)) * 0.40)
         else:
             res["EARLY_SEASON_ELO_BLEND_WEIGHT"] = 0.0
-
-        if n_min < 20:
-            # Elo prior adjustment based on Bayesian shrinkage
-            home_base_elo = 1500.0 + (0.75 + 0.25 * w_home) * (float(res.get("PRE_GAME_ELO", 1500.0)) - 1500.0)
-            away_base_elo = 1500.0 + (0.75 + 0.25 * w_away) * (float(res.get("OPP_PRE_GAME_ELO", 1500.0)) - 1500.0)
-
-            # Roster quality adjustment derived from active player projections
-            roster_delta = float(res.get("TEAM_V3_PROJ_PTS_SUM", 112.0) - res.get("OPP_V3_PROJ_PTS_SUM", 112.0))
-            roster_shift = float(np.clip(roster_delta * 2.0, -100.0, 100.0)) * (1.0 - w_min)
-
-            home_elo = home_base_elo + (roster_shift / 2.0)
-            away_elo = away_base_elo - (roster_shift / 2.0)
-
-            res["PRE_GAME_ELO"] = home_elo
-            res["OPP_PRE_GAME_ELO"] = away_elo
-            res["ELO_DIFF"] = home_elo - away_elo
-            res["ABS_ELO_DIFF"] = abs(home_elo - away_elo)
-
-            # Smoothly blend recency and venue features towards league baseline
-            res["WINRATE_LAST_10"] = w_home * float(res.get("WINRATE_LAST_10", 0.5)) + (1.0 - w_home) * 0.50
-            res["OPP_WINRATE_LAST_10"] = w_away * float(res.get("OPP_WINRATE_LAST_10", 0.5)) + (1.0 - w_away) * 0.50
-            res["WINRATE_LAST_5"] = w_home * float(res.get("WINRATE_LAST_5", 0.5)) + (1.0 - w_home) * 0.50
-            res["OPP_WINRATE_LAST_5"] = w_away * float(res.get("OPP_WINRATE_LAST_5", 0.5)) + (1.0 - w_away) * 0.50
-            res["WINRATE_DIFF_LAST_10"] = res["WINRATE_LAST_10"] - res["OPP_WINRATE_LAST_10"]
-            res["ABS_WINRATE_DIFF_LAST_10"] = abs(res["WINRATE_DIFF_LAST_10"])
-
-            net_h = w_home * float(res.get("NET_RTG_LAST_10", 0.0))
-            net_a = w_away * float(res.get("OPP_NET_RTG_LAST_10", 0.0))
-            res["NET_RTG_DIFF_LAST_10"] = net_h - net_a
-
-            clean_net_h = w_home * float(res.get("CLEAN_NET_RTG_LAST_10", res.get("NET_RTG_LAST_10", 0.0)))
-            clean_net_a = w_away * float(res.get("OPP_CLEAN_NET_RTG_LAST_10", res.get("OPP_NET_RTG_LAST_10", 0.0)))
-            res["CLEAN_NET_RTG_DIFF_LAST_10"] = clean_net_h - clean_net_a
-
-            clutch_h = w_home * float(res.get("CLUTCH_NET_RTG_LAST_10", 0.0))
-            clutch_a = w_away * float(res.get("OPP_CLUTCH_NET_RTG_LAST_10", 0.0))
-            res["CLUTCH_NET_RTG_DIFF_LAST_10"] = clutch_h - clutch_a
-
-            res["CURRENT_VENUE_WINRATE_LAST_5"] = w_home * float(res.get("CURRENT_VENUE_WINRATE_LAST_5", 0.5)) + (1.0 - w_home) * 0.54
-            res["OPP_CURRENT_VENUE_WINRATE_LAST_5"] = w_away * float(res.get("OPP_CURRENT_VENUE_WINRATE_LAST_5", 0.5)) + (1.0 - w_away) * 0.46
-            res["HOME_WINRATE_LAST_5"] = w_home * float(res.get("HOME_WINRATE_LAST_5", 0.5)) + (1.0 - w_home) * 0.54
-            res["AWAY_WINRATE_LAST_5"] = w_away * float(res.get("AWAY_WINRATE_LAST_5", 0.5)) + (1.0 - w_away) * 0.46
-
-
-            res["OFF_RTG_LAST_5"] = w_home * float(res.get("OFF_RTG_LAST_5", 114.0)) + (1.0 - w_home) * 114.0
-            res["OPP_OFF_RTG_LAST_5"] = w_away * float(res.get("OPP_OFF_RTG_LAST_5", 114.0)) + (1.0 - w_away) * 114.0
-            res["DEF_RTG_LAST_5"] = w_home * float(res.get("DEF_RTG_LAST_5", 114.0)) + (1.0 - w_home) * 114.0
-            res["OPP_DEF_RTG_LAST_5"] = w_away * float(res.get("OPP_DEF_RTG_LAST_5", 114.0)) + (1.0 - w_away) * 114.0
     except Exception:
         pass
 
@@ -868,37 +725,6 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     except Exception:
         pass
 
-
-    # Compute SCORE_PRED_MARGIN from active Score Model to link Score and Win models
-    try:
-        score_candidates = [
-            (ROOT / "models/production/score_model_v10_margin.pkl", ROOT / "models/production/score_model_v10_metadata.json", ROOT / "models/production/score_model_v10_ridge_margin.pkl"),
-            (ROOT / "models/production/score_model_v9_margin.pkl", ROOT / "models/production/score_model_v9_metadata.json", ROOT / "models/production/score_model_v9_ridge_margin.pkl"),
-        ]
-        s_margin_path, s_meta_path, s_ridge_path = next(((m, meta, r) for m, meta, r in score_candidates if m.exists() and meta.exists()), (None, None, None))
-        if s_margin_path is not None:
-            s_margin_model = load_cached_joblib(s_margin_path)
-            s_meta = load_cached_json(s_meta_path)
-            s_ridge_margin = load_cached_joblib(s_ridge_path) if s_ridge_path and s_ridge_path.exists() else None
-            req_margin_cols = s_meta.get("margin_features", []) if s_meta else []
-
-            margin_input = {c: res.get(c, np.nan) for c in req_margin_cols}
-            df_margin_input = pd.DataFrame([margin_input])
-            raw_m = float(s_margin_model.predict(df_margin_input)[0])
-            if s_ridge_margin is not None:
-                from scripts.generate_report import get_indicator_df
-                df_margin_full = pd.DataFrame([res])
-                X_ind = get_indicator_df(df_margin_full)
-                ridge_adj = float(s_ridge_margin.predict(X_ind)[0])
-                pred_margin_val = raw_m - ridge_adj
-            else:
-                pred_margin_val = raw_m
-            res["SCORE_PRED_MARGIN"] = float(pred_margin_val)
-    except Exception as e:
-        # A silent 0.0 reads as "even game" to the WIN model; NaN lets its imputer
-        # fall back to the training mean and the warning makes the failure visible.
-        print(f"Warning: SCORE_PRED_MARGIN could not be computed: {e}")
-        res["SCORE_PRED_MARGIN"] = np.nan
 
     # Validation: ensure all values derived from rows have GAME_DATE < prediction_date
     # (we filtered at top; assert again)
@@ -949,206 +775,6 @@ def _parse_player_overrides(overrides):
     return lookup
 
 
-def compute_ridge_player_features_for_inference(
-    home_team: str,
-    away_team: str,
-    prediction_date: str,
-    player_status_overrides: list = None,
-):
-    import joblib
-    import os
-    
-    # Use the newest leakage-free player model available for win-model projection features.
-    candidates = [
-        (ROOT / "models/production/player_v9_features.pkl", "player_v9_lgb_"),
-        (ROOT / "models/production/player_v8_features.pkl", "player_v8_lgb_"),
-        (ROOT / "models/production/player_v7_features.pkl", "player_v7_lgb_"),
-        (ROOT / "models/production/player_v6_features.pkl", "player_v6_lgb_"),
-        (ROOT / "models/production/player_v5_features.pkl", "player_v5_lgb_"),
-        (ROOT / "models/production/player_v4_features.pkl", "player_v4_lgb_"),
-    ]
-    features_path, model_prefix = next(((p, prefix) for p, prefix in candidates if p.exists()), (None, None))
-    if features_path is None or model_prefix is None:
-        return {}
-        
-    player_features = load_cached_joblib(features_path)
-    if player_features is None:
-        return {}
-        
-    targets = ["pts", "reb", "ast"]
-    models = {}
-    for t in targets:
-        m_path = ROOT / f"models/production/{model_prefix}{t}.pkl"
-        m = load_cached_joblib(m_path)
-        if m is not None:
-            models[t] = m
-            
-    df = _load_v4_matchups()
-    if df.empty:
-        return {}
-
-    last_games = _get_latest_player_snapshots(prediction_date)
-    if last_games.empty:
-        return {}
-    
-    pred_dt = pd.to_datetime(prediction_date)
-    
-    # Roster-aware filtering using the team_rosters.csv dataset
-    year = pred_dt.year
-    month = pred_dt.month
-    if month < 10:
-        start_year = year - 1
-    else:
-        start_year = year
-    season_str = f"{start_year}-{str(start_year+1)[-2:]}"
-    
-    home_active = None
-    away_active = None
-    roster_df = _load_team_rosters(season_str)
-    if not roster_df.empty:
-        try:
-            home_active = set(roster_df[roster_df["TEAM_ABBREVIATION"] == home_team]["PLAYER_ID"].unique())
-            away_active = set(roster_df[roster_df["TEAM_ABBREVIATION"] == away_team]["PLAYER_ID"].unique())
-        except Exception:
-            pass
-
-    if home_active:
-        home_roster_candidates = last_games[last_games["PLAYER_ID"].isin(home_active)].copy()
-        home_roster_candidates["TEAM_ABBREVIATION"] = home_team
-        if len(home_roster_candidates) == 0:
-            home_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == home_team]
-    else:
-        home_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == home_team]
-
-    if away_active:
-        away_roster_candidates = last_games[last_games["PLAYER_ID"].isin(away_active)].copy()
-        away_roster_candidates["TEAM_ABBREVIATION"] = away_team
-        if len(away_roster_candidates) == 0:
-            away_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == away_team]
-    else:
-        away_roster_candidates = last_games[last_games["TEAM_ABBREVIATION"] == away_team]
-        
-    # Filter to only players who have played at least one of the team's last 15 games (only if no official roster is defined)
-    if not home_active:
-        home_dates = sorted(df[df["TEAM_ABBREVIATION"] == home_team]["GAME_DATE"].unique())
-        if len(home_dates) >= 5:
-            home_last_15 = home_dates[-15:]
-            home_recent_active = set(df[(df["TEAM_ABBREVIATION"] == home_team) & (df["GAME_DATE"].isin(home_last_15))]["PLAYER_ID"].unique())
-            filtered = home_roster_candidates[home_roster_candidates["PLAYER_ID"].isin(home_recent_active)]
-            if len(filtered) > 0:
-                home_roster_candidates = filtered
-            
-    if not away_active:
-        away_dates = sorted(df[df["TEAM_ABBREVIATION"] == away_team]["GAME_DATE"].unique())
-        if len(away_dates) >= 5:
-            away_last_15 = away_dates[-15:]
-            away_recent_active = set(df[(df["TEAM_ABBREVIATION"] == away_team) & (df["GAME_DATE"].isin(away_last_15))]["PLAYER_ID"].unique())
-            filtered = away_roster_candidates[away_roster_candidates["PLAYER_ID"].isin(away_recent_active)]
-            if len(filtered) > 0:
-                away_roster_candidates = filtered
-        
-    home_roster = home_roster_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
-    away_roster = away_roster_candidates.sort_values("MIN_EMA_10", ascending=False).head(11)
-    
-    if len(home_roster) == 0 or len(away_roster) == 0:
-        return {}
-
-    home_def = df[df["OPPONENT_ABBREVIATION"] == home_team].sort_values("GAME_DATE").tail(1)
-    if len(home_def) == 0:
-        home_def = df.tail(1)
-        
-    away_def = df[df["OPPONENT_ABBREVIATION"] == away_team].sort_values("GAME_DATE").tail(1)
-    if len(away_def) == 0:
-        away_def = df.tail(1)
-
-    opp_cols = [c for c in df.columns if c.startswith("OPP_") and "ALLOWED" in c]
-    home_def_dict = {c: home_def[c].values[0] for c in opp_cols}
-    away_def_dict = {c: away_def[c].values[0] for c in opp_cols}
-
-    def build_inference_df(roster_df, def_dict):
-        for k, v in def_dict.items():
-            roster_df[k] = v
-        for f in player_features:
-            if f not in roster_df.columns:
-                roster_df[f] = 0
-        return roster_df
-
-    home_X = build_inference_df(home_roster.copy(), away_def_dict)
-    away_X = build_inference_df(away_roster.copy(), home_def_dict)
-
-    # Calculate status factors
-    override_lookup = _parse_player_overrides(player_status_overrides)
-
-    def extract_factors(roster_df):
-        factors = []
-        for _, r in roster_df.iterrows():
-            pid = r.get("PLAYER_ID")
-            pname = str(r.get("PLAYER_NAME", "")).strip().lower()
-            entry = None
-            if pd.notna(pid):
-                try:
-                    entry = override_lookup.get(int(pid))
-                except (ValueError, TypeError):
-                    entry = None
-            if entry is None and pname:
-                entry = override_lookup.get(pname)
-            factors.append(entry["factor"] if entry is not None else 1.0)
-        return np.array(factors, dtype=float)
-
-    home_factors = extract_factors(home_roster)
-    away_factors = extract_factors(away_roster)
-    
-    res = {}
-    # Compute PTS, REB, AST predictions using V4 LightGBM models
-    home_predictions = {}
-    away_predictions = {}
-    for t in targets:
-        model = models[t]
-        home_proj = model.predict(home_X[player_features])
-        away_proj = model.predict(away_X[player_features])
-
-        home_scaled = home_proj * home_factors
-        away_scaled = away_proj * away_factors
-
-        if t == "pts":
-            home_lost = max(0.0, float((home_proj - home_scaled).sum()))
-            if home_lost > 0:
-                h_active = home_factors > 0.0
-                h_active_sum = home_scaled[h_active].sum()
-                if h_active_sum > 0:
-                    home_scaled[h_active] += home_lost * 0.70 * (home_scaled[h_active] / h_active_sum)
-
-            away_lost = max(0.0, float((away_proj - away_scaled).sum()))
-            if away_lost > 0:
-                a_active = away_factors > 0.0
-                a_active_sum = away_scaled[a_active].sum()
-                if a_active_sum > 0:
-                    away_scaled[a_active] += away_lost * 0.70 * (away_scaled[a_active] / a_active_sum)
-
-        home_predictions[t] = home_scaled
-        away_predictions[t] = away_scaled
-
-        res[f"TEAM_V3_PROJ_{t.upper()}_SUM"] = float(home_scaled.sum())
-        res[f"TEAM_V3_PROJ_{t.upper()}_AVG"] = float(home_scaled.mean())
-
-        res[f"OPP_V3_PROJ_{t.upper()}_SUM"] = float(away_scaled.sum())
-        res[f"OPP_V3_PROJ_{t.upper()}_AVG"] = float(away_scaled.mean())
-
-    # Calculate V4 PRA mathematically as PTS + REB + AST
-    home_pra = home_predictions["pts"] + home_predictions["reb"] + home_predictions["ast"]
-    away_pra = away_predictions["pts"] + away_predictions["reb"] + away_predictions["ast"]
-
-    res["TEAM_V3_PROJ_PRA_SUM"] = float(home_pra.sum())
-    res["TEAM_V3_PROJ_PRA_AVG"] = float(home_pra.mean())
-    res["OPP_V3_PROJ_PRA_SUM"] = float(away_pra.sum())
-    res["OPP_V3_PROJ_PRA_AVG"] = float(away_pra.mean())
-
-    res["ACTIVE_ROSTER_PROJECTED_PTS_DIFF"] = float(home_predictions["pts"].sum() - away_predictions["pts"].sum())
-    res["ACTIVE_ROSTER_PROJECTED_PRA_DIFF"] = float(home_pra.sum() - away_pra.sum())
-        
-    return res
-
-
 def compute_player_features_for_inference(
     home_team: str,
     away_team: str,
@@ -1157,14 +783,7 @@ def compute_player_features_for_inference(
     player_status_overrides: list = None,
 ):
     if not season:
-        pred_dt = pd.to_datetime(prediction_date)
-        year = pred_dt.year
-        month = pred_dt.month
-        if month < 10:
-            start_year = year - 1
-        else:
-            start_year = year
-        season = f"{start_year}-{str(start_year+1)[-2:]}"
+        season = date_to_season(pd.to_datetime(prediction_date))
 
     player_features_list = [
         "HOME_CORE_PLAYERS_AVAILABLE_COUNT", "HOME_CORE_PLAYERS_MISSING_COUNT",

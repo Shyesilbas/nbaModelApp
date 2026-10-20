@@ -59,7 +59,7 @@ The platform utilizes a dual storage architecture for speed and efficiency:
 ## 5. Dataset Assembly Layers
 
 - **Team Model-Ready V3**: `data/processed/team_model_ready_v3_{YYYY_YY}.csv` (and `.parquet`).
-- **Player Model-Ready V4**: `data/experimental/player_model_ready_v4_usg.csv` (and `.parquet`).
+- **Player Model-Ready V4**: `data/experimental/player_model_ready_v4_usg.csv` (CSV only; inference reads the newer of any CSV/parquet pair).
 - **Score Model Dataset**: Joint features combining pace, ratings, travel, and rest indicators.
 
 ---
@@ -67,9 +67,9 @@ The platform utilizes a dual storage architecture for speed and efficiency:
 ## 6. Model Inference & Serving Architecture
 
 1. **Active Production Models**:
-   - **WIN Probability (v10.1)**: Calibrated LightGBM (Isotonic) with Out-of-Fold score margins and continuous Elo.
-   - **SCORE Prediction (v10)**: 4-way XGBoost regressors (Pace, Home Off_Rtg, Away Off_Rtg, Margin) with Ridge residual calibration.
-   - **PLAYER Projection (v9)**: LightGBM regressors for PTS, REB, AST with Ridge position/minutes calibration.
+   - **WIN Probability (v10)**: Uncalibrated logistic regression on 7 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs) plus an early-season Elo blend.
+   - **SCORE Prediction (v10)**: Ridge regressors for pace and each side's offensive rating (2 features each) and for the margin (WIN inputs), with a Ridge residual correction; trained on actual points.
+   - **PLAYER Projection (v9)**: LightGBM regressors for PTS (L1), REB, AST on 21 features including position flags and the opponent's allowance to the player's position.
 2. **Serving**:
    - FastAPI ML service (`ml-service/app`) providing sub-20ms point inference.
    - React 19 dashboard with week-by-week lazy fetching (~25 KB payload vs 1.2 MB full season).

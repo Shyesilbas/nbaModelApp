@@ -16,6 +16,26 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 NEAR_DUPLICATE_ABS_CORR = 0.98
+LINEAR_DEPENDENCE_R2 = 0.9999
+
+
+def linear_dependent_features(numeric: pd.DataFrame, r2_threshold: float = LINEAR_DEPENDENCE_R2) -> List[str]:
+    """Columns that are an exact linear combination of the others (A_DIFF = A - OPP_A).
+
+    Pairwise correlation misses these, yet they make linear coefficients and SHAP signs arbitrary.
+    """
+    rows = numeric.dropna()
+    if len(rows) <= numeric.shape[1]:
+        return []
+    z = (rows - rows.mean()) / rows.std()
+    dependent = []
+    for col in z.columns:
+        others = z.drop(columns=[col]).to_numpy()
+        target = z[col].to_numpy()
+        coef, *_ = np.linalg.lstsq(others, target, rcond=None)
+        if 1.0 - np.var(target - others @ coef) / np.var(target) >= r2_threshold:
+            dependent.append(col)
+    return dependent
 
 
 def check_feature_matrix(X: pd.DataFrame, model_name: str, corr_threshold: float = NEAR_DUPLICATE_ABS_CORR) -> Dict[str, Any]:
@@ -31,17 +51,19 @@ def check_feature_matrix(X: pd.DataFrame, model_name: str, corr_threshold: float
             r = corr.at[a, b]
             if pd.notna(r) and r >= corr_threshold:
                 pairs.append([a, b, round(float(r), 4)])
+    dependent = linear_dependent_features(varying)
     report = {
         "n_features": int(X.shape[1]),
         "constant_features": constant,
         "mostly_missing_features": mostly_missing,
         "near_duplicate_pairs": pairs,
         "near_duplicate_threshold": corr_threshold,
+        "linear_dependent_features": dependent,
     }
-    if constant or pairs:
+    if constant or pairs or dependent:
         logger.warning(
-            "%s feature guard: %d constant, %d near-duplicate pairs (|r| >= %.2f): %s",
-            model_name, len(constant), len(pairs), corr_threshold, pairs[:5],
+            "%s feature guard: %d constant, %d near-duplicate pairs (|r| >= %.2f): %s, linear combinations: %s",
+            model_name, len(constant), len(pairs), corr_threshold, pairs[:5], dependent,
         )
     return report
 

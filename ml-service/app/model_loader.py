@@ -178,9 +178,6 @@ class PlayerModelLoader:
         self.pts_model = None
         self.reb_model = None
         self.ast_model = None
-        self.ridge_pts_model = None
-        self.ridge_reb_model = None
-        self.ridge_ast_model = None
         self.feature_cols = None
         self.version = "player_v3_ridge"
 
@@ -197,10 +194,7 @@ class PlayerModelLoader:
         reb_path = resolve_artifact_path("player_model", "reb_model_path", "models/production/player_v9_lgb_reb.pkl")
         ast_path = resolve_artifact_path("player_model", "ast_model_path", "models/production/player_v9_lgb_ast.pkl")
         features_path = resolve_artifact_path("player_model", "feature_columns_path", "models/production/player_v9_features.pkl")
-        
-        ridge_pts_path = resolve_artifact_path("player_model", "ridge_pts_path", "models/production/player_v9_ridge_pts.pkl")
-        ridge_reb_path = resolve_artifact_path("player_model", "ridge_reb_path", "models/production/player_v9_ridge_reb.pkl")
-        ridge_ast_path = resolve_artifact_path("player_model", "ridge_ast_path", "models/production/player_v9_ridge_ast.pkl")
+
 
         v9_exists = all(p.exists() for p in [pts_path, reb_path, ast_path, features_path])
         if not v9_exists:
@@ -208,9 +202,6 @@ class PlayerModelLoader:
             reb_path = ROOT / "models/production/player_v9_lgb_reb.pkl"
             ast_path = ROOT / "models/production/player_v9_lgb_ast.pkl"
             features_path = ROOT / "models/production/player_v9_features.pkl"
-            ridge_pts_path = ROOT / "models/production/player_v9_ridge_pts.pkl"
-            ridge_reb_path = ROOT / "models/production/player_v9_ridge_reb.pkl"
-            ridge_ast_path = ROOT / "models/production/player_v9_ridge_ast.pkl"
 
         v9_actual_exists = all(p.exists() for p in [pts_path, reb_path, ast_path, features_path])
         if v9_actual_exists:
@@ -219,19 +210,6 @@ class PlayerModelLoader:
                 "player_v9_lgb",
                 "Loaded V9 LightGBM Player Models successfully."
             )
-            self.version = "player_v9_lgb"
-            
-            if ridge_pts_path.exists() and ridge_reb_path.exists() and ridge_ast_path.exists():
-                self.ridge_pts_model = joblib.load(ridge_pts_path)
-                self.ridge_reb_model = joblib.load(ridge_reb_path)
-                self.ridge_ast_model = joblib.load(ridge_ast_path)
-                self.version = "player_v9_lgb_calibrated"
-                print("Loaded V9 LightGBM Player Models with Ridge calibration successfully.")
-            else:
-                self.ridge_pts_model = None
-                self.ridge_reb_model = None
-                self.ridge_ast_model = None
-                print("Loaded V9 LightGBM Player Models successfully (uncalibrated).")
             return
 
         # Fallbacks:

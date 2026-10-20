@@ -23,6 +23,8 @@ from src.training.segment_evaluation import evaluate_segments, player_metrics, s
 from src.training.training_manifest import load_training_manifest
 from scripts.data_paths import get_data_paths
 from scripts.generate_report import add_location_features, get_indicator_df
+from src.features.win_strength_features import attach_actual_points
+from src.features.player_form import add_player_matchup_features
 
 CLEAN_HOLDOUT_METRICS_FILE = "clean_holdout_metrics.json"
 
@@ -44,65 +46,6 @@ def evaluate_model_files(model_dir, season, segments=None):
     df["GAME_ID"] = df["GAME_ID"].astype(str).apply(lambda x: x.split('.')[0].zfill(10))
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
     
-    if "TEAM_V3_PROJ_PTS_SUM" not in df.columns:
-        player_feat_path = ROOT / "data" / "experimental" / "player_model_ready_v4_usg.csv"
-        if player_feat_path.exists():
-            player_df = pd.read_csv(player_feat_path)
-            if "Game_ID" in player_df.columns:
-                player_df = player_df.rename(columns={"Game_ID": "GAME_ID"})
-            player_df["GAME_ID"] = player_df["GAME_ID"].astype(str).apply(lambda x: x.split('.')[0].zfill(10))
-            
-            player_features_config_path = model_dir / "player_v9_features.pkl"
-            if not player_features_config_path.exists():
-                player_features_config_path = ROOT / "models/production/player_v9_features.pkl"
-                
-            if player_features_config_path.exists():
-                player_features_cols = joblib.load(player_features_config_path)
-                player_df = player_df.dropna(subset=player_features_cols)
-                
-                targets = ["pts", "reb", "ast"]
-                predictions = {}
-                for t in targets:
-                    model_path = model_dir / f"player_v9_lgb_{t}.pkl"
-                    if not model_path.exists():
-                        model_path = ROOT / "models" / "production" / f"player_v9_lgb_{t}.pkl"
-                    if model_path.exists():
-                        model = joblib.load(model_path)
-                        pred = model.predict(player_df[player_features_cols])
-                        player_df[f"PROJ_{t.upper()}"] = pred
-                        predictions[t] = pred
-                        
-                player_df["PROJ_PRA"] = predictions["pts"] + predictions["reb"] + predictions["ast"]
-                
-                team_agg = player_df.groupby(["GAME_ID", "TEAM_ABBREVIATION"])[[c for c in player_df.columns if c in ["PROJ_PTS", "PROJ_REB", "PROJ_AST", "PROJ_PRA"] or c.startswith("PROJ_")]].agg(['sum', 'mean']).reset_index()
-                team_agg.columns = ["GAME_ID", "TEAM_ABBREVIATION"] + [f"{col}_{agg}" for col, agg in team_agg.columns[2:]]
-                
-                team_features_df = team_agg.rename(columns={
-                    "PROJ_PTS_sum": "TEAM_V3_PROJ_PTS_SUM",
-                    "PROJ_REB_sum": "TEAM_V3_PROJ_REB_SUM",
-                    "PROJ_AST_sum": "TEAM_V3_PROJ_AST_SUM",
-                    "PROJ_PRA_sum": "TEAM_V3_PROJ_PRA_SUM",
-                    "PROJ_PTS_mean": "TEAM_V3_PROJ_PTS_AVG",
-                    "PROJ_REB_mean": "TEAM_V3_PROJ_REB_AVG",
-                    "PROJ_AST_mean": "TEAM_V3_PROJ_AST_AVG",
-                    "PROJ_PRA_mean": "TEAM_V3_PROJ_PRA_AVG",
-                })
-                
-                opp_features_df = team_agg.rename(columns={
-                    "TEAM_ABBREVIATION": "OPPONENT_ABBREVIATION",
-                    "PROJ_PTS_sum": "OPP_V3_PROJ_PTS_SUM",
-                    "PROJ_REB_sum": "OPP_V3_PROJ_REB_SUM",
-                    "PROJ_AST_sum": "OPP_V3_PROJ_AST_SUM",
-                    "PROJ_PRA_sum": "OPP_V3_PROJ_PRA_SUM",
-                    "PROJ_PTS_mean": "OPP_V3_PROJ_PTS_AVG",
-                    "PROJ_REB_mean": "OPP_V3_PROJ_REB_AVG",
-                    "PROJ_AST_mean": "OPP_V3_PROJ_AST_AVG",
-                    "PROJ_PRA_mean": "OPP_V3_PROJ_PRA_AVG",
-                })
-                
-                df = df.merge(team_features_df, on=["GAME_ID", "TEAM_ABBREVIATION"], how="inner")
-                df = df.merge(opp_features_df, on=["GAME_ID", "OPPONENT_ABBREVIATION"], how="inner")
-                
     if "PACE_COLLISION" not in df.columns or "ELO_DIFF" not in df.columns:
         from src.features.win_strength_features import add_win_strength_features
         df = add_win_strength_features(df)
@@ -131,8 +74,9 @@ def evaluate_model_files(model_dir, season, segments=None):
         home_df = home_df.dropna(subset=[c for c in req_cols if c in home_df.columns])
         
         if not home_df.empty:
-            home_df["ACTUAL_HOME_PTS"] = home_df["PACE"] * home_df["OFF_RTG"] / 100.0
-            home_df["ACTUAL_AWAY_PTS"] = home_df["PACE"] * home_df["DEF_RTG"] / 100.0
+            home_df = attach_actual_points(home_df).dropna(subset=["ACTUAL_PTS", "ACTUAL_OPP_PTS"])
+            home_df["ACTUAL_HOME_PTS"] = home_df["ACTUAL_PTS"]
+            home_df["ACTUAL_AWAY_PTS"] = home_df["ACTUAL_OPP_PTS"]
             home_df["ACTUAL_TOTAL"] = home_df["ACTUAL_HOME_PTS"] + home_df["ACTUAL_AWAY_PTS"]
             home_df["ACTUAL_MARGIN"] = home_df["ACTUAL_HOME_PTS"] - home_df["ACTUAL_AWAY_PTS"]
             
@@ -166,20 +110,16 @@ def evaluate_model_files(model_dir, season, segments=None):
                 score_results = dict(score_segments.get("overall", {}))
                 score_results["segments"] = score_segments
 
-                baseline_predictions = {}
-                if all(c in eval_df.columns for c in ["PACE_LAST_5", "OFF_RTG_LAST_5", "OPP_OFF_RTG_LAST_5"]):
-                    baseline_predictions["rolling_team_ratings"] = {
-                        "home": eval_df["PACE_LAST_5"] * eval_df["OFF_RTG_LAST_5"] / 100.0,
-                        "away": eval_df["PACE_LAST_5"] * eval_df["OPP_OFF_RTG_LAST_5"] / 100.0,
-                    }
-                    baseline = baseline_predictions["rolling_team_ratings"]
-                    base_total = baseline["home"] + baseline["away"]
-                    base_margin = baseline["home"] - baseline["away"]
-                    score_results["baseline_rolling_team_ratings"] = {
-                        "total_mae": float(mean_absolute_error(eval_df["ACTUAL_TOTAL"], base_total)),
-                        "margin_mae": float(mean_absolute_error(eval_df["ACTUAL_MARGIN"], base_margin)),
+                points_cols = ["PTS_LAST_10", "PTS_ALLOWED_LAST_10", "OPP_PTS_LAST_10", "OPP_PTS_ALLOWED_LAST_10"]
+                if all(c in eval_df.columns for c in points_cols):
+                    # Recent real points of both teams; the old PACE x OFF_RTG baseline was ~1.5 points weaker.
+                    base_home = (eval_df["PTS_LAST_10"] + eval_df["OPP_PTS_ALLOWED_LAST_10"]) / 2.0
+                    base_away = (eval_df["OPP_PTS_LAST_10"] + eval_df["PTS_ALLOWED_LAST_10"]) / 2.0
+                    score_results["baseline_recent_points"] = {
+                        "total_mae": float(mean_absolute_error(eval_df["ACTUAL_TOTAL"], base_home + base_away)),
+                        "margin_mae": float(mean_absolute_error(eval_df["ACTUAL_MARGIN"], base_home - base_away)),
                         "samples": int(len(eval_df)),
-                        "definition": "pregame PACE_LAST_5 × each side's rolling offensive rating",
+                        "definition": "each side's last-10 points scored averaged with the opponent's last-10 points allowed",
                     }
 
                 # Attach PRED_MARGIN to full df as SCORE_PRED_MARGIN (positive for home, negative for away)
@@ -241,7 +181,8 @@ def evaluate_model_files(model_dir, season, segments=None):
             player_df = player_df[pd.to_numeric(player_df["SEASON_ID"], errors="coerce").isin(_season_to_season_ids(season))].copy()
         if not player_df.empty:
             features = joblib.load(player_features_path)
-            player_df = player_df.dropna(subset=[c for c in features if c in player_df.columns])
+            # No dropna on features: the pipeline imputes them, as it does in production.
+            player_df = add_player_matchup_features(player_df)
             target_map = {"pts": "TARGET_PTS", "reb": "TARGET_REB", "ast": "TARGET_AST"}
             for short_name, target_col in target_map.items():
                 model_path = model_dir / f"player_v9_lgb_{short_name}.pkl"
@@ -253,10 +194,10 @@ def evaluate_model_files(model_dir, season, segments=None):
                     target_segments = evaluate_segments(eval_df, segments, player_metrics(short_name))
                     player_results[short_name] = dict(target_segments.get("overall", {}))
                     player_results[short_name]["segments"] = target_segments
-                    rolling_feature = {"pts": "PTS_LAST_5", "reb": "REB_LAST_5", "ast": "AST_LAST_5"}[short_name]
-                    if rolling_feature in eval_df.columns:
-                        baseline_error = eval_df[rolling_feature].astype(float) - eval_df[f"actual_{short_name}"].astype(float)
-                        player_results[short_name]["baseline_last_5_mae"] = float(baseline_error.abs().mean())
+                    for key, col in [("baseline_last_5_mae", f"{short_name.upper()}_LAST_5"), ("baseline_ema10_mae", f"{short_name.upper()}_EMA_10")]:
+                        if col in eval_df.columns:
+                            baseline_error = eval_df[col].astype(float) - eval_df[f"actual_{short_name}"].astype(float)
+                            player_results[short_name][key] = float(baseline_error.abs().mean())
                 
     return {
         "win": win_results,
@@ -324,13 +265,13 @@ def _baseline_gate(metrics):
         checks.append({"name": "win.brier_better_than_elo", "passed": bool(elo) and win.get("brier", float("inf")) < elo.get("brier", float("inf"))})
         checks.append({"name": "win.auc_at_least_elo", "passed": bool(elo) and win.get("roc_auc", 0) >= elo.get("roc_auc", 0)})
     score = metrics.get("score", {})
-    score_base = score.get("baseline_rolling_team_ratings", {})
+    score_base = score.get("baseline_recent_points", {})
     if score:
-        checks.append({"name": "score.total_mae_better_than_rolling", "passed": bool(score_base) and score.get("total_mae", float("inf")) < score_base.get("total_mae", float("inf"))})
-        checks.append({"name": "score.margin_mae_better_than_rolling", "passed": bool(score_base) and score.get("margin_mae", float("inf")) < score_base.get("margin_mae", float("inf"))})
+        checks.append({"name": "score.total_mae_better_than_recent_points", "passed": bool(score_base) and score.get("total_mae", float("inf")) < score_base.get("total_mae", float("inf"))})
+        checks.append({"name": "score.margin_mae_better_than_recent_points", "passed": bool(score_base) and score.get("margin_mae", float("inf")) < score_base.get("margin_mae", float("inf"))})
     for target, values in metrics.get("player", {}).items():
-        baseline = values.get("baseline_last_5_mae")
-        checks.append({"name": f"player.{target}.mae_better_than_last5", "passed": baseline is not None and values.get("mae", float("inf")) < baseline})
+        baseline = values.get("baseline_ema10_mae")
+        checks.append({"name": f"player.{target}.mae_better_than_ema10", "passed": baseline is not None and values.get("mae", float("inf")) < baseline})
     return {"passed": bool(checks and all(item["passed"] for item in checks)), "checks": checks}
 
 def write_training_report(run_id, manifest, trainer_metadata, champ_metrics, chall_metrics, eligibility):
@@ -415,7 +356,7 @@ def main():
         out_dir.mkdir(parents=True, exist_ok=True)
         metadata = {}
         if is_model_enabled("player"):
-            print("-> Training Player Models (LGBM + Ridge Calibration)...")
+            print("-> Training Player Models (LightGBM)...")
             metadata["player"] = PlayerModelTrainer(
                 data_path=manifest.player_dataset_path,
                 output_dir=out_dir,
@@ -425,12 +366,17 @@ def main():
                 feature_contract_path=manifest.feature_contracts.get("player"),
             ).train_and_export()
 
+        validation_file = ROOT / "data" / "processed" / f"team_model_ready_v3_{validation_season.replace('-', '_')}.csv"
         if is_model_enabled("score"):
             print("-> Training Score Models (Ridge + Ridge Calibration)...")
+            # Holdout copies (train_only) must not see the validation season; release models must.
+            score_data_files = list(manifest.team_dataset_files)
+            if holdout.get("final_refit_scope") != "train_only" and validation_file.exists() and validation_file not in score_data_files:
+                score_data_files.append(validation_file)
             metadata["score"] = ScoreModelTrainer(
                 output_dir=out_dir,
                 version="v10",
-                data_files=manifest.team_dataset_files,
+                data_files=score_data_files,
                 player_data_path=manifest.player_dataset_path,
                 player_models_dir=out_dir,
                 manifest_metadata=manifest_metadata,
@@ -439,7 +385,7 @@ def main():
             ).train_and_export()
 
         if is_model_enabled("win"):
-            print("-> Training Win Probability Model (Calibrated Classifier)...")
+            print("-> Training Win Probability Model...")
             win_validation_file = ROOT / "data" / "processed" / f"team_model_ready_v3_{validation_season.replace('-', '_')}.csv"
             win_data_files = list(manifest.team_dataset_files)
             if win_validation_file.exists() and win_validation_file not in win_data_files:
@@ -518,6 +464,12 @@ def main():
         margin_diff = s_chall["margin_mae"] - s_champ["margin_mae"]
         print(f"{'Total Score MAE':<25} | {s_champ['total_mae']:<15.4f} | {s_chall['total_mae']:<16.4f} | {mae_diff:<+10.4f}")
         print(f"{'Margin MAE':<25} | {s_champ['margin_mae']:<15.4f} | {s_chall['margin_mae']:<16.4f} | {margin_diff:<+10.4f}")
+
+    for target in ["pts", "reb", "ast"]:
+        p_champ = champ_metrics.get("player", {}).get(target, {})
+        p_chall = chall_metrics.get("player", {}).get(target, {})
+        if p_champ.get("mae") is not None and p_chall.get("mae") is not None:
+            print(f"{'Player ' + target.upper() + ' MAE':<25} | {p_champ['mae']:<15.4f} | {p_chall['mae']:<16.4f} | {p_chall['mae'] - p_champ['mae']:<+10.4f}")
         
     print("--------------------------------------------------")
     challenger_gate = _champion_challenger_gate(champ_metrics, chall_metrics)
@@ -602,7 +554,10 @@ def main():
             "player_v9_ridge_ast.pkl",
             "player_v9_metadata.json",
         ]
-        
+        # Only promote models trained in this run; experimental/ may hold stale artifacts of the others.
+        owner = lambda f: "score" if f.startswith("score_") else "player" if f.startswith("player_") else "win"
+        files_to_copy = [f for f in files_to_copy if is_model_enabled(owner(f))]
+
         for f in files_to_copy:
             src_file = experimental_dir / f
             dest_file = production_dir / f
@@ -611,15 +566,24 @@ def main():
                     shutil.copy2(dest_file, backup_dir / f)
                 shutil.copy2(src_file, dest_file)
                 print(f"-> Copied {f} to production.")
+            elif dest_file.exists():
+                # An artifact the retrained model no longer produces (the retired player Ridge
+                # correction) would otherwise stay live and still be loaded.
+                shutil.move(str(dest_file), str(backup_dir / f))
+                print(f"-> Retired {f} from production (backed up).")
             else:
                 print(f"Warning: {f} not found in experimental output directory.")
                 
-        if all_models_selected:
+        # Record clean metrics per promoted model; a partial run keeps the other models' entries.
+        same_season = champion_record.get("validation_season") == validation_season
+        if all_models_selected or same_season:
+            clean_metrics = {} if all_models_selected else dict(champion_record.get("metrics", {}))
+            clean_metrics.update({name: chall_metrics.get(name, {}) for name in ("win", "score", "player") if is_model_enabled(name)})
             (production_dir / CLEAN_HOLDOUT_METRICS_FILE).write_text(json.dumps({
                 "run_id": run_id,
                 "validation_season": validation_season,
                 "note": "Metrics of copies fitted without the validation season; the next retrain's gate compares against these.",
-                "metrics": chall_metrics,
+                "metrics": clean_metrics,
             }, indent=2, default=float))
         if replace_policy:
             release = {

@@ -1,6 +1,6 @@
 {
-    "version": "v9_temporal_Ridge_candidate",
-    "updated_at": "2026-10-19T20:46:45.203701Z",
+    "version": "v9_temporal_lgb_candidate",
+    "updated_at": "2026-10-19T22:37:22.842153Z",
     "training_manifest": {
         "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
         "train_seasons": [
@@ -29,66 +29,28 @@
                 "TARGET_REB": "reb",
                 "TARGET_AST": "ast"
             },
-            "exclude_columns": [
-                "SEASON_ID",
-                "Player_ID",
-                "PLAYER_ID",
-                "player_id",
-                "GAME_DATE",
-                "MATCHUP",
-                "VIDEO_AVAILABLE",
-                "PTS",
-                "MIN",
-                "REB",
-                "AST",
-                "PLUS_MINUS",
-                "WL",
-                "WIN",
-                "TARGET_PTS",
-                "TARGET_REB",
-                "TARGET_AST",
-                "PLAYER_NAME",
-                "player_name",
-                "SEASON_TYPE",
-                "OPPONENT_ABBREVIATION",
-                "GAME_ID",
-                "Game_ID",
-                "game_id",
-                "TEAM_ABBREVIATION",
-                "PLAYER_POSITION_GROUP",
-                "PLAYOFF_ROUND",
-                "SERIES_GAME_NUMBER",
-                "GAME_PTS",
-                "GAME_REB",
-                "GAME_AST",
-                "GAME_MIN",
-                "GAME_USG_PCT",
-                "GAME_PLUS_MINUS",
-                "CAN_CLINCH_SERIES",
-                "IS_ELIMINATION_GAME",
-                "IS_B2B",
-                "OPP_GUARD_REB_ALLOWED_LAST_10",
-                "OPP_WING_REB_ALLOWED_LAST_10",
-                "OPP_BIG_AST_ALLOWED_LAST_10",
-                "OPP_WING_PTS_ALLOWED_LAST_10",
-                "TEAM_ELO",
-                "OPP_ELO",
-                "ELO_DIFF",
-                "BLOWOUT_RISK_PROXY",
-                "TEAM_PACE",
-                "OPP_TEAM_PACE",
-                "OPP_BIG_PTS_ALLOWED_LAST_10",
-                "OPP_BIG_REB_ALLOWED_LAST_10",
-                "OPP_GUARD_PTS_ALLOWED_LAST_10",
-                "OPP_WING_AST_ALLOWED_LAST_10",
-                "OPP_GUARD_AST_ALLOWED_LAST_10",
-                "USG_PCT_LAST_3",
-                "USG_PCT_EMA_5",
-                "USG_PCT_STD_LAST_10",
-                "USG_PCT_TREND",
-                "MIN_LAST_10",
-                "MIN_STD_LAST_10",
-                "PLUS_MINUS_LAST_5"
+            "features": [
+                "IS_HOME",
+                "IS_PLAYOFF",
+                "DAYS_REST",
+                "IS_GUARD",
+                "IS_BIG",
+                "PTS_LAST_5",
+                "PTS_EMA_10",
+                "PTS_PER_MIN_LAST_10",
+                "REB_LAST_5",
+                "REB_EMA_10",
+                "REB_PER_MIN_LAST_10",
+                "AST_LAST_5",
+                "AST_EMA_10",
+                "AST_PER_MIN_LAST_10",
+                "MIN_LAST_3",
+                "MIN_EMA_10",
+                "MIN_TREND",
+                "USG_PCT_EMA_10",
+                "OPP_POS_PTS_ALLOWED_LAST_10",
+                "OPP_POS_REB_ALLOWED_LAST_10",
+                "OPP_POS_AST_ALLOWED_LAST_10"
             ],
             "required_context_columns": [
                 "SEASON_ID",
@@ -96,8 +58,16 @@
                 "IS_PLAYOFF",
                 "IS_HOME",
                 "PLAYER_POSITION_GROUP",
-                "USG_PCT_LAST_10",
-                "MIN_EMA_10"
+                "MIN_EMA_10",
+                "OPP_GUARD_PTS_ALLOWED_LAST_10",
+                "OPP_WING_PTS_ALLOWED_LAST_10",
+                "OPP_BIG_PTS_ALLOWED_LAST_10",
+                "OPP_GUARD_REB_ALLOWED_LAST_10",
+                "OPP_WING_REB_ALLOWED_LAST_10",
+                "OPP_BIG_REB_ALLOWED_LAST_10",
+                "OPP_GUARD_AST_ALLOWED_LAST_10",
+                "OPP_WING_AST_ALLOWED_LAST_10",
+                "OPP_BIG_AST_ALLOWED_LAST_10"
             ],
             "lgb_params_by_target": {
                 "pts": {
@@ -107,7 +77,7 @@
         }
     },
     "provenance": {
-        "code_revision": "eef7687efbb512b6c9bb51dde438785a231ea4b8",
+        "code_revision": "b1eebcdf9d9b29ea4aa1a0bedcce07d2b66b9608",
         "python_version": "3.12.4",
         "packages": {
             "numpy": "1.26.4",
@@ -118,14 +88,14 @@
         },
         "feature_contract": {
             "path": "config/features/player_v9.yaml",
-            "sha256": "48689ddd2257b7521e15d3e97f654f35a7982b65fa4132c88b6032218171d999",
-            "bytes": 2066
+            "sha256": "068c25648ce09f773f83d565431f96eb9023d99f9536a784e358beb888fbe272",
+            "bytes": 1852
         },
         "input_snapshots": [
             {
                 "path": "data/experimental/player_model_ready_v4_usg.csv",
-                "sha256": "058bd7da6106815b9d3e4e824ba3610c3d29725fe69716f04592843be6e649c9",
-                "bytes": 111984649
+                "sha256": "2584871883508926be644133f64e1954df00d6b8820a89ffcd6b5ed6400de0e1",
+                "bytes": 112003993
             }
         ],
         "training_manifest": {
@@ -135,67 +105,55 @@
         },
         "trainer_source": {
             "path": "src/training/player_trainer.py",
-            "sha256": "949bb334653447ad2ae2fc1a189cb621718d0f246cf6614b03db27c80e0bf6a4",
-            "bytes": 12482
+            "sha256": "2d690f2660bdaa590a5c2eae97cac1b047db0981342cedf439b37a70a6f6646a",
+            "bytes": 11430
         },
         "artifacts": [
             {
                 "path": "models/experimental/player_v9_lgb_pts.pkl",
-                "sha256": "4a465ecd1e3f0d26c0f98a8a03efc86aade2166a0369f6e43eac4e82c5936432",
-                "bytes": 428568
-            },
-            {
-                "path": "models/experimental/player_v9_ridge_pts.pkl",
-                "sha256": "c397251b4b6e4dd7d5bbc9bfc9db5a86cacf011e05fed287fed32588622cada8",
-                "bytes": 1072
+                "sha256": "1c661fd860427f1f97c5a4aa20f6a049bb84d371cfa8007cad58df5c0f66274e",
+                "bytes": 421993
             },
             {
                 "path": "models/experimental/player_v9_lgb_reb.pkl",
-                "sha256": "7a9d3aa6a73a975216dc4e6446ee105e25415f3ecc5a1fb0b8ee5216c392f27c",
-                "bytes": 423163
-            },
-            {
-                "path": "models/experimental/player_v9_ridge_reb.pkl",
-                "sha256": "4b657e897591a48d3955c34bc27e5ac1754ec92cfc04f7e0308438a537e452cd",
-                "bytes": 1072
+                "sha256": "9a3df17689b02bbfd99239336bc5eb7618800058f227a24e15fe9191e8b14911",
+                "bytes": 429474
             },
             {
                 "path": "models/experimental/player_v9_lgb_ast.pkl",
-                "sha256": "b7819550fec9f4abd7925e9d3b42efd83808f9b49c3a039dc9110db2abfb7643",
-                "bytes": 404840
-            },
-            {
-                "path": "models/experimental/player_v9_ridge_ast.pkl",
-                "sha256": "38c1b2e8837d71753eca15dee11d471c5fdc43aabad524d866580effa762494e",
-                "bytes": 1072
+                "sha256": "e438874a3ea3ae7df6a6b149d4ed549ae764031fe420aefefb9b7c94ade78cc7",
+                "bytes": 421558
             },
             {
                 "path": "models/experimental/player_v9_features.pkl",
-                "sha256": "aad1062ea0c15320b77bafda424b23638cadf4e0d4a3459655623e94f0d0f99b",
-                "bytes": 335
+                "sha256": "a0703c6d550ba9fdb8d9fc0dd0574e64425e31c82d0f04a63b9f600557e89c16",
+                "bytes": 360
             }
         ]
     },
     "input_file": "/Users/serhat/PycharmProjects/nbaModelApp/data/experimental/player_model_ready_v4_usg.csv",
     "number_of_rows": 165988,
-    "training_rows": 137290,
-    "evaluation_training_rows": 137290,
+    "training_rows": 165988,
+    "evaluation_training_rows": 165988,
     "training_season_ids": [
         22020,
         22021,
         22022,
         22023,
         22024,
+        22025,
         42020,
         42021,
         42022,
         42023,
         42024,
+        42025,
         52020,
         52021,
         52022,
         52023,
-        52024
+        52024,
+        52025
     ],
     "season_coverage": [
         22020,
@@ -218,83 +176,66 @@
         52025
     ],
     "feature_guard": {
-        "n_features": 22,
+        "n_features": 21,
         "constant_features": [],
         "mostly_missing_features": [],
         "near_duplicate_pairs": [
             [
                 "PTS_LAST_5",
                 "PTS_EMA_10",
-                0.9835
-            ],
-            [
-                "PTS_LAST_10",
-                "PTS_EMA_10",
-                0.9897
-            ],
-            [
-                "MIN_LAST_5",
-                "MIN_EMA_5",
-                0.9885
-            ],
-            [
-                "MIN_LAST_5",
-                "MIN_EMA_10",
-                0.9851
+                0.9832
             ],
             [
                 "AST_LAST_5",
                 "AST_EMA_10",
-                0.9832
-            ],
-            [
-                "REB_LAST_10",
-                "REB_EMA_10",
-                0.987
-            ],
-            [
-                "AST_LAST_10",
-                "AST_EMA_10",
-                0.9896
-            ],
-            [
-                "MIN_LAST_3",
-                "MIN_EMA_5",
-                0.9868
-            ],
-            [
-                "MIN_EMA_5",
-                "MIN_EMA_10",
-                0.9889
-            ],
-            [
-                "USG_PCT_LAST_10",
-                "USG_PCT_EMA_10",
-                0.9805
+                0.9827
             ]
         ],
-        "near_duplicate_threshold": 0.98
+        "near_duplicate_threshold": 0.98,
+        "linear_dependent_features": []
     },
     "final_refit": {
         "enabled": true,
-        "rows": 137290,
+        "rows": 165988,
         "scope": "all_eligible_rows",
-        "note": "Final target models and Ridge corrections use only the configured pre-holdout fit scope."
+        "note": "Holdout metrics come from the model fit before the holdout season; the shipped model is then refit on this scope."
     },
-    "features_count": 22,
+    "features_count": 21,
     "targets": [
         "TARGET_PTS",
         "TARGET_REB",
         "TARGET_AST"
     ],
+    "features": [
+        "IS_HOME",
+        "IS_PLAYOFF",
+        "DAYS_REST",
+        "IS_GUARD",
+        "IS_BIG",
+        "PTS_LAST_5",
+        "PTS_EMA_10",
+        "PTS_PER_MIN_LAST_10",
+        "REB_LAST_5",
+        "REB_EMA_10",
+        "REB_PER_MIN_LAST_10",
+        "AST_LAST_5",
+        "AST_EMA_10",
+        "AST_PER_MIN_LAST_10",
+        "MIN_LAST_3",
+        "MIN_EMA_10",
+        "MIN_TREND",
+        "USG_PCT_EMA_10",
+        "OPP_POS_PTS_ALLOWED_LAST_10",
+        "OPP_POS_REB_ALLOWED_LAST_10",
+        "OPP_POS_AST_ALLOWED_LAST_10"
+    ],
     "evaluation": "chronological_holdout",
     "evaluation_metrics": {
         "pts": {
-            "mae": 4.554047422997004,
-            "ridge_training_rows": 101503,
-            "ridge_oof_strategy": "expanding_window_by_game_date",
-            "rmse": 6.0746292537188875,
-            "r2": 0.5282500010072971,
+            "mae": 4.553973169470006,
+            "baseline_ema10_mae": 4.675234071796703,
+            "rmse": 6.071033262427436,
+            "r2": 0.5288083583017682,
             "split": {
                 "strategy": "season_holdout",
                 "split_date": null,
@@ -309,37 +250,13 @@
                 "test_seasons": [
                     "2024-25"
                 ]
-            },
-            "ridge_coefs": [
-                0.33122737032452515,
-                -0.11022324775994592,
-                -0.02184669587844377,
-                0.04226371436917845,
-                -0.020417018490473036,
-                -0.02154252766647859,
-                0.03914029708487754,
-                0.10499295733365228,
-                -0.3360546053429498
-            ],
-            "ridge_intercept": -0.6862835165910768,
-            "ridge_features": [
-                "is_playoff",
-                "is_home",
-                "pos_guard",
-                "pos_wing",
-                "pos_big",
-                "high_usage",
-                "low_usage",
-                "heavy_minutes",
-                "light_minutes"
-            ]
+            }
         },
         "reb": {
-            "mae": 1.9215682380505592,
-            "ridge_training_rows": 101503,
-            "ridge_oof_strategy": "expanding_window_by_game_date",
-            "rmse": 2.531802780880509,
-            "r2": 0.4679403597997558,
+            "mae": 1.9171946377198306,
+            "baseline_ema10_mae": 1.9460396224740215,
+            "rmse": 2.5249581018601677,
+            "r2": 0.4708132966236278,
             "split": {
                 "strategy": "season_holdout",
                 "split_date": null,
@@ -354,37 +271,13 @@
                 "test_seasons": [
                     "2024-25"
                 ]
-            },
-            "ridge_coefs": [
-                -0.0032405907927025427,
-                -0.010147981702361976,
-                0.18497874877594775,
-                0.030428559600834668,
-                -0.215407308380614,
-                -0.054301918617195466,
-                -0.03403213912100639,
-                -0.07036944990260574,
-                0.02349749055148716
-            ],
-            "ridge_intercept": -0.017089159428145595,
-            "ridge_features": [
-                "is_playoff",
-                "is_home",
-                "pos_guard",
-                "pos_wing",
-                "pos_big",
-                "high_usage",
-                "low_usage",
-                "heavy_minutes",
-                "light_minutes"
-            ]
+            }
         },
         "ast": {
-            "mae": 1.3353592462833543,
-            "ridge_training_rows": 101503,
-            "ridge_oof_strategy": "expanding_window_by_game_date",
-            "rmse": 1.8216814154700853,
-            "r2": 0.5144285780715552,
+            "mae": 1.3326639572504546,
+            "baseline_ema10_mae": 1.3507971753029429,
+            "rmse": 1.8166383477454686,
+            "r2": 0.5171133285540533,
             "split": {
                 "strategy": "season_holdout",
                 "split_date": null,
@@ -399,30 +292,7 @@
                 "test_seasons": [
                     "2024-25"
                 ]
-            },
-            "ridge_coefs": [
-                0.06286854573139512,
-                -0.02864111697256136,
-                -0.06620911040924769,
-                0.05406486489301161,
-                0.012144245517091081,
-                0.007671638039612208,
-                -0.009296908312795723,
-                -0.018009177016035747,
-                -0.008068256203634263
-            ],
-            "ridge_intercept": 0.01287767890019094,
-            "ridge_features": [
-                "is_playoff",
-                "is_home",
-                "pos_guard",
-                "pos_wing",
-                "pos_big",
-                "high_usage",
-                "low_usage",
-                "heavy_minutes",
-                "light_minutes"
-            ]
+            }
         }
     }
 }

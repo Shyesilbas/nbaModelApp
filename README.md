@@ -8,15 +8,17 @@ Production-grade NBA machine learning pipeline, analytics engine, and interactiv
 
 Models are trained on six NBA seasons (2020-21 through 2025-26: 7,390 games, 165,430 player-game rows). Every number below is measured, not copied from training metadata, and can be reproduced with `python -m scripts.backtest.offline` (walk-forward) and `python -m scripts.backtest.live` (season replay through the API code).
 
-| Layer | Model | Walk-forward 2025-26 (trained on 2020-21..2024-25 only) | 3-season walk-forward (2023-24..2025-26, 2,644 games) |
+| Layer | Model | Walk-forward 2025-26 (trained on 2020-21..2024-25 only) | 3-season walk-forward (2023-24..2025-26, 3,772 games) |
 | :--- | :--- | :--- | :--- |
-| **WIN Probability (v10)** | Logistic regression (family picked on fold-averaged Brier), early-season Elo blend | ROC-AUC `0.736`, Brier `0.206`, Log-loss `0.599`, Accuracy `68.5%` (1,257 games) | ROC-AUC `0.728`, Brier `0.209`, Accuracy `66.9%` |
-| **SCORE Prediction (v10)** | Ridge pace / offensive-rating models + Ridge residual correction | Total MAE `15.38`, Margin MAE `11.47`, Winner accuracy `68.2%` | Total MAE `14.94`, Margin MAE `11.33` |
-| **PLAYER Projection (v9)** | LightGBM (L1 objective for points) + Ridge calibration | MAE PTS `4.54`, REB `1.89`, AST `1.34` (28,698 rows) | MAE PTS `4.56`, REB `1.90`, AST `1.34` |
+| **WIN Probability (v10)** | Logistic regression on 7 features (Elo diff, home, clean net rating diff, win-rate diff, rest), early-season Elo blend | ROC-AUC `0.740`, Brier `0.204`, Log-loss `0.596`, Accuracy `68.4%` (1,257 games) | ROC-AUC `0.732`, Brier `0.208`, Accuracy `66.9%` |
+| **SCORE Prediction (v10)** | Ridge pace / offensive-rating models (2 features each), Ridge margin on the WIN inputs, Ridge residual correction; actual-point targets | Total MAE `15.31`, Margin MAE `11.45`, Winner accuracy `68.1%` | Total MAE `14.97`, Margin MAE `11.14` |
+| **PLAYER Projection (v9)** | LightGBM per target (L1 for points), 21 features incl. opponent allowance to the player's position | MAE PTS `4.50`, REB `1.89`, AST `1.33` (28,698 rows) | MAE PTS `4.51`, REB `1.90`, AST `1.33` |
 
-Live replay of 2025-26 (every game predicted from the API code path with features as of that morning, models trained through 2024-25): ROC-AUC `0.731`, Brier `0.208`, Total MAE `15.42`, Margin MAE `11.48`, 0 failed games out of 1,321.
+Live replay of 2025-26 (every game predicted from the API code path with features as of that morning, models trained through 2024-25): ROC-AUC `0.735`, Brier `0.206`, Total MAE `15.46`, Margin MAE `11.42`, 0 failed games out of 1,321. Run it with `NBA_MODEL_DIR=models/experimental/holdout_eval python -m scripts.backtest.live --season 2025-26 --out <path>` so the replay uses models that never saw 2025-26.
 
-> **Validation**: walk-forward means each test season is predicted by models fitted only on earlier seasons. The production models are then refit on every eligible row (`final_refit_scope: all_eligible_rows`). The 2026-10 model audit and the step-by-step measurements of each fix are in the audit report.
+Against simple pregame baselines over five walk-forward seasons (`reports/evaluation/multi_season_walk_forward_backtest.md`): WIN Brier `0.2141` vs `0.2157` for Elo + home court, SCORE total MAE `14.90` vs `14.95` and margin MAE `10.97` vs `11.41` for last-10 real points, PLAYER PTS MAE `4.54` vs `4.63` for EMA-10. The game-level models sit close to what pregame data allows; larger gains need new information (injuries, lineups, market lines).
+
+> **Validation**: walk-forward means each test season is predicted by models fitted only on earlier seasons. The production models are then refit on every eligible row (`final_refit_scope: all_eligible_rows`). The 2026-10 model audit and the 2026-10-20 review (`reports/production/model_performance_and_architecture_report.md`, section 5) describe each fix.
 
 ---
 
@@ -52,7 +54,7 @@ Live replay of 2025-26 (every game predicted from the API code path with feature
 ├── frontend/
 │   ├── src/components/    # React prediction, player, and roster explorer views
 │   └── src/lib/           # Centralized constants, API clients, and query caching
-├── models/production/     # Promoted LightGBM, XGBoost, and Ridge model artifacts
+├── models/production/     # Promoted logistic (WIN), Ridge (SCORE) and LightGBM (PLAYER) artifacts
 ├── scripts/               # Ingestion, feature engineering, SQLite compilation, retraining
 └── reports/               # Audits, empirical benchmark logs, and governance documents
 ```
@@ -110,7 +112,7 @@ PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date 2026-10-08 --seaso
 
 - [ARTIFACT_REGISTRY.md](ARTIFACT_REGISTRY.md) — Single source of truth for all active models, datasets, and paths.
 - [PROJECT_STATUS.md](PROJECT_STATUS.md) — Current development phase, active production configurations, and backlog.
-- [reports/production/model_performance_and_architecture_report.md](reports/production/model_performance_and_architecture_report.md) — Active V10/V10.1 model architecture, empirical 6-season benchmarks, and calibration methods.
+- [reports/production/model_performance_and_architecture_report.md](reports/production/model_performance_and_architecture_report.md) — Active model architecture, the 2026-10-20 review changes and walk-forward benchmarks.
 - [reports/audits/model_quality_leakage_and_governance_audit.md](reports/audits/model_quality_leakage_and_governance_audit.md) — Comprehensive audit of V10.1 out-of-sample performance, leakage prevention, and metric verification.
 - [docs/season_onboarding_guide.md](docs/season_onboarding_guide.md) — Step-by-step workflow for ingesting new NBA seasons.
 - [reports/production/v8_vs_v9_model_comparisons.md](reports/production/v8_vs_v9_model_comparisons.md) — Historical model evolution and calibration notes.

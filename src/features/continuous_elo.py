@@ -6,6 +6,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from scripts.season_utils import date_to_season
+
 
 INITIAL_ELO = 1500.0
 # Tuned on 2020-21..2025-26 home-win log-loss (grid over K, HCA, carryover):
@@ -18,15 +20,7 @@ SEASON_REGRESSION = 0.6
 
 
 def _calc_season_key(date_val: pd.Timestamp) -> str:
-    year = date_val.year
-    month = date_val.month
-    if month >= 10:
-        start_year = year
-        end_year = (year + 1) % 100
-    else:
-        start_year = year - 1
-        end_year = year % 100
-    return f"{start_year}-{end_year:02d}"
+    return date_to_season(date_val)
 
 
 def compute_mov_multiplier(margin: float, elo_diff: float) -> float:
@@ -206,7 +200,9 @@ def build_continuous_elo_dataset(seasons: List[str]) -> Tuple[pd.DataFrame, Dict
     if not dfs:
         raise FileNotFoundError(f"No team games found for seasons {seasons}")
 
-    full_df = pd.concat(dfs, ignore_index=True)
+    from src.processing.season_type_normalizer import drop_preseason
+    # Live inference drops preseason games; the opening-rating chain must too.
+    full_df = drop_preseason(pd.concat(dfs, ignore_index=True))
     engine = ContinuousEloEngine()
     enriched_df = engine.transform_games(full_df)
     return enriched_df, dict(engine.ratings)

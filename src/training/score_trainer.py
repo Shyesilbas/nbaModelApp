@@ -318,8 +318,10 @@ class ScoreModelTrainer:
         """Strength, location and date preparation shared by training and the backtest harness."""
         df = self.apply_strength_features(df)
         self.validate_dataset_contract(df)
-        
-        df = df.dropna(subset=["PACE", "OFF_RTG", "DEF_RTG", "PACE_LAST_5", "OFF_RTG_LAST_5", "DEF_RTG_LAST_5"])
+        from src.features.win_strength_features import attach_actual_points
+        df = attach_actual_points(df)
+
+        df = df.dropna(subset=["PACE", "OFF_RTG", "DEF_RTG", "PACE_LAST_5", "OFF_RTG_LAST_5", "DEF_RTG_LAST_5", "ACTUAL_PTS", "ACTUAL_OPP_PTS"])
         
         loc_feats = df.apply(get_location_features, axis=1)
         df = pd.concat([df, loc_feats], axis=1)
@@ -343,7 +345,7 @@ class ScoreModelTrainer:
         df_home["TARGET_PACE"] = df_home["PACE"]
         df_home["TARGET_HOME_OFF_RTG"] = df_home["OFF_RTG"]
         df_away["TARGET_AWAY_OFF_RTG"] = df_away["OFF_RTG"]
-        df_home["TARGET_MARGIN"] = df_home["PACE"] * df_home["NET_RTG"] / 100.0
+        df_home["TARGET_MARGIN"] = df_home["ACTUAL_PTS"] - df_home["ACTUAL_OPP_PTS"]
         
         pace_eval_model, pace_model, pace_mae, pace_split, pace_test_idx = self._train_eval_final(df_home, self.pace_features, "TARGET_PACE")
         home_eval_model, home_model, home_mae, home_split, home_test_idx = self._train_eval_final(df_home, self.home_off_rtg_features, "TARGET_HOME_OFF_RTG")
@@ -358,8 +360,8 @@ class ScoreModelTrainer:
         pred_home_rtg = home_eval_model.predict(df_home_eval[self.home_off_rtg_features])
         df_home_eval["PRED_PACE"] = pred_pace
         df_home_eval["PRED_HOME_RTG"] = pred_home_rtg
-        df_home_eval["ACTUAL_HOME_PTS"] = df_home_eval["PACE"] * df_home_eval["OFF_RTG"] / 100.0
-        df_home_eval["ACTUAL_AWAY_PTS"] = df_home_eval["PACE"] * df_home_eval["DEF_RTG"] / 100.0
+        df_home_eval["ACTUAL_HOME_PTS"] = df_home_eval["ACTUAL_PTS"]
+        df_home_eval["ACTUAL_AWAY_PTS"] = df_home_eval["ACTUAL_OPP_PTS"]
         
         df_away_eval = df_away[df_away["GAME_ID"].astype(str).isin(eval_away_games)][["GAME_ID"] + self.away_off_rtg_features].copy()
         df_away_eval["PRED_AWAY_RTG"] = away_eval_model.predict(df_away_eval[self.away_off_rtg_features])
@@ -388,8 +390,8 @@ class ScoreModelTrainer:
 
         df_full_eval = df_home_full_eval.merge(df_away_full_eval, on="GAME_ID", how="inner")
         df_full_eval = df_full_eval.dropna(subset=["PRED_PACE", "PRED_HOME_RTG", "PRED_MARGIN_MODEL", "PRED_AWAY_RTG"]).copy()
-        df_full_eval["ACTUAL_HOME_PTS"] = df_full_eval["PACE"] * df_full_eval["OFF_RTG"] / 100.0
-        df_full_eval["ACTUAL_AWAY_PTS"] = df_full_eval["PACE"] * df_full_eval["DEF_RTG"] / 100.0
+        df_full_eval["ACTUAL_HOME_PTS"] = df_full_eval["ACTUAL_PTS"]
+        df_full_eval["ACTUAL_AWAY_PTS"] = df_full_eval["ACTUAL_OPP_PTS"]
         df_full_eval["ACTUAL_TOTAL"] = df_full_eval["ACTUAL_HOME_PTS"] + df_full_eval["ACTUAL_AWAY_PTS"]
         df_full_eval["ACTUAL_MARGIN"] = df_full_eval["ACTUAL_HOME_PTS"] - df_full_eval["ACTUAL_AWAY_PTS"]
 

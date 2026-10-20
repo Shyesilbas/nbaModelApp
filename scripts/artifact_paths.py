@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict
 
@@ -53,6 +54,13 @@ def resolve_artifact_path(section: str, key: str, fallback: str) -> Path:
     manifest = load_production_manifest()
     section_data = manifest.get(section, {})
     value = section_data.get(key)
+    # Backtests and season replays point every model artifact at another directory
+    # (e.g. the holdout copies) without editing the manifest the live service reads.
+    model_dir = os.environ.get("NBA_MODEL_DIR")
+    relative = value if isinstance(value, str) and value else fallback
+    if model_dir and relative.startswith("models/"):
+        base = Path(model_dir)
+        return (base if base.is_absolute() else ROOT / base) / Path(relative).name
     if isinstance(value, str) and value:
         candidate = ROOT / value
         if candidate.exists():

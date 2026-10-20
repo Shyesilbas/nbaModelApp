@@ -20,9 +20,10 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from src.features.player_form import add_player_matchup_features
 from src.processing.cleaning import regulation_team_minutes
 from scripts.data_paths import get_data_paths
-from scripts.season_utils import season_to_file_token
+from scripts.season_utils import season_labels, season_to_file_token
 from src.training.player_trainer import PlayerModelTrainer
 from src.training.score_trainer import ScoreModelTrainer
 from src.training.win_trainer import WinModelTrainer
@@ -35,9 +36,7 @@ PLAYER_DATA = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
 
 
 def season_of(dates: pd.Series) -> pd.Series:
-    dates = pd.to_datetime(dates)
-    start = np.where(dates.dt.month >= 8, dates.dt.year, dates.dt.year - 1)
-    return pd.Series([f"{y}-{str(y + 1)[-2:]}" for y in start], index=dates.index)
+    return season_labels(dates)
 
 
 def team_files(seasons):
@@ -134,14 +133,10 @@ def predict_player(test_season, model_dir: Path) -> pd.DataFrame:
     df = df[season_of(df["GAME_DATE"]) == test_season].copy()
     features = joblib.load(model_dir / "player_v9_features.pkl")
     out = pd.DataFrame({"GAME_ID": df["GAME_ID"].astype(str), "PLAYER_ID": df.get("Player_ID", df.get("PLAYER_ID"))})
-    import importlib, sys
-    sys.path.insert(0, str(ROOT / "ml-service"))
-    ridge_frame = importlib.import_module("app.player_service")._ridge_calibration_frame
-    ind = ridge_frame(df)
+    df = add_player_matchup_features(df)
     X = df[features].apply(pd.to_numeric, errors="coerce")
     for target, short in [("TARGET_PTS", "pts"), ("TARGET_REB", "reb"), ("TARGET_AST", "ast")]:
         raw = joblib.load(model_dir / f"player_v9_lgb_{short}.pkl").predict(X)
-        raw = raw - joblib.load(model_dir / f"player_v9_ridge_{short}.pkl").predict(ind)
         out[f"PRED_{short.upper()}"] = np.maximum(0.0, raw)
         out[f"REAL_{short.upper()}"] = df[target].to_numpy()
     return out

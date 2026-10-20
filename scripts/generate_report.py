@@ -16,6 +16,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import normalize_season, get_default_season
+from src.features.win_strength_features import attach_actual_points
 
 NBA_TEAMS_LOCATIONS = {
     "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
@@ -309,8 +310,9 @@ def evaluate_model_on_season(model_ver, season):
         home_df = home_df.dropna(subset=[c for c in req_cols if c in home_df.columns])
         
         if not home_df.empty:
-            home_df["ACTUAL_HOME_PTS"] = home_df["PACE"] * home_df["OFF_RTG"] / 100.0
-            home_df["ACTUAL_AWAY_PTS"] = home_df["PACE"] * home_df["DEF_RTG"] / 100.0
+            home_df = attach_actual_points(home_df).dropna(subset=["ACTUAL_PTS", "ACTUAL_OPP_PTS"])
+            home_df["ACTUAL_HOME_PTS"] = home_df["ACTUAL_PTS"]
+            home_df["ACTUAL_AWAY_PTS"] = home_df["ACTUAL_OPP_PTS"]
             home_df["ACTUAL_TOTAL"] = home_df["ACTUAL_HOME_PTS"] + home_df["ACTUAL_AWAY_PTS"]
             home_df["ACTUAL_MARGIN"] = home_df["ACTUAL_HOME_PTS"] - home_df["ACTUAL_AWAY_PTS"]
             

@@ -7,57 +7,31 @@ targets:
   home_off_rtg: TARGET_HOME_OFF_RTG
   away_off_rtg: TARGET_AWAY_OFF_RTG
   margin: TARGET_MARGIN
+# 2026-10-20: two features per sub-model. On actual points over five walk-forward
+# seasons they tied the 15/22/24-feature lists (total MAE 14.901 vs 14.907) while
+# the long lists only added collinear pairs whose SHAP impacts cancelled
+# (PACE_COLLISION -5.8 vs OPP_PACE_LAST_5 +5.0, PTS_SHARE_3PT vs FG3A_RATE).
 pace_features:
-  - PACE_LAST_5
   - PACE_LAST_10
-  - OPP_PACE_LAST_5
   - OPP_PACE_LAST_10
-  - OFF_RTG_LAST_5
-  - DEF_RTG_LAST_5
-  - OPP_OFF_RTG_LAST_5
-  - OPP_DEF_RTG_LAST_5
-  - DAYS_REST
-  - OPP_DAYS_REST
-  - IS_3_IN_4
-  - OPP_IS_3_IN_4
-  - PACE_COLLISION
-  - FG3A_RATE_LAST_5
-  - OPP_FG3A_RATE_LAST_5
 base_off_rtg_features:
-  - OFF_RTG_LAST_5
   - OFF_RTG_LAST_10
-  - PACE_LAST_5
-  - WINRATE_LAST_5
-  - OPP_DEF_RTG_LAST_5
   - OPP_DEF_RTG_LAST_10
-  - OPP_PACE_LAST_5
-  - DAYS_REST
-  - OPP_DAYS_REST
-  - EFG_PCT_LAST_5
-  - EFG_PCT_LAST_10
-  - DEF_EFG_PCT_LAST_5
-  - FT_RATE_LAST_5
-  - TOV_PCT_LAST_5
-  - FG3A_RATE_LAST_5
-  - FG3A_RATE_LAST_10
-  - ORB_PCT_LAST_5
-  - DEF_TOV_PCT_LAST_5
-  - DEF_ORB_PCT_LAST_5
-  - AST_TO_TOV_LAST_5
-  - PTS_SHARE_3PT_LAST_5
-  - PTS_SHARE_PAINT_LAST_5
-away_extra_features:
-  - TRAVEL_DISTANCE
-  - TIMEZONE_DIFF
+away_extra_features: []
 # Margin uses its own short list: ELO_DIFF and CLEAN_NET_RTG_DIFF_LAST_10 carry
 # almost all of the signal; a 5-feature Ridge scored 11.86 margin MAE vs 12.27
 # for the 40-feature XGB. margin_extra_features is ignored when this is set.
+# 2026-10-20: the WIN model's inputs replaced the one-sided NET_RTG_LAST_10; on
+# actual-point margins they won 4 of 5 walk-forward seasons and tied the fifth
+# (mean MAE 10.99 vs 11.03), and keep the score margin in line with WIN.
 margin_features:
   - ELO_DIFF
   - CLEAN_NET_RTG_DIFF_LAST_10
-  - NET_RTG_LAST_10
+  - WINRATE_DIFF_LAST_10
   - DAYS_REST
   - OPP_DAYS_REST
+  - IS_B2B
+  - OPP_IS_B2B
 margin_extra_features:
   - DEF_RTG_LAST_5
   - DEF_RTG_LAST_10

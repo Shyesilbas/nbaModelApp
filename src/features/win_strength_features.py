@@ -13,8 +13,52 @@ from src.features.continuous_elo import ContinuousEloEngine, INITIAL_ELO, BASE_K
 K_FACTOR = BASE_K_FACTOR
 
 
+ELO_COLUMNS = ["PRE_GAME_ELO", "OPP_PRE_GAME_ELO", "ELO_DIFF", "ABS_ELO_DIFF", "HOME_COURT_ELO_DIFF", "ELO_EXPECTED_WIN_PROB"]
+_full_history_elo_cache: dict = {}
+
+
+def _full_history_elo() -> pd.DataFrame:
+    """Pre-game Elo of every completed game on disk, keyed by (GAME_ID, TEAM_ABBREVIATION).
+
+    Built from the complete raw game log, the same chain live inference walks
+    (season openings chained from earlier seasons, then this season's games).
+    """
+    from pathlib import Path
+    from scripts.season_utils import discover_seasons
+    from scripts.data_paths import get_data_paths
+    from src.features.continuous_elo import build_continuous_elo_dataset
+
+    seasons = sorted(discover_seasons())
+    files = [Path(get_data_paths(s).team_games_raw) for s in seasons]
+    key = tuple((str(p), p.stat().st_mtime_ns) for p in files if p.exists())
+    if key not in _full_history_elo_cache:
+        elo, _ = build_continuous_elo_dataset(seasons)
+        elo["GAME_ID"] = elo["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+        _full_history_elo_cache.clear()
+        _full_history_elo_cache[key] = (
+            elo.drop_duplicates(["GAME_ID", "TEAM_ABBREVIATION"]).set_index(["GAME_ID", "TEAM_ABBREVIATION"])[ELO_COLUMNS]
+        )
+    return _full_history_elo_cache[key]
+
+
 def add_pre_game_elo(df: pd.DataFrame) -> pd.DataFrame:
     """Compute leakage-safe pre-game Elo from chronological completed games using ContinuousEloEngine."""
+    # Model-ready rows skip each team's first games of a season, so running the engine
+    # over them alone left training Elo up to ~13 points off the live value. Use the
+    # full raw log whenever every row is a completed game in it.
+    if {"GAME_ID", "TEAM_ABBREVIATION"} <= set(df.columns):
+        try:
+            elo = _full_history_elo()
+            gids = df["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+            matched = elo.reindex(pd.MultiIndex.from_arrays([gids, df["TEAM_ABBREVIATION"].astype(str)]))
+            if len(df) and matched["PRE_GAME_ELO"].notna().all():
+                out = df.copy()
+                for col in ELO_COLUMNS:
+                    out[col] = matched[col].to_numpy()
+                return out
+        except FileNotFoundError:
+            pass
+
     df_copy = df.copy()
     added_pts = False
     added_wl = False
@@ -54,6 +98,34 @@ def add_pre_game_elo(df: pd.DataFrame) -> pd.DataFrame:
         res = res.drop(columns=["WL"])
         
     return res
+
+
+def attach_actual_points(df: pd.DataFrame) -> pd.DataFrame:
+    """Add ACTUAL_PTS / ACTUAL_OPP_PTS from the raw box scores.
+
+    Never rebuild scores as PACE * OFF_RTG / 100: PACE is per 48 minutes, so that
+    formula undercounts overtime games by ~13 points each.
+    """
+    from pathlib import Path
+    from scripts.season_utils import discover_seasons
+    from scripts.data_paths import get_data_paths
+
+    frames = [
+        pd.read_csv(p, usecols=["GAME_ID", "TEAM_ABBREVIATION", "PTS"])
+        for p in (Path(get_data_paths(s).team_games_raw) for s in discover_seasons())
+        if p.exists()
+    ]
+    if not frames:
+        raise FileNotFoundError("No raw team_games.csv found; actual points are required.")
+    raw = pd.concat(frames, ignore_index=True)
+    raw["GAME_ID"] = raw["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+    pts = raw.drop_duplicates(["GAME_ID", "TEAM_ABBREVIATION"]).set_index(["GAME_ID", "TEAM_ABBREVIATION"])["PTS"]
+
+    out = df.copy()
+    gids = out["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+    for col, team_col in [("ACTUAL_PTS", "TEAM_ABBREVIATION"), ("ACTUAL_OPP_PTS", "OPPONENT_ABBREVIATION")]:
+        out[col] = pts.reindex(pd.MultiIndex.from_arrays([gids, out[team_col].astype(str)])).to_numpy()
+    return out
 
 
 def add_win_strength_features(df: pd.DataFrame) -> pd.DataFrame:

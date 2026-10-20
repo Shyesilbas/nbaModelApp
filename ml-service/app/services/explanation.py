@@ -113,9 +113,13 @@ def explain_xgboost_model(model, features_list, feats_dict, perspective: str = "
     X = pd.DataFrame([row], columns=features_list)
 
     try:
-        booster = model.get_booster()
-        dmat = xgb.DMatrix(X)
-        contribs = booster.predict(dmat, pred_contribs=True)[0]
+        if hasattr(model, "named_steps"):  # Ridge pipeline: get_booster() does not exist
+            from src.inference.shap_explainer import linear_contributions
+            contribs, _ = linear_contributions(model, X)
+        else:
+            booster = model.get_booster()
+            dmat = xgb.DMatrix(X)
+            contribs = booster.predict(dmat, pred_contribs=True)[0]
 
         explanations = []
         for i, col in enumerate(features_list):

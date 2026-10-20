@@ -26,9 +26,9 @@ PYTHONPATH=. python3 scripts/generate_report.py --model {v9, v10}
 ```
 
 ### Information Inspected:
-- Model family (`lightgbm_isotonic`, `xgboost_regressor`).
+- Model family (WIN `logistic_regression`, SCORE `ridge`, PLAYER LightGBM).
 - Feature contracts from `config/features/` (e.g. `win_v10.yaml`, `score_v9.yaml`).
-- Calibration parameters (Isotonic calibration, Ridge residual coefficients for Pace/Total/Margin).
+- Calibration parameters (SCORE Ridge residual coefficients for Total/Margin; WIN and PLAYER have none).
 - Base holdout metrics recorded in `models/production/model_metadata.json`.
 
 ---
@@ -72,7 +72,7 @@ PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --seaso
 ### Features:
 - Filters games for the target date from `schedule_combined.csv` or `.parquet`.
 - Automatically queries rolling team features, rest days, and roster availability.
-- Evaluates the active Win model (LightGBM Isotonic) and Score models (XGBoost + Ridge).
+- Evaluates the active Win model (logistic regression) and Score models (Ridge).
 - Outputs a formatted ASCII table to the console and exports a markdown forecast to `reports/predictions/schedule_{date}_model_{model}.md`.
 
 ---

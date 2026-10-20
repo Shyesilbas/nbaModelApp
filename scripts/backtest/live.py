@@ -56,7 +56,6 @@ def _predict_game(game):
             "PRED_HOME": score.predicted_home_score,
             "PRED_AWAY": score.predicted_away_score,
             "ELO_BLEND_WEIGHT": float(feats.get("EARLY_SEASON_ELO_BLEND_WEIGHT", 0.0)),
-            "SCORE_PRED_MARGIN": feats.get("SCORE_PRED_MARGIN"),
         })
     except Exception as exc:  # a failed game is a result too: the API would have errored
         row["ERROR"] = str(exc)[:200]

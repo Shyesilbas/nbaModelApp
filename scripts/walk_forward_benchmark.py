@@ -21,15 +21,16 @@ import numpy as np
 import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.linear_model import LogisticRegression, Ridge, RidgeCV
 from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, mean_absolute_error, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-import xgboost as xgb
-import lightgbm as lgb
 
-from src.features.win_strength_features import add_win_strength_features
+from src.features.win_strength_features import add_win_strength_features, attach_actual_points
+from src.features.continuous_elo import HOME_COURT_ADVANTAGE
 from src.training.score_trainer import get_location_features
+from src.training.player_trainer import PlayerModelTrainer
+from src.features.player_form import add_player_matchup_features
 from src.training.validation_utils import expanding_window_date_splits
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,22 +101,22 @@ def load_dataset() -> pd.DataFrame:
         frames.append(df)
     full_df = pd.concat(frames, ignore_index=True)
     full_df["GAME_DATE"] = pd.to_datetime(full_df["GAME_DATE"], errors="coerce")
-    full_df = add_win_strength_features(full_df)
-    full_df = full_df.dropna(subset=["PACE", "OFF_RTG", "DEF_RTG", "PACE_LAST_5", "OFF_RTG_LAST_5", "DEF_RTG_LAST_5"])
+    full_df = attach_actual_points(add_win_strength_features(full_df))
+    full_df = full_df.dropna(subset=["PACE", "OFF_RTG", "DEF_RTG", "PACE_LAST_5", "OFF_RTG_LAST_5", "DEF_RTG_LAST_5", "ACTUAL_PTS", "ACTUAL_OPP_PTS"])
     loc_feats = full_df.apply(get_location_features, axis=1)
     full_df = pd.concat([full_df, loc_feats], axis=1)
     return full_df.sort_values(["GAME_DATE", "GAME_ID"], kind="stable").reset_index(drop=True)
 
 
 def load_player_dataset(player_features: list[str]) -> pd.DataFrame:
-    parquet_path = ROOT / "data/experimental/player_model_ready_v4_usg.parquet"
-    if not parquet_path.exists():
+    # The CSV is what the player trainer writes and reads; the parquet copy is not refreshed.
+    csv_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
+    if not csv_path.exists():
         return pd.DataFrame()
-    cols = list(dict.fromkeys(
-        ["SEASON_ID", "GAME_DATE", "TARGET_PTS", "TARGET_REB", "TARGET_AST",
-         "PTS_LAST_5", "REB_LAST_5", "AST_LAST_5"] + player_features
-    ))
-    df = pd.read_parquet(parquet_path, columns=cols)
+    wanted = set(["SEASON_ID", "GAME_DATE", "TARGET_PTS", "TARGET_REB", "TARGET_AST", "PLAYER_POSITION_GROUP",
+                  "PTS_EMA_10", "REB_EMA_10", "AST_EMA_10"] + player_features)
+    df = pd.read_csv(csv_path, usecols=lambda c: c in wanted or "_ALLOWED_LAST_10" in c)
+    df = add_player_matchup_features(df)  # derived columns of the production feature list
     season_map = {
         22020: "2020-21", 42020: "2020-21", 52020: "2020-21",
         22021: "2021-22", 42021: "2021-22", 52021: "2021-22",
@@ -206,33 +207,19 @@ def run_walk_forward_backtest():
             lr_pipe.fit(X_train_win, y_train_win)
             p_win_lr = lr_pipe.predict_proba(X_test_win)[:, 1]
 
-        # Production Stack LightGBM (Calibrated)
-        lgb_pipe = Pipeline([
+        # Production configuration (src/training/win_trainer.py: uncalibrated logistic regression)
+        prod_pipe = Pipeline([
             ("imputer", SimpleImputer(strategy="mean")),
-            ("lgb", lgb.LGBMClassifier(
-                n_estimators=120,
-                learning_rate=0.03,
-                max_depth=4,
-                num_leaves=15,
-                subsample=0.8,
-                colsample_bytree=0.8,
-                random_state=42,
-                verbose=-1,
-            )),
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(max_iter=1000, random_state=42)),
         ])
-        try:
-            calibrated_lgb = CalibratedClassifierCV(estimator=lgb_pipe, method="sigmoid", cv=cal_splits)
-            calibrated_lgb.fit(X_train_win, y_train_win)
-            p_win_lgb = calibrated_lgb.predict_proba(X_test_win)[:, 1]
-        except Exception:
-            lgb_pipe.fit(X_train_win, y_train_win)
-            p_win_lgb = lgb_pipe.predict_proba(X_test_win)[:, 1]
+        p_win_prod = prod_pipe.fit(X_train_win, y_train_win).predict_proba(X_test_win)[:, 1]
 
         # Baselines for WIN
-        elo_prob = 1.0 / (1.0 + np.power(10.0, -test_home["ELO_DIFF"].astype(float) / 400.0))
+        elo_prob = 1.0 / (1.0 + np.power(10.0, -(test_home["ELO_DIFF"].astype(float) + HOME_COURT_ADVANTAGE) / 400.0))
         last10_prob = test_home["WINRATE_LAST_10"].fillna(0.50).astype(float)
 
-        win_eval_lgb = _evaluate_prob(y_test_win, p_win_lgb)
+        win_eval_prod = _evaluate_prob(y_test_win, p_win_prod)
         win_eval_lr = _evaluate_prob(y_test_win, p_win_lr)
         win_eval_elo = _evaluate_prob(y_test_win, elo_prob)
         win_eval_last10 = _evaluate_prob(y_test_win, last10_prob)
@@ -248,12 +235,11 @@ def run_walk_forward_backtest():
         df_home_train["TARGET_PACE"] = df_home_train["PACE"]
         df_home_train["TARGET_HOME_OFF_RTG"] = df_home_train["OFF_RTG"]
         df_away_train["TARGET_AWAY_OFF_RTG"] = df_away_train["OFF_RTG"]
-        df_home_train["TARGET_MARGIN"] = df_home_train["PACE"] * df_home_train["NET_RTG"] / 100.0
+        df_home_train["TARGET_MARGIN"] = df_home_train["ACTUAL_PTS"] - df_home_train["ACTUAL_OPP_PTS"]
 
-        model_pace = xgb.XGBRegressor(n_estimators=100, max_depth=3, learning_rate=0.05, random_state=42)
-        model_home = xgb.XGBRegressor(n_estimators=100, max_depth=3, learning_rate=0.05, random_state=42)
-        model_away = xgb.XGBRegressor(n_estimators=100, max_depth=3, learning_rate=0.05, random_state=42)
-        model_margin = xgb.XGBRegressor(n_estimators=100, max_depth=3, learning_rate=0.05, random_state=42)
+        # Same estimator as src/training/score_trainer.py (estimator: ridge)
+        ridge = lambda: Pipeline([("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler()), ("ridge", RidgeCV(alphas=np.logspace(-2, 4, 25)))])
+        model_pace, model_home, model_away, model_margin = ridge(), ridge(), ridge(), ridge()
 
         model_pace.fit(df_home_train[pace_features], df_home_train["TARGET_PACE"])
         model_home.fit(df_home_train[home_features], df_home_train["TARGET_HOME_OFF_RTG"])
@@ -273,8 +259,8 @@ def run_walk_forward_backtest():
             subset=["PRED_PACE", "PRED_HOME_RTG", "PRED_MARGIN_MODEL", "PRED_AWAY_RTG"]
         ).copy()
 
-        merged_test["ACTUAL_HOME_PTS"] = merged_test["PACE"] * merged_test["OFF_RTG"] / 100.0
-        merged_test["ACTUAL_AWAY_PTS"] = merged_test["PACE"] * merged_test["DEF_RTG"] / 100.0
+        merged_test["ACTUAL_HOME_PTS"] = merged_test["ACTUAL_PTS"]
+        merged_test["ACTUAL_AWAY_PTS"] = merged_test["ACTUAL_OPP_PTS"]
         merged_test["ACTUAL_TOTAL"] = merged_test["ACTUAL_HOME_PTS"] + merged_test["ACTUAL_AWAY_PTS"]
         merged_test["ACTUAL_MARGIN"] = merged_test["ACTUAL_HOME_PTS"] - merged_test["ACTUAL_AWAY_PTS"]
 
@@ -282,8 +268,10 @@ def run_walk_forward_backtest():
         pred_margin_model = merged_test["PRED_MARGIN_MODEL"]
 
         # Baseline: rolling team offensive ratings x pregame pace
-        base_total = merged_test["PACE_LAST_5"] * (merged_test["OFF_RTG_LAST_5"] + merged_test.get("OPP_OFF_RTG_LAST_5", merged_test["OFF_RTG_LAST_5"])) / 100.0
-        base_margin = merged_test["PACE_LAST_5"] * (merged_test.get("NET_RTG_LAST_10", 0.0)) / 100.0
+        # Baselines from recent real points: both teams' last-10 scoring and allowing, plus the training home edge.
+        base_total = (merged_test["PTS_LAST_10"] + merged_test["PTS_ALLOWED_LAST_10"] + merged_test["OPP_PTS_LAST_10"] + merged_test["OPP_PTS_ALLOWED_LAST_10"]) / 2.0
+        home_edge = (df_home_train["ACTUAL_PTS"] - df_home_train["ACTUAL_OPP_PTS"]).mean()
+        base_margin = ((merged_test["PTS_LAST_10"] - merged_test["PTS_ALLOWED_LAST_10"]) - (merged_test["OPP_PTS_LAST_10"] - merged_test["OPP_PTS_ALLOWED_LAST_10"])) / 2.0 + home_edge
 
         score_eval_model = _evaluate_score(merged_test["ACTUAL_TOTAL"], pred_total_model, merged_test["ACTUAL_MARGIN"], pred_margin_model, offsets_80)
         score_eval_base = _evaluate_score(merged_test["ACTUAL_TOTAL"], base_total, merged_test["ACTUAL_MARGIN"], base_margin)
@@ -298,11 +286,12 @@ def run_walk_forward_backtest():
             
             for target_name in ["pts", "reb", "ast"]:
                 target_col = f"TARGET_{target_name.upper()}"
-                base_col = f"{target_name.upper()}_LAST_5"
-                p_tr = p_train.dropna(subset=[target_col, base_col] + player_features)
-                p_te = p_test.dropna(subset=[target_col, base_col] + player_features)
+                # Strongest simple baseline; features stay NaN-able because the production pipeline imputes them.
+                base_col = f"{target_name.upper()}_EMA_10"
+                p_tr = p_train.dropna(subset=[target_col])
+                p_te = p_test.dropna(subset=[target_col, base_col])
 
-                m_p = lgb.LGBMRegressor(n_estimators=100, max_depth=5, learning_rate=0.05, random_state=42, verbose=-1)
+                m_p = PlayerModelTrainer()._model_pipeline(target_name)  # production LightGBM settings
                 m_p.fit(p_tr[player_features], p_tr[target_col])
                 pred_p = m_p.predict(p_te[player_features])
                 
@@ -315,11 +304,11 @@ def run_walk_forward_backtest():
             "train_rows": int(len(train_home)),
             "test_games": int(len(test_home)),
             "win": {
-                "lightgbm_production": win_eval_lgb,
+                "production": win_eval_prod,
                 "logistic_benchmark": win_eval_lr,
                 "pregame_elo": win_eval_elo,
                 "last10_winrate": win_eval_last10,
-                "beats_elo": bool(win_eval_lgb["brier"] <= win_eval_elo["brier"] and win_eval_lgb["roc_auc"] >= win_eval_elo["roc_auc"]),
+                "beats_elo": bool(win_eval_prod["brier"] <= win_eval_elo["brier"] and win_eval_prod["roc_auc"] >= win_eval_elo["roc_auc"]),
             },
             "score": {
                 "model": score_eval_model,
@@ -330,7 +319,7 @@ def run_walk_forward_backtest():
         }
         folds.append(fold_record)
 
-        print(f"WIN   | LightGBM Brier: {win_eval_lgb['brier']:.4f} (Elo: {win_eval_elo['brier']:.4f}) | AUC: {win_eval_lgb['roc_auc']:.4f} (Elo: {win_eval_elo['roc_auc']:.4f})")
+        print(f"WIN   | Production Brier: {win_eval_prod['brier']:.4f} (Elo: {win_eval_elo['brier']:.4f}) | AUC: {win_eval_prod['roc_auc']:.4f} (Elo: {win_eval_elo['roc_auc']:.4f})")
         print(f"SCORE | Total MAE: {score_eval_model['total_mae']:.2f} (Base: {score_eval_base['total_mae']:.2f}) | Margin MAE: {score_eval_model['margin_mae']:.2f} (Base: {score_eval_base['margin_mae']:.2f}) | Conformal 80% Coverage: {score_eval_model.get('conformal_80_total_coverage')}%")
         if player_eval_fold:
             p_pts = player_eval_fold.get("pts", {})
@@ -340,15 +329,15 @@ def run_walk_forward_backtest():
 
     # Aggregate summaries
     total_test_games = sum(f["test_games"] for f in folds)
-    avg_lgb_acc = sum(f["win"]["lightgbm_production"]["accuracy"] * f["test_games"] for f in folds) / total_test_games
+    avg_prod_acc = sum(f["win"]["production"]["accuracy"] * f["test_games"] for f in folds) / total_test_games
     avg_lr_acc = sum(f["win"]["logistic_benchmark"]["accuracy"] * f["test_games"] for f in folds) / total_test_games
     avg_elo_acc = sum(f["win"]["pregame_elo"]["accuracy"] * f["test_games"] for f in folds) / total_test_games
     
-    avg_lgb_brier = sum(f["win"]["lightgbm_production"]["brier"] * f["test_games"] for f in folds) / total_test_games
+    avg_prod_brier = sum(f["win"]["production"]["brier"] * f["test_games"] for f in folds) / total_test_games
     avg_lr_brier = sum(f["win"]["logistic_benchmark"]["brier"] * f["test_games"] for f in folds) / total_test_games
     avg_elo_brier = sum(f["win"]["pregame_elo"]["brier"] * f["test_games"] for f in folds) / total_test_games
 
-    avg_lgb_auc = sum(f["win"]["lightgbm_production"]["roc_auc"] * f["test_games"] for f in folds) / total_test_games
+    avg_prod_auc = sum(f["win"]["production"]["roc_auc"] * f["test_games"] for f in folds) / total_test_games
     avg_lr_auc = sum(f["win"]["logistic_benchmark"]["roc_auc"] * f["test_games"] for f in folds) / total_test_games
     avg_elo_auc = sum(f["win"]["pregame_elo"]["roc_auc"] * f["test_games"] for f in folds) / total_test_games
 
@@ -379,16 +368,16 @@ def run_walk_forward_backtest():
         "total_unseen_games": total_test_games,
         "folds_evaluated": len(folds),
         "aggregate_win": {
-            "lightgbm_production_brier": round(avg_lgb_brier, 4),
-            "lightgbm_production_auc": round(avg_lgb_auc, 4),
-            "lightgbm_production_accuracy": round(avg_lgb_acc, 4),
+            "production_brier": round(avg_prod_brier, 4),
+            "production_auc": round(avg_prod_auc, 4),
+            "production_accuracy": round(avg_prod_acc, 4),
             "logistic_benchmark_brier": round(avg_lr_brier, 4),
             "logistic_benchmark_auc": round(avg_lr_auc, 4),
             "logistic_benchmark_accuracy": round(avg_lr_acc, 4),
             "elo_brier": round(avg_elo_brier, 4),
             "elo_auc": round(avg_elo_auc, 4),
             "elo_accuracy": round(avg_elo_acc, 4),
-            "lgb_brier_improvement_vs_elo": round(avg_elo_brier - avg_lgb_brier, 4),
+            "prod_brier_improvement_vs_elo": round(avg_elo_brier - avg_prod_brier, 4),
         },
         "aggregate_score": {
             "model_total_mae": round(avg_score_total_mae, 4),
@@ -426,20 +415,20 @@ def run_walk_forward_backtest():
 ### Galibiyet Olasılığı (WIN Model) vs. Pregame Elo Baseline
 | Model / Taban Çizgisi | Brier Score (Düşük = İyi) | ROC-AUC | Doğruluk (Accuracy) |
 |---|---:|---:|---:|
-| **LightGBM (Üretim Mimarisi)** | **{summary['aggregate_win']['lightgbm_production_brier']:.4f}** | **{summary['aggregate_win']['lightgbm_production_auc']:.4f}** | **%{summary['aggregate_win']['lightgbm_production_accuracy']*100:.2f}** |
+| **Logistic Regression (Üretim Mimarisi)** | **{summary['aggregate_win']['production_brier']:.4f}** | **{summary['aggregate_win']['production_auc']:.4f}** | **%{summary['aggregate_win']['production_accuracy']*100:.2f}** |
 | **Lojistik Regresyon Benchmark** | {summary['aggregate_win']['logistic_benchmark_brier']:.4f} | {summary['aggregate_win']['logistic_benchmark_auc']:.4f} | %{summary['aggregate_win']['logistic_benchmark_accuracy']*100:.2f} |
 | **Saf Elo Baseline** | {summary['aggregate_win']['elo_brier']:.4f} | {summary['aggregate_win']['elo_auc']:.4f} | %{summary['aggregate_win']['elo_accuracy']*100:.2f} |
-| **Elo Karşısında Kazanım (LGB)** | **{summary['aggregate_win']['lgb_brier_improvement_vs_elo']:+.4f} (Daha Kalibre)** | **+{summary['aggregate_win']['lightgbm_production_auc'] - summary['aggregate_win']['elo_auc']:.4f}** | **+{(summary['aggregate_win']['lightgbm_production_accuracy'] - summary['aggregate_win']['elo_accuracy'])*100:.2f} puan** |
+| **Elo Karşısında Kazanım (Üretim)** | **{summary['aggregate_win']['prod_brier_improvement_vs_elo']:+.4f} (Daha Kalibre)** | **+{summary['aggregate_win']['production_auc'] - summary['aggregate_win']['elo_auc']:.4f}** | **+{(summary['aggregate_win']['production_accuracy'] - summary['aggregate_win']['elo_accuracy'])*100:.2f} puan** |
 
-### Takım Skoru (SCORE Model) vs. Rolling Ratings Baseline
-| Metrik | Model (Çok Sezonlu) | Rolling Taban Çizgisi | Fark / Kazanım |
+### Takım Skoru (SCORE Model) vs. Son 10 Maç Sayıları Baseline
+| Metrik | Model (Çok Sezonlu) | Son 10 Maç Taban Çizgisi | Fark / Kazanım |
 |---|---:|---:|---:|
 | **Toplam Skor MAE** | **{summary['aggregate_score']['model_total_mae']:.2f} sayı** | {summary['aggregate_score']['baseline_total_mae']:.2f} sayı | **-{summary['aggregate_score']['total_mae_reduction']:.2f} sayı daha az hata** |
 | **Sayı Farkı (Margin) MAE** | **{summary['aggregate_score']['model_margin_mae']:.2f} sayı** | {summary['aggregate_score']['baseline_margin_mae']:.2f} sayı | **-{summary['aggregate_score']['margin_mae_reduction']:.2f} sayı daha az hata** |
 | **Conformal %80 Kapsama** | **%{summary['aggregate_score']['average_conformal_80_coverage']:.1f}** | Sabit ±12 (~%47) | **Tam İstatistiksel Kalibrasyon** |
 
-### Oyuncu Tahminleri (PLAYER Model) vs. Son 5 Maç Ortalaması
-| Hedef İstatistik | LightGBM Modeli MAE | Son 5 Maç Taban Çizgisi | MAE İyileşmesi | Toplam Test Satırı |
+### Oyuncu Tahminleri (PLAYER Model) vs. EMA-10 Ortalaması
+| Hedef İstatistik | LightGBM Modeli MAE | EMA-10 Taban Çizgisi | MAE İyileşmesi | Toplam Test Satırı |
 |---|---:|---:|---:|---:|
 | **Sayı (PTS)** | **{pts_sum.get('model_mae', 0):.2f}** | {pts_sum.get('baseline_mae', 0):.2f} | **-{pts_sum.get('mae_reduction', 0):.2f} sayı** | {pts_sum.get('total_samples', 0):,} |
 | **Ribaund (REB)** | **{reb_sum.get('model_mae', 0):.2f}** | {reb_sum.get('baseline_mae', 0):.2f} | **-{reb_sum.get('mae_reduction', 0):.2f} rib** | {reb_sum.get('total_samples', 0):,} |
@@ -449,11 +438,11 @@ def run_walk_forward_backtest():
 
 ## 2. Sezon Bazında Ayrıntılı Walk-Forward Sonuçları
 
-| Sezon | Test Maçı | WIN Brier (LGB / Elo) | WIN AUC (LGB / Elo) | SCORE Total MAE (Mod / Base) | SCORE Margin MAE (Mod / Base) | Conformal 80% | PTS MAE (Mod / Base) | REB MAE (Mod / Base) | AST MAE (Mod / Base) |
+| Sezon | Test Maçı | WIN Brier (Üretim / Elo) | WIN AUC (Üretim / Elo) | SCORE Total MAE (Mod / Base) | SCORE Margin MAE (Mod / Base) | Conformal 80% | PTS MAE (Mod / Base) | REB MAE (Mod / Base) | AST MAE (Mod / Base) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 """
     for f in folds:
-        w_lgb = f["win"]["lightgbm_production"]
+        w_prod = f["win"]["production"]
         w_e = f["win"]["pregame_elo"]
         s_m = f["score"]["model"]
         s_b = f["score"]["rolling_baseline"]
@@ -463,7 +452,7 @@ def run_walk_forward_backtest():
         ast_f = p_f.get("ast", {})
         cov = s_m.get("conformal_80_total_coverage", "N/A")
         cov_str = f"%{cov}" if isinstance(cov, (int, float)) else str(cov)
-        md_content += f"| **{f['test_season']}** | {f['test_games']} | {w_lgb['brier']:.4f} / {w_e['brier']:.4f} | {w_lgb['roc_auc']:.4f} / {w_e['roc_auc']:.4f} | {s_m['total_mae']:.2f} / {s_b['total_mae']:.2f} | {s_m['margin_mae']:.2f} / {s_b['margin_mae']:.2f} | {cov_str} | {pts_f.get('model_mae', 0):.2f} / {pts_f.get('baseline_mae', 0):.2f} | {reb_f.get('model_mae', 0):.2f} / {reb_f.get('baseline_mae', 0):.2f} | {ast_f.get('model_mae', 0):.2f} / {ast_f.get('baseline_mae', 0):.2f} |\n"
+        md_content += f"| **{f['test_season']}** | {f['test_games']} | {w_prod['brier']:.4f} / {w_e['brier']:.4f} | {w_prod['roc_auc']:.4f} / {w_e['roc_auc']:.4f} | {s_m['total_mae']:.2f} / {s_b['total_mae']:.2f} | {s_m['margin_mae']:.2f} / {s_b['margin_mae']:.2f} | {cov_str} | {pts_f.get('model_mae', 0):.2f} / {pts_f.get('baseline_mae', 0):.2f} | {reb_f.get('model_mae', 0):.2f} / {reb_f.get('baseline_mae', 0):.2f} | {ast_f.get('model_mae', 0):.2f} / {ast_f.get('baseline_mae', 0):.2f} |\n"
 
     md_content += """
 ---

@@ -8,20 +8,13 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.features.player_form import pregame_player_rows
+from scripts.season_utils import date_to_season
+from src.features.player_form import add_player_matchup_features, pregame_player_rows
 
 logger = logging.getLogger(__name__)
 
 _player_df_cache = {}
 
-def date_to_season(dt) -> str:
-    year = dt.year
-    month = dt.month
-    if month < 10:
-        start_year = year - 1
-    else:
-        start_year = year
-    return f"{start_year}-{str(start_year + 1)[-2:]}"
 
 
 def is_playoff_date(dt) -> int:
@@ -204,28 +197,41 @@ def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
 def _load_player_dataset(season: str = None):
     global _player_df_cache
 
-    cache_key = f"player_dataset_{season or 'default'}"
-    if cache_key in _player_df_cache:
-        return _player_df_cache[cache_key]
-
     v4_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
-    dfs = []
-    if v4_path.exists():
-        dfs.append(pd.read_csv(v4_path))
-
+    season_path = None
     if season:
         season_path_parquet = ROOT / f"data/season={season}/features/player_features.parquet"
         season_path_csv = ROOT / f"data/season={season}/features/player_features.csv"
-        if season_path_parquet.exists():
-            dfs.append(pd.read_parquet(season_path_parquet))
-        elif season_path_csv.exists():
-            dfs.append(pd.read_csv(season_path_csv))
+        # The newer of the two copies: some updaters rewrite only the CSV.
+        candidates = [p for p in (season_path_parquet, season_path_csv) if p.exists()]
+        season_path = max(candidates, key=lambda p: p.stat().st_mtime_ns) if candidates else None
+
+    # Keyed by file versions so a data refresh is picked up without restarting the service.
+    meta_path = ROOT / "data/canonical/player_metadata.csv"
+    sources = [p for p in (v4_path, season_path, meta_path) if p is not None and p.exists()]
+    cache_key = tuple((str(p), p.stat().st_mtime_ns) for p in sources)
+    if cache_key in _player_df_cache:
+        return _player_df_cache[cache_key]
+    _player_df_cache.clear()
+
+    dfs = []
+    if v4_path.exists():
+        dfs.append(pd.read_csv(v4_path))
+    if season_path is not None:
+        dfs.append(pd.read_parquet(season_path) if season_path.suffix == ".parquet" else pd.read_csv(season_path))
 
     if not dfs:
         raise FileNotFoundError("Player dataset (V3 or V4) missing for player inference.")
 
     df_combined = pd.concat(dfs, ignore_index=True) if len(dfs) > 1 else dfs[0]
     normalized_df = _normalize_player_dataset(df_combined)
+    if meta_path.exists():
+        # Current-season feature files carry no position; the training dataset takes it from
+        # this same file, so map it here instead of letting the WING fill-in stand.
+        meta = pd.read_csv(meta_path, usecols=["PLAYER_ID", "POSITION_GROUP"]).drop_duplicates("PLAYER_ID")
+        canonical = normalized_df["PLAYER_ID"].map(meta.set_index("PLAYER_ID")["POSITION_GROUP"])
+        for col in ("PLAYER_POSITION_GROUP", "POSITION_GROUP"):
+            normalized_df[col] = canonical.fillna(normalized_df[col])
     _player_df_cache[cache_key] = normalized_df
     return normalized_df
 
@@ -382,28 +388,6 @@ def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, predictio
     return home_X, away_X
 
 
-def _ridge_calibration_frame(full_X):
-    X_ind = pd.DataFrame(index=full_X.index)
-    X_ind["is_playoff"] = (full_X["IS_PLAYOFF"].fillna(0).astype(int) == 1).astype(float)
-    X_ind["is_home"] = (full_X["IS_HOME"].fillna(0).astype(int) == 1).astype(float)
-
-    pos_col = "PLAYER_POSITION_GROUP" if "PLAYER_POSITION_GROUP" in full_X.columns else "POSITION_GROUP"
-    pos_vals = full_X[pos_col].fillna("WING") if pos_col in full_X.columns else pd.Series("WING", index=full_X.index)
-    X_ind["pos_guard"] = (pos_vals == "GUARD").astype(float)
-    X_ind["pos_wing"] = (pos_vals == "WING").astype(float)
-    X_ind["pos_big"] = (pos_vals == "BIG").astype(float)
-
-    usg_vals = full_X["USG_PCT_LAST_10"].fillna(18.0) if "USG_PCT_LAST_10" in full_X.columns else pd.Series(18.0, index=full_X.index)
-    X_ind["high_usage"] = (usg_vals >= 25.0).astype(float)
-    X_ind["low_usage"] = (usg_vals < 15.0).astype(float)
-
-    min_vals = full_X["MIN_EMA_10"].fillna(20.0) if "MIN_EMA_10" in full_X.columns else pd.Series(20.0, index=full_X.index)
-    X_ind["heavy_minutes"] = (min_vals >= 30.0).astype(float)
-    X_ind["light_minutes"] = (min_vals < 15.0).astype(float)
-
-    return X_ind
-
-
 def _parse_player_overrides(overrides):
     lookup = {}
     if not overrides:
@@ -455,7 +439,7 @@ def get_player_predictions(
     is_preseason: bool = None,
 ):
     """
-    Generate player predictions for home and away teams using the V3/V4 Ridge models.
+    Generate player predictions for home and away teams using the V9 LightGBM models.
     Respects prediction_date to prevent future data leakage and use accurate historical rosters.
     Applies player injury/status overrides and redistributes scoring usage when players are out/restricted.
     """
@@ -477,7 +461,7 @@ def get_player_predictions(
     else:
         home_X, away_X = _build_future_rosters(df, home_team, away_team, pred_dt, prediction_date)
     
-    full_X = pd.concat([home_X, away_X], ignore_index=True)
+    full_X = add_player_matchup_features(pd.concat([home_X, away_X], ignore_index=True))
     full_X["IS_PRESEASON"] = 1 if is_preseason else 0
     features = player_loader.feature_cols
     
@@ -488,27 +472,12 @@ def get_player_predictions(
             full_X[f] = np.nan
             
     X_matrix = full_X[features]
-    
+
     # 4. Predict Raw Values
     raw_pts = player_loader.pts_model.predict(X_matrix)
     raw_reb = player_loader.reb_model.predict(X_matrix)
     raw_ast = player_loader.ast_model.predict(X_matrix)
-    
-    # Apply Ridge calibration if available
-    if (getattr(player_loader, "ridge_pts_model", None) is not None and 
-        getattr(player_loader, "ridge_reb_model", None) is not None and 
-        getattr(player_loader, "ridge_ast_model", None) is not None):
-        
-        X_ind = _ridge_calibration_frame(full_X)
-        
-        res_pts = player_loader.ridge_pts_model.predict(X_ind)
-        res_reb = player_loader.ridge_reb_model.predict(X_ind)
-        res_ast = player_loader.ridge_ast_model.predict(X_ind)
-        
-        raw_pts = raw_pts - res_pts
-        raw_reb = raw_reb - res_reb
-        raw_ast = raw_ast - res_ast
-        
+
     full_X["RAW_PROJ_PTS"] = np.maximum(0.0, raw_pts)
     full_X["RAW_PROJ_REB"] = np.maximum(0.0, raw_reb)
     full_X["RAW_PROJ_AST"] = np.maximum(0.0, raw_ast)

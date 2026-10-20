@@ -1,8 +1,6 @@
-import os
-import yaml
 from pathlib import Path
 from dataclasses import dataclass
-from scripts.season_utils import get_default_season, normalize_season, season_to_file_token
+from scripts.season_utils import get_default_season, normalize_season
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -41,22 +39,7 @@ class DataPaths:
 
 
 def get_data_paths(season: str = None) -> DataPaths:
-    # 1. Load config
-    config_path = ROOT / "config" / "data_sources.yaml"
-    config = {}
-    if config_path.exists():
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = yaml.safe_load(f) or {}
-        except Exception:
-            pass
-
-    # 2. Extract current season
-    if not season:
-        season = config.get("current_season") or get_default_season()
-    
-    season = normalize_season(season)
-    token = season_to_file_token(season)
+    season = normalize_season(season or get_default_season())
 
     # Roots relative to the season partition folder
     season_dir = ROOT / "data" / f"season={season}"

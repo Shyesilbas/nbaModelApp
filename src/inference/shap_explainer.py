@@ -14,6 +14,18 @@ import shap
 from scripts.artifact_paths import resolve_artifact_path
 
 
+def linear_contributions(model, X: pd.DataFrame):
+    """Exact SHAP of an imputer/scaler/linear pipeline against the training mean: coef * scaled value.
+
+    Returns (per-feature contributions for the first row, intercept = prediction for an average row).
+    """
+    steps = model.named_steps
+    Z = steps["imputer"].transform(X) if "imputer" in steps else X.to_numpy(dtype=float)
+    Z = steps["scaler"].transform(Z) if "scaler" in steps else Z
+    est = model.steps[-1][1]
+    return Z[0] * np.ravel(est.coef_), float(np.ravel(est.intercept_)[0])
+
+
 class ShapExplainer:
     def __init__(self, model_version: str = "v10"):
         self.model_version = model_version
@@ -66,7 +78,9 @@ class ShapExplainer:
             shap_vals_raw = explainer.shap_values(X_scaled)
             base_val = explainer.expected_value
         else:
-            explainer = shap.LinearExplainer(clf, X_scaled)
+            # Background is the training mean (zero after scaling); using the row itself made every SHAP value 0.
+            background = np.zeros((1, X_scaled.shape[1])) if scaler else imputer.statistics_.reshape(1, -1) if imputer else X_scaled
+            explainer = shap.LinearExplainer(clf, background)
             shap_vals_raw = explainer.shap_values(X_scaled)
             base_val = explainer.expected_value
 
@@ -114,7 +128,7 @@ class ShapExplainer:
         })
 
         return {
-            "base_value": float(base_pred_prob),
+            "base_value": float(1.0 / (1.0 + np.exp(-base_val))),
             "final_prediction": float(final_prob),
             "top_factors": factors[:10],
             "unit": "probability",
@@ -171,14 +185,16 @@ class ShapExplainer:
         X_home = pd.DataFrame([[features_dict.get(c, 0.0) for c in home_rtg_features]], columns=home_rtg_features)
         X_away = pd.DataFrame([[features_dict.get(c, 0.0) for c in away_rtg_features]], columns=away_rtg_features)
 
-        pace_exp = shap.TreeExplainer(pace_model)
-        home_exp = shap.TreeExplainer(home_rtg_model)
+        def contributions(model, X):
+            if hasattr(model, "named_steps"):  # Ridge pipeline (score_v10 estimator: ridge)
+                return linear_contributions(model, X)
+            exp = shap.TreeExplainer(model)
+            vals = exp.shap_values(X)
+            base = exp.expected_value
+            return (vals[0] if len(np.shape(vals)) > 1 else vals), float(base[0] if isinstance(base, (list, np.ndarray)) else base)
 
-        pace_shap = pace_exp.shap_values(X_pace)
-        home_shap = home_exp.shap_values(X_home)
-
-        pace_shap = pace_shap[0] if len(np.shape(pace_shap)) > 1 else pace_shap
-        home_shap = home_shap[0] if len(np.shape(home_shap)) > 1 else home_shap
+        pace_shap, base_pace = contributions(pace_model, X_pace)
+        home_shap, base_home = contributions(home_rtg_model, X_home)
 
         factors = []
         for i, col in enumerate(pace_features):
@@ -203,8 +219,6 @@ class ShapExplainer:
 
         factors.sort(key=lambda x: abs(x["impact"]), reverse=True)
 
-        base_pace = float(pace_exp.expected_value if not isinstance(pace_exp.expected_value, (list, np.ndarray)) else pace_exp.expected_value[0])
-        base_home = float(home_exp.expected_value if not isinstance(home_exp.expected_value, (list, np.ndarray)) else home_exp.expected_value[0])
         base_total = (base_pace * base_home / 100.0) * 2.0
 
         pred_pace = float(pace_model.predict(X_pace)[0])

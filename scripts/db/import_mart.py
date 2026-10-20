@@ -83,7 +83,12 @@ def season_dirs(data_root: Path, season: str | None) -> list[Path]:
 
 
 def import_dataset(conn, season: str, dataset: str, path: Path, batch_size: int) -> int:
-    df = pd.read_parquet(path)
+    # Some updaters rewrite only the CSV; never import a parquet copy older than it.
+    csv = path.with_suffix(".csv")
+    if csv.exists() and (not path.exists() or csv.stat().st_mtime_ns > path.stat().st_mtime_ns):
+        df = pd.read_csv(csv, dtype={c: str for c in ("GAME_ID", "Game_ID", "game_id")})
+    else:
+        df = pd.read_parquet(path)
     source_path = relative_path(path)
     records = [clean_record(record) for record in df.to_dict(orient="records")]
 

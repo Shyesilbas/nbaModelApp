@@ -6,6 +6,8 @@ from typing import Optional, Tuple
 import pandas as pd
 import numpy as np
 
+from scripts.season_utils import season_labels
+
 
 @dataclass(frozen=True)
 class SplitMetadata:
@@ -40,9 +42,7 @@ def expanding_window_date_splits(meta: pd.DataFrame, date_col: str = "GAME_DATE"
 
 
 def season_from_dates(dates: pd.Series) -> pd.Series:
-    parsed = pd.to_datetime(dates, errors="coerce")
-    years = parsed.dt.year.where(parsed.dt.month >= 10, parsed.dt.year - 1)
-    return years.astype("Int64").astype(str) + "-" + ((years + 1) % 100).astype("Int64").astype(str).str.zfill(2)
+    return season_labels(dates)
 
 
 def season_holdout_train_test_split(

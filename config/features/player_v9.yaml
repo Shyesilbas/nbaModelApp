@@ -3,79 +3,52 @@ targets:
   TARGET_PTS: pts
   TARGET_REB: reb
   TARGET_AST: ast
-exclude_columns:
-  - SEASON_ID
-  - Player_ID
-  - PLAYER_ID
-  - player_id
-  - GAME_DATE
-  - MATCHUP
-  - VIDEO_AVAILABLE
-  # Same-game box score/outcome fields are targets or postgame information.
-  - PTS
-  - MIN
-  - REB
-  - AST
-  - PLUS_MINUS
-  - WL
-  - WIN
-  - TARGET_PTS
-  - TARGET_REB
-  - TARGET_AST
-  - PLAYER_NAME
-  - player_name
-  - SEASON_TYPE
-  - OPPONENT_ABBREVIATION
-  - GAME_ID
-  - Game_ID
-  - game_id
-  - TEAM_ABBREVIATION
-  - PLAYER_POSITION_GROUP
-  - PLAYOFF_ROUND
-  - SERIES_GAME_NUMBER
-  # Raw stats of the row's own game, kept only so inference can roll form forward.
-  - GAME_PTS
-  - GAME_REB
-  - GAME_AST
-  - GAME_MIN
-  - GAME_USG_PCT
-  - GAME_PLUS_MINUS
-  # Zero-importance, dead regular season, and cross-positional noise columns:
-  - CAN_CLINCH_SERIES
-  - IS_ELIMINATION_GAME
-  - IS_B2B
-  - OPP_GUARD_REB_ALLOWED_LAST_10
-  - OPP_WING_REB_ALLOWED_LAST_10
-  - OPP_BIG_AST_ALLOWED_LAST_10
-  - OPP_WING_PTS_ALLOWED_LAST_10
-  - TEAM_ELO
-  - OPP_ELO
-  # No holdout permutation contribution for PTS, REB or AST (2026-10 audit),
-  # most of them near-duplicates of a kept MIN/USG average.
-  - ELO_DIFF
-  - BLOWOUT_RISK_PROXY
-  - TEAM_PACE
-  - OPP_TEAM_PACE
-  - OPP_BIG_PTS_ALLOWED_LAST_10
-  - OPP_BIG_REB_ALLOWED_LAST_10
-  - OPP_GUARD_PTS_ALLOWED_LAST_10
-  - OPP_WING_AST_ALLOWED_LAST_10
-  - OPP_GUARD_AST_ALLOWED_LAST_10
-  - USG_PCT_LAST_3
-  - USG_PCT_EMA_5
-  - USG_PCT_STD_LAST_10
-  - USG_PCT_TREND
-  - MIN_LAST_10
-  - MIN_STD_LAST_10
-  - PLUS_MINUS_LAST_5
+# Explicit feature list: an exclusion list silently admitted every new dataset column.
+# 2026-10-20 walk-forward (2023-24..2025-26, train on earlier seasons): one EMA per
+# stat instead of LAST_5/LAST_10/EMA near-duplicates (|r| >= 0.98), plus position
+# flags and the opponent's allowance to the player's position group. Against the
+# previous 22-feature model with its Ridge residual correction, MAE moved
+# PTS 4.554 -> 4.509, AST 1.337 -> 1.334, REB 1.898 -> 1.901; the Ridge
+# correction was dropped because it raised PTS MAE in every season (L2 shift on an
+# L1 / median model).
+features:
+  - IS_HOME
+  - IS_PLAYOFF
+  - DAYS_REST
+  - IS_GUARD
+  - IS_BIG
+  - PTS_LAST_5
+  - PTS_EMA_10
+  - PTS_PER_MIN_LAST_10
+  - REB_LAST_5
+  - REB_EMA_10
+  - REB_PER_MIN_LAST_10
+  - AST_LAST_5
+  - AST_EMA_10
+  - AST_PER_MIN_LAST_10
+  - MIN_LAST_3
+  - MIN_EMA_10
+  - MIN_TREND
+  - USG_PCT_EMA_10
+  - OPP_POS_PTS_ALLOWED_LAST_10
+  - OPP_POS_REB_ALLOWED_LAST_10
+  - OPP_POS_AST_ALLOWED_LAST_10
 required_context_columns:
   - SEASON_ID
   - GAME_DATE
   - IS_PLAYOFF
   - IS_HOME
   - PLAYER_POSITION_GROUP
-  - USG_PCT_LAST_10
   - MIN_EMA_10
+  - OPP_GUARD_PTS_ALLOWED_LAST_10
+  - OPP_WING_PTS_ALLOWED_LAST_10
+  - OPP_BIG_PTS_ALLOWED_LAST_10
+  - OPP_GUARD_REB_ALLOWED_LAST_10
+  - OPP_WING_REB_ALLOWED_LAST_10
+  - OPP_BIG_REB_ALLOWED_LAST_10
+  - OPP_GUARD_AST_ALLOWED_LAST_10
+  - OPP_WING_AST_ALLOWED_LAST_10
+  - OPP_BIG_AST_ALLOWED_LAST_10
 lgb_params_by_target:
   # Fit the conditional median for points: they are right-skewed and the model
   # is judged on MAE, which the median minimises. In walk-forward tests over
