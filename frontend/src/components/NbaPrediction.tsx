@@ -277,10 +277,11 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
     [playerOverrides]
   );
 
-  const handleOverrideChange = (key: string, override: PlayerStatusOverride) => {
+  const handleOverrideChange = (key: string, override: PlayerStatusOverride, keepActive = false) => {
     setPlayerOverrides((prev) => {
       const next = { ...prev };
-      if (override.status === "ACTIVE") {
+      // ACTIVE normally means "no override"; for a player the models assume out it must be sent
+      if (override.status === "ACTIVE" && !keepActive) {
         delete next[key];
       } else {
         next[key] = override;

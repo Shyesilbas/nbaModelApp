@@ -29,6 +29,7 @@ from src.training.training_manifest import load_training_manifest
 from src.analysis.roster_analysis import get_core_players
 from src.features import build_opponent_features, build_player_features, build_team_features
 from src.features.core_player_availability_features import build_core_player_availability_features
+from src.features.roster_absence import add_absence_columns
 from src.processing import build_team_model_dataset_v3
 from src.processing.cleaning import clean_dates, sort_player_games, sort_team_games
 from src.processing.player_dataset_builder import build_player_dataset_v4
@@ -50,6 +51,7 @@ def rebuild_season(season: str) -> None:
         build_opponent_features(team_features), player_features, get_core_players(player_features)
     )
     v3, _ = build_team_model_dataset_v3(with_core)
+    v3 = add_absence_columns(v3, player)
     os.makedirs("data/processed", exist_ok=True)
     v3.to_csv(f"data/processed/team_model_ready_v3_{season_to_file_token(season)}.csv", index=False)
     print(f"{season}: {len(team_features)} team rows, {len(player_features)} player rows, {len(v3)} model rows", flush=True)

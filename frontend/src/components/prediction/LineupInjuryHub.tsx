@@ -13,6 +13,10 @@ export interface RotationPlayer {
   predicted_ast?: number;
   predicted_min?: number;
   status?: "ACTIVE" | "RESTRICTED" | "OUT" | "DNP";
+  // Son maçta oynamayan rotasyon oyuncusu: takım modelleri "Full" seçilmedikçe yok sayar
+  assumed_out?: boolean;
+  // 0.5*dk + sayı + 0.8*asist + 0.6*ribaund (son 10 maç EMA); liste bu skora göre sıralanır
+  importance?: number;
 }
 
 interface LineupInjuryHubProps {
@@ -21,7 +25,7 @@ interface LineupInjuryHubProps {
   homePlayers: RotationPlayer[];
   awayPlayers: RotationPlayer[];
   overrides: Record<string, PlayerStatusOverride>;
-  onOverrideChange: (playerIdOrName: string, override: PlayerStatusOverride) => void;
+  onOverrideChange: (playerIdOrName: string, override: PlayerStatusOverride, keepActive?: boolean) => void;
   onResetOverrides: () => void;
   onApplyChanges?: () => void;
   loading?: boolean;
@@ -44,6 +48,7 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
   const getPlayerStatus = (p: RotationPlayer): "ACTIVE" | "RESTRICTED" | "OUT" | "DNP" => {
     const key = String(p.player_id ?? p.player_name);
     if (overrides[key]) return overrides[key].status;
+    if (p.assumed_out) return "DNP";
     return p.status || "ACTIVE";
   };
 
@@ -57,7 +62,7 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
       status,
       minute_limit: minLimit,
       status_factor: factor,
-    });
+    }, status === "ACTIVE" && Boolean(p.assumed_out));
   };
 
   const overrideCount = Object.keys(overrides).length;
@@ -69,6 +74,10 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
     const displayedPlayers = query
       ? players.filter((p) => p.player_name.toLowerCase().includes(query))
       : players;
+    // Önem skoruna göre sabit sıralama: durum değişince satırlar yer değiştirmez
+    const ordered = [...displayedPlayers].sort(
+      (a, b) => (b.importance ?? b.predicted_pts ?? 0) - (a.importance ?? a.predicted_pts ?? 0)
+    );
 
     return (
       <div className="flex-1 bg-background-secondary rounded border border-border p-4 flex flex-col gap-3">
@@ -129,11 +138,11 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
               {query ? `"${query}" ile eşleşen oyuncu bulunamadı.` : "Kadro oyuncusu bulunamadı."}
             </div>
           ) : (
-            displayedPlayers.map((p) => {
+            ordered.map((p) => {
               const currentStatus = getPlayerStatus(p);
               const isOut = currentStatus === "OUT";
               const isRestricted = currentStatus === "RESTRICTED";
-              const isDnp = currentStatus === "DNP" || ((p.predicted_min ?? 0) <= 0 && !isOut);
+              const isDnp = currentStatus === "DNP" || (p.predicted_min !== undefined && p.predicted_min <= 0 && !isOut);
 
               return (
                 <div
@@ -182,7 +191,10 @@ export const LineupInjuryHub: React.FC<LineupInjuryHubProps> = ({
                             )}
                           </span>
                         )}
-                        {isDnp && <span>0 Dk (Rotasyon Dışı)</span>}
+                        {!isOut && !isDnp && p.predicted_pts === undefined && p.importance !== undefined && (
+                          <span className="tabular-nums">Önem skoru: <strong className="text-text-primary font-medium">{p.importance.toFixed(1)}</strong></span>
+                        )}
+                        {isDnp && <span>{p.assumed_out ? "Son maçta oynamadı · model oynamıyor sayıyor (Full ile ekle)" : "Rotasyon dışı: dakika sıralamasında ilk 10 dışında · Full ile ekle"}</span>}
                         {isRestricted && <span className="text-status-warning font-medium">Kısıtlı Süre (%60)</span>}
                         {isOut && <span className="text-status-error font-medium">0 Dk (Sakat / Yok)</span>}
                       </div>

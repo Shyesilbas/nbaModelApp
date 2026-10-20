@@ -31,6 +31,18 @@ export function formatFeatureInsight(
     };
   }
 
+  // Kadro durumu: formun hesaba kattığı oyunculardan kim bu maçta yok/kısıtlı
+  if (key === "ABS_DIFF") {
+    const pts = Math.abs(value).toFixed(1);
+    return {
+      title: "Kadro Durumu",
+      category: "Kadro & Güç",
+      categoryIcon: "activity",
+      simpleValue: `${pts} Puanlık Kadro Farkı`,
+      insight: `Son maçlardaki forma göre ${favoredTeam.name} bu maça daha eksiksiz bir rotasyonla çıkıyor; rakipte yok veya kısıtlı oyuncuların etkisi hesaba katıldı.`,
+    };
+  }
+
   // 2. Elo ve Güç Sıralaması
   if (key === "ELO_DIFF" || key === "ABS_ELO_DIFF") {
     const eloAbs = Math.abs(value).toFixed(0);

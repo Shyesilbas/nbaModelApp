@@ -2,6 +2,7 @@
   "IS_HOME",
   "IS_B2B",
   "OPP_IS_B2B",
+  "ABS_DIFF",
   "ELO_DIFF",
   "WINRATE_DIFF_LAST_10",
   "REST_DIFF",

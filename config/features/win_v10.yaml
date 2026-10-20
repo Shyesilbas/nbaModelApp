@@ -40,7 +40,13 @@ static_venue_split_features:
   - OPP_AWAY_WINRATE_LAST_5
   - OPP_AWAY_PTS_LAST_5
   - OPP_AWAY_PTS_ALLOWED_LAST_5
-required_features: []
+# 2026-10-20: ABS_DIFF = roster availability tonight vs what last-15-game form already
+# credits (src/features/roster_absence.py). It is the only feature that improved WIN Brier
+# in all 5 walk-forward seasons (mean -0.0032 with true availability, -0.0006 when every
+# player is assumed to play whoever played last game), and it is the input that lets a
+# player marked OUT in the frontend move the team probability.
+required_features:
+  - ABS_DIFF
 excluded_features:
   # 2026-10-20 forward selection on walk-forward folds 2021-24 (2025-26 held out)
   # kept 7 features: ELO_DIFF, IS_HOME, REST_DIFF, CLEAN_NET_RTG_DIFF_LAST_10,
@@ -136,6 +142,7 @@ excluded_features:
   - AST_TO_TOV_DIFF_LAST_5
   - PACE_COLLISION
 defaultable_features:
+  ABS_DIFF: 0.0
   IS_ELIMINATION_GAME: 0
   CAN_CLINCH_SERIES: 0
   H2H_GAMES_LAST_5: 0

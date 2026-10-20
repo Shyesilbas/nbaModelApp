@@ -24,6 +24,7 @@ from scripts.data_paths import get_data_paths
 from scripts.season_utils import SEASON_START_MONTH, date_to_season
 from scripts.artifact_paths import resolve_artifact_path
 from src.features.win_strength_features import build_matchup_strength_features, compute_current_elo_state
+from src.features.roster_absence import live_absence_delta
 
 from functools import lru_cache
 import math
@@ -164,6 +165,12 @@ def _load_player_games(season: str = None):
             if p.exists():
                 return _read_frame(p)
     return pd.DataFrame()
+
+
+def _load_absence_logs(season: str):
+    """Current + previous season logs, so a fresh injury counts before the team has 5 games this season."""
+    logs = pd.concat([_load_player_games(previous_season(season)), _load_player_games(season)], ignore_index=True)
+    return logs.drop_duplicates(subset=["Game_ID", "Player_ID"])
 
 
 def _load_team_games(season: str = None):
@@ -725,6 +732,16 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     except Exception:
         pass
 
+
+    # Roster availability: players marked OUT/RESTRICTED move the team strength the
+    # form features still credit them with (see src/features/roster_absence.py).
+    overrides = _parse_player_overrides(player_status_overrides)
+    player_logs = _load_player_games(season)
+    player_logs = _load_absence_logs(season)
+    pre = bool(res.get("IS_PRESEASON"))
+    res["ABS_DELTA"] = live_absence_delta(player_logs, home_team, pred_dt, overrides, pre)
+    res["OPP_ABS_DELTA"] = live_absence_delta(player_logs, away_team, pred_dt, overrides, pre)
+    res["ABS_DIFF"] = res["ABS_DELTA"] - res["OPP_ABS_DELTA"]
 
     # Validation: ensure all values derived from rows have GAME_DATE < prediction_date
     # (we filtered at top; assert again)

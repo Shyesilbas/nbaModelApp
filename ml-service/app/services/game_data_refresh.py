@@ -41,8 +41,7 @@ def _infer_season_from_game_id(game_id: str) -> str:
     return "2025-26"
 
 
-def start_refresh(game_id: str, season: str | None = None) -> dict[str, Any]:
-    gid = _game_id(game_id)
+def _resolve_game(gid: str, season: str | None) -> tuple[str, str, str | None, str | None]:
     from scripts.data_paths import get_data_paths
     from scripts.season_utils import normalize_season
 
@@ -84,6 +83,12 @@ def start_refresh(game_id: str, season: str | None = None) -> dict[str, Any]:
                         break
             except Exception:
                 pass
+    return gid, resolved_season, home_team, away_team
+
+
+def start_refresh(game_id: str, season: str | None = None) -> dict[str, Any]:
+    gid = _game_id(game_id)
+    gid, resolved_season, home_team, away_team = _resolve_game(gid, season)
 
     with _lock:
         current = _jobs.get(gid)
@@ -94,6 +99,52 @@ def start_refresh(game_id: str, season: str | None = None) -> dict[str, Any]:
     worker = threading.Thread(target=_run_refresh, args=(gid, resolved_season, home_team, away_team), daemon=True)
     worker.start()
     return {"game_id": gid, "status": "queued", "detail": None, "error": None}
+
+
+def missing_game_ids(game_ids: list[str], season: str | None = None) -> list[str]:
+    """Games whose player box scores are not in the raw dataset yet."""
+    from scripts.data_paths import get_data_paths
+
+    gids = list(dict.fromkeys(_game_id(g) for g in game_ids))
+    have: dict[str, set[str]] = {}
+    out = []
+    for g in gids:
+        _, resolved, _, _ = _resolve_game(g, season)
+        if resolved not in have:
+            path = get_data_paths(resolved).player_games_raw
+            have[resolved] = set(pd.read_csv(path, usecols=["Game_ID"], dtype=str)["Game_ID"].str.zfill(10)) if os.path.exists(path) else set()
+        if g not in have[resolved]:
+            out.append(g)
+    return out
+
+
+def start_batch_refresh(game_ids: list[str], season: str | None = None) -> dict[str, Any]:
+    """One background worker refreshes the games one after another: the ingest/export steps
+    rewrite shared files, so running them in parallel threads would corrupt each other."""
+    gids = missing_game_ids(game_ids, season)  # fetched games are left alone
+    with _lock:
+        todo = [g for g in gids if _jobs.get(g, {}).get("status") not in {"queued", "running"}]
+        for g in todo:
+            _jobs[g] = {"status": "queued", "detail": None, "error": None}
+
+    def _worker():
+        for g in todo:
+            _, resolved, home, away = _resolve_game(g, season)
+            _run_refresh(g, resolved, home, away)
+
+    if todo:
+        threading.Thread(target=_worker, daemon=True).start()
+    return {"game_ids": gids, "queued": todo}
+
+
+def get_batch_status(game_ids: list[str]) -> dict[str, Any]:
+    """Per-game status (no detail payload; clients fetch it from the single-game status)."""
+    out = {}
+    with _lock:
+        for g in dict.fromkeys(_game_id(x) for x in game_ids):
+            job = _jobs.get(g)
+            out[g] = {"status": job["status"], "error": job.get("error")} if job else {"status": "unknown", "error": None}
+    return {"games": out}
 
 
 def get_refresh_status(game_id: str) -> dict[str, Any]:

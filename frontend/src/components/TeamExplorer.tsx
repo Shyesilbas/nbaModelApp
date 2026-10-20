@@ -13,6 +13,7 @@ import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { NBA_TEAM_ABBRS, TEAM_NAME_BY_ABBR } from "../lib/nbaTeams";
 import { loadJson } from "../lib/dataCache";
+import { CURRENT_SEASON } from "../lib/constants";
 
 interface CorePlayer {
   PLAYER_ID: number;
@@ -42,6 +43,7 @@ interface TeamRosterItem {
 interface TeamExplorerProps {
   rosters?: any[];
   onSelectPlayer: (playerId: number) => void;
+  initialTeam?: string;
 }
 
 const ROLE_BY_RANK: Record<number, { title: string; description: string; icon: any }> = {
@@ -72,26 +74,31 @@ const ROLE_BY_RANK: Record<number, { title: string; description: string; icon: a
   },
 };
 
-const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer }) => {
-  const [selectedSeason, setSelectedSeason] = useState<string>("2024-25");
+const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam }) => {
+  const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
   const [activeRosters, setActiveRosters] = useState<any[]>([]);
   const [loadingSeason, setLoadingSeason] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [selectedTeam, setSelectedTeam] = useState<string>("BOS");
+  const [selectedTeam, setSelectedTeam] = useState<string>(() => initialTeam || "BOS");
+
+  useEffect(() => {
+    if (initialTeam) {
+      setSelectedTeam(initialTeam);
+    }
+  }, [initialTeam]);
   const [view, setView] = useState<"team" | "league">("team");
   const [sortBy, setSortBy] = useState<keyof TeamRosterItem>("IMPORTANCE_SCORE");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  const seasonsList = useMemo(() => ["2024-25", "2023-24", "2022-23", "2021-22", "2020-21"], []);
+  const seasonsList = useMemo(() => ["2026-27", "2025-26", "2024-25", "2023-24", "2022-23", "2021-22", "2020-21"], []);
 
   useEffect(() => {
     let isMounted = true;
     setLoadingSeason(true);
     setLoadError(null);
+    setActiveRosters([]); // never show the previous season's rosters while the new one loads
 
-    const path = selectedSeason === "2024-25" 
-      ? "/data/team_rosters.json" 
-      : `/data/seasons/${selectedSeason}/team_rosters.json`;
+    const path = `/data/seasons/${selectedSeason}/team_rosters.json`;
 
     loadJson<any[]>(path)
       .then((data) => {
@@ -273,6 +280,11 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer }) => {
           </div>
           {loadingSeason && (
             <p className="mt-2 text-xs text-text-secondary">Loading {selectedSeason} roster data...</p>
+          )}
+          {selectedSeason === CURRENT_SEASON && !loadingSeason && (
+            <p className="mt-2 text-xs text-text-secondary">
+              Kadrolar güncel takımlara göre; istatistikler bir önceki sezondan (2025-26).
+            </p>
           )}
           {loadError && (
             <p className="mt-2 text-xs text-status-error">{loadError}</p>

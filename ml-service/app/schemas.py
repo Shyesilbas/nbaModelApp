@@ -158,6 +158,8 @@ class GameFullPlayer(BaseModel):
     scale_factor: float
     status: Optional[str] = "ACTIVE"
     proj_min: Optional[float] = None
+    importance: float = 0.0  # 0.5*MIN + PTS + 0.8*AST + 0.6*REB (EMA-10), used to order the lineup
+    assumed_out: bool = False  # team models assume this rotation player is out unless marked ACTIVE
 
 
 class ScaleFactorsSub(BaseModel):

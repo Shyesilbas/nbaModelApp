@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 from .. import service as svc
 from ..player_service import get_player_predictions
+from .availability import assumed_out_ids, importance_score
 from .explanation import explain_win_probability, explain_xgboost_model
 from .score_prediction import predict_score
 from ..schemas import (
@@ -100,8 +101,9 @@ def _build_game_full_player_list(df, scaled_pts, scaled_reb, scaled_ast, scale) 
             scale_factor=round(scale, 3),
             status=stat_status,
             proj_min=p_min,
+            importance=importance_score(r),
         ))
-    return players
+    return sorted(players, key=lambda p: p.importance, reverse=True)
 
 
 
@@ -246,6 +248,14 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
         )
     except Exception as e:
         logger.warning("Player inference failed in /predict/game_full: %s", e)
+
+    try:
+        for players, team in ((home_list, home_team), (away_list, away_team)):
+            flagged = assumed_out_ids(team, pred_date_str, preseason=is_preseason)  # the default, independent of overrides, so the UI can keep an explicit ACTIVE
+            for p in players:
+                p.assumed_out = p.player_id in flagged
+    except Exception as e:
+        logger.warning("Could not flag assumed-out players: %s", e)
 
     if win_resp is None:
         win_req = WinProbRequest(

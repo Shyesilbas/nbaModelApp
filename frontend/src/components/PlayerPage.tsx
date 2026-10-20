@@ -1,18 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   ChevronDown,
-  User,
-  TrendingUp,
+  Check,
+  ArrowLeft,
   Calendar,
   AlertCircle,
-  Trophy,
-  GraduationCap,
-  Globe,
-  Ruler,
-  Weight,
   ArrowRightLeft,
-  Users2,
 } from "lucide-react";
 import { loadJson, loadPrivateApi } from "../lib/dataCache";
 import PlayerPhoto from "./PlayerPhoto";
@@ -105,7 +99,7 @@ interface GameRow {
 /* ─────────── Helpers ─────────── */
 
 const fmtPct = (v: number | null | undefined) =>
-  v != null ? `%${(v * 100).toFixed(1)}` : "—";
+  v != null ? `${(v * 100).toFixed(1)}%` : "—";
 const fmtStat = (v: number | null | undefined, dec = 1) =>
   v != null ? v.toFixed(dec) : "—";
 const fmtDate = (d: string | null) => {
@@ -119,57 +113,76 @@ const fmtDate = (d: string | null) => {
 
 /* ─────────── Sub-components ─────────── */
 
-function InfoChip({
-  icon,
-  label,
-  value,
-  className,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | null | undefined;
-  className?: string;
-}) {
-  if (!value) return null;
-  return (
-    <div className={`flex items-start gap-2.5 py-1 ${className || ""}`}>
-      <span className="mt-0.5 shrink-0 text-text-muted">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-xs text-text-secondary">{label}</p>
-        <p className="text-xs font-semibold text-text-primary leading-tight truncate mt-0.5">{value}</p>
-      </div>
-    </div>
-  );
-}
-
 function SeasonSelector({
   seasons,
   selected,
   onChange,
+  teamFor,
 }: {
   seasons: string[];
   selected: string;
   onChange: (s: string) => void;
-  }) {
+  teamFor: (s: string) => string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const label = (s: string) => {
+    const team = teamFor(s);
+    return (
+      <>
+        {team && <TeamLogo abbr={team} name="" size={20} />}
+        <span className="tabular-nums">{s}</span>
+        {team && <span className="text-text-secondary">{team}</span>}
+      </>
+    );
+  };
+
   return (
-    <div className="flex flex-wrap gap-3 border-b border-border-light">
-      {seasons.map((s) => {
-        const isSelected = selected === s;
-        return (
-          <button
-            key={s}
-            type="button"
-            onClick={() => onChange(s)}
-            className={`border-b-2 px-1.5 py-2 text-xs font-medium transition-colors cursor-pointer ${
-              isSelected
-                ? "border-primary text-text-primary font-semibold"
-                : "border-transparent text-text-secondary hover:text-text-primary"
-            }`}
-          >
-            {s}
-          </button>
-        );
-      })}
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex h-10 items-center gap-2 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary hover:border-card-border-hover focus-visible:border-border-focus focus-visible:outline-none cursor-pointer"
+      >
+        {label(selected)}
+        <ChevronDown size={16} strokeWidth={1.5} className="text-text-muted" />
+      </button>
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute right-0 z-50 mt-1 max-h-72 min-w-full overflow-y-auto rounded border border-border bg-background-primary py-1 shadow-sm"
+        >
+          {[...seasons].reverse().map((sn) => (
+            <li key={sn} role="option" aria-selected={sn === selected}>
+              <button
+                type="button"
+                onClick={() => { onChange(sn); setOpen(false); }}
+                className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm text-text-primary hover:bg-background-tertiary cursor-pointer"
+              >
+                {label(sn)}
+                {sn === selected && <Check size={16} strokeWidth={1.5} className="ml-auto text-text-muted" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -207,48 +220,23 @@ function AveragesGrid({ avgs }: { avgs: SeasonAverages }) {
     },
   ];
 
+  const stat = (label: string, value: string, sub?: string, big = false) => (
+    <div key={label}>
+      <p className="text-xs text-text-secondary">{label}</p>
+      <p className={`tabular-nums text-text-primary ${big ? "text-xl font-semibold" : "text-sm font-medium"}`}>
+        {value}
+        {sub && <span className="ml-1 text-xs font-normal text-text-muted">({sub})</span>}
+      </p>
+    </div>
+  );
+
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-3 divide-x divide-border-light rounded border border-border-light bg-background-secondary/40 py-4 px-2">
-        {headline.map((item) => (
-          <div key={item.short} className="text-center px-2">
-            <p className="text-xs font-medium text-text-secondary">{item.label}</p>
-            <div className="mt-1 flex items-baseline justify-center gap-1.5">
-              <span className="text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums text-text-primary">
-                {item.value}
-              </span>
-              <span className="text-xs font-medium text-text-muted">{item.short}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="border-t border-border-light pt-4">
-        <h3 className="text-xs font-semibold text-text-secondary">Diğer maç başına değerler</h3>
-        <div className="mt-3 grid grid-cols-2 gap-y-3 sm:grid-cols-4 xl:grid-cols-7 divide-y sm:divide-y-0 sm:divide-x divide-border-light">
-          {supporting.map((item, idx) => (
-            <div key={item.label} className={`pt-2 sm:pt-0 ${idx > 0 ? "sm:pl-3" : ""}`}>
-              <div className="text-xs text-text-secondary">{item.label}</div>
-              <div className="mt-0.5 text-base font-semibold tabular-nums text-text-primary">{item.value}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="border-t border-border-light pt-4">
-        <h3 className="text-xs font-semibold text-text-secondary">Şut oranları</h3>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border-light">
-          {shooting.map((item, idx) => (
-            <div key={item.label} className={`flex items-baseline justify-between ${idx > 0 ? "sm:pl-4 pt-2 sm:pt-0" : ""}`}>
-              <div>
-                <span className="text-xs font-medium text-text-secondary">{item.label}</span>
-                {item.sub && <span className="ml-2 text-xs tabular-nums text-text-muted">({item.sub})</span>}
-              </div>
-              <span className="text-lg font-semibold tabular-nums text-text-primary">{item.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="flex flex-wrap gap-x-8 gap-y-3">
+      {headline.map((h) => stat(h.short, h.value, undefined, true))}
+      <span className="hidden sm:block w-px self-stretch bg-border-light" />
+      {supporting.map((i) => stat(i.label, i.value))}
+      <span className="hidden sm:block w-px self-stretch bg-border-light" />
+      {shooting.map((i) => stat(i.label, i.value, i.sub))}
     </div>
   );
 }
@@ -295,16 +283,34 @@ function GameLogTable({
   const totalPages = Math.ceil(renderItems.length / PAGE_SIZE);
   const visible = renderItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const wlColor = (wl: string | null) => {
-    if (wl === "W") return "text-status-success font-semibold";
-    if (wl === "L") return "text-status-error font-semibold";
-    return "text-text-muted";
+  const wlBadge = (wl: string | null) => {
+    if (wl === "W") {
+      return (
+        <span
+          className="inline-flex h-4 w-4 items-center justify-center rounded-full text-xs font-semibold text-white bg-status-success"
+          title="Galibiyet"
+        >
+          G
+        </span>
+      );
+    }
+    if (wl === "L") {
+      return (
+        <span
+          className="inline-flex h-4 w-4 items-center justify-center rounded-full text-xs font-semibold text-white bg-status-error"
+          title="Maglubiyet"
+        >
+          M
+        </span>
+      );
+    }
+    return <span className="text-text-muted">—</span>;
   };
 
   const pmColor = (pm: number | null | undefined) => {
     if (pm == null) return "text-text-muted";
-    if (pm > 0) return "text-status-success font-medium";
-    if (pm < 0) return "text-status-error font-medium";
+    if (pm > 0) return "text-status-success font-semibold";
+    if (pm < 0) return "text-status-error font-semibold";
     return "text-text-secondary";
   };
 
@@ -313,38 +319,38 @@ function GameLogTable({
       <div className="overflow-x-auto rounded border border-border bg-background-primary">
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-background-secondary border-b border-border">
-              <th className="sticky left-0 bg-background-secondary px-3 py-2.5 text-left text-xs font-semibold text-text-secondary min-w-[120px]">Tarih</th>
-              <th className="px-2 py-2.5 text-left text-xs font-semibold text-text-secondary min-w-[130px]">Eşleşme</th>
-              <th className="px-2 py-2.5 text-center text-xs font-semibold text-text-secondary">G/M</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">Skor</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">MIN</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">PTS</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">REB</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">AST</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">STL</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">BLK</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">TOV</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">FG%</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">3P%</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">FT%</th>
-              <th className="px-2 py-2.5 text-right text-xs font-semibold text-text-secondary">+/-</th>
-              <th className="px-2 py-2.5 text-center text-xs font-semibold text-text-secondary">Tür</th>
+            <tr className="bg-background-tertiary/60 border-b border-border text-xs font-semibold text-text-muted">
+              <th className="sticky left-0 bg-background-tertiary px-3 py-2.5 text-left min-w-[120px]">Tarih</th>
+              <th className="px-2 py-2.5 text-left min-w-[130px]">Eşleşme</th>
+              <th className="px-2 py-2.5 text-center">G/M</th>
+              <th className="px-2 py-2.5 text-right">Skor</th>
+              <th className="px-2 py-2.5 text-right">MIN</th>
+              <th className="px-2 py-2.5 text-right">PTS</th>
+              <th className="px-2 py-2.5 text-right">REB</th>
+              <th className="px-2 py-2.5 text-right">AST</th>
+              <th className="px-2 py-2.5 text-right">STL</th>
+              <th className="px-2 py-2.5 text-right">BLK</th>
+              <th className="px-2 py-2.5 text-right">TOV</th>
+              <th className="px-2 py-2.5 text-right">FG%</th>
+              <th className="px-2 py-2.5 text-right">3P%</th>
+              <th className="px-2 py-2.5 text-right">FT%</th>
+              <th className="px-2 py-2.5 text-right">+/-</th>
+              <th className="px-2 py-2.5 text-center">Tür</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-light">
+          <tbody className="divide-y divide-border">
             {visible.map((item, idx) => {
               if (item.type === "trade") {
                 return (
-                  <tr key={`trade-${idx}`} className="bg-background-secondary border-t border-b border-border">
+                  <tr key={`trade-${idx}`} className="bg-background-tertiary/70 border-t border-b border-border">
                     <td colSpan={16} className="px-3 py-2.5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
-                          <span className="flex items-center gap-1.5 bg-background-primary border border-border text-text-primary px-2 py-0.5 rounded-sm text-xs font-medium uppercase">
+                          <span className="flex items-center gap-1.5 bg-background-primary border border-border text-text-primary px-2 py-0.5 rounded text-xs font-semibold">
                             <ArrowRightLeft size={12} />
                             Takas / Transfer
                           </span>
-                          <div className="flex items-center gap-2 font-medium text-text-primary text-xs">
+                          <div className="flex items-center gap-2 font-semibold text-text-primary text-xs">
                             <TeamLogo abbr={item.from} name="" size={18} />
                             <span className="text-text-secondary">{item.from}</span>
                             <ArrowRightLeft size={12} className="text-text-muted mx-1" />
@@ -352,7 +358,7 @@ function GameLogTable({
                             <span className="text-text-primary font-semibold">{item.to}</span>
                           </div>
                         </div>
-                        <p className="text-xs text-text-secondary">
+                        <p className="text-xs text-text-muted">
                           Geçiş: {fmtDate(item.dateBefore)} → {fmtDate(item.dateAfter)}
                         </p>
                       </div>
@@ -374,13 +380,13 @@ function GameLogTable({
                   key={`${g.GAME_ID}-${idx}`}
                   onClick={clickable ? () => onGameClick!(g) : undefined}
                   className={`transition-colors ${
-                    isDnp ? "bg-background-secondary/50 opacity-70" : "hover:bg-background-secondary/60"
+                    isDnp ? "bg-background-tertiary/40 opacity-70" : "hover:bg-background-tertiary/70"
                   } ${clickable ? "cursor-pointer group" : ""}`}
                 >
                   <td className="sticky left-0 bg-background-primary px-3 py-2">
-                    <p className="text-xs font-medium text-text-primary tabular-nums">{fmtDate(g.GAME_DATE)}</p>
+                    <p className="text-xs font-semibold text-text-primary tabular-nums">{fmtDate(g.GAME_DATE)}</p>
                     {clickable && (
-                      <p className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                         Kutu skorunu gör
                       </p>
                     )}
@@ -394,23 +400,23 @@ function GameLogTable({
                           size={16}
                         />
                       )}
-                      <span className="text-xs font-medium text-text-primary whitespace-nowrap">
+                      <span className="text-xs font-semibold text-text-primary whitespace-nowrap">
                         {g.MATCHUP ?? "—"}
                       </span>
                     </div>
                   </td>
                   <td className="px-2 py-2 text-center">
                     {isDnp ? (
-                      <span className="rounded-sm bg-background-secondary border border-border px-1.5 py-0.5 text-xs font-medium text-text-muted uppercase">DNP</span>
+                      <span className="rounded-sm bg-background-tertiary border border-border px-1.5 py-0.5 text-xs font-semibold text-text-muted">DNP</span>
                     ) : (
-                      <span className={wlColor(g.WL)}>{g.WL ?? "—"}</span>
+                      wlBadge(g.WL)
                     )}
                   </td>
                   <td className="px-2 py-2 text-right">
                     {isDnp ? (
-                      <span className="text-xs text-text-muted">Sakat / Oynamadı</span>
+                      <span className="text-xs text-text-muted">Oynamadı</span>
                     ) : (
-                      <span className="text-xs font-medium text-text-secondary tabular-nums">{score}</span>
+                      <span className="text-xs font-semibold text-text-secondary tabular-nums">{score}</span>
                     )}
                   </td>
                   {isDnp ? (
@@ -423,8 +429,8 @@ function GameLogTable({
                     <>
                       <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{g.MIN != null ? Math.round(g.MIN) : "—"}</td>
                       <td className="px-2 py-2 text-right font-semibold text-text-primary tabular-nums">{g.PTS ?? "—"}</td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{g.REB ?? "—"}</td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{g.AST ?? "—"}</td>
+                      <td className="px-2 py-2 text-right font-semibold text-text-secondary tabular-nums">{g.REB ?? "—"}</td>
+                      <td className="px-2 py-2 text-right font-semibold text-text-secondary tabular-nums">{g.AST ?? "—"}</td>
                       <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{g.STL ?? "—"}</td>
                       <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{g.BLK ?? "—"}</td>
                       <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{g.TOV ?? "—"}</td>
@@ -437,7 +443,7 @@ function GameLogTable({
                     </>
                   )}
                   <td className="px-2 py-2 text-center">
-                    <span className="rounded-sm px-1.5 py-0.5 text-xs font-medium uppercase bg-background-secondary border border-border text-text-secondary">
+                    <span className="rounded-sm  px-1.5 py-0.5 text-xs font-semibold bg-background-tertiary border border-border text-text-secondary">
                       {g.IS_PLAYOFF ? "PO" : "RS"}
                     </span>
                   </td>
@@ -449,8 +455,8 @@ function GameLogTable({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-text-secondary">
+        <div className="flex items-center justify-between pt-1">
+          <p className="text-xs font-medium text-text-secondary">
             {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, games.length)} / {games.length} maç
           </p>
           <div className="flex gap-1.5">
@@ -458,7 +464,7 @@ function GameLogTable({
               type="button"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="h-8 rounded border border-border bg-background-primary px-3 text-xs font-medium text-text-primary hover:bg-background-secondary disabled:opacity-30 transition-colors cursor-pointer"
+              className="h-8 rounded border border-border bg-background-primary px-3 text-xs font-semibold text-text-primary hover:bg-background-tertiary disabled:opacity-30 transition-all cursor-pointer"
             >
               Önceki
             </button>
@@ -469,10 +475,10 @@ function GameLogTable({
                   key={pg}
                   type="button"
                   onClick={() => setPage(pg)}
-                  className={`h-8 w-8 rounded text-xs font-medium transition-colors cursor-pointer ${
+                  className={`h-8 w-8 rounded text-xs font-semibold transition-all cursor-pointer ${
                     pg === page
                       ? "bg-primary text-white"
-                      : "border border-border bg-background-primary text-text-secondary hover:bg-background-secondary hover:text-text-primary"
+                      : "border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
                   }`}
                 >
                   {pg + 1}
@@ -483,7 +489,7 @@ function GameLogTable({
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              className="h-8 rounded border border-border bg-background-primary px-3 text-xs font-medium text-text-primary hover:bg-background-secondary disabled:opacity-30 transition-colors cursor-pointer"
+              className="h-8 rounded border border-border bg-background-primary px-3 text-xs font-semibold text-text-primary hover:bg-background-tertiary disabled:opacity-30 transition-all cursor-pointer"
             >
               Sonraki
             </button>
@@ -494,95 +500,25 @@ function GameLogTable({
   );
 }
 
-/* ─────────── Featured player card ─────────── */
-function FeaturedCard({
-  profile,
-  label,
-  avgs,
-  onClick,
-}: {
-  profile: PlayerProfile;
-  label: string;
-  avgs: SeasonAverages | null;
-  onClick: () => void;
-}) {
-  const teamAbbr = profile.CURRENT_TEAM || avgs?.teams?.[avgs.teams.length - 1] || null;
+/* ─────────── League leaders (landing) ─────────── */
+type LeaderKey = "PTS" | "REB" | "AST" | "STL" | "BLK" | "FG_PCT" | "FG3_PCT";
+const LEADER_COLS: { key: LeaderKey; label: string; pct?: boolean }[] = [
+  { key: "PTS", label: "PTS" },
+  { key: "REB", label: "REB" },
+  { key: "AST", label: "AST" },
+  { key: "STL", label: "STL" },
+  { key: "BLK", label: "BLK" },
+  { key: "FG_PCT", label: "FG%", pct: true },
+  { key: "FG3_PCT", label: "3P%", pct: true },
+];
+const POSITION_GROUPS = [
+  { id: "all", label: "Tümü" },
+  { id: "GUARD", label: "Guard" },
+  { id: "FORWARD", label: "Forward" },
+  { id: "CENTER", label: "Center" },
+];
+const PAGE_SIZE = 25;
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group w-full rounded border border-border bg-background-primary text-left transition-colors hover:border-card-border-hover p-4 cursor-pointer"
-    >
-      <div>
-        <div className="flex items-center gap-3">
-          <div className="relative shrink-0">
-            <PlayerPhoto
-              playerId={profile.PLAYER_ID}
-              name={profile.PLAYER_NAME ?? ""}
-              size={48}
-              className="rounded-full border border-border"
-            />
-            {teamAbbr && (
-              <div className="absolute -bottom-1 -right-1 bg-background-primary border border-border rounded-full p-0.5">
-                <TeamLogo abbr={teamAbbr} name="" size={16} />
-              </div>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-text-primary leading-tight group-hover:text-primary transition-colors">
-              {profile.PLAYER_NAME}
-            </p>
-            <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-              {profile.OFFICIAL_POSITION && (
-                <span className="rounded-sm border border-border bg-background-secondary px-1.5 py-0.2 text-xs font-medium uppercase text-text-secondary">
-                  {profile.OFFICIAL_POSITION}
-                </span>
-              )}
-              {teamAbbr && (
-                <span className="rounded-sm bg-background-secondary border border-border px-1.5 py-0.2 text-xs font-medium uppercase text-text-secondary">
-                  {teamAbbr}
-                </span>
-              )}
-              <span className="rounded-sm bg-background-secondary px-1.5 py-0.2 text-xs font-medium uppercase text-text-secondary">
-                {label}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {avgs ? (
-          <div className="mt-3 flex items-center justify-around border-t border-border-light pt-2.5">
-            <div className="text-center">
-              <p className="text-base font-semibold tabular-nums text-text-primary">
-                {avgs.PTS != null ? avgs.PTS.toFixed(1) : "—"}
-              </p>
-              <p className="text-xs text-text-secondary">PPG</p>
-            </div>
-            <div className="h-5 w-px bg-border-light" />
-            <div className="text-center">
-              <p className="text-base font-semibold tabular-nums text-text-primary">
-                {avgs.REB != null ? avgs.REB.toFixed(1) : "—"}
-              </p>
-              <p className="text-xs text-text-secondary">RPG</p>
-            </div>
-            <div className="h-5 w-px bg-border-light" />
-            <div className="text-center">
-              <p className="text-base font-semibold tabular-nums text-text-primary">
-                {avgs.AST != null ? avgs.AST.toFixed(1) : "—"}
-              </p>
-              <p className="text-xs text-text-secondary">APG</p>
-            </div>
-          </div>
-        ) : (
-          <p className="mt-3 border-t border-border-light pt-2.5 text-xs text-text-secondary">Veri bulunamadı</p>
-        )}
-      </div>
-    </button>
-  );
-}
-
-/* ─────────── Discovery / suggestion grid ─────────── */
 function DiscoveryGrid({
   profiles,
   averagesData,
@@ -594,50 +530,161 @@ function DiscoveryGrid({
   onSelect: (p: PlayerProfile) => void;
   seasons: string[];
 }) {
-  const latestSeason = useMemo(() =>
-    [...seasons].reverse().find((season) => profiles.some((profile) =>
-      (averagesData[String(profile.PLAYER_ID)]?.[season]?.games_played ?? 0) >= 15
-    )) ?? seasons[seasons.length - 1] ?? "2025-26",
-  [profiles, averagesData, seasons]);
-  const getBestAvgs = (pid: number, preferSeason?: string): { avgs: SeasonAverages; season: string } | null => {
-    const pidStr = String(pid);
-    const pAvgs = averagesData[pidStr];
-    if (!pAvgs) return null;
-    const ordered = preferSeason
-      ? [preferSeason, ...seasons.filter((s) => s !== preferSeason).reverse()]
-      : [...seasons].reverse();
-    for (const s of ordered) {
-      if (pAvgs[s] && pAvgs[s].games_played >= 15) return { avgs: pAvgs[s], season: s };
-    }
-    return null;
-  };
+  const seasonsDesc = useMemo(() => [...seasons].reverse(), [seasons]);
+  const defaultSeason = useMemo(
+    () =>
+      seasonsDesc.find((sn) =>
+        profiles.some((p) => (averagesData[String(p.PLAYER_ID)]?.[sn]?.games_played ?? 0) >= 15)
+      ) ?? seasonsDesc[0] ?? "",
+    [profiles, averagesData, seasonsDesc]
+  );
+  const [season, setSeason] = useState(defaultSeason);
+  const [team, setTeam] = useState("all");
+  const [position, setPosition] = useState("all");
+  const [sortKey, setSortKey] = useState<LeaderKey>("PTS");
+  const [shown, setShown] = useState(PAGE_SIZE);
 
-  const topScorers = useMemo(() =>
-    profiles
-      .map((p) => ({ p, res: getBestAvgs(p.PLAYER_ID, latestSeason) }))
-      .filter((x) => x.res?.season === latestSeason && (x.res.avgs.PTS ?? 0) > 0)
-      .sort((a, b) => (b.res!.avgs.PTS ?? 0) - (a.res!.avgs.PTS ?? 0))
-      .slice(0, 12)
-      .map(({ p, res }) => ({ p, avgs: res!.avgs, label: "Skorer" })),
-  [profiles, averagesData, seasons, latestSeason]);
+  const rows = useMemo(
+    () =>
+      profiles.flatMap((p) => {
+        const a = averagesData[String(p.PLAYER_ID)]?.[season];
+        if (!a || a.games_played < 10) return [];
+        return [{ p, a, team: a.teams?.[a.teams.length - 1] ?? p.CURRENT_TEAM ?? null }];
+      }),
+    [profiles, averagesData, season]
+  );
+  const teams = useMemo(() => [...new Set(rows.map((r) => r.team).filter(Boolean) as string[])].sort(), [rows]);
+  const list = useMemo(
+    () =>
+      rows
+        .filter((r) => (team === "all" || r.team === team) && (position === "all" || r.p.POSITION_GROUP === position))
+        .sort((x, y) => (y.a[sortKey] ?? -1) - (x.a[sortKey] ?? -1)),
+    [rows, team, position, sortKey]
+  );
+  const reset = () => setShown(PAGE_SIZE);
+
+  const selectCls =
+    "h-10 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary focus:border-border-focus focus:outline-none";
 
   return (
-    <div>
-      <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h2 className="text-base font-semibold text-text-primary">Keşfedilecek Oyuncular</h2>
-        <p className="text-xs text-text-secondary">En Skorerler · {latestSeason}</p>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-text-primary">Lig liderleri</h2>
+          <p className="text-sm text-text-secondary">
+            Maç başına ortalamalar · en az 10 maç · <span className="tabular-nums">{list.length}</span> oyuncu
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select aria-label="Sezon" value={season} onChange={(e) => { setSeason(e.target.value); setTeam("all"); reset(); }} className={`${selectCls} tabular-nums`}>
+            {seasonsDesc.map((sn) => <option key={sn} value={sn}>{sn}</option>)}
+          </select>
+          <select aria-label="Takım" value={team} onChange={(e) => { setTeam(e.target.value); reset(); }} className={selectCls}>
+            <option value="all">Tüm takımlar</option>
+            {teams.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <div role="group" aria-label="Pozisyon" className="inline-flex rounded border border-border bg-background-tertiary p-0.5">
+            {POSITION_GROUPS.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                aria-pressed={position === g.id}
+                onClick={() => { setPosition(g.id); reset(); }}
+                className={`h-9 rounded-sm px-3 text-sm font-medium cursor-pointer ${
+                  position === g.id ? "bg-background-primary text-text-primary" : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {topScorers.map(({ p, avgs, label }) => (
-          <FeaturedCard
-            key={p.PLAYER_ID}
-            profile={p}
-            label={label}
-            avgs={avgs}
-            onClick={() => onSelect(p)}
-          />
-        ))}
+
+      <div className="overflow-x-auto rounded border border-border">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead>
+            <tr className="border-b border-border bg-background-tertiary text-left text-text-secondary">
+              <th className="w-10 px-3 py-2 font-medium">#</th>
+              <th className="px-3 py-2 font-medium">Oyuncu</th>
+              <th className="px-3 py-2 font-medium">Takım</th>
+              <th className="px-3 py-2 text-right font-medium">GP</th>
+              {LEADER_COLS.map((c) => (
+                <th key={c.key} className="px-1 py-1 text-right font-medium">
+                  <button
+                    type="button"
+                    onClick={() => { setSortKey(c.key); reset(); }}
+                    aria-sort={sortKey === c.key ? "descending" : "none"}
+                    className={`rounded px-2 py-1 cursor-pointer hover:text-text-primary ${
+                      sortKey === c.key ? "text-text-primary font-semibold" : ""
+                    }`}
+                  >
+                    {c.label}{sortKey === c.key ? " ↓" : ""}
+                  </button>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {list.slice(0, shown).map(({ p, a, team: t }, i) => (
+              <tr
+                key={p.PLAYER_ID}
+                onClick={() => onSelect(p)}
+                className="cursor-pointer border-b border-border-light last:border-b-0 hover:bg-background-tertiary"
+              >
+                <td className="px-3 py-2 tabular-nums text-text-secondary">{i + 1}</td>
+                <td className="px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onSelect(p); }}
+                    className="flex items-center gap-3 text-left cursor-pointer"
+                  >
+                    <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME ?? ""} size={32} />
+                    <span className="font-medium text-text-primary">{p.PLAYER_NAME}</span>
+                    {p.OFFICIAL_POSITION && <span className="text-xs text-text-secondary">{p.OFFICIAL_POSITION}</span>}
+                  </button>
+                </td>
+                <td className="px-3 py-2">
+                  {t && (
+                    <span className="flex items-center gap-2 text-text-secondary">
+                      <TeamLogo abbr={t} name="" size={20} />
+                      {t}
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums text-text-secondary">{a.games_played}</td>
+                {LEADER_COLS.map((c) => (
+                  <td
+                    key={c.key}
+                    className={`px-3 py-2 text-right tabular-nums ${sortKey === c.key ? "font-semibold text-text-primary" : "text-text-secondary"}`}
+                  >
+                    {c.pct ? fmtPct(a[c.key]) : fmtStat(a[c.key])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {list.length === 0 && (
+              <tr>
+                <td colSpan={4 + LEADER_COLS.length} className="px-3 py-10 text-center text-text-secondary">
+                  Bu filtrelerle eşleşen oyuncu yok.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
+
+      {shown < list.length && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => setShown((n) => n + PAGE_SIZE)}
+            className="h-10 rounded border border-border px-4 text-sm font-medium text-text-primary hover:border-card-border-hover cursor-pointer"
+          >
+            Daha fazla göster
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -821,6 +868,8 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
     return seasonsList.filter((s) => (playerGames[s]?.length > 0) || (playerAvgs[s] != null) || s === "2026-27");
   }, [seasonsList, playerGames, playerAvgs]);
   const currentAvgs = playerAvgs[selectedSeason] ?? null;
+  const teamForSeason = (s: string) =>
+    playerAvgs[s]?.teams?.at(-1) ?? playerGames[s]?.[0]?.TEAM_ABBREVIATION ?? (s === "2026-27" ? selectedPlayer?.CURRENT_TEAM ?? null : null);
 
   const currentGames = useMemo(() => {
     const games = playerGames[selectedSeason] ?? [];
@@ -860,8 +909,7 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
   if (loading) {
     return (
       <div className="flex h-72 flex-col items-center justify-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p className="text-xs font-medium text-text-secondary">
+        <p className="text-sm text-text-secondary">
           Oyuncu verileri yükleniyor
         </p>
       </div>
@@ -878,7 +926,7 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
           <h2 className="text-base font-semibold text-text-primary">Veri bulunamadı</h2>
           <p className="mt-1 text-xs text-text-secondary">{error}</p>
         </div>
-        <p className="rounded border border-border bg-background-secondary px-3 py-1.5 font-mono text-xs text-text-secondary">
+        <p className="rounded border border-border bg-background-secondary px-3 py-1.5 text-xs text-text-secondary">
           python3 scripts/export_player_profiles.py
         </p>
       </div>
@@ -888,44 +936,44 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
   return (
     <div className="space-y-6">
       {/* Search bar */}
+      {!selectedPlayer && (
       <div className="rounded border border-border bg-background-primary p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col gap-1 border-b border-border-light pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-medium text-text-secondary">NBA Oyuncu Profilleri</p>
-            <h1 className="text-2xl font-semibold leading-none tracking-tight text-text-primary mt-1">Oyuncular</h1>
+            <h1 className="text-2xl font-semibold text-text-primary">Oyuncular</h1>
           </div>
-          <p className="text-xs text-text-secondary">{profiles.length.toLocaleString()} profil · 2018–26</p>
+          <p className="text-xs font-semibold text-text-secondary">{profiles.length.toLocaleString()} profil · 2018–26</p>
         </div>
         <div>
-          <label htmlFor="player-profile-search" className="mb-1.5 block text-xs font-medium text-text-secondary">Oyuncu Ara</label>
+          <label htmlFor="player-profile-search" className="mb-1.5 block text-sm font-medium text-text-secondary">Oyuncu ara</label>
           <div className="relative">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary" />
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
             <input
               id="player-profile-search"
               type="text"
-              placeholder="Oyuncu adına göre ara..."
+              placeholder="Oyuncu adı (örn. LeBron James)"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setShowDropdown(true); }}
               onFocus={() => setShowDropdown(true)}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-              className="w-full h-10 rounded border border-border bg-background-secondary pl-10 pr-10 text-xs font-medium text-text-primary placeholder:text-text-secondary transition focus:border-border-focus focus:bg-background-primary focus:outline-none"
+              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+              className="w-full h-10 rounded border border-border bg-background-tertiary pl-10 pr-10 text-xs font-medium text-text-primary placeholder:text-text-muted transition focus:border-border-focus focus:bg-background-primary focus:outline-none"
             />
-            <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-secondary" />
+            <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
           </div>
 
           {showDropdown && filteredProfiles.length > 0 && (
-            <div className="absolute z-50 mt-1 max-h-64 w-full max-w-lg overflow-y-auto rounded border border-border bg-background-primary shadow-sm divide-y divide-border-light">
+            <div className="absolute z-50 mt-1 max-h-64 w-full max-w-lg overflow-y-auto rounded border border-border bg-background-primary divide-y divide-border">
               {filteredProfiles.map((p) => (
                 <button
                   key={p.PLAYER_ID}
                   type="button"
-                  onClick={() => handleSelectPlayer(p)}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-background-secondary cursor-pointer"
+                  onMouseDown={() => handleSelectPlayer(p)}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-background-tertiary cursor-pointer"
                 >
                   <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME ?? ""} size={32} />
                   <div className="min-w-0">
                     <p className="text-xs font-semibold text-text-primary">{p.PLAYER_NAME}</p>
-                    <p className="text-xs text-text-secondary">
+                    <p className="text-xs text-text-muted">
                       {[
                         p.OFFICIAL_POSITION,
                         p.FROM_YEAR && p.TO_YEAR && `${p.FROM_YEAR}–${p.TO_YEAR}`,
@@ -938,113 +986,69 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
           )}
         </div>
 
-        {selectedPlayer && (
-          <div className="flex items-center justify-between border-t border-border-light pt-2 text-xs">
-            <div className="flex items-center gap-1.5 text-text-secondary">
-              <User size={13} className="shrink-0" />
-              <span>Görüntülenen: <strong className="text-text-primary font-medium">{selectedPlayer.PLAYER_NAME}</strong></span>
-            </div>
-            <button
-              type="button"
-              onClick={() => { setSelectedPlayer(null); setSearch(""); }}
-              className="text-xs text-text-secondary hover:text-text-primary underline cursor-pointer"
-            >
-              Farklı oyuncu seç
-            </button>
-          </div>
-        )}
       </div>
+      )}
 
       {/* Player Profile (when selected) */}
       {selectedPlayer && (
         <div className="space-y-5">
+          <button
+            type="button"
+            onClick={() => { setSelectedPlayer(null); setSearch(""); setSelectedGame(null); }}
+            className="inline-flex h-9 items-center gap-1.5 rounded px-2 -ml-2 text-sm font-medium text-text-secondary hover:text-text-primary cursor-pointer"
+          >
+            <ArrowLeft size={16} strokeWidth={1.5} />
+            Oyuncu profilleri
+          </button>
           {/* Hero Card */}
           {(() => {
-            const primaryTeamAbbr =
-              (selectedSeason === "2026-27" ? (currentAvgs?.teams?.[0] || selectedPlayer.CURRENT_TEAM) : null) ||
-              currentAvgs?.teams?.[currentAvgs.teams.length - 1] ||
-              selectedPlayer.CURRENT_TEAM ||
-              null;
             return (
-              <div className="rounded border border-border bg-background-primary p-5 sm:p-6">
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-                  <div className="shrink-0">
-                    <PlayerPhoto
-                      playerId={selectedPlayer.PLAYER_ID}
-                      name={selectedPlayer.PLAYER_NAME ?? ""}
-                      size={96}
-                      className="rounded border border-border"
+              <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
+                <div className="flex items-start gap-4">
+                  <PlayerPhoto
+                    playerId={selectedPlayer.PLAYER_ID}
+                    name={selectedPlayer.PLAYER_NAME ?? ""}
+                    size={64}
+                    className="shrink-0 rounded border border-border"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-2xl font-semibold text-text-primary">{selectedPlayer.PLAYER_NAME}</h2>
+                    <p className="mt-0.5 text-sm text-text-secondary">
+                      {[
+                        [selectedPlayer.OFFICIAL_POSITION, selectedPlayer.POSITION_GROUP].filter(Boolean).join(" · "),
+                        currentAvgs?.teams && currentAvgs.teams.length > 1 ? currentAvgs.teams.join(" → ") : null,
+                        selectedPlayer.HEIGHT,
+                        selectedPlayer.WEIGHT ? `${selectedPlayer.WEIGHT} lbs` : null,
+                        selectedPlayer.COUNTRY,
+                        selectedPlayer.COLLEGE,
+                        draftStr(selectedPlayer),
+                      ].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  {availableSeasons.length > 0 && (
+                    <SeasonSelector
+                      seasons={availableSeasons}
+                      selected={selectedSeason}
+                      onChange={setSelectedSeason}
+                      teamFor={teamForSeason}
                     />
-                  </div>
-
-                  <div className="flex-1 space-y-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <p className="text-xs font-medium text-text-secondary">
-                          NBA Oyuncu Profili
-                        </p>
-                        {primaryTeamAbbr && (
-                          <div className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-background-secondary px-2 py-0.5 text-xs font-medium text-text-primary">
-                            <TeamLogo abbr={primaryTeamAbbr} name="" size={14} />
-                            <span>{primaryTeamAbbr}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <h2 className="text-2xl sm:text-3xl font-semibold leading-tight tracking-tight text-text-primary">
-                        {selectedPlayer.PLAYER_NAME}
-                      </h2>
-
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {selectedPlayer.OFFICIAL_POSITION && (
-                          <span className="rounded-sm border border-border bg-background-secondary px-2 py-0.5 text-xs font-medium text-text-secondary uppercase">
-                            {selectedPlayer.OFFICIAL_POSITION}
-                          </span>
-                        )}
-                        {selectedPlayer.POSITION_GROUP && (
-                          <span className="rounded-sm border border-border bg-background-secondary px-2 py-0.5 text-xs font-medium text-text-secondary uppercase">
-                            {selectedPlayer.POSITION_GROUP}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 xl:grid-cols-4 border-t border-border-light pt-3">
-                      {currentAvgs?.teams && currentAvgs.teams.length > 1 && (
-                        <InfoChip
-                          icon={<ArrowRightLeft size={13} />}
-                          label="Takımlar (Takas)"
-                          value={currentAvgs.teams.join(" → ")}
-                        />
-                      )}
-                      {primaryTeamAbbr && (!currentAvgs?.teams || currentAvgs.teams.length <= 1) && (
-                        <InfoChip
-                          icon={<Users2 size={13} />}
-                          label="Güncel Takım"
-                          value={primaryTeamAbbr}
-                        />
-                      )}
-                      <InfoChip icon={<Ruler size={13} />} label="Boy (Height)" value={selectedPlayer.HEIGHT} />
-                      <InfoChip
-                        icon={<Weight size={13} />}
-                        label="Kilo (Weight)"
-                        value={selectedPlayer.WEIGHT ? `${selectedPlayer.WEIGHT} lbs` : null}
-                      />
-                      <InfoChip icon={<Globe size={13} />} label="Ülke" value={selectedPlayer.COUNTRY} />
-                      <InfoChip icon={<GraduationCap size={13} />} label="Kolej" value={selectedPlayer.COLLEGE} />
-                      <InfoChip icon={<Trophy size={13} />} label="Draft" value={draftStr(selectedPlayer)} />
-                      <InfoChip
-                        icon={<Calendar size={13} />}
-                        label="NBA Sezonları"
-                        value={
-                          selectedPlayer.FROM_YEAR && selectedPlayer.TO_YEAR
-                            ? `${selectedPlayer.FROM_YEAR} – ${selectedPlayer.TO_YEAR}`
-                            : null
-                        }
-                      />
-                    </div>
-                  </div>
+                  )}
                 </div>
+
+                {availableSeasons.length > 0 && (
+                  <div className="mt-4 border-t border-border pt-4">
+                    {currentAvgs && currentAvgs.games_total > 0 ? (
+                      <>
+                        <AveragesGrid avgs={currentAvgs} />
+                        <p className="mt-3 text-xs tabular-nums text-text-secondary">
+                          {currentAvgs.games_played} / {currentAvgs.games_total} maç · maç başına ortalamalar
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-text-secondary">{selectedSeason} sezonu için ortalama verisi bulunamadı.</p>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -1052,61 +1056,33 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
           {availableSeasons.length === 0 ? (
             <div className="rounded border border-border bg-background-primary p-6 text-center">
               <AlertCircle size={22} className="mx-auto mb-2 text-text-secondary" />
-              <p className="text-xs font-medium text-text-secondary">Bu oyuncu için veritabanında maç kaydı bulunamadı.</p>
+              <p className="text-xs font-semibold text-text-secondary">Bu oyuncu için veritabanında maç kaydı bulunamadı.</p>
             </div>
           ) : (
             <>
-              {/* Season Averages + Integrated Season Selector */}
-              <div className="rounded border border-border bg-background-primary p-5 sm:p-6 space-y-4">
-                <div className="flex flex-col gap-4 border-b border-border-light pb-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded border border-border bg-background-secondary text-primary">
-                      <TrendingUp size={18} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-base font-semibold text-text-primary">Sezon Ortalamaları</h2>
-                        {currentAvgs && (
-                          <span className="rounded-sm bg-background-secondary border border-border px-2 py-0.5 text-xs font-medium tabular-nums text-text-secondary">
-                            {currentAvgs.games_played} / {currentAvgs.games_total} Maç
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-text-secondary">{selectedSeason} maç başına istatistikler</p>
-                    </div>
-                  </div>
-
-                  <SeasonSelector
-                    seasons={availableSeasons}
-                    selected={selectedSeason}
-                    onChange={setSelectedSeason}
-                  />
-                </div>
-
-                {currentAvgs && currentAvgs.games_total > 0 ? (
-                  <AveragesGrid avgs={currentAvgs} />
-                ) : (
-                  <p className="py-2 text-xs text-text-secondary">{selectedSeason} sezonu için ortalama verisi bulunamadı.</p>
-                )}
-              </div>
-
               {/* Game Log */}
               <div className="rounded border border-border bg-background-primary p-5 sm:p-6 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-light pb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
                   <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-text-secondary" />
-                    <h2 className="text-base font-semibold text-text-primary">
-                      {selectedSeason} Maç Günlüğü
-                    </h2>
+                    <Calendar size={16} className="text-primary" />
+                    <div>
+                      <h2 className="text-base font-semibold text-text-primary">
+                        {selectedSeason} Maç Günlüğü
+                      </h2>
+                      <p className="text-xs text-text-muted">
+                        Toplam {currentGames.length} karşılaşma
+                      </p>
+                    </div>
                   </div>
+
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-sm bg-background-secondary border border-border px-2 py-0.5 text-xs font-medium text-text-secondary">
+                    <span className="rounded-sm bg-background-tertiary border border-border px-2 py-0.5 text-xs font-semibold text-text-secondary">
                       {currentGames.length} maç
                     </span>
-                    <span className="rounded-sm bg-status-warning/10 border border-status-warning/20 px-2 py-0.5 text-xs font-medium text-status-warning">
+                    <span className="rounded-sm bg-status-warning/10 border border-status-warning/20 px-2 py-0.5 text-xs font-semibold text-status-warning">
                       {currentGames.filter((g) => g.DID_NOT_PLAY).length} DNP
                     </span>
-                    <span className="rounded-sm bg-background-secondary border border-border px-2 py-0.5 text-xs font-medium text-text-secondary">
+                    <span className="rounded-sm bg-background-tertiary border border-border px-2 py-0.5 text-xs font-semibold text-text-secondary">
                       {currentGames.filter((g) => g.IS_PLAYOFF).length} playoff
                     </span>
                   </div>
@@ -1115,28 +1091,28 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   {!selectedGame && (playerGames[selectedSeason] ?? []).length > 0 && (
                     <div className="relative flex-1 max-w-sm">
-                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                       <input
                         type="text"
-                        placeholder="Rakip takıma göre filtrele..."
+                        placeholder="Rakip takıma göre filtrele (örn. GSW)..."
                         value={opponentSearch}
                         onChange={(e) => setOpponentSearch(e.target.value)}
-                        className="w-full h-8 rounded border border-border bg-background-secondary pl-9 pr-4 text-xs font-medium text-text-primary placeholder:text-text-secondary focus:border-border-focus focus:bg-background-primary focus:outline-none"
+                        className="w-full h-9 rounded border border-border bg-background-tertiary pl-9 pr-4 text-xs font-medium text-text-primary placeholder:text-text-muted focus:border-border-focus focus:bg-background-primary focus:outline-none transition-all"
                       />
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 text-xs text-text-secondary ml-auto">
+                  <div className="flex items-center gap-3 text-xs text-text-muted ml-auto font-medium">
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-sm bg-status-warning/40 border border-status-warning/60" />
+                      <span className="h-2 w-2 rounded-full bg-status-warning/60" />
                       DNP = Oynamadı
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="rounded-sm bg-background-secondary border border-border px-1 py-0.2 text-xs font-medium text-text-primary">PO</span>
+                      <span className="rounded-sm  bg-background-tertiary border border-border px-1.5 py-0.5 text-xs font-semibold text-text-primary">PO</span>
                       Playoff
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="rounded-sm bg-background-secondary border border-border px-1 py-0.2 text-xs font-medium text-text-secondary">RS</span>
+                      <span className="rounded-sm  bg-background-tertiary border border-border px-1.5 py-0.5 text-xs font-semibold text-text-secondary">RS</span>
                       Normal Sezon
                     </span>
                   </div>
@@ -1161,22 +1137,19 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
                       <button
                         type="button"
                         onClick={() => setOpponentSearch("")}
-                        className="h-8 rounded border border-border bg-background-primary px-3 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+                        className="h-8 rounded border border-border bg-background-primary px-3 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
                       >
                         Aramayı Temizle
                       </button>
                     </div>
                   )
                 ) : selectedSeason === "2026-27" ? (
-                  <div className="rounded border border-border bg-background-secondary py-8 px-4 text-center">
-                    <Calendar size={24} className="mx-auto mb-2 text-text-secondary" />
-                    <p className="text-sm font-semibold text-text-primary">2026-27 Sezonu Fikstürü Hazırlandı</p>
-                    <p className="mt-1 text-xs text-text-secondary max-w-md mx-auto">
-                      1,274 maçlık yeni sezon fikstürü sisteme yüklenmiştir. Maçlar oynandıkça maç sonuçları ve detaylı kutu istatistikleri burada listelenecektir.
-                    </p>
+                  <div className="py-8 text-center">
+                    <p className="text-sm font-medium text-text-primary">Henüz maç oynanmadı</p>
+                    <p className="mt-1 text-sm text-text-secondary">Maç kayıtları sezon başladığında burada görünecek.</p>
                   </div>
                 ) : (
-                  <div className="py-8 text-center text-xs text-text-secondary">{selectedSeason} için maç kaydı bulunamadı.</div>
+                  <div className="py-8 text-center text-xs text-text-muted">{selectedSeason} için maç kaydı bulunamadı.</div>
                 )}
               </div>
             </>
@@ -1186,14 +1159,12 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
 
       {/* Discovery grid (shown when no player selected) */}
       {!selectedPlayer && profiles.length > 0 && (
-        <div className="rounded border border-border bg-background-primary p-5 sm:p-6">
-          <DiscoveryGrid
-            profiles={profiles}
-            averagesData={averagesData}
-            onSelect={handleSelectPlayer}
-            seasons={seasonsList}
-          />
-        </div>
+        <DiscoveryGrid
+          profiles={profiles}
+          averagesData={averagesData}
+          onSelect={handleSelectPlayer}
+          seasons={seasonsList}
+        />
       )}
     </div>
   );

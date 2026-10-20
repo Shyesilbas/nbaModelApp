@@ -124,6 +124,13 @@ def export_data(season: str = None, out_dir: str = None):
         hist_df.to_json(os.path.join(hist_dir, "multi_team_players.json"), orient="records", double_precision=4)
         print(f"✅ Exported {hist_season} multi-team players ({hist_df.shape[0]} rows)")
 
+    # Per-season rosters for Team Explorer (all seasons, incl. current)
+    for roster_csv in sorted((ROOT / "data").glob("season=*/analysis/team_rosters.csv")):
+        roster_season = roster_csv.parent.parent.name.split("=", 1)[1]
+        roster_dir = os.path.join(out_dir, "seasons", roster_season)
+        os.makedirs(roster_dir, exist_ok=True)
+        pd.read_csv(roster_csv).to_json(os.path.join(roster_dir, "team_rosters.json"), orient="records", double_precision=4)
+
     # Schedule datasets (exported separately with date serialisation)
     schedule_datasets = {
         "schedule.json": schedule_combined_path,
@@ -377,6 +384,9 @@ def export_data(season: str = None, out_dir: str = None):
     with open(out_v2_summary_path, "w") as f:
         json.dump(v2_summary, f, indent=2)
     print(f"✅ Exported Model V2 summary -> {out_v2_summary_path}")
+
+    from scripts.export_trades import export_trades
+    export_trades(Path(out_dir))
 
     _write_frontend_manifest(out_dir, normalized_s)
 

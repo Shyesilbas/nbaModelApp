@@ -342,21 +342,30 @@ def _build_inference_df(roster_df, is_home: bool, defense_values):
     return roster_df
 
 
-def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, prediction_date: str):
+def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, prediction_date: str, roll_forward: bool = True):
     past_df = df[df["GAME_DATE"] < pred_dt]
     if len(past_df) == 0:
         past_df = df
 
-    try:
-        # Roll each player's form forward to include their latest game, as training rows do.
-        last_games = pregame_player_rows(past_df, "PLAYER_ID", pred_dt)
-    except ValueError as exc:
-        logger.warning("Player form not rolled forward (%s); using each player's last stored row.", exc)
-        last_games = past_df.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
     season = date_to_season(pred_dt)
 
     home_active, home_roster_df = _active_roster_ids(home_team, season)
     away_active, away_roster_df = _active_roster_ids(away_team, season)
+
+    # Form is computed per player, so only the two teams' players (anyone who ever
+    # played for either, plus the listed rosters) need rolling forward, not the league.
+    wanted = set(past_df.loc[past_df["TEAM_ABBREVIATION"].isin([home_team, away_team]), "PLAYER_ID"]) | set(home_active or ()) | set(away_active or ())
+    form_history = past_df[past_df["PLAYER_ID"].isin(wanted)]
+    try:
+        if not roll_forward:
+            # Lineup preview: each player's last stored form row is enough to list and rank a roster.
+            raise ValueError("roll-forward skipped")
+        # Roll each player's form forward to include their latest game, as training rows do.
+        last_games = pregame_player_rows(form_history, "PLAYER_ID", pred_dt)
+    except ValueError as exc:
+        if roll_forward:
+            logger.warning("Player form not rolled forward (%s); using each player's last stored row.", exc)
+        last_games = form_history.sort_values("GAME_DATE").groupby("PLAYER_ID").last().reset_index()
 
     home_candidates = _roster_candidates(last_games, home_team, home_active, home_roster_df)
     away_candidates = _roster_candidates(last_games, away_team, away_active, away_roster_df)
@@ -429,6 +438,34 @@ def _parse_player_overrides(overrides):
     return lookup
 
 
+def _roster_frames(home_team, away_team, prediction_date, is_preseason=None, roll_forward=True):
+    """Home and away roster rows (with form features) for a game, no model involved."""
+    pred_dt = pd.to_datetime(prediction_date)
+    season = date_to_season(pred_dt)
+    if is_preseason is None:
+        is_preseason = is_preseason_match(pred_dt, home_team, away_team, season)
+
+    df = _load_player_dataset(season)
+
+    historical_home = df[(df['TEAM_ABBREVIATION'] == home_team) & (df['GAME_DATE'] == pred_dt)].copy()
+    historical_away = df[(df['TEAM_ABBREVIATION'] == away_team) & (df['GAME_DATE'] == pred_dt)].copy()
+
+    if len(historical_home) > 0 and len(historical_away) > 0:
+        home_X = historical_home
+        away_X = historical_away
+        home_X["IS_HOME"] = 1
+        away_X["IS_HOME"] = 0
+    else:
+        home_X, away_X = _build_future_rosters(df, home_team, away_team, pred_dt, prediction_date, roll_forward)
+    return home_X, away_X, is_preseason
+
+
+def get_roster_preview(home_team, away_team, prediction_date) -> pd.DataFrame:
+    """Rosters only: the lineup screen needs names and form, not player projections."""
+    home_X, away_X, _ = _roster_frames(home_team, away_team, prediction_date, roll_forward=False)
+    return pd.concat([home_X, away_X], ignore_index=True)
+
+
 def get_player_predictions(
     home_team: str,
     away_team: str,
@@ -443,24 +480,8 @@ def get_player_predictions(
     Respects prediction_date to prevent future data leakage and use accurate historical rosters.
     Applies player injury/status overrides and redistributes scoring usage when players are out/restricted.
     """
-    pred_dt = pd.to_datetime(prediction_date)
-    season = date_to_season(pred_dt)
-    if is_preseason is None:
-        is_preseason = is_preseason_match(pred_dt, home_team, away_team, season)
+    home_X, away_X, is_preseason = _roster_frames(home_team, away_team, prediction_date, is_preseason)
 
-    df = _load_player_dataset(season)
-    
-    historical_home = df[(df['TEAM_ABBREVIATION'] == home_team) & (df['GAME_DATE'] == pred_dt)].copy()
-    historical_away = df[(df['TEAM_ABBREVIATION'] == away_team) & (df['GAME_DATE'] == pred_dt)].copy()
-    
-    if len(historical_home) > 0 and len(historical_away) > 0:
-        home_X = historical_home
-        away_X = historical_away
-        home_X["IS_HOME"] = 1
-        away_X["IS_HOME"] = 0
-    else:
-        home_X, away_X = _build_future_rosters(df, home_team, away_team, pred_dt, prediction_date)
-    
     full_X = add_player_matchup_features(pd.concat([home_X, away_X], ignore_index=True))
     full_X["IS_PRESEASON"] = 1 if is_preseason else 0
     features = player_loader.feature_cols

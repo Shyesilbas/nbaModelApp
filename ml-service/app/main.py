@@ -31,6 +31,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Frontend cache warmup failed on startup: %s", e)
 
+    try:
+        # The first lineup request would otherwise spend ~6 s reading the season's player data.
+        from scripts.season_utils import get_default_season
+        from .player_service import _load_player_dataset
+        _load_player_dataset(get_default_season())
+    except Exception as e:
+        logger.warning("Player data warmup failed on startup: %s", e)
+
     yield
 
 

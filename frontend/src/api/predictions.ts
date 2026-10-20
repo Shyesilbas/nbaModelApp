@@ -107,6 +107,8 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
         predicted_pra: p.proj_pra,
         predicted_min: p.proj_min,
         status: p.status || "ACTIVE",
+        assumed_out: Boolean(p.assumed_out),
+        importance: p.importance ?? 0,
       })),
       away_players: (data.away_players || []).map((p: any) => ({
         player_id: p.player_id ?? p.player_name,
@@ -118,6 +120,8 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
         predicted_pra: p.proj_pra,
         predicted_min: p.proj_min,
         status: p.status || "ACTIVE",
+        assumed_out: Boolean(p.assumed_out),
+        importance: p.importance ?? 0,
       })),
     },
     explanation: data.explanation,

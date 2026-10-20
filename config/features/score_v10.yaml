@@ -17,6 +17,10 @@ pace_features:
 base_off_rtg_features:
   - OFF_RTG_LAST_10
   - OPP_DEF_RTG_LAST_10
+  # roster availability of both teams tonight vs form (src/features/roster_absence.py):
+  # own-points MAE 9.466 -> 9.415, better in all 5 walk-forward seasons
+  - ABS_DELTA
+  - OPP_ABS_DELTA
 away_extra_features: []
 # Margin uses its own short list: ELO_DIFF and CLEAN_NET_RTG_DIFF_LAST_10 carry
 # almost all of the signal; a 5-feature Ridge scored 11.86 margin MAE vs 12.27
@@ -32,6 +36,8 @@ margin_features:
   - OPP_DAYS_REST
   - IS_B2B
   - OPP_IS_B2B
+  # roster availability tonight vs form (see win_v10.yaml); -0.13 mean walk-forward margin MAE
+  - ABS_DIFF
 margin_extra_features:
   - DEF_RTG_LAST_5
   - DEF_RTG_LAST_10

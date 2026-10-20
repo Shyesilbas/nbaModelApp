@@ -1,6 +1,6 @@
 {
     "version": "v9_temporal_lgb_candidate",
-    "updated_at": "2026-10-19T22:37:22.842153Z",
+    "updated_at": "2026-10-20T11:43:51.506763Z",
     "training_manifest": {
         "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
         "train_seasons": [
@@ -77,7 +77,7 @@
         }
     },
     "provenance": {
-        "code_revision": "b1eebcdf9d9b29ea4aa1a0bedcce07d2b66b9608",
+        "code_revision": "4226796410fc56882adc114fecdf15e262b1ef0e",
         "python_version": "3.12.4",
         "packages": {
             "numpy": "1.26.4",

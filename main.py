@@ -4,6 +4,7 @@ import pandas as pd
 from src.ingestion.data_loader import load_team_games, load_player_games
 from src.processing.validation import validate_team_games, validate_player_games
 from src.processing.cleaning import clean_dates, sort_team_games, sort_player_games
+from src.features.roster_absence import add_absence_columns
 from src.features import build_team_features, build_player_features, build_opponent_features, validate_opponent_join
 from src.processing.mock_generator import generate_mock_team_games, generate_mock_player_games
 from src.orchestration import PipelineOrchestrator
@@ -674,6 +675,10 @@ def main():
             
             # Build V3 Model-Ready Dataset
             df_team_model_v3, dropped_count_v3 = build_team_model_dataset_v3(df_team_features_with_core)
+            try:
+                df_team_model_v3 = add_absence_columns(df_team_model_v3, df_player_raw)
+            except KeyError as e:  # mock player logs lack box-score columns
+                print(f"Skipping roster absence features: missing column {e}")
             
             model_v3_csv_path = os.path.join(processed_dir, f"team_model_ready_v3_{token}.csv")
             model_v3_parquet_path = os.path.join(processed_dir, f"team_model_ready_v3_{token}.parquet")

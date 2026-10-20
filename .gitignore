@@ -139,3 +139,8 @@ models/experimental/holdout_eval/
 
 # graphify knowledge graph output
 graphify-out/
+
+# Odds API key and licensed odds data
+.env
+data/raw/odds/
+data/odds/
