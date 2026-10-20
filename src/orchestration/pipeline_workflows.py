@@ -6,9 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from src.analysis.roster_analysis import get_core_players, run_roster_analysis
 from src.features import build_opponent_features, build_team_features, validate_opponent_join
-from src.features.core_player_availability_features import build_core_player_availability_features
 from src.ingestion.boxscore_loader import run_boxscore_pipeline
 from src.ingestion.data_loader import load_player_games, load_team_games
 from src.ingestion.update_data_service import UpdateDataService
@@ -22,7 +20,8 @@ from src.processing.model_dataset_builder import (
 )
 from src.validation.data_freshness_service import DataFreshnessService
 from scripts.data_paths import get_data_paths
-from scripts.export_frontend_data import export_data
+from src.frontend_store.builders import build_frontend_store
+from src.frontend_store.store import season_db_path
 from scripts.season_manifest import write_season_manifest
 from scripts.season_utils import get_default_season, normalize_season, season_to_file_token
 from src.processing.player_dataset_builder import build_player_dataset_v4
@@ -34,6 +33,7 @@ from src.training.win_trainer import WinModelTrainer
 def run_schedule_context_pipeline(args: Any = None) -> None:
     season = getattr(args, "season", None) if args else None
     PipelineRunner(season=season).build_schedule_context(save=True)
+    build_frontend_store([season or get_default_season()])
 
 
 def run_boxscore_pipeline_cli(args: Any) -> None:
@@ -116,7 +116,7 @@ def run_pre_model_readiness_pipeline(args: Any) -> None:
     dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
     df_team, df_player, df_schedule = dfs.load_local_datasets()
     dfs.generate_data_freshness_report(df_team, df_player, df_schedule, today=date.today())
-    export_data(season=args.season or get_default_season())
+    build_frontend_store([args.season or get_default_season()])
 
 
 def run_bootstrap_season_pipeline(args: Any) -> None:
@@ -127,10 +127,17 @@ def run_bootstrap_season_pipeline(args: Any) -> None:
     sync_result = run_sync_pipeline(args)
     run_game_results_regeneration()
     run_build_enhanced_v2(args)
+    # Training-ready team dataset for this season (v3 + boxscore enrichment), so a new
+    # season can join the training manifest without a separate rebuild.
+    from scripts.feature_engineering.enrich_v3_boxscore_features import enrich_all_seasons
+    from scripts.rebuild_training_data import rebuild_season
+
+    rebuild_season(season)
+    enrich_all_seasons([season])
     dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
     df_team, df_player, df_schedule = dfs.load_local_datasets()
     dfs.generate_data_freshness_report(df_team, df_player, df_schedule, today=date.today())
-    export_data(season=season)
+    build_frontend_store([season or get_default_season()])
 
     artifacts = {
         "team_features": get_data_paths(season).team_features,
@@ -139,7 +146,8 @@ def run_bootstrap_season_pipeline(args: Any) -> None:
         "schedule_combined": get_data_paths(season).schedule_combined,
         "upcoming_games_context": get_data_paths(season).upcoming_context,
         "team_model_ready_v2": get_data_paths(season).team_model_ready_v2,
-        "frontend_export_dir": "frontend/public/data",
+        "team_model_ready_v3": f"data/processed/team_model_ready_v3_{token}.csv",
+        "frontend_store": str(season_db_path(season)),
         "sync_passed": sync_result,
     }
     manifest_path = write_season_manifest(

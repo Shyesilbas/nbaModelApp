@@ -1,5 +1,4 @@
 import re
-import json
 from pathlib import Path
 import pandas as pd
 
@@ -82,10 +81,6 @@ def enrich_2026_27():
     df_multi = df_multi.sort_values(by=["TRADE_DATE", "IMPORTANCE_SCORE"], ascending=[False, False]).reset_index(drop=True)
     df_multi.to_csv(csv_path, index=False)
     df_multi.to_parquet(ROOT / "data/season=2026-27/analysis/multi_team_players.parquet", index=False)
-    records = df_multi.to_dict(orient="records")
-    for path in (ROOT / "frontend/public/data/multi_team_players.json", ROOT / "data/multi_team_players.json"):
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(records, f, indent=2)
     print(f"  -> Enriched {len(df_multi)} players ({(df_multi.MOVE_TYPE == 'Trade').sum()} trades).")
 
 def enrich_historical_season(season: str):

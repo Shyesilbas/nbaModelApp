@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRightLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
-import { loadJson } from "../lib/dataCache";
+import { loadPrivateApi } from "../lib/dataCache";
 import { TEAM_NAME_BY_ABBR, type NbaTeamAbbr } from "../lib/nbaTeams";
 
 interface TradeSide {
@@ -169,7 +169,7 @@ export default function TradeBoard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadJson<Event[]>("/data/trades.json")
+    loadPrivateApi<Event[]>("/frontend-data-api/trades")
       .then((data) => {
         setEvents(data);
         setDate(data[0]?.date ?? "");

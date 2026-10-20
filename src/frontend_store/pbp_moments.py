@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-"""Export condensed play-by-play moments for archive browsing.
+"""Condensed play-by-play "moments" for the game detail view.
 
-This keeps the quarter scores and only the moments that matter for a human scan:
+Keeps the quarter scores and only the moments that matter for a human scan:
 - scoring plays
 - highlight/badge plays
 - clutch plays late in Q4/OT
@@ -10,23 +9,8 @@ This keeps the quarter scores and only the moments that matter for a human scan:
 
 from __future__ import annotations
 
-import argparse
-import hashlib
-import json
 import re
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-from scripts.season_utils import discover_seasons, normalize_season
-
-DEFAULT_SOURCE_ROOT = REPO_ROOT / "data"
-DEFAULT_OUT_DIR = REPO_ROOT / "data" / "frontend" / "play_by_play_moments"
 
 
 def norm_game_id(value: Any) -> str:
@@ -222,46 +206,3 @@ def condense_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "scoring_event_count": scoring_events,
         "highlight_event_count": highlight_events,
     }
-
-
-def build_moments_pack(source_root: Path, out_dir: Path) -> None:
-    seasons = discover_seasons()
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    for season, season_path in seasons.items():
-        src_dir = Path(season_path) / "raw" / "play_by_play"
-        if not src_dir.exists():
-            continue
-
-        season_out = out_dir / season
-        season_out.mkdir(parents=True, exist_ok=True)
-
-        for src_file in sorted(src_dir.glob("*.json")):
-            payload = json.loads(src_file.read_text(encoding="utf-8"))
-            condensed = condense_payload(payload)
-            (season_out / src_file.name).write_text(json.dumps(condensed, indent=2), encoding="utf-8")
-
-    manifest = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "version": hashlib.sha256(
-            json.dumps(sorted(str(p) for p in out_dir.rglob("*.json")), separators=(",", ":")).encode("utf-8")
-        ).hexdigest()[:16],
-    }
-    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Export condensed play-by-play moments.")
-    parser.add_argument(
-        "--out-dir",
-        default=str(DEFAULT_OUT_DIR),
-        help="Output directory for the condensed moment pack.",
-    )
-    args = parser.parse_args()
-
-    build_moments_pack(DEFAULT_SOURCE_ROOT, Path(args.out_dir).resolve())
-    print(f"Play-by-play moments written to {Path(args.out_dir).resolve()}")
-
-
-if __name__ == "__main__":
-    main()

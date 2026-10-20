@@ -19,9 +19,6 @@ if str(ROOT) not in sys.path:
 from src.ingestion.nba_api_client import call_nba_api
 
 STAT_KEYS = ("pts", "fgm", "fga", "fg3m", "fg3a", "ftm", "fta", "reb", "ast", "stl", "blk", "pf", "tov")
-DEFAULT_SOURCE = ROOT / "frontend" / "public" / "data" / "all_seasons_games.json"
-DEFAULT_FRONTEND_PBP_DIR = ROOT / "frontend" / "public" / "data" / "play_by_play"
-DEFAULT_SUMMARY_DIR = ROOT / "frontend" / "public" / "data"
 
 
 def clean_clock(clock_str: Any) -> str:
@@ -338,18 +335,21 @@ def build_play_by_play_payload(
     }
 
 
-def load_game_index(source: Path) -> list[dict[str, Any]]:
-    if not source.exists():
-        return []
-    with source.open("r", encoding="utf-8") as f:
-        data = json.load(f)
-    if not isinstance(data, list):
-        raise ValueError(f"Expected a JSON list in {source}")
-    return data
+def load_game_index(season: str | None = None) -> list[dict[str, Any]]:
+    """Schedule + results rows from the pipeline data (one season, or every season)."""
+    from scripts.season_utils import discover_seasons
+    from src.frontend_store.builders import build_games_feed
+
+    seasons = [season] if season else list(discover_seasons())
+    rows: list[dict[str, Any]] = []
+    for s in seasons:
+        feed = build_games_feed(s)
+        rows.extend(feed.astype(object).where(feed.notna(), None).to_dict(orient="records"))
+    return rows
 
 
 def select_games(args: argparse.Namespace) -> list[dict[str, Any]]:
-    index = load_game_index(Path(args.source))
+    index = load_game_index(args.season)
     rows_by_gid = {norm_game_id(row.get("GAME_ID")): row for row in index if row.get("GAME_ID")}
     selected: list[dict[str, Any]] = []
 
@@ -401,103 +401,6 @@ def write_payload(payload: dict[str, Any], out_dir: Path) -> Path:
     return out_path
 
 
-def sync_payload_to_frontend(payload: dict[str, Any], frontend_dir: Path) -> Path:
-    return write_payload(payload, frontend_dir)
-
-
-def summarize_payload(payload: dict[str, Any], row: dict[str, Any] | None = None) -> dict[str, Any]:
-    row = row or {}
-    player_totals: dict[tuple[str | None, str | None], dict[str, Any]] = {}
-    scoring_events = 0
-    highlight_events = 0
-
-    for event in payload.get("events", []):
-        if event.get("points_scored", 0) > 0:
-            scoring_events += 1
-        if event.get("badges"):
-            highlight_events += 1
-
-        stats = event.get("player_stats_after")
-        player_name = event.get("player_name")
-        team = event.get("team")
-        if not stats or not player_name:
-            continue
-        key = (team, player_name)
-        current = player_totals.get(key)
-        if current is None or stats.get("pts", 0) >= current.get("pts", 0):
-            player_totals[key] = {
-                "player_id": event.get("player_id"),
-                "player_name": player_name,
-                "team": team,
-                "pts": stats.get("pts", 0),
-                "reb": stats.get("reb", 0),
-                "ast": stats.get("ast", 0),
-            }
-
-    top_scorers = sorted(
-        player_totals.values(),
-        key=lambda player: (player.get("pts", 0), player.get("ast", 0), player.get("reb", 0)),
-        reverse=True,
-    )[:3]
-
-    return {
-        "game_id": payload.get("game_id"),
-        "game_date": row.get("GAME_DATE"),
-        "season": row.get("SEASON"),
-        "season_type": row.get("SEASON_TYPE"),
-        "home_team": payload.get("home_team") or row.get("HOME_TEAM_ABBREVIATION"),
-        "away_team": payload.get("away_team") or row.get("AWAY_TEAM_ABBREVIATION"),
-        "home_score": row.get("HOME_SCORE"),
-        "away_score": row.get("AWAY_SCORE"),
-        "quarter_scores": payload.get("quarter_scores", []),
-        "top_scorers": top_scorers,
-        "event_count": len(payload.get("events", [])),
-        "scoring_event_count": scoring_events,
-        "highlight_event_count": highlight_events,
-        "has_play_by_play": True,
-    }
-
-
-def load_payload(path: Path) -> dict[str, Any] | None:
-    if not path.exists():
-        return None
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def write_schedule_summary(
-    games: list[dict[str, Any]],
-    out_dir: Path | None,
-    summary_dir: Path,
-    explicit_season: str | None = None,
-) -> list[Path]:
-    rows_by_season: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
-    for row in games:
-        season = explicit_season or row.get("SEASON")
-        if season:
-            rows_by_season[str(season)].append(row)
-
-    written_paths: list[Path] = []
-    for season, rows in rows_by_season.items():
-        summary: dict[str, Any] = {}
-        for row in rows:
-            gid = norm_game_id(row.get("GAME_ID"))
-            payload_dir = out_dir or raw_pbp_dir_for_season(season)
-            payload = load_payload(payload_dir / f"{gid}.json")
-            if not payload:
-                continue
-            summary[gid] = summarize_payload(payload, row)
-
-        summary_dir.mkdir(parents=True, exist_ok=True)
-        out_path = summary_dir / f"schedule_details_{season_token(season)}.json"
-        with out_path.open("w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2)
-        written_paths.append(out_path)
-        print(f"  wrote summary {out_path} ({len(summary)} games)")
-
-    return written_paths
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Fetch NBA play-by-play data and cache structured JSON under data/season=*/raw/play_by_play.",
@@ -505,23 +408,17 @@ def parse_args() -> argparse.Namespace:
     )
     target = parser.add_mutually_exclusive_group(required=True)
     target.add_argument("--game-id", nargs="+", help="One or more NBA game IDs.")
-    target.add_argument("--season", help="Season label from all_seasons_games.json, e.g. 2025-26.")
+    target.add_argument("--season", help="Season label, e.g. 2025-26.")
     parser.add_argument("--season-type", action="append", help="Filter season mode by SEASON_TYPE. Repeatable.")
     parser.add_argument("--home-team", help="Fallback home abbreviation for --game-id not found in source.")
     parser.add_argument("--away-team", help="Fallback away abbreviation for --game-id not found in source.")
-    parser.add_argument("--source", default=str(DEFAULT_SOURCE), help="Game index JSON used for season metadata.")
     parser.add_argument("--out-dir", help="Override output directory for PBP JSON cache. Defaults to data/season=<season>/raw/play_by_play.")
-    parser.add_argument("--summary-dir", default=str(DEFAULT_SUMMARY_DIR), help="Output directory for schedule_details_{season}.json.")
-    parser.add_argument("--frontend-pbp-dir", default=str(DEFAULT_FRONTEND_PBP_DIR), help="Frontend export directory for PBP JSON cache.")
-    parser.add_argument("--frontend-sync", action=argparse.BooleanOptionalAction, default=True, help="Also copy PBP JSON files to the frontend public data cache.")
     parser.add_argument("--start-period", type=int, default=1)
     parser.add_argument("--end-period", type=int, default=4)
     parser.add_argument("--limit", type=int, help="Limit number of selected games, useful for smoke tests.")
     parser.add_argument("--sleep", type=float, default=0.6, help="Delay between API calls in seconds.")
     parser.add_argument("--force", action="store_true", help="Overwrite existing cached JSON files.")
     parser.add_argument("--dry-run", action="store_true", help="Print selected games without calling the NBA API.")
-    parser.add_argument("--summary-only", action="store_true", help="Rebuild schedule summary files from existing PBP JSON cache without NBA API calls.")
-    parser.add_argument("--no-summary", action="store_true", help="Do not write schedule_details summary files after fetching.")
     parser.add_argument("--final-only", action=argparse.BooleanOptionalAction, default=True)
     return parser.parse_args()
 
@@ -530,8 +427,6 @@ def main() -> int:
     args = parse_args()
     games = select_games(args)
     out_dir = Path(args.out_dir) if args.out_dir else None
-    summary_dir = Path(args.summary_dir)
-    frontend_pbp_dir = Path(args.frontend_pbp_dir)
 
     if not games:
         print("No games selected.")
@@ -553,10 +448,6 @@ def main() -> int:
             )
         return 0
 
-    if args.summary_only:
-        write_schedule_summary(games, out_dir, summary_dir, explicit_season=args.season)
-        return 0
-
     written = 0
     skipped = 0
     failed = 0
@@ -572,11 +463,6 @@ def main() -> int:
         out_path = target_dir / f"{gid}.json"
         if out_path.exists() and not args.force:
             print(f"[{idx}/{len(games)}] skip existing {gid}")
-            if args.frontend_sync:
-                existing_payload = load_payload(out_path)
-                if existing_payload:
-                    sync_path = sync_payload_to_frontend(existing_payload, frontend_pbp_dir)
-                    print(f"  synced frontend cache {sync_path}")
             skipped += 1
             continue
 
@@ -593,9 +479,6 @@ def main() -> int:
             )
             path = write_payload(payload, target_dir)
             print(f"  wrote {path} ({len(payload['events'])} events)")
-            if args.frontend_sync:
-                sync_path = sync_payload_to_frontend(payload, frontend_pbp_dir)
-                print(f"  synced frontend cache {sync_path}")
             written += 1
         except Exception as exc:
             print(f"  failed {gid}: {exc}", file=sys.stderr)
@@ -603,9 +486,6 @@ def main() -> int:
 
         if args.sleep > 0 and idx < len(games):
             time.sleep(args.sleep)
-
-    if not args.no_summary:
-        write_schedule_summary(games, out_dir, summary_dir, explicit_season=args.season)
 
     print(f"Done. written={written} skipped={skipped} failed={failed}")
     return 1 if failed else 0

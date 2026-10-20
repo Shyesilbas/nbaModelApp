@@ -1,5 +1,4 @@
 import os
-import json
 import pandas as pd
 from pathlib import Path
 from nba_api.stats.endpoints import scheduleleaguev2, commonallplayers
@@ -224,7 +223,7 @@ else:
             pass
 
 # 4. Save Core Data and JSONs
-print("\n[4/5] Saving Canonical Datasets and Frontend Public Cache...")
+print("\n[4/5] Saving Canonical Datasets...")
 
 # Save Canonical Data files
 analysis_dir = SEASON_DIR / "analysis"
@@ -311,83 +310,10 @@ if feat_path_parquet.exists():
         df_combined_feat.to_csv(feat_path_csv, index=False)
         print("  -> Updated 2026-27 player_features with all current active roster members.")
 
-# Frontend Public JSONs
-public_data = ROOT / "frontend" / "public" / "data"
-public_data.mkdir(parents=True, exist_ok=True)
-
-with open(public_data / "team_rosters.json", "w", encoding="utf-8") as f:
-    json.dump(roster_df.to_dict(orient="records"), f, indent=2)
-
-with open(public_data / "core_players.json", "w", encoding="utf-8") as f:
-    json.dump(core_df.to_dict(orient="records"), f, indent=2)
-
-with open(public_data / "star_candidates.json", "w", encoding="utf-8") as f:
-    json.dump(star_df.to_dict(orient="records"), f, indent=2)
-
-with open(public_data / "multi_team_players.json", "w", encoding="utf-8") as f:
-    json.dump(multi_team_df.to_dict(orient="records"), f, indent=2)
-
-with open(public_data / "player_name_lookup.json", "w", encoding="utf-8") as f:
-    json.dump(lookup_df.to_dict(orient="records"), f, indent=2)
-
-# Copy to root data/ also for fallback
-with open(ROOT / "data" / "team_rosters.json", "w", encoding="utf-8") as f:
-    json.dump(roster_df.to_dict(orient="records"), f, indent=2)
-with open(ROOT / "data" / "core_players.json", "w", encoding="utf-8") as f:
-    json.dump(core_df.to_dict(orient="records"), f, indent=2)
-with open(ROOT / "data" / "star_candidates.json", "w", encoding="utf-8") as f:
-    json.dump(star_df.to_dict(orient="records"), f, indent=2)
-with open(ROOT / "data" / "multi_team_players.json", "w", encoding="utf-8") as f:
-    json.dump(multi_team_df.to_dict(orient="records"), f, indent=2)
-with open(ROOT / "data" / "player_name_lookup.json", "w", encoding="utf-8") as f:
-    json.dump(lookup_df.to_dict(orient="records"), f, indent=2)
-
-# 5. Update Seasons list and all_seasons_games.json
-print("\n[5/5] Updating all_seasons_games and seasons.json...")
-
-seasons_list = [
-    "2026-27",
-    "2025-26",
-    "2024-25",
-    "2023-24",
-    "2022-23",
-    "2021-22",
-    "2020-21",
-    "2019-20",
-    "2018-19"
-]
-
-with open(public_data / "seasons.json", "w", encoding="utf-8") as f:
-    json.dump(seasons_list, f, indent=2)
-with open(ROOT / "data" / "seasons.json", "w", encoding="utf-8") as f:
-    json.dump(seasons_list, f, indent=2)
-
-# Update all_seasons_games.json with 2026-27 schedule rows
-all_seasons_games_path = public_data / "all_seasons_games.json"
-existing_games = []
-if all_seasons_games_path.exists():
-    try:
-        with open(all_seasons_games_path, "r", encoding="utf-8") as f:
-            existing_games = json.load(f)
-    except Exception:
-        existing_games = []
-
-# Filter out any old 2026-27 if any, and prepend new 2026-27 games
-new_sched_records = sched.to_dict(orient="records")
-filtered_existing = [g for g in existing_games if g.get("SEASON") != "2026-27"]
-combined_all_games = new_sched_records + filtered_existing
-
-with open(all_seasons_games_path, "w", encoding="utf-8") as f:
-    json.dump(combined_all_games, f, indent=2)
-
-with open(public_data / "game_results.json", "w", encoding="utf-8") as f:
-    json.dump(new_sched_records, f, indent=2)
-
-# Generate archive index for 2026-27
-archive_dir = public_data / "archive"
-archive_dir.mkdir(parents=True, exist_ok=True)
-with open(archive_dir / "games_index_2026_27.json", "w", encoding="utf-8") as f:
-    json.dump(new_sched_records, f, indent=2)
+# 5. Frontend store for the new season (and the global seasons list / profiles)
+print("\n[5/5] Building the 2026-27 frontend store...")
+from src.frontend_store.builders import build_frontend_store
+build_frontend_store(["2026-27"])
 
 print("\nSuccessfully onboarded season 2026-27!")
 print(f"Total 2026-27 Games: {len(sched)}")

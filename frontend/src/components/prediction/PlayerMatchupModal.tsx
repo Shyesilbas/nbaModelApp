@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { X, TrendingUp, TrendingDown, Minus, Shield, Trophy, Users, Clock, Flame, BarChart2, Info } from "lucide-react";
 import PlayerPhoto from "../PlayerPhoto";
-import { loadJson, loadPrivateApi } from "../../lib/dataCache";
+import { loadPrivateApi } from "../../lib/dataCache";
 import type { TeamInfo } from "./types";
 
 export interface PlayerMatchupData {
@@ -88,51 +88,26 @@ export function PlayerMatchupModal({
 
     const fetchPlayerData = async () => {
       try {
-        // 1. Try private API first
-        try {
-          const payload = await loadPrivateApi<{
-            player_id: string;
-            games: Record<string, GameRow[]>;
-            averages: Record<string, SeasonAverages>;
-          }>(`/frontend-data-api/players/${encodeURIComponent(playerId)}`);
-
-          if (!isMounted) return;
-
-          const gamesBySeason = payload.games || {};
-          const availableSeasons = Object.keys(gamesBySeason).sort();
-          const latestSeason = availableSeasons.length > 0 ? availableSeasons[availableSeasons.length - 1] : "";
-          const targetSeason = gamesBySeason[season]?.length ? season : latestSeason;
-
-          const allPlayedGames = Object.values(gamesBySeason).flat().filter((g) => !g.DID_NOT_PLAY);
-          allPlayedGames.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
-
-          const seasonAvg = payload.averages?.[targetSeason] || payload.averages?.[latestSeason] || null;
-
-          setGames(allPlayedGames);
-          setSeasonAverages(seasonAvg);
-          setLoading(false);
-          return;
-        } catch {
-          // Fallback to static JSON
-        }
-
-        // 2. Fallback to static bundle
-        const staticBundle = await loadJson<{
-          players: Record<string, { games?: GameRow[]; averages?: SeasonAverages }>;
-        }>(`/data/static_bundles/players_preview_${season}.json`);
+        const payload = await loadPrivateApi<{
+          player_id: string;
+          games: Record<string, GameRow[]>;
+          averages: Record<string, SeasonAverages>;
+        }>(`/frontend-data-api/players/${encodeURIComponent(playerId)}`);
 
         if (!isMounted) return;
 
-        const playerEntry = staticBundle?.players?.[playerId];
-        if (playerEntry) {
-          const played = (playerEntry.games || []).filter((g) => !g.DID_NOT_PLAY);
-          played.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
-          setGames(played);
-          setSeasonAverages(playerEntry.averages || null);
-        } else {
-          setGames([]);
-          setSeasonAverages(null);
-        }
+        const gamesBySeason = payload.games || {};
+        const availableSeasons = Object.keys(gamesBySeason).sort();
+        const latestSeason = availableSeasons.length > 0 ? availableSeasons[availableSeasons.length - 1] : "";
+        const targetSeason = gamesBySeason[season]?.length ? season : latestSeason;
+
+        const allPlayedGames = Object.values(gamesBySeason).flat().filter((g) => !g.DID_NOT_PLAY);
+        allPlayedGames.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
+
+        const seasonAvg = payload.averages?.[targetSeason] || payload.averages?.[latestSeason] || null;
+
+        setGames(allPlayedGames);
+        setSeasonAverages(seasonAvg);
         setLoading(false);
       } catch (err: any) {
         if (!isMounted) return;

@@ -20,7 +20,6 @@ from src.processing.model_dataset_builder import (
     build_team_model_dataset_v3,
 )
 from src.processing.upcoming_context_service import UpcomingContextService
-from scripts.export_frontend_data import export_data
 
 
 @dataclass
@@ -108,28 +107,22 @@ class PipelineRunner:
         return build_team_model_dataset_v2(df_team_features_with_opp)
 
     def build_model_ready_v3(self, df_player_features: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
-        from src.analysis.roster_analysis import get_core_players
         from src.features.core_player_availability_features import build_core_player_availability_features
 
         df_team_raw = load_team_games(self.raw_team_dir, season=self.season)
         df_team_clean = sort_team_games(clean_dates(df_team_raw, "GAME_DATE"))
         df_team_features = build_team_features(df_team_clean, season_dir=self.paths.season_dir)
         df_team_features_with_opp = build_opponent_features(df_team_features)
-        core_players_df = get_core_players(df_player_features)
         df_team_features_with_core = build_core_player_availability_features(
             df_team_features_with_opp,
             df_player_features,
-            core_players_df,
         )
         return build_team_model_dataset_v3(df_team_features_with_core)
 
     def build_schedule_context(self, save: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame]:
         df_combined = load_combined_schedule(season=self.season, save=save)
         ctx_service = UpcomingContextService(season=self.season, save=save)
-        df_upcoming = ctx_service.build_context(save=save)
-        if save:
-            export_data(season=self.season)
-        return df_combined, df_upcoming
+        return df_combined, ctx_service.build_context(save=save)
 
     def rebuild_game_results(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         return run_boxscore_pipeline()

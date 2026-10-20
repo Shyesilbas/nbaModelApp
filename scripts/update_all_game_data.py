@@ -58,16 +58,15 @@ def main() -> int:
     run_step("3/3 Fetch play-by-play", pbp_command)
 
     run_step(
-        "4/4 Update situational dataset & moments",
+        "4/4 Update situational dataset & frontend store",
         [
             sys.executable,
             "-c",
             "from src.features.pbp_situational import build_situational_dataset; "
             "df = build_situational_dataset('data'); "
             "df.to_parquet('data/processed/pbp_situational_features.parquet', index=False); "
-            "from scripts.export_play_by_play_moments import build_moments_pack; "
-            "from pathlib import Path; "
-            "build_moments_pack(Path('data'), Path('frontend/public/data/play_by_play_moments'))",
+            "from src.frontend_store.builders import build_frontend_store; "
+            "build_frontend_store()",
         ],
     )
     print("\nAll game data steps completed.")

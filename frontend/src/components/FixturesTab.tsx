@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isGameEligibleForRefresh } from "./game-results/utils";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -12,7 +13,7 @@ import {
   Trophy,
 } from "lucide-react";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
-import { loadJson, loadPrivateApiFresh, postPrivateApi } from "../lib/dataCache";
+import { loadPrivateApi, loadPrivateApiFresh, postPrivateApi } from "../lib/dataCache";
 import {
   loadArchivedGameBoxscores,
   loadArchivedGameIndex,
@@ -136,7 +137,7 @@ export default function FixturesTab({
 
   // Load available seasons
   useEffect(() => {
-    loadJson<string[]>("/data/seasons.json", [])
+    loadPrivateApi<string[]>("/frontend-data-api/seasons")
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setSeasonsList(data);
@@ -405,7 +406,7 @@ export default function FixturesTab({
 
   // Candidates: the day has come; the backend says which have no box scores yet. One worker runs them in order.
   const dueGames = useMemo(
-    () => (selectedDate && selectedDate <= todayStr ? sortedResults.filter((g) => g.GAME_DATE === selectedDate) : []),
+    () => (selectedDate && selectedDate <= todayStr ? sortedResults.filter((g) => g.GAME_DATE === selectedDate && isGameEligibleForRefresh(g)) : []),
     [sortedResults, selectedDate, todayStr]
   );
   const [missingIds, setMissingIds] = useState<string[]>([]);

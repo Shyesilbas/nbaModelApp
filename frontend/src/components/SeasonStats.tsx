@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, CalendarDays, ShieldCheck, Swords } from "lucide-react";
-import { loadJson } from "../lib/dataCache";
+import { loadPrivateApi } from "../lib/dataCache";
 
 interface GameResult {
   GAME_ID: string;
@@ -28,7 +28,7 @@ export default function SeasonStats() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadJson<GameResult[]>("/data/game_results.json")
+    loadPrivateApi<GameResult[]>("/frontend-data-api/game-results")
       .then((data) => {
         setResults(data);
         setLoading(false);

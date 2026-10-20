@@ -1,141 +1,124 @@
+"""Frontend data endpoints, served from the SQLite store in data/frontend_store/.
+
+One database per season plus global.db (see src/frontend_store/). The store is the only
+source: nothing here reads the pipeline CSVs or exported JSON files.
+"""
 import json
 import logging
 import os
+import sqlite3
+from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
 from fastapi import HTTPException, Request
 
 from scripts.season_utils import get_default_season
+from src.frontend_store.store import connect_ro, global_db_path, season_db_path, stored_seasons
 
 logger = logging.getLogger(__name__)
 
 try:
     DEFAULT_SEASON = get_default_season()
 except Exception:
-    DEFAULT_SEASON = "2025-26"
-
-
-import sqlite3
+    DEFAULT_SEASON = "2026-27"
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-DATA_DIR = Path(os.environ.get("FRONTEND_DATA_DIR", REPO_ROOT / "data" / "frontend")).resolve()
-DB_PATH = DATA_DIR / "nba_frontend.db"
 DATA_TOKEN = os.environ.get("NBA_DATA_API_TOKEN")
-
-
-def _get_db_conn():
-    if not DB_PATH.exists():
-        return None
-    try:
-        return sqlite3.connect(f"file:{DB_PATH.resolve()}?mode=ro", uri=True)
-    except Exception:
-        return None
-GENERIC_ALLOWED_FILES = {
-    "core_players.json",
-    "dataset_summary.json",
-    "game_results.json",
-    "highlights.json",
-    "manifest.json",
-    "model_ready_v2_summary.json",
-    "multi_team_players.json",
-    "player_name_lookup.json",
-    "player_profiles.json",
-    "player_season_averages.json",
-    "schedule.json",
-    "seasons.json",
-    "star_candidates.json",
-    "team_rosters.json",
-    "upcoming_games_context.json",
-}
 
 
 def _check_token(request: Request) -> None:
     if not DATA_TOKEN:
         return
-    supplied = request.headers.get("x-data-token")
-    if supplied != DATA_TOKEN:
+    if request.headers.get("x-data-token") != DATA_TOKEN:
         raise HTTPException(status_code=401, detail="Unauthorized data access")
 
 
-def _resolve_json_path(filename: str) -> Path:
-    if filename.startswith("/data/"):
-        filename = filename.removeprefix("/data/")
-    if "/" in filename or "\\" in filename or not filename.endswith(".json"):
-        raise HTTPException(status_code=400, detail="Invalid data file")
-
-    path = (DATA_DIR / filename).resolve()
-    if DATA_DIR not in path.parents:
-        raise HTTPException(status_code=400, detail="Invalid data file")
-    if not path.exists():
-        raise HTTPException(status_code=404, detail=f"{filename} not found")
-    return path
-
-
-@lru_cache(maxsize=64)
-def _read_json_file(path_str: str, mtime_ns: int) -> Any:
-    del mtime_ns
-    with open(path_str, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def get_manifest(request: Request) -> Any:
-    _check_token(request)
-    path = _resolve_json_path("manifest.json")
-    manifest = dict(_read_json_file(str(path), path.stat().st_mtime_ns))
-    files = manifest.get("files", {})
-    manifest["files"] = {name: meta for name, meta in files.items() if name in GENERIC_ALLOWED_FILES}
-    return manifest
-
-
-def get_frontend_json(filename: str, request: Request) -> Any:
-    _check_token(request)
-    if filename not in GENERIC_ALLOWED_FILES:
-        raise HTTPException(status_code=404, detail=f"{filename} is not available as a bulk file")
-    path = _resolve_json_path(filename)
-    return _read_json_file(str(path), path.stat().st_mtime_ns)
-
-
 def _norm_game_id(value: Any) -> str:
-    text = str(value or "").strip()
-    if "." in text:
-        text = text.split(".", 1)[0]
-    digits = "".join(ch for ch in text if ch.isdigit())
-    return digits.zfill(10)
+    text = str(value or "").strip().split(".", 1)[0]
+    return "".join(ch for ch in text if ch.isdigit()).zfill(10)
 
 
 def _season_from_game_id(game_id: str) -> str:
     gid = _norm_game_id(game_id)
-    if len(gid) < 5 or not gid.startswith("00"):
+    if not gid.startswith("00") or not gid[3:5].isdigit():
         raise HTTPException(status_code=400, detail=f"Cannot infer season from GAME_ID={game_id}")
-    try:
-        start_year = 2000 + int(gid[3:5])
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=f"Cannot infer season from GAME_ID={game_id}") from exc
+    start_year = 2000 + int(gid[3:5])
     return f"{start_year}-{str(start_year + 1)[-2:]}"
 
 
-def _load_json(filename: str) -> Any:
-    path = _resolve_json_path(filename)
-    return _read_json_file(str(path), path.stat().st_mtime_ns)
+def _mtime(path: Path) -> int:
+    return path.stat().st_mtime_ns if path.exists() else 0
 
 
-def _season_suffix(season: str | None) -> str:
-    return "" if not season or season == DEFAULT_SEASON else f"_{season}"
+def _season_conn(season: str) -> sqlite3.Connection:
+    conn = connect_ro(season_db_path(season))
+    if conn is None:
+        raise HTTPException(status_code=404, detail=f"No frontend data for season {season}")
+    return conn
 
 
-def _strip_embedded_detail(game: dict[str, Any]) -> dict[str, Any]:
-    return {k: v for k, v in game.items() if k != "game_detail"}
-
-
-def _row_season(game: dict[str, Any]) -> str | None:
+@lru_cache(maxsize=64)
+def _doc(db_path: str, name: str, mtime_ns: int) -> Any:
+    del mtime_ns  # part of the cache key: a rebuilt store invalidates the entry
+    conn = connect_ro(Path(db_path))
+    if conn is None:
+        return None
     try:
-        return _season_from_game_id(game.get("GAME_ID") or game.get("game_id"))
-    except HTTPException:
-        season = game.get("SEASON")
-        return season if isinstance(season, str) and len(season) == 7 and season[4] == "-" else None
+        row = conn.execute("SELECT data_json FROM docs WHERE name = ?", (name,)).fetchone()
+        return json.loads(row[0]) if row else None
+    finally:
+        conn.close()
+
+
+def _season_doc(season: str, name: str) -> Any:
+    path = season_db_path(season)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"No frontend data for season {season}")
+    return _doc(str(path), name, _mtime(path))
+
+
+def _global_doc(name: str) -> Any:
+    path = global_db_path()
+    if not path.exists():
+        raise HTTPException(status_code=503, detail="Frontend store not built; run scripts/build_frontend_store.py")
+    return _doc(str(path), name, _mtime(path))
+
+
+def get_seasons(request: Request) -> list[str]:
+    _check_token(request)
+    return _global_doc("seasons") or stored_seasons()
+
+
+def get_player_profiles(request: Request) -> Any:
+    _check_token(request)
+    return _global_doc("player_profiles") or []
+
+
+def get_player_season_averages(request: Request) -> Any:
+    _check_token(request)
+    return _global_doc("player_season_averages") or {}
+
+
+def get_trades(request: Request) -> Any:
+    _check_token(request)
+    return _global_doc("trades") or []
+
+
+def get_team_rosters(request: Request, season: str | None = None) -> Any:
+    _check_token(request)
+    return _season_doc(season or DEFAULT_SEASON, "team_rosters") or []
+
+
+def get_multi_team_players(request: Request, season: str | None = None) -> Any:
+    _check_token(request)
+    return _season_doc(season or DEFAULT_SEASON, "multi_team_players") or []
+
+
+def get_game_results(request: Request, season: str | None = None) -> Any:
+    _check_token(request)
+    return _season_doc(season or DEFAULT_SEASON, "game_results") or []
 
 
 def get_game_index(
@@ -145,204 +128,68 @@ def get_game_index(
     end_date: str | None = None,
 ) -> Any:
     _check_token(request)
-    season_key = season or DEFAULT_SEASON
-
-    # SQLite is a fast index, but it can lag behind the canonical JSON exports
-    # and contain only a partial season. Merge all available sources by GAME_ID
-    # so one stale database row cannot hide the rest of the schedule.
-    games_by_id: dict[str, dict[str, Any]] = {}
-    conn = _get_db_conn()
-    if conn is not None:
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT data_json FROM games_index WHERE season = ?", (season_key,))
-            rows = cursor.fetchall()
-            for row in rows:
-                game = json.loads(row[0])
-                gid = _norm_game_id(game.get("GAME_ID") or game.get("game_id"))
-                if gid.strip("0"):
-                    games_by_id[gid] = game
-        except Exception as e:
-            logger.warning("SQLite games_index query failed, falling back to JSON: %s", e)
-        finally:
-            conn.close()
-
-    for filename in ("all_seasons_games.json", "games.json"):
-        try:
-            source_rows = _load_json(filename)
-        except HTTPException:
-            continue
-        if not isinstance(source_rows, list):
-            continue
-        for game in source_rows:
-            if _row_season(game) != season_key:
-                continue
-            gid = _norm_game_id(game.get("GAME_ID") or game.get("game_id"))
-            if gid.strip("0"):
-                existing = games_by_id.get(gid, {})
-                is_existing_completed = (
-                    existing.get("GAME_STATUS") in ("Final", "FINAL")
-                    or (existing.get("HOME_SCORE") is not None and existing.get("AWAY_SCORE") is not None)
-                )
-                is_new_completed = (
-                    game.get("GAME_STATUS") in ("Final", "FINAL")
-                    or (game.get("HOME_SCORE") is not None and game.get("AWAY_SCORE") is not None)
-                )
-                if is_existing_completed and not is_new_completed:
-                    games_by_id[gid] = {**game, **existing}
-                else:
-                    games_by_id[gid] = {**existing, **game}
-
-    raw_games = list(games_by_id.values())
-
-    if start_date or end_date:
-        filtered = []
-        for g in raw_games:
-            d = g.get("GAME_DATE")
-            if not d:
-                continue
-            if start_date and d < start_date:
-                continue
-            if end_date and d > end_date:
-                continue
-            filtered.append(g)
-        raw_games = filtered
-
-    return [_strip_embedded_detail(g) for g in raw_games]
+    conn = _season_conn(season or DEFAULT_SEASON)
+    try:
+        sql, params = "SELECT data_json FROM games WHERE 1=1", []
+        if start_date:
+            sql, params = sql + " AND game_date >= ?", params + [start_date]
+        if end_date:
+            sql, params = sql + " AND game_date <= ?", params + [end_date]
+        rows = conn.execute(sql + " ORDER BY game_date, game_id", params).fetchall()
+    finally:
+        conn.close()
+    return [json.loads(r[0]) for r in rows]
 
 
 def get_season_weeks(request: Request, season: str | None = None) -> list[dict[str, Any]]:
     _check_token(request)
-    games = get_game_index(request, season=season)
+    conn = _season_conn(season or DEFAULT_SEASON)
+    try:
+        dates = [r[0] for r in conn.execute("SELECT game_date FROM games WHERE game_date IS NOT NULL")]
+    finally:
+        conn.close()
 
-    from datetime import datetime, timedelta
-    week_map: dict[tuple[str, str], int] = {}
-    for g in games:
-        d_str = g.get("GAME_DATE")
-        if not d_str:
-            continue
+    week_counts: dict[str, int] = {}
+    for d in dates:
         try:
-            dt = datetime.strptime(d_str, "%Y-%m-%d").date()
-            mon = dt - timedelta(days=dt.weekday())
-            sun = mon + timedelta(days=6)
-            key = (mon.isoformat(), sun.isoformat())
-            week_map[key] = week_map.get(key, 0) + 1
-        except Exception:
+            day = datetime.strptime(d, "%Y-%m-%d").date()
+        except ValueError:
             continue
+        monday = (day - timedelta(days=day.weekday())).isoformat()
+        week_counts[monday] = week_counts.get(monday, 0) + 1
 
-    sorted_keys = sorted(week_map.keys())
-    result = []
-    for idx, (mon, sun) in enumerate(sorted_keys, 1):
-        dt_start = datetime.strptime(mon, "%Y-%m-%d")
-        dt_end = datetime.strptime(sun, "%Y-%m-%d")
-        start_fmt = dt_start.strftime("%b %d")
-        end_fmt = dt_end.strftime("%b %d")
-        count = week_map[(mon, sun)]
-        result.append({
+    weeks = []
+    for idx, monday in enumerate(sorted(week_counts), 1):
+        start = datetime.strptime(monday, "%Y-%m-%d")
+        end = start + timedelta(days=6)
+        weeks.append({
             "week_number": idx,
-            "start_date": mon,
-            "end_date": sun,
-            "label": f"Week {idx} ({start_fmt} - {end_fmt})",
-            "game_count": count,
+            "start_date": monday,
+            "end_date": end.strftime("%Y-%m-%d"),
+            "label": f"Week {idx} ({start.strftime('%b %d')} - {end.strftime('%b %d')})",
+            "game_count": week_counts[monday],
         })
-    return result
-
-
-@lru_cache(maxsize=16)
-def _get_game_grouped_boxscores(filename: str, mtime_ns: int) -> dict[str, list[dict[str, Any]]]:
-    path = _resolve_json_path(filename)
-    raw = _read_json_file(str(path), mtime_ns)
-    grouped: dict[str, list[dict[str, Any]]] = {}
-    if isinstance(raw, list):
-        for row in raw:
-            gid = _norm_game_id(row.get("GAME_ID"))
-            if gid not in grouped:
-                grouped[gid] = []
-            grouped[gid].append(row)
-    return grouped
-
-
-@lru_cache(maxsize=8)
-def _get_game_details_index(mtime_ns: int) -> dict[str, dict[str, Any]]:
-    path = _resolve_json_path("game_details.json")
-    raw = _read_json_file(str(path), mtime_ns)
-    index: dict[str, dict[str, Any]] = {}
-    if isinstance(raw, list):
-        for row in raw:
-            gid = _norm_game_id(row.get("game_id") or row.get("GAME_ID"))
-            index[gid] = row
-    return index
+    return weeks
 
 
 def get_game_detail(game_id: str, request: Request, season: str | None = None) -> Any:
     _check_token(request)
+    return game_detail_payload(game_id, season)
+
+
+def game_detail_payload(game_id: str, season: str | None = None) -> dict[str, Any]:
     gid = _norm_game_id(game_id)
-    season_key = season or DEFAULT_SEASON
+    conn = _season_conn(season or _season_from_game_id(gid))
+    try:
+        detail_row = conn.execute("SELECT data_json FROM game_details WHERE game_id = ?", (gid,)).fetchone()
+        team_rows = [json.loads(r[0]) for r in conn.execute("SELECT data_json FROM team_boxscores WHERE game_id = ?", (gid,))]
+        player_rows = [json.loads(r[0]) for r in conn.execute("SELECT data_json FROM player_boxscores WHERE game_id = ?", (gid,))]
+    finally:
+        conn.close()
 
-    conn = _get_db_conn()
-    if conn is not None:
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT data_json FROM game_details WHERE game_id = ?", (gid,))
-            gd_row = cursor.fetchone()
-            detail = json.loads(gd_row[0]) if gd_row else None
-
-            if season:
-                cursor.execute(
-                    "SELECT data_json FROM team_boxscores WHERE game_id = ? AND season = ?",
-                    (gid, season),
-                )
-            else:
-                cursor.execute(
-                    "SELECT data_json FROM team_boxscores WHERE game_id = ?",
-                    (gid,),
-                )
-            team_rows = [json.loads(r[0]) for r in cursor.fetchall()]
-
-            if season:
-                cursor.execute(
-                    "SELECT data_json FROM player_boxscores WHERE game_id = ? AND season = ?",
-                    (gid, season),
-                )
-            else:
-                cursor.execute(
-                    "SELECT data_json FROM player_boxscores WHERE game_id = ?",
-                    (gid,),
-                )
-            player_rows = [json.loads(r[0]) for r in cursor.fetchall()]
-
-            if detail is not None or team_rows or player_rows:
-                return {
-                    "game_id": gid,
-                    "game_detail": detail,
-                    "team_boxscores": team_rows,
-                    "player_boxscores": player_rows,
-                }
-        except Exception as e:
-            logger.warning("SQLite game_detail query failed, falling back to JSON: %s", e)
-        finally:
-            conn.close()
-
-    # JSON fallback
-    suffix = _season_suffix(season)
-    tb_filename = f"team_boxscores{suffix}.json"
-    pb_filename = f"player_boxscores{suffix}.json"
-
-    tb_path = _resolve_json_path(tb_filename)
-    pb_path = _resolve_json_path(pb_filename)
-
-    team_dict = _get_game_grouped_boxscores(tb_filename, tb_path.stat().st_mtime_ns)
-    player_dict = _get_game_grouped_boxscores(pb_filename, pb_path.stat().st_mtime_ns)
-
-    team_rows = team_dict.get(gid, [])
-    player_rows = player_dict.get(gid, [])
-
-    detail = None
-    if not suffix:
-        gd_path = _resolve_json_path("game_details.json")
-        details_index = _get_game_details_index(gd_path.stat().st_mtime_ns)
-        detail = details_index.get(gid)
-
+    detail = json.loads(detail_row[0]) if detail_row else None
+    if detail is not None:
+        detail["team_stats"] = team_rows
     return {
         "game_id": gid,
         "game_detail": detail,
@@ -355,92 +202,47 @@ def get_play_by_play(game_id: str, request: Request, season: str | None = None) 
     _check_token(request)
     gid = _norm_game_id(game_id)
     season_key = season or _season_from_game_id(gid)
-    pbp_dir = (REPO_ROOT / "data" / f"season={season_key}" / "raw" / "play_by_play").resolve()
-    path = (pbp_dir / f"{gid}.json").resolve()
-    if pbp_dir not in path.parents:
-        raise HTTPException(status_code=400, detail="Invalid play-by-play path")
+    conn = connect_ro(season_db_path(season_key))
+    if conn is not None:
+        try:
+            row = conn.execute("SELECT data_json FROM pbp_moments WHERE game_id = ?", (gid,)).fetchone()
+        finally:
+            conn.close()
+        if row:
+            return json.loads(row[0])
+
+    # Not in the store yet (e.g. fetched after the last build): condense the raw file.
+    from src.frontend_store.pbp_moments import condense_payload
+
+    path = REPO_ROOT / "data" / f"season={season_key}" / "raw" / "play_by_play" / f"{gid}.json"
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"play_by_play not found for {gid} in {season_key}")
-    return _read_json_file(str(path), path.stat().st_mtime_ns)
+    return condense_payload(json.loads(path.read_text(encoding="utf-8")))
 
 
 def get_player_history(player_id: str, request: Request) -> Any:
     _check_token(request)
     pid = str(player_id)
-
-    conn = _get_db_conn()
-    if conn is not None:
+    games: dict[str, Any] = {}
+    averages: dict[str, Any] = {}
+    for season in stored_seasons():
+        conn = connect_ro(season_db_path(season))
+        if conn is None:
+            continue
         try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT games_json, averages_json FROM player_history WHERE player_id = ?", (pid,))
-            row = cursor.fetchone()
-            if row:
-                return {
-                    "player_id": pid,
-                    "games": json.loads(row[0]),
-                    "averages": json.loads(row[1]),
-                }
-            return {
-                "player_id": pid,
-                "games": {},
-                "averages": {},
-            }
-        except Exception as e:
-            logger.warning("SQLite player_history query failed, falling back to JSON: %s", e)
+            row = conn.execute("SELECT games_json, averages_json FROM player_games WHERE player_id = ?", (pid,)).fetchone()
         finally:
             conn.close()
-
-    # JSON fallback
-    games = _load_json("player_season_games.json").get(pid, {})
-    averages = _load_json("player_season_averages.json").get(pid, {})
-    return {
-        "player_id": pid,
-        "games": games,
-        "averages": averages,
-    }
+        if row:
+            games[season] = json.loads(row[0])
+            averages[season] = json.loads(row[1])
+    return {"player_id": pid, "games": games, "averages": averages}
 
 
 def warm_up_cache() -> None:
-    """Pre-warm database and essential files."""
-    if DB_PATH.exists():
-        logger.info("Found frontend SQLite database at %s. Fast point queries enabled with zero startup RAM.", DB_PATH.name)
+    if not global_db_path().exists():
+        logger.warning("Frontend store missing; run scripts/build_frontend_store.py")
         return
-
-    essential_files = [
-        "game_details.json",
-        "games.json",
-        "player_season_averages.json",
-        "player_boxscores.json",
-    ]
-    logger.info("Warming up frontend data cache...")
-    for filename in essential_files:
-        try:
-            path = _resolve_json_path(filename)
-            _read_json_file(str(path), path.stat().st_mtime_ns)
-            logger.info("Cached %s", filename)
-        except Exception as e:
-            logger.warning("Failed to cache %s on startup: %s", filename, e)
-
-
-def get_team_rosters(request: Request, season: str | None = None) -> Any:
-    _check_token(request)
-    season_key = season or DEFAULT_SEASON
-
-    conn = _get_db_conn()
-    if conn is not None:
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT data_json FROM team_rosters WHERE season = ?", (season_key,))
-            row = cursor.fetchone()
-            if row:
-                return json.loads(row[0])
-        except Exception as e:
-            logger.warning("SQLite team_rosters query failed, falling back to CSV: %s", e)
-        finally:
-            conn.close()
-
-    path = REPO_ROOT / f"data/season={season_key}/analysis/team_rosters.csv"
-    if not path.exists():
-        raise HTTPException(status_code=404, detail=f"team_rosters not found for {season_key}")
-    df = pd.read_csv(path)
-    return json.loads(df.to_json(orient="records", double_precision=4))
+    for name in ("seasons", "player_profiles", "player_season_averages"):
+        _global_doc(name)
+    logger.info("Frontend store ready: %d seasons", len(stored_seasons()))

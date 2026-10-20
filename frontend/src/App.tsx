@@ -13,7 +13,7 @@ const TradeBoard = lazy(() => import("./components/TradeBoard"));
 const NbaPrediction = lazy(() => import("./components/NbaPrediction"));
 const PlayerPage = lazy(() => import("./components/PlayerPage"));
 
-import { loadJson } from "./lib/dataCache";
+import { loadPrivateApi } from "./lib/dataCache";
 
 const MENU = [
   { id: "game-results",   label: "Game Results",   icon: <Trophy size={16} strokeWidth={1.5} />,      section: null },
@@ -83,8 +83,7 @@ export default function App() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        await loadJson("/data/dataset_summary.json");
-        setRosters(await loadJson<any[]>("/data/team_rosters.json"));
+        setRosters(await loadPrivateApi<any[]>("/frontend-data-api/team-rosters"));
         setLoading(false);
       } catch (e: any) {
         setError(e.message);
@@ -168,7 +167,7 @@ export default function App() {
                   <p className="mt-1 text-sm text-text-secondary">{error}</p>
                 </div>
                 <p className="rounded border border-border bg-background-tertiary px-3 py-2 font-mono text-xs text-text-secondary">
-                  python3 scripts/export_frontend_data.py
+                  PYTHONPATH=. python3 scripts/build_frontend_store.py
                 </p>
               </div>
             ) : (

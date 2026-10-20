@@ -7,8 +7,9 @@ import {
   Calendar,
   AlertCircle,
   ArrowRightLeft,
+  X,
 } from "lucide-react";
-import { loadJson, loadPrivateApi } from "../lib/dataCache";
+import { loadPrivateApi } from "../lib/dataCache";
 import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
 import GameDetailPanel from "./GameDetailPanel";
@@ -689,82 +690,6 @@ function DiscoveryGrid({
   );
 }
 
-function calculateAveragesFromGames(seasonGames: GameRow[]): SeasonAverages {
-  const activeGames = seasonGames.filter(g => !g.DID_NOT_PLAY);
-  const gp = activeGames.length;
-
-  if (gp === 0) {
-    return {
-      games_played: 0,
-      games_total: seasonGames.length,
-      teams: [],
-      MIN: null, PTS: null, REB: null, AST: null, STL: null, BLK: null, TOV: null,
-      FGM: null, FGA: null, FG_PCT: null, FG3M: null, FG3A: null, FG3_PCT: null,
-      FTM: null, FTA: null, FT_PCT: null, OREB: null, DREB: null, PLUS_MINUS: null
-    };
-  }
-
-  const sum = (key: keyof GameRow) => {
-    let s = 0;
-    let count = 0;
-    for (const g of activeGames) {
-      const val = g[key];
-      if (typeof val === 'number') {
-        s += val;
-        count++;
-      }
-    }
-    return count > 0 ? s : null;
-  };
-
-  const avg = (key: keyof GameRow) => {
-    const s = sum(key);
-    return s !== null ? s / gp : null;
-  };
-
-  const uniqueTeams = new Set<string>();
-  for (const g of seasonGames) {
-    if (g.TEAM_ABBREVIATION) uniqueTeams.add(g.TEAM_ABBREVIATION);
-  }
-
-  const fgmSum = sum("FGM");
-  const fgaSum = sum("FGA");
-  const fgPct = (fgmSum !== null && fgaSum !== null && fgaSum > 0) ? fgmSum / fgaSum : null;
-
-  const fg3mSum = sum("FG3M");
-  const fg3aSum = sum("FG3A");
-  const fg3Pct = (fg3mSum !== null && fg3aSum !== null && fg3aSum > 0) ? fg3mSum / fg3aSum : null;
-
-  const ftmSum = sum("FTM");
-  const ftaSum = sum("FTA");
-  const ftPct = (ftmSum !== null && ftaSum !== null && ftaSum > 0) ? ftmSum / ftaSum : null;
-
-  return {
-    games_played: gp,
-    games_total: seasonGames.length,
-    teams: Array.from(uniqueTeams),
-    MIN: avg("MIN"),
-    PTS: avg("PTS"),
-    REB: avg("REB"),
-    AST: avg("AST"),
-    STL: avg("STL"),
-    BLK: avg("BLK"),
-    TOV: avg("TOV"),
-    FGM: avg("FGM"),
-    FGA: avg("FGA"),
-    FG_PCT: fgPct,
-    FG3M: avg("FG3M"),
-    FG3A: avg("FG3A"),
-    FG3_PCT: fg3Pct,
-    FTM: avg("FTM"),
-    FTA: avg("FTA"),
-    FT_PCT: ftPct,
-    OREB: null,
-    DREB: null,
-    PLUS_MINUS: avg("PLUS_MINUS"),
-  } as any;
-}
-
 /* ─────────── Main Component ─────────── */
 export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId?: number | null }) {
   const [seasonsList, setSeasonsList] = useState<string[]>(["2022-23", "2023-24", "2024-25", "2025-26", "2026-27"]);
@@ -784,7 +709,7 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
   useEffect(() => {
     const load = async () => {
       try {
-        loadJson<string[]>("/data/seasons.json", [])
+        loadPrivateApi<string[]>("/frontend-data-api/seasons")
           .then((data) => {
             if (Array.isArray(data) && data.length > 0) {
               const asc = [...data].sort((a, b) => a.localeCompare(b));
@@ -794,8 +719,8 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
           .catch(() => {});
 
         const [prof, avgs] = await Promise.all([
-          loadJson<PlayerProfile[]>("/data/player_profiles.json"),
-          loadJson<Record<string, Record<string, SeasonAverages>>>("/data/player_season_averages.json"),
+          loadPrivateApi<PlayerProfile[]>("/frontend-data-api/player-profiles"),
+          loadPrivateApi<Record<string, Record<string, SeasonAverages>>>("/frontend-data-api/player-season-averages"),
         ]);
         setProfiles(prof);
         setAveragesData(avgs);
@@ -829,7 +754,7 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
     setSelectedPlayer(p);
     setSelectedGame(null);
     setOpponentSearch("");
-    setSearch(p.PLAYER_NAME ?? "");
+    setSearch("");
     setShowDropdown(false);
     const playerId = String(p.PLAYER_ID);
     loadPrivateApi<{
@@ -841,18 +766,7 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
         setGamesData((prev) => ({ ...prev, [payload.player_id]: payload.games }));
         setAveragesData((prev) => ({ ...prev, [payload.player_id]: payload.averages }));
       })
-      .catch(() => {
-        loadJson<Record<string, GameRow[]>>(`/data/player_games/${encodeURIComponent(playerId)}.json`, {})
-          .then((games) => {
-            setGamesData((prev) => ({ ...prev, [playerId]: games }));
-            const calculatedAverages: Record<string, SeasonAverages> = {};
-            for (const s of Object.keys(games)) {
-              calculatedAverages[s] = calculateAveragesFromGames(games[s]);
-            }
-            setAveragesData((prev) => ({ ...prev, [playerId]: calculatedAverages }));
-          })
-          .catch((e) => setError(e.message));
-      });
+      .catch((e) => setError(e.message));
   }, []);
 
   useEffect(() => {
@@ -927,7 +841,7 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
           <p className="mt-1 text-xs text-text-secondary">{error}</p>
         </div>
         <p className="rounded border border-border bg-background-secondary px-3 py-1.5 text-xs text-text-secondary">
-          python3 scripts/export_player_profiles.py
+          PYTHONPATH=. python3 scripts/build_frontend_store.py
         </p>
       </div>
     );
@@ -936,58 +850,79 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
   return (
     <div className="space-y-6">
       {/* Search bar */}
-      {!selectedPlayer && (
-      <div className="rounded border border-border bg-background-primary p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col gap-1 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-text-primary">Oyuncular</h1>
-          </div>
-          <p className="text-xs font-semibold text-text-secondary">{profiles.length.toLocaleString()} profil · 2018–26</p>
-        </div>
-        <div>
-          <label htmlFor="player-profile-search" className="mb-1.5 block text-sm font-medium text-text-secondary">Oyuncu ara</label>
-          <div className="relative">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-            <input
-              id="player-profile-search"
-              type="text"
-              placeholder="Oyuncu adı (örn. LeBron James)"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setShowDropdown(true); }}
-              onFocus={() => setShowDropdown(true)}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-              className="w-full h-10 rounded border border-border bg-background-tertiary pl-10 pr-10 text-xs font-medium text-text-primary placeholder:text-text-muted transition focus:border-border-focus focus:bg-background-primary focus:outline-none"
-            />
-            <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-          </div>
+      <div className="relative w-full">
+        <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+        <input
+          id="player-profile-search"
+          type="text"
+          placeholder="Oyuncu ara (örn. LeBron James, Stephen Curry)..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setShowDropdown(true);
+          }}
+          onFocus={() => {
+            if (search.trim().length > 0) setShowDropdown(true);
+          }}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && filteredProfiles.length > 0) {
+              handleSelectPlayer(filteredProfiles[0]);
+              setShowDropdown(false);
+            }
+          }}
+          className="w-full h-11 rounded-xl border border-border bg-background-primary pl-10 pr-9 text-xs sm:text-sm font-medium text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-border-focus shadow-xs"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              setShowDropdown(false);
+            }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded transition-colors cursor-pointer"
+            title="Aramayı temizle"
+          >
+            <X size={15} />
+          </button>
+        )}
 
-          {showDropdown && filteredProfiles.length > 0 && (
-            <div className="absolute z-50 mt-1 max-h-64 w-full max-w-lg overflow-y-auto rounded border border-border bg-background-primary divide-y divide-border">
-              {filteredProfiles.map((p) => (
+        {showDropdown && search.trim().length > 0 && (
+          <div className="absolute left-0 right-0 z-50 mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-border bg-background-primary shadow-xl divide-y divide-border">
+            {filteredProfiles.length > 0 ? (
+              filteredProfiles.map((p) => (
                 <button
                   key={p.PLAYER_ID}
                   type="button"
-                  onMouseDown={() => handleSelectPlayer(p)}
+                  onMouseDown={() => {
+                    handleSelectPlayer(p);
+                    setShowDropdown(false);
+                  }}
                   className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-background-tertiary cursor-pointer"
                 >
                   <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME ?? ""} size={32} />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-text-primary">{p.PLAYER_NAME}</p>
-                    <p className="text-xs text-text-muted">
+                    <p className="text-[11px] text-text-muted truncate">
                       {[
                         p.OFFICIAL_POSITION,
+                        p.CURRENT_TEAM,
                         p.FROM_YEAR && p.TO_YEAR && `${p.FROM_YEAR}–${p.TO_YEAR}`,
-                      ].filter(Boolean).join(" · ")}
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                   </div>
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
-
+              ))
+            ) : (
+              <div className="p-4 text-center text-xs text-text-muted">
+                &quot;{search}&quot; ile eşleşen oyuncu bulunamadı.
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      )}
 
       {/* Player Profile (when selected) */}
       {selectedPlayer && (

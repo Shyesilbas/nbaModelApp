@@ -15,7 +15,7 @@ import {
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { NBA_TEAM_ABBRS, TEAM_NAME_BY_ABBR, type NbaTeamAbbr } from "../lib/nbaTeams";
-import { loadJson } from "../lib/dataCache";
+import { loadPrivateApi } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
 
 export interface MultiTeamPlayer {
@@ -72,12 +72,7 @@ export default function MultiTeamPlayers({ players }: { players: MultiTeamPlayer
     let isMounted = true;
     setLoadingSeason(true);
 
-    const path =
-      selectedSeason === CURRENT_SEASON
-        ? "/data/multi_team_players.json"
-        : `/data/seasons/${selectedSeason}/multi_team_players.json`;
-
-    loadJson<MultiTeamPlayer[]>(path)
+    loadPrivateApi<MultiTeamPlayer[]>(`/frontend-data-api/multi-team-players?season=${encodeURIComponent(selectedSeason)}`)
       .then((data) => {
         if (isMounted) {
           setSeasonPlayers(data || []);

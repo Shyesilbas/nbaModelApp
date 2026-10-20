@@ -12,7 +12,7 @@ import {
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { NBA_TEAM_ABBRS, TEAM_NAME_BY_ABBR } from "../lib/nbaTeams";
-import { loadJson } from "../lib/dataCache";
+import { loadPrivateApi } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
 
 interface CorePlayer {
@@ -98,9 +98,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
     setLoadError(null);
     setActiveRosters([]); // never show the previous season's rosters while the new one loads
 
-    const path = `/data/seasons/${selectedSeason}/team_rosters.json`;
-
-    loadJson<any[]>(path)
+    loadPrivateApi<any[]>(`/frontend-data-api/team-rosters?season=${encodeURIComponent(selectedSeason)}`)
       .then((data) => {
         if (isMounted) {
           setActiveRosters(data || []);
@@ -123,6 +121,11 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
     const extracted = Array.from(new Set(activeRosters.map(r => r.TEAM_ABBREVIATION))).filter(Boolean);
     return extracted.length > 0 ? (extracted as string[]).sort() : [...NBA_TEAM_ABBRS];
   }, [activeRosters]);
+
+  const currentStatsCount = useMemo(
+    () => activeRosters.filter((r) => r.STATS_SEASON === selectedSeason).length,
+    [activeRosters, selectedSeason]
+  );
 
   const activeTeam = teamsList.includes(selectedTeam) ? selectedTeam : (teamsList[0] || "BOS");
 
@@ -281,9 +284,11 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
           {loadingSeason && (
             <p className="mt-2 text-xs text-text-secondary">Loading {selectedSeason} roster data...</p>
           )}
-          {selectedSeason === CURRENT_SEASON && !loadingSeason && (
+          {selectedSeason === CURRENT_SEASON && !loadingSeason && activeRosters.length > 0 && (
             <p className="mt-2 text-xs text-text-secondary">
-              Kadrolar güncel takımlara göre; istatistikler bir önceki sezondan (2025-26).
+              {currentStatsCount === 0
+                ? "Kadrolar güncel takımlara göre; istatistikler bir önceki sezondan (2025-26)."
+                : `${currentStatsCount} oyuncu ${CURRENT_SEASON} regular season istatistikleriyle; henüz oynamayanlar 2025-26 verisiyle gösteriliyor.`}
             </p>
           )}
           {loadError && (

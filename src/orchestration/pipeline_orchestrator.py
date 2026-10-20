@@ -42,8 +42,8 @@ class PipelineOrchestrator:
             workflows.run_bootstrap_season_pipeline(self.args)
             return True
         if self.args.export_frontend_data:
-            from scripts.export_frontend_data import export_data
-            export_data(season=self.args.season or get_default_season())
+            from src.frontend_store.builders import build_frontend_store
+            build_frontend_store([self.args.season or get_default_season()])
             return True
         if self.args.build_schedule_context:
             workflows.run_schedule_context_pipeline()

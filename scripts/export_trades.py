@@ -1,5 +1,4 @@
-"""Build frontend/public/data/trades.json: grouped trades plus non-rostered moves (waived/signed/claimed)."""
-import json
+"""Trade board data: grouped trades plus non-rostered moves (waived/signed/claimed), newest first."""
 import re
 from pathlib import Path
 
@@ -43,7 +42,7 @@ def _moves(impact: dict) -> list:
     return moves
 
 
-def export_trades(out_dir: Path = ROOT / "frontend" / "public" / "data") -> int:
+def build_trades() -> list:
     df = pd.read_csv(ROOT / "data" / "transactions" / "player_movement.csv")
     df = df[df.Transaction_Type == "Trade"]
     impact = _impact_by_player()
@@ -69,9 +68,8 @@ def export_trades(out_dir: Path = ROOT / "frontend" / "public" / "data") -> int:
             trades.append({"kind": "trade", "id": group, "date": str(g.TRANSACTION_DATE.iloc[0]), "sides": list(sides.values())})
     trades += _moves(impact)
     trades.sort(key=lambda t: (t["date"], t["id"]), reverse=True)
-    (out_dir / "trades.json").write_text(json.dumps(trades, ensure_ascii=False), encoding="utf-8")
-    return len(trades)
+    return trades
 
 
 if __name__ == "__main__":
-    print(f"Exported {export_trades()} trades")
+    print(f"{len(build_trades())} trades")

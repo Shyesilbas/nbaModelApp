@@ -21,14 +21,18 @@ from .service import (
 )
 from .services.game_full import predict_game_full
 from .services.frontend_data import (
-    get_frontend_json,
     get_game_detail,
     get_game_index,
-    get_manifest,
+    get_game_results,
+    get_multi_team_players,
     get_play_by_play,
     get_player_history,
+    get_player_profiles,
+    get_player_season_averages,
     get_season_weeks,
+    get_seasons,
     get_team_rosters,
+    get_trades,
 )
 from .services.player_prediction import predict_players
 from .services.score_prediction import predict_score
@@ -137,14 +141,34 @@ def health():
     return {"status": "ok"}
 
 
-@router.get("/frontend-data/manifest")
-def frontend_data_manifest(request: Request):
-    return _run_endpoint(lambda: get_manifest(request))
+@router.get("/frontend-data-api/seasons")
+def frontend_seasons(request: Request):
+    return _run_endpoint(lambda: get_seasons(request))
 
 
-@router.get("/frontend-data/{filename}")
-def frontend_data_file(filename: str, request: Request):
-    return _run_endpoint(lambda: get_frontend_json(filename, request))
+@router.get("/frontend-data-api/player-profiles")
+def frontend_player_profiles(request: Request):
+    return _run_endpoint(lambda: get_player_profiles(request))
+
+
+@router.get("/frontend-data-api/player-season-averages")
+def frontend_player_season_averages(request: Request):
+    return _run_endpoint(lambda: get_player_season_averages(request))
+
+
+@router.get("/frontend-data-api/trades")
+def frontend_trades(request: Request):
+    return _run_endpoint(lambda: get_trades(request))
+
+
+@router.get("/frontend-data-api/multi-team-players")
+def frontend_multi_team_players(request: Request, season: str = None):
+    return _run_endpoint(lambda: get_multi_team_players(request, season))
+
+
+@router.get("/frontend-data-api/game-results")
+def frontend_game_results(request: Request, season: str = None):
+    return _run_endpoint(lambda: get_game_results(request, season))
 
 
 @router.get("/frontend-data-api/games")

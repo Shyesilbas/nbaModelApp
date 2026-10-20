@@ -38,15 +38,14 @@ def _parse_path_list(raw: str | None) -> tuple[str, ...]:
 
 def default_rate_limit_rules() -> list[RateLimitRule]:
     predict_max = _parse_int_env("RATE_LIMIT_PREDICT_MAX", 180)
-    data_api_max = _parse_int_env("RATE_LIMIT_DATA_API_MAX", 300)
-    frontend_data_max = _parse_int_env("RATE_LIMIT_FRONTEND_DATA_MAX", 600)
+    # All frontend data (game lists, box scores, player pages) goes through the data API.
+    data_api_max = _parse_int_env("RATE_LIMIT_DATA_API_MAX", 600)
     default_max = _parse_int_env("RATE_LIMIT_DEFAULT_MAX", 1200)
     window_seconds = _parse_int_env("RATE_LIMIT_WINDOW_SECONDS", 60)
 
     return [
         RateLimitRule("predict", ("/predict/",), predict_max, window_seconds),
         RateLimitRule("frontend_data_api", ("/frontend-data-api/",), data_api_max, window_seconds),
-        RateLimitRule("frontend_data", ("/frontend-data/",), frontend_data_max, window_seconds),
         RateLimitRule("default", ("/",), default_max, window_seconds),
     ]
 

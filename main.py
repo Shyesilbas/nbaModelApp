@@ -30,120 +30,6 @@ def _run_boxscore_pipeline_cli(args):
     run_boxscore_pipeline_cli(args)
 
 
-def _export_boxscore_json(team_bs_df, player_bs_df, results_df):
-    """Export the three box score datasets as frontend-ready JSON files."""
-    import json
-    out_dir = "frontend/public/data"
-    os.makedirs(out_dir, exist_ok=True)
-
-    def _save_json(df: "pd.DataFrame", filename: str, label: str):
-        # Normalise dates to strings
-        for col in df.select_dtypes(include=["datetime64[ns]"]).columns:
-            df[col] = df[col].dt.strftime("%Y-%m-%d")
-        path = os.path.join(out_dir, filename)
-        df.to_json(path, orient="records", indent=2, double_precision=4, date_format="iso")
-        print(f"  ✅ Exported {label} → {path} ({len(df):,} rows)")
-
-    _save_json(results_df.copy(), "game_results.json", "Game results")
-
-    # Team box scores — cap to recent 200 games to keep JSON size manageable
-    # Sort newest first so the frontend gets the most recent data
-    team_recent = team_bs_df.sort_values("GAME_DATE", ascending=False).head(2000).copy()
-    _save_json(team_recent, "team_boxscores.json", "Team box scores (recent 2000 rows)")
-
-    # Player box scores — cap to recent 3000 rows
-    player_recent = player_bs_df.sort_values("GAME_DATE", ascending=False).head(3000).copy()
-    _save_json(player_recent, "player_boxscores.json", "Player box scores (recent 3000 rows)")
-
-    # Compute and save season highlights
-    highlights = {
-        "highest_scoring_games": [],
-        "lowest_scoring_games": [],
-        "top_points": [],
-        "top_assists": [],
-        "top_rebounds": []
-    }
-
-    if not results_df.empty:
-        df_res = results_df.copy()
-        df_res["TOTAL_PTS"] = df_res["HOME_SCORE"] + df_res["AWAY_SCORE"]
-        
-        # Highest scoring games
-        df_high = df_res.sort_values("TOTAL_PTS", ascending=False).head(5)
-        for _, row in df_high.iterrows():
-            highlights["highest_scoring_games"].append({
-                "GAME_ID": row["GAME_ID"],
-                "GAME_DATE": str(row["GAME_DATE"]),
-                "HOME_TEAM": row["HOME_TEAM_ABBREVIATION"],
-                "AWAY_TEAM": row["AWAY_TEAM_ABBREVIATION"],
-                "HOME_SCORE": int(row["HOME_SCORE"]),
-                "AWAY_SCORE": int(row["AWAY_SCORE"]),
-                "TOTAL_PTS": int(row["TOTAL_PTS"]),
-                "SEASON_TYPE": row["SEASON_TYPE"]
-            })
-            
-        # Lowest scoring games
-        df_low = df_res.sort_values("TOTAL_PTS", ascending=True).head(5)
-        for _, row in df_low.iterrows():
-            highlights["lowest_scoring_games"].append({
-                "GAME_ID": row["GAME_ID"],
-                "GAME_DATE": str(row["GAME_DATE"]),
-                "HOME_TEAM": row["HOME_TEAM_ABBREVIATION"],
-                "AWAY_TEAM": row["AWAY_TEAM_ABBREVIATION"],
-                "HOME_SCORE": int(row["HOME_SCORE"]),
-                "AWAY_SCORE": int(row["AWAY_SCORE"]),
-                "TOTAL_PTS": int(row["TOTAL_PTS"]),
-                "SEASON_TYPE": row["SEASON_TYPE"]
-            })
-
-    if not player_bs_df.empty:
-        df_player = player_bs_df.copy()
-        
-        # Top Points
-        if "PTS" in df_player.columns:
-            df_pts = df_player.sort_values("PTS", ascending=False).head(5)
-            for _, row in df_pts.iterrows():
-                highlights["top_points"].append({
-                    "PLAYER_NAME": row["PLAYER_NAME"],
-                    "TEAM": row["TEAM_ABBREVIATION"],
-                    "MATCHUP": row.get("MATCHUP", ""),
-                    "GAME_DATE": str(row["GAME_DATE"]),
-                    "VALUE": int(row["PTS"]),
-                    "GAME_ID": row["GAME_ID"]
-                })
-                
-        # Top Assists
-        if "AST" in df_player.columns:
-            df_ast = df_player.sort_values("AST", ascending=False).head(5)
-            for _, row in df_ast.iterrows():
-                highlights["top_assists"].append({
-                    "PLAYER_NAME": row["PLAYER_NAME"],
-                    "TEAM": row["TEAM_ABBREVIATION"],
-                    "MATCHUP": row.get("MATCHUP", ""),
-                    "GAME_DATE": str(row["GAME_DATE"]),
-                    "VALUE": int(row["AST"]),
-                    "GAME_ID": row["GAME_ID"]
-                })
-                
-        # Top Rebounds
-        if "REB" in df_player.columns:
-            df_reb = df_player.sort_values("REB", ascending=False).head(5)
-            for _, row in df_reb.iterrows():
-                highlights["top_rebounds"].append({
-                    "PLAYER_NAME": row["PLAYER_NAME"],
-                    "TEAM": row["TEAM_ABBREVIATION"],
-                    "MATCHUP": row.get("MATCHUP", ""),
-                    "GAME_DATE": str(row["GAME_DATE"]),
-                    "VALUE": int(row["REB"]),
-                    "GAME_ID": row["GAME_ID"]
-                })
-                
-    highlights_path = os.path.join(out_dir, "highlights.json")
-    with open(highlights_path, "w") as f:
-        json.dump(highlights, f, indent=2)
-    print(f"  ✅ Exported season highlights → {highlights_path}")
-
-
 def _run_data_freshness_pipeline(args):
     from src.orchestration.pipeline_workflows import run_data_freshness_pipeline
     run_data_freshness_pipeline(args)
@@ -225,7 +111,26 @@ def _run_train_win_model(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="NBA ML Project Preprocessing & Feature Engineering Pipeline")
+    scripts_epilog = """standalone scripts (run with PYTHONPATH=. python3 <script> --help for details):
+  scripts/refresh_current_season_views.py --season YYYY-YY
+      Refresh the live roster (team_rosters_live.csv) and the season's frontend store
+      with current regular-season games. Also runs automatically in --update-data (Step 9b).
+  scripts/build_frontend_store.py [--season YYYY-YY] [--force]
+      Build the SQLite store the API serves frontend data from. Closed seasons are built once.
+  scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY
+      Predict all matchups for a given date.
+  scripts/retrain_pipeline.py --season YYYY-YY [--dry-run]
+      Safe retraining and promotion pipeline.
+  scripts/generate_report.py --season YYYY-YY --model {v8,v9}
+      Season and model report audit.
+  scripts/detect_drift_and_leakage.py --reference-season YYYY-YY --target-season YYYY-YY
+      Data drift and feature leakage detector.
+"""
+    parser = argparse.ArgumentParser(
+        description="NBA ML Project Preprocessing & Feature Engineering Pipeline",
+        epilog=scripts_epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
         "--season", 
         type=str, 
@@ -325,12 +230,14 @@ def main():
     parser.add_argument(
         "--bootstrap-season",
         action="store_true",
-        help="Run the full season bootstrap workflow: sync, rebuild, export frontend data, and write a manifest"
+        help="Run the full season bootstrap workflow: sync, rebuild, build the frontend store, and write a manifest"
     )
     parser.add_argument(
+        "--build-frontend-store",
         "--export-frontend-data",
+        dest="export_frontend_data",
         action="store_true",
-        help="Export data for frontend"
+        help="Rebuild the season's frontend store (data/frontend_store/) and the global store"
     )
     parser.add_argument(
         "--update-data",
@@ -663,14 +570,13 @@ def main():
             from src.analysis.roster_analysis import get_core_players
             from src.features.core_player_availability_features import build_core_player_availability_features
             
-            print("Discovering core players dynamically from player logs...")
+            print("Discovering season core players (report only; features use pre-game cores)...")
             core_players_df = get_core_players(df_player_features)
             
             print("Building core player availability features...")
             df_team_features_with_core = build_core_player_availability_features(
                 df_team_features_with_opp,
                 df_player_features,
-                core_players_df
             )
             
             # Build V3 Model-Ready Dataset
