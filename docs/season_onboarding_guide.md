@@ -55,7 +55,7 @@ PYTHONPATH=. python3 main.py --season YYYY-YY --bootstrap-season
 ```
 - **What it does**: 
   1. Generates 5/10/20-game rolling team and player features.
-  2. Assembles `team_model_ready_v3_{YYYY_YY}.parquet` (and `.csv`) with Dean Oliver Four Factors and Continuous Elo ratings.
+  2. Assembles `team_model_ready_v3_{YYYY_YY}.csv` with Dean Oliver Four Factors and Continuous Elo ratings.
   3. Writes season manifests to `data/manifests/`.
 
 ---

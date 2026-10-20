@@ -157,7 +157,7 @@ Yapılan kod incelemeleri ve refaktör çalışmaları sonucunda veri hattında 
 - **Çözüm**: `--bootstrap-season` artık sezonun `team_model_ready_v3` dosyasını da üretir (`rebuild_season` + boxscore enrichment) ve manifest'e ekler. `--update-data` aynı adımı her gün çalıştırır (Step 8b), böylece devam eden sezonun v3'ü güncel kalır. `player_model_ready_v4_usg` sezonlar arası bir eğitim seti olduğu için `scripts/rebuild_training_data.py` ile üretilmeye devam eder.
 
 ### 8. Atomik Olmayan CSV Yazımları (ÇÖZÜLDÜ, 2026-10-21)
-- **Çözüm**: `src/ingestion/atomic_io.py` (`write_csv_atomic`, `write_parquet_atomic`) geçici dosyaya yazıp `os.replace` ile değiştirir. `src/ingestion/` altındaki tüm raw/processed yazımları buna geçirildi. Test: `tests/test_atomic_io.py`.
+- **Çözüm**: `src/ingestion/atomic_io.py` (`write_csv_atomic`) geçici dosyaya yazıp `os.replace` ile değiştirir. `src/ingestion/` altındaki tüm raw/processed yazımları buna geçirildi. Test: `tests/test_atomic_io.py`.
 
 ### 9. Veri Doğrulama Sözleşmesi (ÇÖZÜLDÜ, 2026-10-21)
 - **Çözüm**: `src/validation/contracts.py` raw team/player game log'ları ve team model-ready veri setleri için kural seti tanımlar: zorunlu kolonlar, 10 haneli `GAME_ID`, `(GAME_ID, TEAM_ID)` / `(Game_ID, Player_ID)` tekilliği, maç başına en fazla iki takım satırı, parse edilebilen tarih ve maç başına `WIN` toplamı = 1. Kontroller `team_games_fetcher`, `player_games_fetcher` ve `rebuild_training_data` içinde yazımdan önce çalışır; ihlalde `ContractViolation` fırlatılır ve atomik yazım sayesinde eski dosya korunur. Mevcut tüm sezonlar (2020-21 → 2026-27) kontratları geçiyor. Test: `tests/test_contracts.py`.

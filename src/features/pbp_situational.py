@@ -164,14 +164,14 @@ def build_situational_dataset(data_dir: str = "data") -> pd.DataFrame:
     return df
 
 
-def load_situational_lookup(parquet_path: str = "data/processed/pbp_situational_features.parquet") -> Dict[tuple[str, str], Dict[str, float]]:
+def load_situational_lookup(csv_path: str = "data/processed/pbp_situational_features.csv") -> Dict[tuple[str, str], Dict[str, float]]:
     lookup: Dict[tuple[str, str], Dict[str, float]] = {}
-    p = Path(parquet_path)
+    p = Path(csv_path)
     if not p.exists():
         return lookup
 
     try:
-        df = pd.read_parquet(p)
+        df = pd.read_csv(p)
         for _, r in df.iterrows():
             gid = str(r["GAME_ID"]).split(".")[0].strip().zfill(10)
             ht = str(r.get("HOME_TEAM") or "").strip()
@@ -193,7 +193,7 @@ def load_situational_lookup(parquet_path: str = "data/processed/pbp_situational_
                     "GARBAGE_TIME_SHARE": garbage_share,
                 }
     except Exception as exc:
-        logger.warning("Failed to load situational lookup from %s: %s", parquet_path, exc)
+        logger.warning("Failed to load situational lookup from %s: %s", csv_path, exc)
 
     return lookup
 

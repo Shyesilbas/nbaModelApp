@@ -10,7 +10,7 @@ Builds an enriched upcoming-games context dataset by joining:
 
 Outputs
 -------
-  season-aware upcoming_games_context CSV and Parquet outputs
+  season-aware upcoming_games_context CSV output
 
 No model training.  No predictions.  No betting language.
 """
@@ -78,7 +78,7 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
     Parameters
     ----------
     save : bool
-        If True, writes output to disk (CSV + Parquet).
+        If True, writes output to disk (CSV).
 
     Returns
     -------
@@ -92,7 +92,6 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
     game_results_path = paths.game_results
     core_players_path = "data/analysis/core_players.csv"
     out_csv = paths.upcoming_context
-    out_parq = paths.upcoming_context.replace(".csv", ".parquet")
 
     # ── 1. Load combined schedule ──────────────────────────────────────────
     if not os.path.exists(combined_schedule_path):
@@ -249,8 +248,6 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
         season_dir = Path(out_csv).parent
         season_dir.mkdir(parents=True, exist_ok=True)
         ctx.to_csv(out_csv, index=False)
-        ctx.to_parquet(out_parq, index=False, engine="pyarrow")
         print(f"  Saved: {out_csv}")
-        print(f"  Saved: {out_parq}")
 
     return ctx

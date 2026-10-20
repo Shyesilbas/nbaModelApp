@@ -76,8 +76,7 @@ def haversine(lat1, lon1, lat2, lon2):
 @lru_cache(maxsize=64)
 def _read_frame_cached(path_str: str, mtime_ns: int, size_bytes: int):
     del mtime_ns, size_bytes
-    path = Path(path_str)
-    return pd.read_parquet(path) if path.suffix == ".parquet" else pd.read_csv(path)
+    return pd.read_csv(path_str)
 
 
 def previous_season(season: str) -> str:
@@ -96,75 +95,42 @@ def is_preseason_game(game_id=None, season_type=None, season_id=None) -> bool:
 
 
 def _read_frame(path: Path):
-    # Some updaters rewrite only the CSV; never serve a parquet copy older than it.
-    csv = path.with_suffix(".csv")
-    if path.suffix == ".parquet" and csv.exists() and csv.stat().st_mtime_ns > path.stat().st_mtime_ns:
-        path = csv
     stat = path.stat()
     return _read_frame_cached(str(path.resolve()), stat.st_mtime_ns, stat.st_size)
 
 
-def _load_team_features(season: str = None):
-    paths = get_data_paths(season)
-    p_parq = Path(paths.team_features.replace(".csv", ".parquet"))
-    p_csv = Path(paths.team_features)
-    for p in [p_parq, p_csv]:
-        if p.exists():
-            if p.suffix == ".parquet":
-                df = _read_frame(p)
-            else:
-                df = _read_frame(p)
-            # New-season files can exist before that season has any completed games.
-            if not df.empty:
+def _load_season_csv(attr: str, season: str | None, skip_empty: bool, fallback: bool = True) -> pd.DataFrame | None:
+    """The season's CSV (``attr`` of DataPaths), else the previous season's.
+
+    ``skip_empty``: a header-only file (new season, no games yet) counts as missing.
+    """
+    seasons = [season] + ([previous_season(season)] if fallback and season else [])
+    for s in seasons:
+        path = Path(getattr(get_data_paths(s), attr))
+        if path.exists():
+            df = _read_frame(path)
+            if not (skip_empty and df.empty):
                 return df
-    # Fallback to previous latest season if upcoming season features not yet generated
-    if season:
-        fallback_paths = get_data_paths(previous_season(season))
-        for p in [Path(fallback_paths.team_features.replace(".csv", ".parquet")), Path(fallback_paths.team_features)]:
-            if p.exists():
-                df = _read_frame(p)
-                if not df.empty:
-                    return df
-    raise FileNotFoundError(f"team_games_features not found; expected at {p_parq} or {p_csv}")
+    return None
+
+
+def _load_team_features(season: str = None):
+    df = _load_season_csv("team_features", season, skip_empty=True)
+    if df is None:
+        raise FileNotFoundError(f"team_games_features not found; expected at {get_data_paths(season).team_features}")
+    return df
 
 
 def _load_game_results(season: str = None):
-    paths = get_data_paths(season)
-    p_parq = Path(paths.game_results.replace(".csv", ".parquet"))
-    p_csv = Path(paths.game_results)
-    for p in [p_parq, p_csv]:
-        if p.exists():
-            if p.suffix == ".parquet":
-                df = _read_frame(p)
-            else:
-                df = _read_frame(p)
-            # Upcoming-season results files may be header-only until games are played.
-            if not df.empty:
-                return df
-    # Fallback to previous latest season if upcoming season results not yet generated
-    if season:
-        fallback_paths = get_data_paths(previous_season(season))
-        for p in [Path(fallback_paths.game_results.replace(".csv", ".parquet")), Path(fallback_paths.game_results)]:
-            if p.exists():
-                df = _read_frame(p)
-                if not df.empty:
-                    return df
-    raise FileNotFoundError(f"game_results not found; expected at {p_parq} or {p_csv}")
+    df = _load_season_csv("game_results", season, skip_empty=True)
+    if df is None:
+        raise FileNotFoundError(f"game_results not found; expected at {get_data_paths(season).game_results}")
+    return df
 
 
 def _load_player_games(season: str = None):
-    paths = get_data_paths(season)
-    p_parq = Path(paths.player_games_raw.replace(".csv", ".parquet"))
-    p_csv = Path(paths.player_games_raw)
-    for p in [p_parq, p_csv]:
-        if p.exists():
-            return _read_frame(p)
-    if season:
-        fallback_paths = get_data_paths(previous_season(season))
-        for p in [Path(fallback_paths.player_games_raw.replace(".csv", ".parquet")), Path(fallback_paths.player_games_raw)]:
-            if p.exists():
-                return _read_frame(p)
-    return pd.DataFrame()
+    df = _load_season_csv("player_games_raw", season, skip_empty=False)
+    return pd.DataFrame() if df is None else df
 
 
 def _load_absence_logs(season: str):
@@ -174,28 +140,13 @@ def _load_absence_logs(season: str):
 
 
 def _load_team_games(season: str = None):
-    paths = get_data_paths(season)
-    p_parq = Path(paths.team_games_raw.replace(".csv", ".parquet"))
-    p_csv = Path(paths.team_games_raw)
-    for p in [p_parq, p_csv]:
-        if p.exists():
-            return _read_frame(p)
-    if season:
-        fallback_paths = get_data_paths(previous_season(season))
-        for p in [Path(fallback_paths.team_games_raw.replace(".csv", ".parquet")), Path(fallback_paths.team_games_raw)]:
-            if p.exists():
-                return _read_frame(p)
-    return pd.DataFrame()
+    df = _load_season_csv("team_games_raw", season, skip_empty=False)
+    return pd.DataFrame() if df is None else df
 
 
 def _load_combined_schedule(season: str = None):
-    paths = get_data_paths(season)
-    p_parq = Path(paths.schedule_combined.replace(".csv", ".parquet"))
-    p_csv = Path(paths.schedule_combined)
-    for p in [p_parq, p_csv]:
-        if p.exists():
-            return _read_frame(p)
-    return pd.DataFrame()
+    df = _load_season_csv("schedule_combined", season, skip_empty=False, fallback=False)
+    return pd.DataFrame() if df is None else df
 
 
 @lru_cache(maxsize=32)
@@ -233,13 +184,10 @@ EARLY_SEASON_BLEND_GAMES = 6
 
 def _raw_season_games(season: str) -> pd.DataFrame:
     """Completed regular-season and playoff team games of one season (no preseason)."""
-    paths = get_data_paths(season)
-    for p in [Path(paths.team_games_raw.replace(".csv", ".parquet")), Path(paths.team_games_raw)]:
-        if p.exists():
-            df = _read_frame(p).copy()
-            break
-    else:
+    path = Path(get_data_paths(season).team_games_raw)
+    if not path.exists():
         return pd.DataFrame()
+    df = _read_frame(path).copy()
     if df.empty:
         return df
     df["GAME_ID"] = df["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)

@@ -109,7 +109,6 @@ def load_dataset() -> pd.DataFrame:
 
 
 def load_player_dataset(player_features: list[str]) -> pd.DataFrame:
-    # The CSV is what the player trainer writes and reads; the parquet copy is not refreshed.
     csv_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
     if not csv_path.exists():
         return pd.DataFrame()

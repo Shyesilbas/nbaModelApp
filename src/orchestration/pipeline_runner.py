@@ -82,10 +82,8 @@ class PipelineRunner:
         os.makedirs(os.path.dirname(player_csv), exist_ok=True)
 
         df_team_features.to_csv(team_csv, index=False)
-        df_team_features.to_parquet(team_csv.replace(".csv", ".parquet"), index=False, engine="pyarrow")
         if not df_player_features.empty:
             df_player_features.to_csv(player_csv, index=False)
-            df_player_features.to_parquet(player_csv.replace(".csv", ".parquet"), index=False, engine="pyarrow")
 
         return PipelineResult(
             status="SUCCESS",

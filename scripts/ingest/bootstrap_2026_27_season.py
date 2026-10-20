@@ -230,13 +230,9 @@ analysis_dir = SEASON_DIR / "analysis"
 analysis_dir.mkdir(parents=True, exist_ok=True)
 
 roster_df.to_csv(analysis_dir / "team_rosters.csv", index=False)
-roster_df.to_parquet(analysis_dir / "team_rosters.parquet", index=False)
 core_df.to_csv(analysis_dir / "core_players.csv", index=False)
-core_df.to_parquet(analysis_dir / "core_players.parquet", index=False)
 star_df.to_csv(analysis_dir / "star_candidates.csv", index=False)
-star_df.to_parquet(analysis_dir / "star_candidates.parquet", index=False)
 multi_team_df.to_csv(analysis_dir / "multi_team_players.csv", index=False)
-multi_team_df.to_parquet(analysis_dir / "multi_team_players.parquet", index=False)
 
 # Player name lookup
 lookup_rows = []
@@ -248,7 +244,6 @@ for _, r in roster_df.iterrows():
     })
 lookup_df = pd.DataFrame(lookup_rows).drop_duplicates(subset=["PLAYER_ID"]).reset_index(drop=True)
 lookup_df.to_csv(analysis_dir / "player_name_lookup.csv", index=False)
-lookup_df.to_parquet(analysis_dir / "player_name_lookup.parquet", index=False)
 
 roster_df.to_csv(ROOT / "data" / "canonical" / "team_rosters.csv", index=False)
 core_df.to_csv(ROOT / "data" / "canonical" / "core_players.csv", index=False)
@@ -256,9 +251,8 @@ core_df.to_csv(ROOT / "data" / "production" / "core_players.csv", index=False)
 
 # Synchronize 2026-27 player_features for all roster players so they can be predicted
 feat_path_csv = FEATURES_DIR / "player_features.csv"
-feat_path_parquet = FEATURES_DIR / "player_features.parquet"
-if feat_path_parquet.exists():
-    df_feat = pd.read_parquet(feat_path_parquet)
+if feat_path_csv.exists():
+    df_feat = pd.read_csv(feat_path_csv)
     id_col = "PLAYER_ID" if "PLAYER_ID" in df_feat.columns else "Player_ID"
     existing_pids = set(df_feat[id_col])
     missing_roster_players = roster_df[~roster_df["PLAYER_ID"].isin(existing_pids)]
@@ -306,7 +300,6 @@ if feat_path_parquet.exists():
                 except Exception:
                     pass
         df_combined_feat = pd.concat([df_feat, df_new_feat], ignore_index=True)
-        df_combined_feat.to_parquet(feat_path_parquet, index=False)
         df_combined_feat.to_csv(feat_path_csv, index=False)
         print("  -> Updated 2026-27 player_features with all current active roster members.")
 

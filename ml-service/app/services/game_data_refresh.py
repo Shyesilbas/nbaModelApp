@@ -274,13 +274,13 @@ def _run_refresh(game_id: str, season: str, home_team: str | None, away_team: st
 
                 pbp_rec = parse_pbp_file(str(pbp_dir / f"{game_id}.json"))
                 if pbp_rec:
-                    sit_path = REPO_ROOT / "data" / "processed" / "pbp_situational_features.parquet"
+                    sit_path = REPO_ROOT / "data" / "processed" / "pbp_situational_features.csv"
                     if sit_path.exists():
-                        sit_df = pd.read_parquet(sit_path)
+                        sit_df = pd.read_csv(sit_path)
                         sit_df = sit_df[sit_df["GAME_ID"].astype(str).str.zfill(10) != game_id]
                         new_row = pd.DataFrame([pbp_rec])
                         sit_df = pd.concat([sit_df, new_row], ignore_index=True)
-                        sit_df.to_parquet(sit_path, index=False)
+                        sit_df.to_csv(sit_path, index=False)
             except Exception as exc:
                 logger.warning("PBP situational features failed for %s: %s", game_id, exc)
         except Exception as exc:

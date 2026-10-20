@@ -64,7 +64,7 @@ def main() -> int:
             "-c",
             "from src.features.pbp_situational import build_situational_dataset; "
             "df = build_situational_dataset('data'); "
-            "df.to_parquet('data/processed/pbp_situational_features.parquet', index=False); "
+            "df.to_csv('data/processed/pbp_situational_features.csv', index=False); "
             "from src.frontend_store.builders import build_frontend_store; "
             "build_frontend_store()",
         ],

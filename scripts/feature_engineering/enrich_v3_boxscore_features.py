@@ -23,9 +23,7 @@ def enrich_all_seasons(seasons=SEASONS):
         
         raw_path = Path(dp.team_games_raw)
         v3_csv = ROOT / "data" / "processed" / f"team_model_ready_v3_{token}.csv"
-        v3_parquet = ROOT / "data" / "processed" / f"team_model_ready_v3_{token}.parquet"
         features_csv = Path(dp.team_features)
-        features_parquet = Path(dp.team_features.replace(".csv", ".parquet"))
         
         if not raw_path.exists() or not v3_csv.exists():
             print(f"Skipping {season} (files missing)")
@@ -57,7 +55,6 @@ def enrich_all_seasons(seasons=SEASONS):
         )
         
         df_v3_enriched.to_csv(v3_csv, index=False)
-        df_v3_enriched.to_parquet(v3_parquet, index=False, engine="pyarrow")
         print(f"  -> Saved team_model_ready_v3_{token} ({len(df_v3_enriched)} rows, {len(df_v3_enriched.columns)} columns)")
         
         # 2. Update team_features.csv if exists
@@ -73,8 +70,6 @@ def enrich_all_seasons(seasons=SEASONS):
                 how="left"
             )
             df_feat_enriched.to_csv(features_csv, index=False)
-            if features_parquet.exists() or Path(dp.team_features).suffix == ".parquet":
-                df_feat_enriched.to_parquet(features_parquet, index=False, engine="pyarrow")
             print(f"  -> Updated {features_csv.name} ({len(df_feat_enriched)} rows, {len(df_feat_enriched.columns)} columns)")
 
     print(f"=== {len(seasons)} season(s) enriched with advanced boxscore features ===")

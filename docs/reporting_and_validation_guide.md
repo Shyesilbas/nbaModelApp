@@ -14,7 +14,7 @@ PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY
 ### Checks Performed:
 - Existence and size of `team_games.csv`, `player_games.csv`, and `schedule.csv`.
 - Unique game ID counts, null checks, and date range validity.
-- Row counts and feature completeness for `team_model_ready_v3_{YYYY_YY}.parquet` and `player_model_ready_v4_usg.parquet`.
+- Row counts and feature completeness for `team_model_ready_v3_{YYYY_YY}.csv` and `player_model_ready_v4_usg.csv`.
 
 ---
 
@@ -41,7 +41,7 @@ PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY --model {v9, v1
 ```
 
 ### Execution Flow:
-1. Loads the season's V3 team dataset from Parquet/CSV.
+1. Loads the season's V3 team dataset from CSV.
 2. Injects rolling feature states (Continuous Elo, Dean Oliver Four Factors, schedule fatigue).
 3. If win projection aggregates are required, calculates player projection averages dynamically.
 4. Generates performance evaluation reports saved to `reports/evaluation/season_{season}_model_{model}_evaluation_report.md`:
@@ -70,7 +70,7 @@ PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --seaso
 ```
 
 ### Features:
-- Filters games for the target date from `schedule_combined.csv` or `.parquet`.
+- Filters games for the target date from `schedule_combined.csv`.
 - Automatically queries rolling team features, rest days, and roster availability.
 - Evaluates the active Win model (logistic regression) and Score models (Ridge).
 - Outputs a formatted ASCII table to the console and exports a markdown forecast to `reports/predictions/schedule_{date}_model_{model}.md`.

@@ -10,7 +10,7 @@ from src.ingestion.player_games_fetcher import fetch_missing_player_games_by_gam
 from src.orchestration.pipeline_runner import PipelineRunner
 from scripts.season_utils import get_default_season
 from scripts.data_paths import get_data_paths
-from src.ingestion.atomic_io import write_csv_atomic, write_parquet_atomic
+from src.ingestion.atomic_io import write_csv_atomic
 
 
 class UpdateDataService:
@@ -188,13 +188,11 @@ class UpdateDataService:
             os.makedirs(out_root, exist_ok=True)
             v2_path = os.path.join(out_root, f"team_model_ready_v2_{runner.token}.csv")
             write_csv_atomic(v2_df, v2_path)
-            write_parquet_atomic(v2_df, v2_path.replace(".csv", ".parquet"))
 
             season_v2_path = runner.paths.team_model_ready_v2
             if os.path.normpath(v2_path) != os.path.normpath(season_v2_path):
                 os.makedirs(os.path.dirname(season_v2_path), exist_ok=True)
                 write_csv_atomic(v2_df, season_v2_path)
-                write_parquet_atomic(v2_df, season_v2_path.replace(".csv", ".parquet"))
 
             print("\nStep 8b: Rebuilding training-ready V3 dataset for the season...")
             try:

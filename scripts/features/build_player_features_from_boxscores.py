@@ -3,7 +3,6 @@ Build boxscore-aligned minimal player features for a given season.
 
 Outputs (experimental scope only for 2024-25 work):
 - data/experimental/player_games_features_{YYYY_YY}_boxscore_aligned.csv
-- data/experimental/player_games_features_{YYYY_YY}_boxscore_aligned.parquet
 
 Notes:
 - Uses raw player boxscores as canonical source to ensure GAME_ID alignment with game_results.
@@ -15,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Tuple
 
 import pandas as pd
 
@@ -59,7 +57,7 @@ def _derive_opponent_and_home_flags(df_players: pd.DataFrame, df_team: pd.DataFr
     return out
 
 
-def build_player_features_from_boxscores(season: str, output_scope: str = "experimental") -> Tuple[Path, Path]:
+def build_player_features_from_boxscores(season: str, output_scope: str = "experimental") -> Path:
     import sys
     sys.path.append(str(ROOT / "scripts"))
     from scripts.data_paths import get_data_paths
@@ -81,14 +79,9 @@ def build_player_features_from_boxscores(season: str, output_scope: str = "exper
     out = _derive_opponent_and_home_flags(df_player, df_team)
 
     csv_out = ROOT / f"data/experimental/player_games_features_{token}_boxscore_aligned.csv"
-    pq_out = ROOT / f"data/experimental/player_games_features_{token}_boxscore_aligned.parquet"
     csv_out.parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(csv_out, index=False)
-    try:
-        out.to_parquet(pq_out, index=False)
-    except Exception:
-        pass
-    return csv_out, pq_out
+    return csv_out
 
 
 def main():
@@ -97,10 +90,7 @@ def main():
     parser.add_argument("--output-scope", type=str, default="experimental", help="Output scope (experimental only)")
     args = parser.parse_args()
 
-    csv_p, pq_p = build_player_features_from_boxscores(args.season, args.output_scope)
-    print(f"Saved: {csv_p}")
-    if pq_p.exists():
-        print(f"Saved: {pq_p}")
+    print(f"Saved: {build_player_features_from_boxscores(args.season, args.output_scope)}")
 
 
 if __name__ == "__main__":

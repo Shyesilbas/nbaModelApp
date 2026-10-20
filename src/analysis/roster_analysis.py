@@ -39,7 +39,7 @@ def run_roster_analysis(
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Runs the complete NBA roster discovery, core player detection, and star ranking analysis.
-    Saves CSV and Parquet structured datasets under data_dir.
+    Saves CSV structured datasets under data_dir.
     Generates three markdown reports in output_dir.
     
     Returns:
@@ -181,36 +181,30 @@ def run_roster_analysis(
     ]].sort_values(by="PLAYER_ID").reset_index(drop=True)
     
     # ------------------------------------------------------------
-    # 6. Save Structured Output Datasets (CSV & Parquet)
+    # 6. Save Structured Output Datasets (CSV)
     # ------------------------------------------------------------
     os.makedirs(data_dir, exist_ok=True)
     
     # Roster
     roster_df.to_csv(os.path.join(data_dir, "team_rosters.csv"), index=False)
-    roster_df.to_parquet(os.path.join(data_dir, "team_rosters.parquet"), index=False, engine="pyarrow")
     
     # Core Players
     core_players_df.to_csv(os.path.join(data_dir, "core_players.csv"), index=False)
-    core_players_df.to_parquet(os.path.join(data_dir, "core_players.parquet"), index=False, engine="pyarrow")
     
     # Automatically copy to production and canonical directories
     for extra_dir in ["data/production", "data/canonical"]:
         os.makedirs(extra_dir, exist_ok=True)
         core_players_df.to_csv(os.path.join(extra_dir, "core_players.csv"), index=False)
-        core_players_df.to_parquet(os.path.join(extra_dir, "core_players.parquet"), index=False, engine="pyarrow")
         print(f"Automatically synchronized core players to: {extra_dir}/")
     
     # Star Candidates
     star_candidates_df.to_csv(os.path.join(data_dir, "star_candidates.csv"), index=False)
-    star_candidates_df.to_parquet(os.path.join(data_dir, "star_candidates.parquet"), index=False, engine="pyarrow")
     
     # Multi-Team Players
     multi_team_players_df.to_csv(os.path.join(data_dir, "multi_team_players.csv"), index=False)
-    multi_team_players_df.to_parquet(os.path.join(data_dir, "multi_team_players.parquet"), index=False, engine="pyarrow")
     
     # Name Lookup
     player_name_lookup_df.to_csv(os.path.join(data_dir, "player_name_lookup.csv"), index=False)
-    player_name_lookup_df.to_parquet(os.path.join(data_dir, "player_name_lookup.parquet"), index=False, engine="pyarrow")
     
     print(f"Structured analysis datasets saved to: {data_dir}/")
     

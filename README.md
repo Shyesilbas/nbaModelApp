@@ -24,8 +24,8 @@ Against simple pregame baselines over five walk-forward seasons (`reports/evalua
 
 ## High-Performance Engineering
 
-### 1. High-Speed Data Engine (Parquet & SQLite)
-- **Parquet Layer**: Snappy-compressed Parquet copies of the model-ready datasets (measured 4.5x faster reads and 55% smaller than CSV for `team_model_ready_v3_2025_26`).
+### 1. Data Engine (CSV & SQLite)
+- **CSV pipeline data**: every layer under `data/` is a single CSV per table (no Parquet copies that can go stale).
 - **Frontend Store**: one SQLite file per season under `data/frontend_store/` plus `global.db`, built by `scripts/build_frontend_store.py`. A season is sealed once its Finals are decided and never rebuilt; the daily refresh only rebuilds the active season (~3 s). The frontend reads everything through `/frontend-data-api/*`.
 - **In-Memory Caching**: State-cached Continuous Elo engine and memoized joblib models eliminate redundant filesystem I/O during real-time schedule predictions.
 
@@ -44,7 +44,7 @@ Against simple pregame baselines over five walk-forward seasons (`reports/evalua
 
 ```text
 ├── data/
-│   ├── processed/         # Team model-ready datasets (V3, 2020-21 to 2025-26) in Parquet/CSV
+│   ├── processed/         # Team model-ready datasets (V3, 2020-21 to 2025-26) as CSV
 │   ├── experimental/      # Player model-ready datasets (V4 USG, 165K rows)
 │   ├── frontend_store/    # Per-season SQLite store served by the API to the frontend
 │   └── season=YYYY-YY/    # Season-scoped raw box scores, schedules, and rolling features

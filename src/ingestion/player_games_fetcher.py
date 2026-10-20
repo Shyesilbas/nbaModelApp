@@ -11,13 +11,12 @@ from typing import List, Optional
 
 from src.ingestion.nba_api_client import call_nba_api
 from scripts.season_utils import get_default_season
-from src.ingestion.atomic_io import write_csv_atomic, write_parquet_atomic
+from src.ingestion.atomic_io import write_csv_atomic
 from src.validation.contracts import check_player_games
 
 logger = logging.getLogger("PlayerGamesFetcher")
 
 RAW_PLAYER_CSV = "data/raw/player_games/nba_player_games_regular_and_playoffs.csv"
-RAW_PLAYER_PARQUET = "data/raw/player_games/nba_player_games_regular_and_playoffs.parquet"
 
 EXPECTED_COLUMNS = [
     'SEASON_ID', 'Player_ID', 'Game_ID', 'GAME_DATE', 'MATCHUP', 'WL', 'MIN', 
@@ -347,14 +346,13 @@ def fetch_missing_player_games_by_game_ids(game_ids: List[str], season: str = No
 def append_player_games_to_raw_dataset(new_rows: pd.DataFrame, season: Optional[str] = None) -> int:
     """
     Appends new player game log rows to the raw player games dataset,
-    deduplicates by Player_ID + Game_ID, and saves both CSV and Parquet.
+    deduplicates by Player_ID + Game_ID, and saves the CSV.
     
     Returns the total count of rows after update.
     """
     from scripts.data_paths import get_data_paths
     paths = get_data_paths(season)
     raw_player_csv = paths.player_games_raw
-    raw_player_parquet = paths.player_games_raw.replace(".csv", ".parquet")
 
     if new_rows is None or new_rows.empty:
         logger.info("No new player rows to append.")
@@ -393,9 +391,5 @@ def append_player_games_to_raw_dataset(new_rows: pd.DataFrame, season: Optional[
     os.makedirs(os.path.dirname(raw_player_csv), exist_ok=True)
     write_csv_atomic(df_combined, raw_player_csv)
     logger.info(f"Saved: {raw_player_csv} ({len(df_combined)} rows)")
-    
-    # Save Parquet
-    write_parquet_atomic(df_combined, raw_player_parquet)
-    logger.info(f"Saved: {raw_player_parquet}")
     
     return len(df_combined)

@@ -9,7 +9,7 @@ import pandas as pd
 from pathlib import Path
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import get_default_season, season_to_file_token
-from src.ingestion.atomic_io import write_csv_atomic, write_parquet_atomic
+from src.ingestion.atomic_io import write_csv_atomic
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -78,13 +78,10 @@ def load_team_boxscores(save: bool = True, season: str = None, output_scope: str
         token = season_to_file_token(season or get_default_season())
         out_team_dir = str(ROOT / "data/raw/boxscores/team")
         team_bs_csv = str(ROOT / f"data/raw/boxscores/team/nba_team_boxscores_{token}.csv")
-        team_bs_parq = team_bs_csv.replace(".csv", ".parquet")
         
         os.makedirs(out_team_dir, exist_ok=True)
         write_csv_atomic(df, team_bs_csv)
-        write_parquet_atomic(df, team_bs_parq)
         print(f"  💾 Saved: {team_bs_csv}")
-        print(f"  💾 Saved: {team_bs_parq}")
 
     return df
 
@@ -159,13 +156,10 @@ def load_player_boxscores(save: bool = True, season: str = None, output_scope: s
         token = season_to_file_token(season or get_default_season())
         out_player_dir = str(ROOT / "data/raw/boxscores/player")
         player_bs_csv = str(ROOT / f"data/raw/boxscores/player/nba_player_boxscores_{token}.csv")
-        player_bs_parq = player_bs_csv.replace(".csv", ".parquet")
         
         os.makedirs(out_player_dir, exist_ok=True)
         write_csv_atomic(df, player_bs_csv)
-        write_parquet_atomic(df, player_bs_parq)
         print(f"  💾 Saved: {player_bs_csv}")
-        print(f"  💾 Saved: {player_bs_parq}")
 
     return df
 
@@ -274,11 +268,8 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
             os.makedirs(str(ROOT / "data/processed"), exist_ok=True)
             results_csv = dp.game_results
             
-        results_parq = results_csv.replace(".csv", ".parquet")
         write_csv_atomic(results, results_csv)
-        write_parquet_atomic(results, results_parq)
         print(f"  💾 Saved results summary: {results_csv}")
-        print(f"  💾 Saved results summary: {results_parq}")
 
     return results
 

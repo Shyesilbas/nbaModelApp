@@ -12,13 +12,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from src.ingestion.nba_api_client import call_nba_api
 from scripts.season_utils import get_default_season
-from src.ingestion.atomic_io import write_csv_atomic, write_parquet_atomic
+from src.ingestion.atomic_io import write_csv_atomic
 from src.validation.contracts import check_team_games
 
 logger = logging.getLogger("TeamGamesFetcher")
 
 RAW_TEAM_CSV = "data/raw/team_games/nba_team_games_regular_and_playoffs.csv"
-RAW_TEAM_PARQUET = "data/raw/team_games/nba_team_games_regular_and_playoffs.parquet"
 
 EXPECTED_COLUMNS = [
     'SEASON_ID', 'TEAM_ID', 'TEAM_ABBREVIATION', 'TEAM_NAME', 'GAME_ID', 
@@ -296,14 +295,13 @@ def fetch_missing_team_games_by_game_ids(
 def append_team_games_to_raw_dataset(new_rows: pd.DataFrame, season: Optional[str] = None) -> int:
     """
     Appends new team game log rows to the raw team games dataset,
-    deduplicates by TEAM_ID + GAME_ID, and saves both CSV and Parquet.
+    deduplicates by TEAM_ID + GAME_ID, and saves the CSV.
     
     Returns the total count of rows after update.
     """
     from scripts.data_paths import get_data_paths
     paths = get_data_paths(season)
     raw_team_csv = paths.team_games_raw
-    raw_team_parquet = paths.team_games_raw.replace(".csv", ".parquet")
 
     if new_rows is None or new_rows.empty:
         logger.info("No new team rows to append.")
@@ -342,9 +340,5 @@ def append_team_games_to_raw_dataset(new_rows: pd.DataFrame, season: Optional[st
     os.makedirs(os.path.dirname(raw_team_csv), exist_ok=True)
     write_csv_atomic(df_combined, raw_team_csv)
     logger.info(f"Saved: {raw_team_csv} ({len(df_combined)} rows)")
-    
-    # Save Parquet
-    write_parquet_atomic(df_combined, raw_team_parquet)
-    logger.info(f"Saved: {raw_team_parquet}")
     
     return len(df_combined)

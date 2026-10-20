@@ -80,7 +80,6 @@ def enrich_2026_27():
     df_multi = apply_movements(pd.read_csv(csv_path), load_movements(), "2025-07-01", "2026-12-31", reorder_teams=True)
     df_multi = df_multi.sort_values(by=["TRADE_DATE", "IMPORTANCE_SCORE"], ascending=[False, False]).reset_index(drop=True)
     df_multi.to_csv(csv_path, index=False)
-    df_multi.to_parquet(ROOT / "data/season=2026-27/analysis/multi_team_players.parquet", index=False)
     print(f"  -> Enriched {len(df_multi)} players ({(df_multi.MOVE_TYPE == 'Trade').sum()} trades).")
 
 def enrich_historical_season(season: str):
@@ -124,8 +123,6 @@ def enrich_historical_season(season: str):
     df_multi = df_multi.sort_values(by=["TRADE_DATE", "IMPORTANCE_SCORE" if "IMPORTANCE_SCORE" in df_multi.columns else "PLAYER_ID"], ascending=[False, False]).reset_index(drop=True)
 
     df_multi.to_csv(csv_path, index=False)
-    parquet_path = ROOT / f"data/season={season}/analysis/multi_team_players.parquet"
-    df_multi.to_parquet(parquet_path, index=False)
     print(f"  -> Enriched {season} with {len(df_multi)} players.")
 
 def main():

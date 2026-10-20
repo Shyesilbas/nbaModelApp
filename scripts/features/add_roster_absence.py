@@ -26,8 +26,6 @@ def main() -> None:
         df = pd.read_csv(path, dtype={"GAME_ID": str})
         out = add_absence_columns(df, logs)
         out.to_csv(path, index=False)
-        if Path(path).with_suffix('.parquet').exists():
-            out.to_parquet(Path(path).with_suffix('.parquet'), index=False)
         print(f"{Path(path).name}: {len(out)} rows, ABS_DIFF std {out['ABS_DIFF'].std():.2f}, non-zero {(out['ABS_DIFF'] != 0).mean():.0%}")
 
 

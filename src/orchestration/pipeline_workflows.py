@@ -100,13 +100,11 @@ def run_build_enhanced_v2(args: Any) -> None:
     os.makedirs(out_root, exist_ok=True)
     v2_csv = os.path.join(out_root, f"team_model_ready_v2_{token}.csv")
     df_team_model_v2.to_csv(v2_csv, index=False)
-    df_team_model_v2.to_parquet(v2_csv.replace(".csv", ".parquet"), index=False, engine="pyarrow")
 
     season_v2_path = runner.paths.team_model_ready_v2
     if os.path.normpath(v2_csv) != os.path.normpath(season_v2_path):
         os.makedirs(os.path.dirname(season_v2_path), exist_ok=True)
         df_team_model_v2.to_csv(season_v2_path, index=False)
-        df_team_model_v2.to_parquet(season_v2_path.replace(".csv", ".parquet"), index=False, engine="pyarrow")
 
 
 def run_pre_model_readiness_pipeline(args: Any) -> None:

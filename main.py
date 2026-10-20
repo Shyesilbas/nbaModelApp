@@ -298,7 +298,6 @@ def main():
         # Shapes & Storage locations
         print("1. TEAM ROSTERS:")
         print(f"   - CSV Path:     {os.path.join(season_data_dir, 'team_rosters.csv')}")
-        print(f"   - Parquet Path: {os.path.join(season_data_dir, 'team_rosters.parquet')}")
         print(f"   - Shape:        {roster_df.shape}")
         print("   - Sample Rows:")
         print(roster_df.head(3).to_string(index=False))
@@ -306,7 +305,6 @@ def main():
         
         print("2. CORE PLAYERS:")
         print(f"   - CSV Path:     {os.path.join(season_data_dir, 'core_players.csv')}")
-        print(f"   - Parquet Path: {os.path.join(season_data_dir, 'core_players.parquet')}")
         print(f"   - Shape:        {core_players_df.shape}")
         print("   - Sample Rows:")
         print(core_players_df.head(3).to_string(index=False))
@@ -314,7 +312,6 @@ def main():
         
         print("3. LEAGUE-WIDE STAR CANDIDATES:")
         print(f"   - CSV Path:     {os.path.join(season_data_dir, 'star_candidates.csv')}")
-        print(f"   - Parquet Path: {os.path.join(season_data_dir, 'star_candidates.parquet')}")
         print(f"   - Shape:        {star_candidates_df.shape}")
         print("   - Sample (Top 3):")
         print(star_candidates_df.head(3).to_string(index=False))
@@ -322,7 +319,6 @@ def main():
         
         print("4. MULTI-TEAM PLAYERS:")
         print(f"   - CSV Path:     {os.path.join(season_data_dir, 'multi_team_players.csv')}")
-        print(f"   - Parquet Path: {os.path.join(season_data_dir, 'multi_team_players.parquet')}")
         print(f"   - Shape:        {multi_team_players_df.shape}")
         print("   - Sample Rows:")
         print(multi_team_players_df.head(3).to_string(index=False))
@@ -330,7 +326,6 @@ def main():
         
         print("5. NAME NORMALIZATION LOOKUP:")
         print(f"   - CSV Path:     {os.path.join(season_data_dir, 'player_name_lookup.csv')}")
-        print(f"   - Parquet Path: {os.path.join(season_data_dir, 'player_name_lookup.parquet')}")
         print(f"   - Shape:        {player_name_lookup_df.shape}")
         print("   - Sample Rows (with Accent Characters):")
         accented_samples = player_name_lookup_df[
@@ -444,21 +439,15 @@ def main():
     
     # File paths
     team_csv_path = paths.team_features
-    team_parquet_path = paths.team_features.replace(".csv", ".parquet")
     player_csv_path = paths.player_features
-    player_parquet_path = paths.player_features.replace(".csv", ".parquet")
     
     # Save team games
     print(f"Saving team features to CSV: {team_csv_path}")
     df_team_features.to_csv(team_csv_path, index=False)
-    print(f"Saving team features to Parquet: {team_parquet_path}")
-    df_team_features.to_parquet(team_parquet_path, index=False, engine="pyarrow")
     
     # Save player games
     print(f"Saving player features to CSV: {player_csv_path}")
     df_player_features.to_csv(player_csv_path, index=False)
-    print(f"Saving player features to Parquet: {player_parquet_path}")
-    df_player_features.to_parquet(player_parquet_path, index=False, engine="pyarrow")
     
     # 6. BUILD MODEL-READY DATASETS
     if args.build_model_dataset or args.build_v3_dataset:
@@ -472,12 +461,9 @@ def main():
         os.makedirs(processed_dir, exist_ok=True)
         
         model_csv_path = os.path.join(processed_dir, f"team_model_ready_{token}.csv")
-        model_parquet_path = os.path.join(processed_dir, f"team_model_ready_{token}.parquet")
         
         print(f"Saving model-ready team features (V1) to CSV: {model_csv_path}")
         df_team_model.to_csv(model_csv_path, index=False)
-        print(f"Saving model-ready team features (V1) to Parquet: {model_parquet_path}")
-        df_team_model.to_parquet(model_parquet_path, index=False, engine="pyarrow")
         
         # Build V2 Dataset (Opponent-Aware)
         print("\nEngineering opponent features...")
@@ -490,12 +476,9 @@ def main():
         df_team_model_v2, dropped_count_v2 = build_team_model_dataset_v2(df_team_features_with_opp)
         
         model_v2_csv_path = paths.team_model_ready_v2
-        model_v2_parquet_path = paths.team_model_ready_v2.replace(".csv", ".parquet")
         
         print(f"Saving model-ready team features (V2) to CSV: {model_v2_csv_path}")
         df_team_model_v2.to_csv(model_v2_csv_path, index=False)
-        print(f"Saving model-ready team features (V2) to Parquet: {model_v2_parquet_path}")
-        df_team_model_v2.to_parquet(model_v2_parquet_path, index=False, engine="pyarrow")
         
         # Generate Opponent Feature Report
         report_path = "reports/audits/opponent_feature_report.md"
@@ -512,7 +495,6 @@ def main():
             f.write("# NBA Team Model-Ready Dataset V2 (Opponent-Aware) Report\n\n")
             f.write("## 1. Dataset Dimensions & Paths\n")
             f.write(f"- **V2 CSV Output File**: `{model_v2_csv_path}`\n")
-            f.write(f"- **V2 Parquet Output File**: `{model_v2_parquet_path}`\n")
             f.write(f"- **Final V2 Shape**: **{df_team_model_v2.shape[0]} rows, {df_team_model_v2.shape[1]} columns**\n")
             f.write(f"- **Total Features**: **{df_team_model_v2.shape[1] - 7} features** (Target `WIN` and 6 Metadata columns excluded)\n\n")
             
@@ -587,12 +569,9 @@ def main():
                 print(f"Skipping roster absence features: missing column {e}")
             
             model_v3_csv_path = os.path.join(processed_dir, f"team_model_ready_v3_{token}.csv")
-            model_v3_parquet_path = os.path.join(processed_dir, f"team_model_ready_v3_{token}.parquet")
             
             print(f"Saving model-ready team features (V3) to CSV: {model_v3_csv_path}")
             df_team_model_v3.to_csv(model_v3_csv_path, index=False)
-            print(f"Saving model-ready team features (V3) to Parquet: {model_v3_parquet_path}")
-            df_team_model_v3.to_parquet(model_v3_parquet_path, index=False, engine="pyarrow")
             
             # Programmatically generate reports/operations/team_model_ready_v3_report.md
             v3_report_path = "reports/operations/team_model_ready_v3_report.md"
@@ -626,7 +605,6 @@ def main():
                 
                 f.write("## 1. Dataset Dimensions & Paths\n")
                 f.write(f"- **V3 CSV Output File**: `{model_v3_csv_path}`\n")
-                f.write(f"- **V3 Parquet Output File**: `{model_v3_parquet_path}`\n")
                 f.write(f"- **Final V3 Shape**: **{df_team_model_v3.shape[0]} rows, {df_team_model_v3.shape[1]} columns**\n")
                 f.write(f"- **Total Features**: **{df_team_model_v3.shape[1] - 7} features** (Target `WIN` and 6 Metadata columns excluded)\n\n")
                 

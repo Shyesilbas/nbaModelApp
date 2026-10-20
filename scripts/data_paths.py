@@ -13,8 +13,6 @@ class DataPaths:
     raw_team_boxscores: str
     raw_player_boxscores: str
     raw_play_by_play_dir: str
-    processed_pbp_events: str
-    processed_quarter_scores: str
     game_results: str
     schedule_combined: str
     upcoming_context: str
@@ -24,18 +22,6 @@ class DataPaths:
     score_model_dataset: str
     team_model_ready_v2: str
     season_dir: str
-
-    @property
-    def player_features_parquet(self) -> Path:
-        return Path(self.player_features.replace(".csv", ".parquet"))
-
-    @property
-    def team_features_parquet(self) -> Path:
-        return Path(self.team_features.replace(".csv", ".parquet"))
-
-    @property
-    def schedule_combined_parquet(self) -> Path:
-        return Path(self.schedule_combined.replace(".csv", ".parquet"))
 
 
 def get_data_paths(season: str = None) -> DataPaths:
@@ -58,8 +44,6 @@ def get_data_paths(season: str = None) -> DataPaths:
         raw_team_boxscores=str(raw_root / "boxscores" / "team_boxscores.csv"),
         raw_player_boxscores=str(raw_root / "boxscores" / "player_boxscores.csv"),
         raw_play_by_play_dir=str(raw_root / "play_by_play"),
-        processed_pbp_events=str(processed_root / "pbp_events.parquet"),
-        processed_quarter_scores=str(processed_root / "quarter_scores.parquet"),
         game_results=str(processed_root / "game_results.csv"),
         schedule_combined=str(processed_root / "schedule_combined.csv"),
         upcoming_context=str(processed_root / "upcoming_games_context.csv"),

@@ -202,11 +202,7 @@ def _load_player_dataset(season: str = None):
     v4_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
     season_path = None
     if season:
-        season_path_parquet = ROOT / f"data/season={season}/features/player_features.parquet"
-        season_path_csv = ROOT / f"data/season={season}/features/player_features.csv"
-        # The newer of the two copies: some updaters rewrite only the CSV.
-        candidates = [p for p in (season_path_parquet, season_path_csv) if p.exists()]
-        season_path = max(candidates, key=lambda p: p.stat().st_mtime_ns) if candidates else None
+        season_path = ROOT / f"data/season={season}/features/player_features.csv"
 
     # Keyed by file versions so a data refresh is picked up without restarting the service.
     meta_path = ROOT / "data/canonical/player_metadata.csv"
@@ -220,7 +216,7 @@ def _load_player_dataset(season: str = None):
     if v4_path.exists():
         dfs.append(pd.read_csv(v4_path))
     if season_path is not None:
-        dfs.append(pd.read_parquet(season_path) if season_path.suffix == ".parquet" else pd.read_csv(season_path))
+        dfs.append(pd.read_csv(season_path))
 
     if not dfs:
         raise FileNotFoundError("Player dataset (V3 or V4) missing for player inference.")

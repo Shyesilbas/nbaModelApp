@@ -33,8 +33,3 @@ def write_csv_atomic(df: pd.DataFrame, path, **kwargs) -> None:
     kwargs.setdefault("index", False)
     _atomic_write(path, lambda tmp: df.to_csv(tmp, **kwargs))
 
-
-def write_parquet_atomic(df: pd.DataFrame, path, **kwargs) -> None:
-    kwargs.setdefault("index", False)
-    kwargs.setdefault("engine", "pyarrow")
-    _atomic_write(path, lambda tmp: df.to_parquet(tmp, **kwargs))

@@ -7,14 +7,14 @@ Public API
 ----------
   load_full_schedule()          -> pd.DataFrame
   load_finals_upcoming_schedule() -> pd.DataFrame
-  load_combined_schedule()      -> pd.DataFrame  (also saves CSV + Parquet)
+  load_combined_schedule()      -> pd.DataFrame  (also saves the CSV)
 """
 
 import os
 from typing import Optional
 import pandas as pd
 from scripts.season_utils import get_default_season
-from src.ingestion.atomic_io import write_csv_atomic, write_parquet_atomic
+from src.ingestion.atomic_io import write_csv_atomic
 
 # ─────────────────────────────────────────────
 # Full unified column schema (superset of both source files)
@@ -141,7 +141,7 @@ def load_combined_schedule(save: bool = True, season: Optional[str] = None) -> p
     Merge the full played schedule and the upcoming Finals schedule.
 
     Deduplicates on GAME_ID (Finals file wins on overlap since it has richer data).
-    Saves the combined dataset to CSV and Parquet by default.
+    Saves the combined dataset to CSV by default.
 
     Parameters
     ----------
@@ -155,7 +155,6 @@ def load_combined_schedule(save: bool = True, season: Optional[str] = None) -> p
     from scripts.data_paths import get_data_paths
     paths = get_data_paths(season or get_default_season())
     combined_csv_path = paths.schedule_combined
-    combined_parq_path = paths.schedule_combined.replace(".csv", ".parquet")
 
     df_main   = load_full_schedule(season)
     df_finals = load_finals_upcoming_schedule(season)
@@ -177,8 +176,6 @@ def load_combined_schedule(save: bool = True, season: Optional[str] = None) -> p
     if save:
         os.makedirs(os.path.dirname(combined_csv_path), exist_ok=True)
         write_csv_atomic(df_combined, combined_csv_path)
-        write_parquet_atomic(df_combined, combined_parq_path)
         print(f"  💾 Saved: {combined_csv_path}")
-        print(f"  💾 Saved: {combined_parq_path}")
 
     return df_combined

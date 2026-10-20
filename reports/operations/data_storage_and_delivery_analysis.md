@@ -145,5 +145,6 @@ Karar: A (tek kanal: SQLite + API). Sezon, Finalleri bir takım 4 galibiyetle ka
 
 **Açık kalanlar**:
 - `.git` geçmişi eski frontend JSON'larını hâlâ içeriyor (~216 MB). Küçültmek için geçmişin yeniden yazılması (`git filter-repo`) ve force-push gerekiyor.
-- `data/` katmanlarında CSV + Parquet ikilisi (Bölüm 6, adım 5) ayrı bir iş olarak duruyor.
+- ~~`data/` katmanlarında CSV + Parquet ikilisi~~ ÇÖZÜLDÜ (2026-10-21): tek format CSV. 119 çiftin 3'ünde içerik farklıydı ve hepsinde CSV daha yeniydi; 14 Parquet bayattı. Bütün Parquet yazımları ve "ikisinden yenisini oku" mantığı kaldırıldı, `pbp_situational_features` CSV'ye çevrildi. Kopyalar `data/`'dan çıkarıldı (43 MB). WIN, skor ve oyuncu tahminleri 4 maçta (2 güncel, 2 geçmiş sezon) önce ve sonra birebir aynı.
+- ~~Git'te izlenen `data/` dosyaları~~ ÇÖZÜLDÜ (2026-10-21): sadece yeniden üretilemeyen girdiler (oyuncu metadata'sı, 2026-27 bootstrap roster/core/Elo) izleniyor.
 
