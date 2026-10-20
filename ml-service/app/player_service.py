@@ -3,12 +3,14 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import sys
+from functools import lru_cache
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.season_utils import date_to_season
+from src.analysis.roster_transactions import MOVEMENTS_PATH, roster_as_of
 from src.features.player_form import add_player_matchup_features, pregame_player_rows
 
 logger = logging.getLogger(__name__)
@@ -236,7 +238,13 @@ def _load_player_dataset(season: str = None):
     return normalized_df
 
 
-def _active_roster_ids(team: str, season: str):
+@lru_cache(maxsize=32)
+def _season_roster(roster_path: str, season: str, as_of: str, _mtimes: tuple) -> pd.DataFrame:
+    # The bootstrap roster is a pre-season snapshot; replay trades/signings/waivers up to the game date.
+    return roster_as_of(pd.read_csv(roster_path), season, as_of)
+
+
+def _active_roster_ids(team: str, season: str, as_of=None):
     roster_path = ROOT / f"data/season={season}/analysis/team_rosters.csv"
     if not roster_path.exists():
         roster_path = ROOT / "data/canonical/team_rosters.csv"
@@ -244,7 +252,9 @@ def _active_roster_ids(team: str, season: str):
         return None, None
 
     try:
-        roster_df = pd.read_csv(roster_path)
+        as_of = pd.Timestamp(as_of or pd.Timestamp.today()).strftime("%Y-%m-%d")
+        mtimes = tuple(p.stat().st_mtime if p.exists() else 0.0 for p in (roster_path, MOVEMENTS_PATH))
+        roster_df = _season_roster(str(roster_path), season, as_of, mtimes)
         team_roster = roster_df[roster_df["TEAM_ABBREVIATION"] == team]
         return set(team_roster["PLAYER_ID"].unique()), team_roster
     except Exception:
@@ -349,8 +359,8 @@ def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, predictio
 
     season = date_to_season(pred_dt)
 
-    home_active, home_roster_df = _active_roster_ids(home_team, season)
-    away_active, away_roster_df = _active_roster_ids(away_team, season)
+    home_active, home_roster_df = _active_roster_ids(home_team, season, pred_dt)
+    away_active, away_roster_df = _active_roster_ids(away_team, season, pred_dt)
 
     # Form is computed per player, so only the two teams' players (anyone who ever
     # played for either, plus the listed rosters) need rolling forward, not the league.
@@ -469,6 +479,21 @@ def get_roster_preview(home_team, away_team, prediction_date) -> pd.DataFrame:
     return pd.concat([home_X, away_X], ignore_index=True)
 
 
+_ROLE_SEASONS = ["2022-23", "2023-24", "2024-25", "2025-26", "2026-27"]
+_role_model_cache = {}
+
+
+def _role_model():
+    """Role-minutes model fitted on the recorded starter flags; refit when those files change."""
+    from src.features.starter_history import fit_role_model, load_role_inputs
+    from src.ingestion.starters_fetcher import starters_path
+    key = tuple(starters_path(s).stat().st_mtime_ns if starters_path(s).exists() else 0 for s in _ROLE_SEASONS)
+    if key not in _role_model_cache:
+        _role_model_cache.clear()
+        _role_model_cache[key] = fit_role_model(*load_role_inputs(_ROLE_SEASONS))
+    return _role_model_cache[key]
+
+
 def get_player_predictions(
     home_team: str,
     away_team: str,
@@ -513,6 +538,7 @@ def get_player_predictions(
         full_X,
         override_lookup,
         is_preseason=bool(is_preseason),
+        role_model=_role_model(),
     )
 
     return full_X

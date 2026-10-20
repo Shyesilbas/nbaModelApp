@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Optional, Tuple
 
 from src.ingestion.nba_api_client import call_nba_api
 from scripts.season_utils import get_default_season
+from src.ingestion.atomic_io import write_csv_atomic
 
 logger = logging.getLogger("ScheduleFetcher")
 
@@ -60,8 +61,10 @@ def fetch_schedule_for_season(season: str = None) -> pd.DataFrame:
     mapped_df["GAME_DATE"] = pd.to_datetime(df["gameDateEst"]).dt.strftime("%Y-%m-%d")
     # Keep scheduled UTC tip-off so the frontend can enable post-game
     # ingestion after a fixed delay without relying on live game status.
-    if "gameDateUTC" in df.columns:
-        mapped_df["GAME_START_UTC"] = pd.to_datetime(df["gameDateUTC"], utc=True, errors="coerce").dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    # gameDateUTC is only the calendar day (midnight ET); gameDateTimeUTC is the real tip-off.
+    start_col = "gameDateTimeUTC" if "gameDateTimeUTC" in df.columns else "gameDateUTC"
+    if start_col in df.columns:
+        mapped_df["GAME_START_UTC"] = pd.to_datetime(df[start_col], utc=True, errors="coerce").dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     else:
         mapped_df["GAME_START_UTC"] = None
     
@@ -230,10 +233,10 @@ def update_schedule_files(season: str = None) -> Tuple[int, int]:
     
     # Save files
     os.makedirs(os.path.dirname(raw_schedule_csv), exist_ok=True)
-    df_sched.to_csv(raw_schedule_csv, index=False)
+    write_csv_atomic(df_sched, raw_schedule_csv)
     logger.info(f"Updated: {raw_schedule_csv} ({len(df_sched)} games)")
     
-    df_finals.to_csv(raw_finals_csv, index=False)
+    write_csv_atomic(df_finals, raw_finals_csv)
     logger.info(f"Updated: {raw_finals_csv} ({len(df_finals)} games)")
     
     return len(df_sched), len(df_finals)

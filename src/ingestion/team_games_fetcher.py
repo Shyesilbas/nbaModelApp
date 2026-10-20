@@ -12,6 +12,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from src.ingestion.nba_api_client import call_nba_api
 from scripts.season_utils import get_default_season
+from src.ingestion.atomic_io import write_csv_atomic, write_parquet_atomic
+from src.validation.contracts import check_team_games
 
 logger = logging.getLogger("TeamGamesFetcher")
 
@@ -334,13 +336,15 @@ def append_team_games_to_raw_dataset(new_rows: pd.DataFrame, season: Optional[st
             .dt.strftime("%Y-%m-%d")
         )
 
+    check_team_games(df_combined, raw_team_csv)
+
     # Save CSV
     os.makedirs(os.path.dirname(raw_team_csv), exist_ok=True)
-    df_combined.to_csv(raw_team_csv, index=False)
+    write_csv_atomic(df_combined, raw_team_csv)
     logger.info(f"Saved: {raw_team_csv} ({len(df_combined)} rows)")
     
     # Save Parquet
-    df_combined.to_parquet(raw_team_parquet, index=False, engine="pyarrow")
+    write_parquet_atomic(df_combined, raw_team_parquet)
     logger.info(f"Saved: {raw_team_parquet}")
     
     return len(df_combined)

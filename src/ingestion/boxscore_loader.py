@@ -9,6 +9,7 @@ import pandas as pd
 from pathlib import Path
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import get_default_season, season_to_file_token
+from src.ingestion.atomic_io import write_csv_atomic, write_parquet_atomic
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -80,8 +81,8 @@ def load_team_boxscores(save: bool = True, season: str = None, output_scope: str
         team_bs_parq = team_bs_csv.replace(".csv", ".parquet")
         
         os.makedirs(out_team_dir, exist_ok=True)
-        df.to_csv(team_bs_csv, index=False)
-        df.to_parquet(team_bs_parq, index=False, engine="pyarrow")
+        write_csv_atomic(df, team_bs_csv)
+        write_parquet_atomic(df, team_bs_parq)
         print(f"  💾 Saved: {team_bs_csv}")
         print(f"  💾 Saved: {team_bs_parq}")
 
@@ -100,7 +101,7 @@ PLAYER_BS_COLS = [
     "FTM", "FTA", "FT_PCT",
     "OREB", "DREB", "REB",
     "AST", "STL", "BLK", "TOV", "PF", "PLUS_MINUS",
-    "SEASON_TYPE",
+    "SEASON_TYPE", "IS_STARTER",
 ]
 
 
@@ -130,6 +131,16 @@ def load_player_boxscores(save: bool = True, season: str = None, output_scope: s
     if "TEAM_ABBREVIATION" not in df.columns and "MATCHUP" in df.columns:
         df["TEAM_ABBREVIATION"] = df["MATCHUP"].str.split(r"\s+").str[0]
 
+    # Starter flags are recorded per game from the box score; games without a record keep it empty.
+    from src.ingestion.starters_fetcher import starters_path
+    starters_csv = starters_path(season)
+    if starters_csv.exists():
+        st = pd.read_csv(starters_csv, dtype={"Game_ID": str})
+        st["GAME_ID"] = st["Game_ID"].str.zfill(10)
+        df["GAME_ID"] = df["GAME_ID"].astype(str).str.zfill(10)
+        df = df.merge(st[["GAME_ID", "Player_ID", "IS_STARTER"]].rename(columns={"Player_ID": "PLAYER_ID"}), on=["GAME_ID", "PLAYER_ID"], how="left")
+        df["IS_STARTER"] = df["IS_STARTER"].astype("Int64")
+
     # Select and reorder columns
     existing_cols = [c for c in PLAYER_BS_COLS if c in df.columns]
     df = df[existing_cols].copy()
@@ -151,8 +162,8 @@ def load_player_boxscores(save: bool = True, season: str = None, output_scope: s
         player_bs_parq = player_bs_csv.replace(".csv", ".parquet")
         
         os.makedirs(out_player_dir, exist_ok=True)
-        df.to_csv(player_bs_csv, index=False)
-        df.to_parquet(player_bs_parq, index=False, engine="pyarrow")
+        write_csv_atomic(df, player_bs_csv)
+        write_parquet_atomic(df, player_bs_parq)
         print(f"  💾 Saved: {player_bs_csv}")
         print(f"  💾 Saved: {player_bs_parq}")
 
@@ -264,8 +275,8 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
             results_csv = dp.game_results
             
         results_parq = results_csv.replace(".csv", ".parquet")
-        results.to_csv(results_csv, index=False)
-        results.to_parquet(results_parq, index=False, engine="pyarrow")
+        write_csv_atomic(results, results_csv)
+        write_parquet_atomic(results, results_parq)
         print(f"  💾 Saved results summary: {results_csv}")
         print(f"  💾 Saved results summary: {results_parq}")
 

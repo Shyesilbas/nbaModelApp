@@ -14,6 +14,7 @@ import os
 from typing import Optional
 import pandas as pd
 from scripts.season_utils import get_default_season
+from src.ingestion.atomic_io import write_csv_atomic, write_parquet_atomic
 
 # ─────────────────────────────────────────────
 # Full unified column schema (superset of both source files)
@@ -85,7 +86,7 @@ def load_full_schedule(season: Optional[str] = None) -> pd.DataFrame:
             df_sched["IS_PLAYOFF"] = df_merged["SEASON_TYPE_HOME"].astype(str).str.contains("Playoff", case=False, na=False)
             
             os.makedirs(os.path.dirname(raw_schedule_path), exist_ok=True)
-            df_sched.to_csv(raw_schedule_path, index=False)
+            write_csv_atomic(df_sched, raw_schedule_path)
             print(f"  ✅ Saved generated schedule.csv ({len(df_sched)} games)")
         else:
             raise FileNotFoundError(
@@ -175,8 +176,8 @@ def load_combined_schedule(save: bool = True, season: Optional[str] = None) -> p
 
     if save:
         os.makedirs(os.path.dirname(combined_csv_path), exist_ok=True)
-        df_combined.to_csv(combined_csv_path, index=False)
-        df_combined.to_parquet(combined_parq_path, index=False, engine="pyarrow")
+        write_csv_atomic(df_combined, combined_csv_path)
+        write_parquet_atomic(df_combined, combined_parq_path)
         print(f"  💾 Saved: {combined_csv_path}")
         print(f"  💾 Saved: {combined_parq_path}")
 

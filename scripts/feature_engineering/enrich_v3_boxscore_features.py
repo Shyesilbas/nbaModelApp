@@ -14,10 +14,10 @@ from src.features.boxscore_advanced_features import compute_team_boxscore_advanc
 
 SEASONS = ["2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"]
 
-def enrich_all_seasons():
+def enrich_all_seasons(seasons=SEASONS):
     print("=== Enriching V3 Team Datasets with Advanced Boxscore Features ===")
     
-    for season in SEASONS:
+    for season in seasons:
         token = season_to_file_token(season)
         dp = get_data_paths(season)
         
@@ -77,7 +77,7 @@ def enrich_all_seasons():
                 df_feat_enriched.to_parquet(features_parquet, index=False, engine="pyarrow")
             print(f"  -> Updated {features_csv.name} ({len(df_feat_enriched)} rows, {len(df_feat_enriched.columns)} columns)")
 
-    print("=== All 6 seasons successfully enriched with advanced boxscore features! ===")
+    print(f"=== {len(seasons)} season(s) enriched with advanced boxscore features ===")
 
 if __name__ == "__main__":
     enrich_all_seasons()

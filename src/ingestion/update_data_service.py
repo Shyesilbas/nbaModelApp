@@ -10,6 +10,7 @@ from src.ingestion.player_games_fetcher import fetch_missing_player_games_by_gam
 from src.orchestration.pipeline_runner import PipelineRunner
 from scripts.season_utils import get_default_season
 from scripts.data_paths import get_data_paths
+from src.ingestion.atomic_io import write_csv_atomic, write_parquet_atomic
 
 
 class UpdateDataService:
@@ -149,6 +150,15 @@ class UpdateDataService:
                 failed_api_calls.append(f"player_games_fetcher error: {e}")
                 post_player_count = pre_player_count
 
+            # Starter flags are only available from the box score, so they are recorded as games land.
+            try:
+                from src.ingestion.starters_fetcher import collect_starters
+                n_games = collect_starters(missing_game_ids, season=self.season)
+                print(f"Recorded starters for {n_games} game(s).")
+            except Exception as e:
+                print(f"Error recording starters: {e}")
+                failed_api_calls.append(f"starters_fetcher error: {e}")
+
         else:
             print("\nStep 3: No missing completed games detected. Local raw datasets are up to date.")
             post_team_count = pre_team_count
@@ -177,18 +187,41 @@ class UpdateDataService:
             out_root = "data/experimental" if runner.output_scope == "experimental" else "data/processed"
             os.makedirs(out_root, exist_ok=True)
             v2_path = os.path.join(out_root, f"team_model_ready_v2_{runner.token}.csv")
-            v2_df.to_csv(v2_path, index=False)
-            v2_df.to_parquet(v2_path.replace(".csv", ".parquet"), index=False, engine="pyarrow")
+            write_csv_atomic(v2_df, v2_path)
+            write_parquet_atomic(v2_df, v2_path.replace(".csv", ".parquet"))
 
             season_v2_path = runner.paths.team_model_ready_v2
             if os.path.normpath(v2_path) != os.path.normpath(season_v2_path):
                 os.makedirs(os.path.dirname(season_v2_path), exist_ok=True)
-                v2_df.to_csv(season_v2_path, index=False)
-                v2_df.to_parquet(season_v2_path.replace(".csv", ".parquet"), index=False, engine="pyarrow")
+                write_csv_atomic(v2_df, season_v2_path)
+                write_parquet_atomic(v2_df, season_v2_path.replace(".csv", ".parquet"))
+
+            print("\nStep 8b: Rebuilding training-ready V3 dataset for the season...")
+            try:
+                from scripts.feature_engineering.enrich_v3_boxscore_features import enrich_all_seasons
+                from scripts.rebuild_training_data import rebuild_season
+                rebuild_season(self.season)
+                enrich_all_seasons([self.season])
+            except Exception as e:
+                print(f"Warning: V3 rebuild failed: {e}")
 
             # Step 9: Export schedule/context and frontend data
             print("\nStep 9: Exporting schedule context and frontend datasets...")
             runner.build_schedule_context(save=True)
+
+            print("\nStep 9a: Refreshing player movements (trades, signings, waivers)...")
+            try:
+                from scripts.ingest.ingest_transactions import ingest_transactions
+                ingest_transactions()
+            except Exception as e:
+                print(f"Warning: player movement refresh failed, using the cached feed: {e}")
+
+            print("\nStep 9b: Refreshing live roster and the frontend store...")
+            try:
+                from scripts.refresh_current_season_views import refresh_current_season_views
+                refresh_current_season_views(self.season)
+            except Exception as e:
+                print(f"Warning: current season view refresh failed: {e}")
         else:
             print("\nSteps 6-9: Skipped heavy rebuilds (--skip-post-update-rebuilds enabled).")
 

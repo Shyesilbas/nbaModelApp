@@ -11,6 +11,8 @@ from typing import List, Optional
 
 from src.ingestion.nba_api_client import call_nba_api
 from scripts.season_utils import get_default_season
+from src.ingestion.atomic_io import write_csv_atomic, write_parquet_atomic
+from src.validation.contracts import check_player_games
 
 logger = logging.getLogger("PlayerGamesFetcher")
 
@@ -385,13 +387,15 @@ def append_player_games_to_raw_dataset(new_rows: pd.DataFrame, season: Optional[
             .dt.strftime("%Y-%m-%d")
         )
 
+    check_player_games(df_combined, raw_player_csv)
+
     # Save CSV
     os.makedirs(os.path.dirname(raw_player_csv), exist_ok=True)
-    df_combined.to_csv(raw_player_csv, index=False)
+    write_csv_atomic(df_combined, raw_player_csv)
     logger.info(f"Saved: {raw_player_csv} ({len(df_combined)} rows)")
     
     # Save Parquet
-    df_combined.to_parquet(raw_player_parquet, index=False, engine="pyarrow")
+    write_parquet_atomic(df_combined, raw_player_parquet)
     logger.info(f"Saved: {raw_player_parquet}")
     
     return len(df_combined)
