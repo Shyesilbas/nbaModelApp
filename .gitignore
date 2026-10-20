@@ -41,10 +41,17 @@ env/
 .DS_Store
 Thumbs.db
 
-# Project-specific generated/local assets — ignore all data/ except production runtime files
+# data/ is local: raw logs can be re-fetched from the NBA API and everything else is
+# rebuilt from them. Only inputs that cannot be regenerated later are tracked:
+# player bio metadata and the season-start bootstrap (roster snapshot, core players,
+# initial Elo), which depend on the date they were built.
 data/*
-# Keep the prior season's historical feature inputs and current season's live
-# inference bundle in Git.
+!data/canonical
+data/canonical/*
+!data/canonical/player_metadata.csv
+!data/production
+data/production/*
+!data/production/team_elo_initial_2026_27.json
 !data/season=2026-27
 data/season=2026-27/*
 !data/season=2026-27/analysis
@@ -52,42 +59,6 @@ data/season=2026-27/analysis/*
 !data/season=2026-27/analysis/team_rosters.csv
 !data/season=2026-27/analysis/core_players.csv
 !data/season=2026-27/analysis/team_elo_initial.json
-!data/season=2026-27/features
-data/season=2026-27/features/*
-!data/season=2026-27/features/team_features.csv
-!data/season=2026-27/features/team_features.parquet
-!data/season=2026-27/features/player_features.csv
-!data/season=2026-27/features/player_features.parquet
-!data/season=2026-27/processed
-data/season=2026-27/processed/*
-!data/season=2026-27/processed/game_results.csv
-!data/season=2026-27/processed/schedule_combined.csv
-!data/season=2026-27/processed/upcoming_games_context.csv
-!data/season=2026-27/raw
-data/season=2026-27/raw/*
-!data/season=2026-27/raw/team_games.csv
-!data/season=2026-27/raw/player_games.csv
-!data/production
-data/production/*
-!data/production/team_elo_initial_2026_27.json
-# Retain compatibility with previously tracked 2025-26 runtime files.
-!data/season=2025-26
-data/season=2025-26/*
-!data/season=2025-26/features
-data/season=2025-26/features/*
-!data/season=2025-26/features/team_features.csv
-!data/season=2025-26/features/team_features.parquet
-!data/season=2025-26/features/player_features.csv
-!data/season=2025-26/features/player_features.parquet
-!data/season=2025-26/processed
-data/season=2025-26/processed/*
-!data/season=2025-26/processed/game_results.csv
-!data/season=2025-26/processed/schedule_combined.csv
-!data/season=2025-26/processed/upcoming_games_context.csv
-!data/season=2025-26/raw
-data/season=2025-26/raw/*
-!data/season=2025-26/raw/team_games.csv
-!data/season=2025-26/raw/player_games.csv
 # Generated frontend data is served by the API from data/frontend_store/; nothing here is tracked.
 frontend/public/data/
 data/frontend_store/
