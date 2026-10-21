@@ -68,9 +68,9 @@ This document describes the end-to-end data flow, feature engineering, model dat
 ## 6. Model Inference & Serving Architecture
 
 1. **Active Production Models**:
-   - **WIN Probability (v10)**: Uncalibrated logistic regression on 7 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs) plus an early-season Elo blend.
-   - **SCORE Prediction (v10)**: Ridge regressors for pace and each side's offensive rating (2 features each) and for the margin (WIN inputs), with a Ridge residual correction; trained on actual points.
-   - **PLAYER Projection (v9)**: LightGBM regressors for PTS (L1), REB, AST on 21 features including position flags and the opponent's allowance to the player's position.
+   - **WIN Probability (v11)**: Uncalibrated logistic regression on 7 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs) plus an early-season Elo blend.
+   - **SCORE Prediction (v11)**: Ridge regressors for pace and each side's offensive rating (2 features each) and for the margin (WIN inputs), with a Ridge residual correction; trained on actual points.
+   - **PLAYER Projection (v11)**: LightGBM regressors for PTS (L1), REB, AST on 21 features including position flags and the opponent's allowance to the player's position.
 2. **Serving**:
    - FastAPI ML service (`src/api`). Measured warm WIN prediction: p50 ~430 ms, p95 ~820 ms, dominated by feature building (log loading and form roll-forward), not the model call.
    - React 19 dashboard; all data requests go to `/frontend-data-api/*` (`frontend/src/lib/dataCache.ts`).

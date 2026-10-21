@@ -4,9 +4,9 @@ This file tracks the overall status of the project.
 
 ## Current Phase
 
-**Phase 5: Cross-Season Model Training & Validation** (WIN v10.1, SCORE v10.1, and PLAYER v9 production artifacts active; Elo train-serve scale aligned; OOF margin integration complete)
+**Phase 5: Cross-Season Model Training & Validation** (release v11 production artifacts active (WIN, SCORE, PLAYER); Elo train-serve scale aligned; OOF margin integration complete)
 
-**Phase 7: Efficiency / Strength Features** — parked/blocked (production WIN v10.1 promotion complete; no further Phase 7 promotion yet)
+**Phase 7: Efficiency / Strength Features** — parked/blocked (production release v11 promotion complete; no further Phase 7 promotion yet)
 
 ## Active Production Models
 

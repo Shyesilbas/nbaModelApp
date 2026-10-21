@@ -10,9 +10,9 @@ Models are trained on six NBA seasons (2020-21 through 2025-26: 7,390 games, 165
 
 | Layer | Model | Walk-forward 2025-26 (trained on 2020-21..2024-25 only) | 3-season walk-forward (2023-24..2025-26, 3,772 games) |
 | :--- | :--- | :--- | :--- |
-| **WIN Probability (v10)** | Logistic regression on 7 features (Elo diff, home, clean net rating diff, win-rate diff, rest), early-season Elo blend | ROC-AUC `0.740`, Brier `0.204`, Log-loss `0.596`, Accuracy `68.4%` (1,257 games) | ROC-AUC `0.732`, Brier `0.208`, Accuracy `66.9%` |
-| **SCORE Prediction (v10)** | Ridge pace / offensive-rating models (2 features each), Ridge margin on the WIN inputs, Ridge residual correction; actual-point targets | Total MAE `15.31`, Margin MAE `11.45`, Winner accuracy `68.1%` | Total MAE `14.97`, Margin MAE `11.14` |
-| **PLAYER Projection (v9)** | LightGBM per target (L1 for points), 21 features incl. opponent allowance to the player's position | MAE PTS `4.50`, REB `1.89`, AST `1.33` (28,698 rows) | MAE PTS `4.51`, REB `1.90`, AST `1.33` |
+| **WIN Probability (v11)** | Logistic regression on 7 features (Elo diff, home, clean net rating diff, win-rate diff, rest), early-season Elo blend | ROC-AUC `0.740`, Brier `0.204`, Log-loss `0.596`, Accuracy `68.4%` (1,257 games) | ROC-AUC `0.732`, Brier `0.208`, Accuracy `66.9%` |
+| **SCORE Prediction (v11)** | Ridge pace / offensive-rating models (2 features each), Ridge margin on the WIN inputs, Ridge residual correction; actual-point targets | Total MAE `15.31`, Margin MAE `11.45`, Winner accuracy `68.1%` | Total MAE `14.97`, Margin MAE `11.14` |
+| **PLAYER Projection (v11)** | LightGBM per target (L1 for points), 21 features incl. opponent allowance to the player's position | MAE PTS `4.50`, REB `1.89`, AST `1.33` (28,698 rows) | MAE PTS `4.51`, REB `1.90`, AST `1.33` |
 
 The walk-forward columns above score the raw model probability. The served probability additionally blends in the pure Elo probability during each team's first 6 games (weight 0.40 decaying to 0; `src/inference/win_blend.py`, used by the API, CLI, daily schedule and SHAP explanation). Replaying the first 250 games of 2025-26 (95 of them with an active blend), the blend moves Brier from `0.2204` to `0.2185` and accuracy from `66.3%` to `67.4%` on those 95 games; it changes nothing afterwards. The sample is small, so read it as "not harmful", not as a proven gain.
 
