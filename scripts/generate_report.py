@@ -14,7 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts.artifact_paths import resolve_artifact_path
 from scripts.data_paths import get_data_paths
+from src.features.player_form import add_player_matchup_features
 from scripts.season_utils import normalize_season, get_default_season
 from src.features.win_strength_features import attach_actual_points
 
@@ -146,6 +148,8 @@ def print_model_info(model_ver):
     # Find active metadata files
     score_meta_path = ROOT / f"models/production/score_model_{model_ver}_metadata.json"
     player_meta_path = ROOT / f"models/production/player_{model_ver}_metadata.json"
+    if not player_meta_path.exists():
+        player_meta_path = resolve_artifact_path("player_model", "metadata_path", "models/player_v9_metadata.json")
     win_meta_path = ROOT / "models/production/model_metadata.json"
     
     if score_meta_path.exists():
@@ -215,12 +219,17 @@ def evaluate_model_on_season(model_ver, season):
                     player_df = player_df.rename(columns={"Game_ID": "GAME_ID"})
                 player_df["GAME_ID"] = player_df["GAME_ID"].astype(str).apply(lambda x: x.split('.')[0].zfill(10))
                 
+                # Player models are versioned separately from win/score (e.g. v10 ships
+                # with player v9), so fall back to the production manifest's player model.
                 player_features_config_path = ROOT / f"models/production/player_{model_ver}_features.pkl"
                 if not player_features_config_path.exists():
-                    player_features_config_path = ROOT / "models/production/player_v8_features.pkl"
+                    player_features_config_path = resolve_artifact_path("player_model", "feature_columns_path", "models/player_v9_features.pkl")
                     
                 if player_features_config_path.exists():
                     player_features_cols = joblib.load(player_features_config_path)
+                    # Same derived columns training and PlayerPredictor build (v9+ needs them).
+                    if "PLAYER_POSITION_GROUP" in player_df.columns:
+                        player_df = add_player_matchup_features(player_df)
                     player_df = player_df.dropna(subset=player_features_cols)
                     
                     targets = ["pts", "reb", "ast"]
@@ -228,7 +237,7 @@ def evaluate_model_on_season(model_ver, season):
                     for t in targets:
                         model_path = ROOT / "models" / "production" / f"player_{model_ver}_lgb_{t}.pkl"
                         if not model_path.exists():
-                            model_path = ROOT / "models" / "production" / f"player_v8_lgb_{t}.pkl"
+                            model_path = resolve_artifact_path("player_model", f"{t}_model_path", f"models/player_v9_lgb_{t}.pkl")
                         if model_path.exists():
                             model = joblib.load(model_path)
                             pred = model.predict(player_df[player_features_cols])
@@ -360,7 +369,7 @@ def evaluate_model_on_season(model_ver, season):
 def main():
     parser = argparse.ArgumentParser(description="NBA Season and Model Reporting/Evaluation CLI")
     parser.add_argument("--season", help="Target season for data stats/freshness or evaluation (e.g. 2025-26)")
-    parser.add_argument("--model", help="Target model version (e.g. v8 or v9) to inspect or evaluate")
+    parser.add_argument("--model", help="Target model version (e.g. v9 or v10) to inspect or evaluate")
     parser.add_argument("--compare-models", nargs=2, metavar=("M1", "M2"), help="Compare two model versions on the specified season")
     parser.add_argument("--freshness-check", action="store_true", help="Perform freshness and shape sanity check on target season")
     args = parser.parse_args()

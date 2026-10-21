@@ -122,7 +122,7 @@ def main():
       Predict all matchups for a given date.
   scripts/retrain_pipeline.py --season YYYY-YY [--dry-run]
       Safe retraining and promotion pipeline.
-  scripts/generate_report.py --season YYYY-YY --model {v8,v9}
+  scripts/generate_report.py --season YYYY-YY --model {v9,v10}
       Season and model report audit.
   scripts/detect_drift_and_leakage.py --reference-season YYYY-YY --target-season YYYY-YY
       Data drift and feature leakage detector.
