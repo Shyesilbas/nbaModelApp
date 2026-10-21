@@ -7,7 +7,7 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 1. `docs/artifact_registry.md` — Single source of truth for all data, model, and report paths. Never overwrite production paths listed here without explicit user approval.
 2. `docs/project_status.md` — Tracks the current active phases, production model configurations, and next steps.
 3. `README.md` — Core architecture overview and quick-start pipeline commands.
-4. `reports/production/model_performance_and_architecture_report.md` — Production V10/V10.1 model architecture, calibration methods, and benchmark parameters.
+4. `reports/production/model_performance_and_architecture_report.md` — Production model architecture (release v11), calibration methods, and benchmark parameters.
 5. `docs/season_onboarding_guide.md` — Sequence of CLI commands to ingest and bootstrap new seasons.
 6. `docs/reporting_and_validation_guide.md` — How to run season freshness audits, model evaluations, and comparisons.
 7. `config/production_artifacts.yaml` — Production configurations, paths, and metadata.
@@ -27,9 +27,22 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 - Experiment reports must be registered before they are treated as active outputs.
 
 ## Current Production Decision
-- Win Probability: Win Probability V10 (Uncalibrated Logistic Regression on 7-8 features) is the active production model.
-- Score Prediction: Score Prediction V10 (Standardized Ridge models for Pace, Home/Away Off_Rtg, Margin with Ridge residual correction) is the active production model.
-- Player Prediction: Player Prediction V9 (LightGBM models for PTS with L1 objective, REB, AST on 21 features) is the active production model.
+Single release **v11** (`release: v11` in `config/production_artifacts.yaml`); file names carry no version. All models are trained on 2020-21..2025-26. Details and metrics live in `docs/project_status.md`.
+- Win Probability: uncalibrated logistic regression on 8 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs, roster availability ABS_DIFF).
+- Score Prediction: Ridge pace and offensive-rating models, Ridge margin on the WIN inputs, Ridge residual correction.
+- Player Prediction: LightGBM for PTS/REB/AST on 21 features, no residual correction.
+- Honest baselines: WIN is close to Elo + home court; SCORE total is close to last-10 real points. Gains need new data, not more tuning.
+
+## Project Map
+- `main.py` — CLI entry point. Run `python3 main.py --help` for the authoritative flag list; the command tables below can lag behind it.
+- `src/` — `api`, `core` (incl. `data_paths`), `features`, `training`, `inference`, `evaluation`, `validation`, `ingestion`, `processing`, `orchestration`, `frontend_store`, `analysis`.
+- `scripts/` — operational scripts (retrain, daily predict, reports, audits, backtests, ingest).
+- `tests/` — pytest suite: `PYTHONPATH=. python3 -m pytest tests -q`.
+- `data/season=YYYY-YY/` — per-season data; `data/frontend_store/` — frontend SQLite store.
+- `models/production/`, `models/experimental/` — trained artifacts.
+- `reports/` — `production`, `evaluation`, `backtests`, `audits`, `predictions`, `shap`, `operations`.
+- `frontend/` — Vite/React app. `scripts/start_all.sh` starts the FastAPI ML service and the frontend together.
+- `graphify-out/GRAPH_REPORT.md` — knowledge graph of the codebase; read it for architecture questions before grepping.
 
 ## Common Pipelines and CLI Commands
 
@@ -46,6 +59,10 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 - Build Frontend Store (per-season SQLite, closed seasons skipped): `PYTHONPATH=. python3 scripts/build_frontend_store.py`
 - Roster & Core Player Analysis: `PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis`
 - Daily Schedule Matchups Predictor: `PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY`
+
+### Tests
+- Full suite: `PYTHONPATH=. python3 -m pytest tests -q`
+- Run before concluding any change to `src/` or `scripts/`.
 
 ### Quality Control & Audits
 - Verify Project Structure: `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py`
