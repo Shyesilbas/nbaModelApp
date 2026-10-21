@@ -10,7 +10,6 @@ from the service functions with whatever models are in ``models/production``.
 from __future__ import annotations
 
 import argparse
-import sys
 import warnings
 from multiprocessing import Pool
 from pathlib import Path
@@ -18,8 +17,6 @@ from pathlib import Path
 import pandas as pd
 
 warnings.filterwarnings("ignore")
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "ml-service"))
 
 
 def _build(build_features, team, opponent, date, season):
@@ -33,8 +30,8 @@ def _build(build_features, team, opponent, date, season):
 def _predict_game(game):
     import contextlib, io
     from app import service as svc
-    from app.schemas import ScorePredictionRequest, WinProbRequest
-    from app.services.score_prediction import predict_score
+    from src.api.schemas import ScorePredictionRequest, WinProbRequest
+    from src.api.services.score_prediction import predict_score
     from src.features.build_matchup_features import build_features
 
     gid, date, home, away, season = game

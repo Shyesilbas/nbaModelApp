@@ -103,7 +103,7 @@ WIN sözleşmesinde oyuncu projeksiyon girdileri `fill_default_when_unavailable`
 
 ### P1 — Tahmin aralıklarının kapsama ve belirsizliği kanıtlanmalı
 
-Canlı skor aralıkları metadata ofsetleriyle oluşturuluyor; metadata’da yoksa sabit ±8/±12/±10 sayı yedekleri var: [score_prediction.py](../ml-service/app/services/score_prediction.py#L124). “%80 aralık” etiketi kullanılacaksa farklı sezonlarda yaklaşık %80 gerçek kapsama göstermeli; kapsam takım skoru, toplam ve fark için ayrı ölçülmeli.
+Canlı skor aralıkları metadata ofsetleriyle oluşturuluyor; metadata’da yoksa sabit ±8/±12/±10 sayı yedekleri var: [score_prediction.py](../src/api/services/score_prediction.py#L124). “%80 aralık” etiketi kullanılacaksa farklı sezonlarda yaklaşık %80 gerçek kapsama göstermeli; kapsam takım skoru, toplam ve fark için ayrı ölçülmeli.
 
 **Çözüm:** Oyun bazlı dış örnek tahmin artıklarından, hedeflenen kapsama göre conformal veya quantile aralıklar hesapla. Kapsama ile aralık genişliğini birlikte raporla; her sezon, ev/deplasman ve maç önü tahmin zamanı için kalibre et. Veri yetersizse yüzde kapsama iddiası yerine açıkça “tarihsel tipik aralık” de.
 
@@ -282,8 +282,8 @@ Sabit eşikleri bir defa belirleyip sonsuza dek korumak yerine, mevcut şampiyon
 - WIN eğitim/değerlendirme: [src/training/win_trainer.py](../src/training/win_trainer.py)
 - SCORE eğitim/değerlendirme: [src/training/score_trainer.py](../src/training/score_trainer.py)
 - PLAYER eğitim/değerlendirme: [src/training/player_trainer.py](../src/training/player_trainer.py)
-- Canlı SCORE uygulaması: [ml-service/app/services/score_prediction.py](../ml-service/app/services/score_prediction.py)
-- Canlı tam tahmin bileşimi: [ml-service/app/services/game_full.py](../ml-service/app/services/game_full.py)
+- Canlı SCORE uygulaması: [src/api/services/score_prediction.py](../src/api/services/score_prediction.py)
+- Canlı tam tahmin bileşimi: [src/api/services/game_full.py](../src/api/services/game_full.py)
 - Tarihsel core availability üretimi: [src/features/core_player_availability_features.py](../src/features/core_player_availability_features.py)
 - Üretim WIN metadata’sı: [models/production/win_metadata.json](../models/production/win_metadata.json)
 - Üretim SCORE metadata’sı: [models/production/score_metadata.json](../models/production/score_metadata.json)
@@ -320,7 +320,7 @@ Leakage azaltma ve üretim adayı değerlendirmesi `reports/evaluation/training_
 
 ## 3. Canlı Shadow Modu ve Drift İzleme Altyapısı (Aşama 4)
 
-* **Shadow Logger:** [ml-service/app/services/shadow_logger.py](../ml-service/app/services/shadow_logger.py) ile canlı servise gelen her tam tahmin `prediction_id`, zaman damgası, model sürümü, conformal aralıklar ve girdi snapshot'ı ile `data/predictions/shadow_predictions_log.jsonl` dosyasına yazılacak şekilde entegre edildi ([ml-service/app/services/game_full.py](../ml-service/app/services/game_full.py)).
+* **Shadow Logger:** [src/api/services/shadow_logger.py](../src/api/services/shadow_logger.py) ile canlı servise gelen her tam tahmin `prediction_id`, zaman damgası, model sürümü, conformal aralıklar ve girdi snapshot'ı ile `data/predictions/shadow_predictions_log.jsonl` dosyasına yazılacak şekilde entegre edildi ([src/api/services/game_full.py](../src/api/services/game_full.py)).
 * **Drift & Kalibrasyon Monitörü:** [scripts/monitor_shadow_and_drift.py](../scripts/monitor_shadow_and_drift.py) ile loglanan tahminlerin tamamlanmış maçlarla eşleştirilip Brier, MAE, Conformal kapsama ve Kolmogorov-Smirnov girdi kayma testlerini yürüten otomatik raporlama hattı kuruldu (`reports/operations/live_shadow_and_drift_report.md` (silindi)).
 
 ## Kapsam ve Tasarım Kararları

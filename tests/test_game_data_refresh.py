@@ -1,12 +1,10 @@
 import importlib
 import threading
 import time
-from pathlib import Path
 
 
 def test_single_and_batch_refreshes_never_overlap(monkeypatch):
-    monkeypatch.syspath_prepend(str(Path.cwd() / "ml-service"))
-    refresh = importlib.import_module("app.services.game_data_refresh")
+    refresh = importlib.import_module("src.api.services.game_data_refresh")
 
     running, overlaps = [0], []
 

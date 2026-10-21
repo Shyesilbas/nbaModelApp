@@ -22,27 +22,21 @@ trap on_exit EXIT INT TERM
 if command -v python3 >/dev/null 2>&1; then
   echo "Starting ML service..."
   if [ -f "requirements.txt" ]; then
-    cd ml-service
     # create venv if missing
     if [ ! -d ".venv" ]; then
-      echo "Creating .venv for ml-service..."
+      echo "Creating .venv..."
       python3 -m venv .venv
-      . .venv/bin/activate
-      pip install --upgrade pip >/dev/null
-      pip install -r "$REPO_ROOT/requirements.txt" >/dev/null
-    else
-      . .venv/bin/activate
+      .venv/bin/pip install --upgrade pip >/dev/null
+      .venv/bin/pip install -r requirements.txt >/dev/null
     fi
 
     # free port 8001 if already bound by an orphan process
     lsof -ti :8001 | xargs kill -9 2>/dev/null || true
 
-    # start uvicorn from REPO_ROOT with auto-reload for app directory
-    cd "$REPO_ROOT"
-    "$REPO_ROOT/ml-service/.venv/bin/python" -m uvicorn app.main:app --app-dir ml-service --host 127.0.0.1 --port 8001 --reload --reload-dir ml-service/app &
+    # start uvicorn from REPO_ROOT; reload on any change under src/ (the API imports it)
+    .venv/bin/python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001 --reload --reload-dir src &
     ML_PID=$!
     echo "ML service started (PID $ML_PID) on port 8001"
-    deactivate || true
   else
     echo "requirements.txt not found — skipping ML service start"
   fi

@@ -1,15 +1,11 @@
 import importlib
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 
 def _load_rate_limit_module():
-    import sys
-
-    sys.path.insert(0, str(Path.cwd() / "ml-service"))
-    module = importlib.import_module("app.rate_limit")
+    module = importlib.import_module("src.api.rate_limit")
     return importlib.reload(module)
 
 

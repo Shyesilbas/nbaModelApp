@@ -31,11 +31,10 @@ Use the single-command startup script to launch both the FastAPI backend and the
 
 ### Manual Execution
 ```bash
-# ML Service
-cd ml-service
+# ML Service (from the repo root)
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r ../requirements.txt
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+pip install -r requirements.txt
+python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001
 
 # Frontend Dashboard
 cd frontend

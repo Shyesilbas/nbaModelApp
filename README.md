@@ -48,14 +48,16 @@ Against simple pregame baselines over five walk-forward seasons (`reports/evalua
 │   ├── experimental/      # Player model-ready datasets (V4 USG, 165K rows)
 │   ├── frontend_store/    # Per-season SQLite store served by the API to the frontend
 │   └── season=YYYY-YY/    # Season-scoped raw box scores, schedules, and rolling features
-├── ml-service/
-│   ├── app/               # FastAPI prediction service, schemas, and rate limiters
-│   └── app/services/      # Model inference engines (win, score, player, frontend data)
 ├── frontend/
 │   ├── src/components/    # React prediction, player, and roster explorer views
 │   └── src/lib/           # Centralized constants, API clients, and query caching
 ├── models/production/     # Promoted logistic (WIN), Ridge (SCORE) and LightGBM (PLAYER) artifacts
-├── scripts/               # Ingestion, feature engineering, SQLite compilation, retraining
+├── src/
+│   ├── api/               # FastAPI service: routes, schemas, rate limiter, model loader
+│   ├── api/services/      # Endpoint logic (win, score, player, frontend data, refresh)
+│   ├── core/              # Season, data path and artifact path resolution
+│   └── ...                # ingestion, features, processing, training, inference, evaluation
+├── scripts/               # CLI entry points: ingest, retrain, predict, backtest, audit
 └── reports/               # Audits, empirical benchmark logs, and governance documents
 ```
 

@@ -22,7 +22,7 @@ The frontend has no static data files; everything comes from the ML service (`/f
 
 ```bash
 PYTHONPATH=. python3 scripts/build_frontend_store.py
-python3 -m uvicorn app.main:app --app-dir ml-service --port 8001
+python3 -m uvicorn src.api.main:app --port 8001
 ```
 
 ### 2. Launch Local Dev Server

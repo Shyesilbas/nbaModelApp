@@ -33,7 +33,7 @@ This document describes the end-to-end data flow, feature engineering, model dat
 2. **Frontend Store (`data/frontend_store/`)**, the frontend's only data source:
    - One SQLite file per season (`season_YYYY_YY.db`: games feed, box scores, game details, player game logs and averages, PBP moments, rosters, movers) plus `global.db` (seasons, player profiles, season averages, trades). Built by `scripts/build_frontend_store.py` (`src/frontend_store/`) straight from `data/`; each file is built in a temp file and swapped in atomically.
    - A season is **closed** once a team has won four Finals games. A closed season's file is built once and then skipped (unless `STORE_VERSION` changes or `--force`), so past seasons cost nothing on daily updates. Measured: closed season ~20-30 s once, active season ~3 s, global ~2 s.
-   - Served by `ml-service/app/services/frontend_data.py` under `/frontend-data-api/*` (games, weeks, game detail, play-by-play, players, player profiles/averages, seasons, rosters, movers, trades, game results). Not tracked in git; `frontend/public/data/` no longer exists.
+   - Served by `src/api/services/frontend_data.py` under `/frontend-data-api/*` (games, weeks, game detail, play-by-play, players, player profiles/averages, seasons, rosters, movers, trades, game results). Not tracked in git; `frontend/public/data/` no longer exists.
 
 ---
 
@@ -72,5 +72,5 @@ This document describes the end-to-end data flow, feature engineering, model dat
    - **SCORE Prediction (v10)**: Ridge regressors for pace and each side's offensive rating (2 features each) and for the margin (WIN inputs), with a Ridge residual correction; trained on actual points.
    - **PLAYER Projection (v9)**: LightGBM regressors for PTS (L1), REB, AST on 21 features including position flags and the opponent's allowance to the player's position.
 2. **Serving**:
-   - FastAPI ML service (`ml-service/app`). Measured warm WIN prediction: p50 ~430 ms, p95 ~820 ms, dominated by feature building (log loading and form roll-forward), not the model call.
+   - FastAPI ML service (`src/api`). Measured warm WIN prediction: p50 ~430 ms, p95 ~820 ms, dominated by feature building (log loading and form roll-forward), not the model call.
    - React 19 dashboard; all data requests go to `/frontend-data-api/*` (`frontend/src/lib/dataCache.ts`).

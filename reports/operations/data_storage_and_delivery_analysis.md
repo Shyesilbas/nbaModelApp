@@ -1,6 +1,6 @@
 # Veri Saklama ve Frontend'e Veri Gönderme Analizi (2026-10-21)
 
-Bağlam: Production/deploy hedefi yok (Vercel, Docker ve runtime bundle 2026-10-21'de kaldırıldı). Uygulama lokal çalışıyor: Vite dev server (frontend) + FastAPI `ml-service`.
+Bağlam: Production/deploy hedefi yok (Vercel, Docker ve runtime bundle 2026-10-21'de kaldırıldı). Uygulama lokal çalışıyor: Vite dev server (frontend) + FastAPI (`src/api`).
 
 ## 1. Bugünkü durum: aynı veri için üç katman
 
@@ -55,7 +55,7 @@ Oyuncu sayfası ikisini birden kullanıyor: önce `/frontend-data-api/players/<i
 ```
 data/                       pipeline'ın tek kaynağı (raw → features → processed → training)
 data/frontend.db            SQLite, build_frontend_db.py üretir (public/ dışında, symlink yok)
-ml-service (FastAPI)        frontend'in tek veri kaynağı: tüm okumalar SQLite'tan
+src/api (FastAPI)          frontend'in tek veri kaynağı: tüm okumalar SQLite'tan
 frontend                    sadece API çağırır; public/data kalmaz
 ```
 
@@ -137,7 +137,7 @@ Karar: A (tek kanal: SQLite + API). Sezon, Finalleri bir takım 4 galibiyetle ka
 
 **Boyut**: `frontend/public/data` (~800 MB) + `data/frontend` symlink'i + `data/*.json` kopyaları kaldırıldı. Yerine `data/frontend_store/` geldi (7 sezon + global, ~294 MB). Git'ten 1266 dosya çıkarıldı.
 
-**API** (`ml-service/app/services/frontend_data.py`): sadece depodan okur. Yeni endpoint'ler: `seasons`, `player-profiles`, `player-season-averages`, `trades`, `multi-team-players`, `game-results`. `/frontend-data/{file}` ve manifest kaldırıldı. Testler: `tests/test_frontend_store_api.py`.
+**API** (`src/api/services/frontend_data.py`): sadece depodan okur. Yeni endpoint'ler: `seasons`, `player-profiles`, `player-season-averages`, `trades`, `multi-team-players`, `game-results`. `/frontend-data/{file}` ve manifest kaldırıldı. Testler: `tests/test_frontend_store_api.py`.
 
 **Frontend**: `dataCache.ts` statik dosya, manifest ve CacheStorage mantığı olmadan sadece API çağırır. Hiçbir bileşen `/data/...` okumaz. `npx tsc -b` ve `vite build` geçti; ana sayfa headless Chrome'da API verisiyle render edildi.
 
@@ -170,7 +170,7 @@ Karar: A (tek kanal: SQLite + API). Sezon, Finalleri bir takım 4 galibiyetle ka
 
 ## 12. "Tamamlananları çek" butonu ile veri saklama (2026-10-21, kontrol edildi)
 
-Akış (`ml-service/app/services/game_data_refresh.py`), maç başına sırasıyla:
+Akış (`src/api/services/game_data_refresh.py`), maç başına sırasıyla:
 1. Ham takım ve oyuncu satırları eklenir. Tekilleştirme, veri kontratı ve atomik yazım yapılır.
 2. Box score'lar ve `game_results.csv` yeniden üretilir.
 3. PBP dosyası ve PBP durum özellikleri yazılır.

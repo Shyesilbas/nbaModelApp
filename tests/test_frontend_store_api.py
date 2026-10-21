@@ -1,6 +1,5 @@
 import importlib
 import json
-from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -46,12 +45,11 @@ def client(tmp_path, monkeypatch):
     (raw_pbp / "0042500406.json").write_text(json.dumps({"events": []}), encoding="utf-8")
 
     monkeypatch.setenv("NBA_DATA_API_TOKEN", "")
-    monkeypatch.syspath_prepend(str(Path.cwd() / "ml-service"))
-    frontend_data = importlib.reload(importlib.import_module("app.services.frontend_data"))
+    frontend_data = importlib.reload(importlib.import_module("src.api.services.frontend_data"))
     monkeypatch.setattr(frontend_data, "REPO_ROOT", repo_root)
     monkeypatch.setattr(frontend_data, "DEFAULT_SEASON", "2025-26")
     frontend_data._doc.cache_clear()
-    routes = importlib.reload(importlib.import_module("app.routes"))
+    routes = importlib.reload(importlib.import_module("src.api.routes"))
     app = FastAPI()
     app.include_router(routes.router)
     return TestClient(app)
@@ -91,7 +89,7 @@ def test_docs_and_missing_season(client):
 
 
 def test_private_token(client, monkeypatch):
-    import app.services.frontend_data as frontend_data
+    import src.api.services.frontend_data as frontend_data
 
     monkeypatch.setattr(frontend_data, "DATA_TOKEN", "secret")
     assert client.get("/frontend-data-api/seasons").status_code == 401

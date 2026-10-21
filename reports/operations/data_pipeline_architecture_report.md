@@ -99,7 +99,7 @@ Sistem bu sorunu şu şekilde çözer:
 1. **İşlem Günlüğü (Transactions Log) Durumu**:
    - [src/ingestion/ingest_transactions.py](../../src/ingestion/ingest_transactions.py) resmi NBA Player Movement feed'ini `data/transactions/player_movement.csv` dosyasına indirir; [scripts/ingest/ingest_espn_transactions.py](../../scripts/ingest/ingest_espn_transactions.py) ESPN hareket listesini `espn_transactions.csv` olarak tamamlar.
    - Feed `--update-data` akışında (Step 9a) her gün yenilenir.
-   - [src/analysis/roster_transactions.py](../../src/analysis/roster_transactions.py) feed'deki Trade / Signing / AwardOnWaivers / Waive hareketlerini sezon roster'ına uygular. Canlı oyuncu tahmini (`ml-service/app/player_service.py`, maç tarihine kadarki hareketler) ve frontend canlı roster'ı (`live_roster_refresh.py`, oyuncunun son maçından sonraki hareketler) bu modülü kullanır. Öncesinde 6 Ekim'de dondurulmuş roster, 17 Ekim'de waive edilen 105 oyuncuyu hâlâ takımlarında gösteriyordu.
+   - [src/analysis/roster_transactions.py](../../src/analysis/roster_transactions.py) feed'deki Trade / Signing / AwardOnWaivers / Waive hareketlerini sezon roster'ına uygular. Canlı oyuncu tahmini (`src/api/services/player_projection.py`, maç tarihine kadarki hareketler) ve frontend canlı roster'ı (`live_roster_refresh.py`, oyuncunun son maçından sonraki hareketler) bu modülü kullanır. Öncesinde 6 Ekim'de dondurulmuş roster, 17 Ekim'de waive edilen 105 oyuncuyu hâlâ takımlarında gösteriyordu.
    - Trade export'u ve çok takımlı takas tarihlerinin zenginleştirilmesi de aynı feed'i kullanır.
 
 2. **Çıkarımsal Takas Hesaplama (Observed Stints)**:
@@ -127,7 +127,7 @@ Sistem bu sorunu şu şekilde çözer:
 | [scripts/build_play_by_play.py](../../scripts/build_play_by_play.py) | Game ID veya sezon bazında NBA `PlayByPlayV3` verisini çekerek frontend için `play_by_play/{GAME_ID}.json` cache dosyalarını üreten CLI. |
 | [src/features/core_player_availability_features.py](../../src/features/core_player_availability_features.py) | Belirlenen core oyuncuların maçlardaki oynama/süre istatistiklerini takım ve rakip bazlı olarak birleştiren özellik üretici. |
 | [src/processing/upcoming_context_builder.py](../../src/processing/upcoming_context_builder.py) | Gelecek maçları, takımların en güncel V2 rolling istatistikleri ve core oyuncu listeleriyle birleştirerek arayüze hazır hale getiren servis. |
-| [ml-service/app/player_service.py](../../ml-service/app/player_service.py) | Canlı tahmin sırasında gelecek maçlar için oyuncuların geçmiş sürelerini (EMA) kullanarak aktif oyuncuları belirleyen mikroservis kodu. |
+| [src/api/services/player_projection.py](../../src/api/services/player_projection.py) | Canlı tahmin sırasında gelecek maçlar için oyuncuların geçmiş sürelerini (EMA) kullanarak aktif oyuncuları belirleyen mikroservis kodu. |
 
 ---
 

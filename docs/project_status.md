@@ -49,11 +49,11 @@ All three are trained on 2020-21..2025-26. Honest walk-forward (2021-22..2025-26
 - [X] 2026-10-20 model review: pruned WIN to 7 features, removed early-season feature shrink (train-serve skew), actual-point SCORE targets (overtime was undercounted ~13 pts), 2-feature SCORE sub-models, PLAYER explicit feature list + opponent position allowance, retired PLAYER Ridge correction, fixed F-G position mapping, release models now include the validation season, training Elo computed from the full raw game log (matches live Elo), stale parquet caches no longer served, SHAP explanations fixed for linear models
 - [X] 2026-10-20 roster availability in WIN/SCORE: `ABS_DELTA`/`ABS_DIFF` (`src/features/roster_absence.py`) = sum over rotation players of (availability tonight - share of the last 15 games played) x game score. Training uses the box score; live inference uses `player_status_overrides` (OUT = 0, RESTRICTED = factor) and, for players nobody mentioned, assumes whoever played the previous game plays. Walk-forward: WIN Brier -0.0032 and margin MAE -0.13 with true availability (better in all 5 seasons), still no worse than before with the carry-forward default. Marking a rotation player OUT now moves win probability, margin and score (e.g. BOS-NYK 2026-03-10: Tatum + Brown OUT, P(BOS) 0.674 -> 0.562). Rebuild with `python -m scripts.features.add_roster_absence` (also part of `rebuild_training_data.py`)
 - [X] Multi-season feature ablation study across 4,407 test games
-- [X] Live shadow prediction logging store (`shadow_logger.py`) and KS-test drift monitor (`monitor_shadow_and_drift.py`)
+- [X] Live shadow prediction logging store (`src/api/services/shadow_logger.py`) and KS-test drift monitor (`monitor_shadow_and_drift.py`)
 
 ## Next Steps
 
-1. Monitor live shadow predictions and feature drift in ml-service for the 2026-27 season.
+1. Monitor live shadow predictions and feature drift in the API (`src/api`) for the 2026-27 season.
 2. Next accuracy gains need new information (injury/lineup data, market lines); feature pruning has reached the pregame-data ceiling.
 3. Phase 7 efficiency/strength feature work remains parked until explicitly resumed.
 

@@ -43,7 +43,7 @@ The PBP data is still lazy-loaded only when the PBP tab opens.
 
 Backend:
 
-- `python3 -m py_compile ml-service/app/routes.py ml-service/app/services/frontend_data.py`
+- `python3 -m py_compile src/api/routes.py src/api/services/frontend_data.py`
 - FastAPI `TestClient` returned `200` for `0042500405?season=2025-26`
 - Returned payload: `0042500405`, `SAS @ NYK`, `554` events
 - Missing game returns `404`
