@@ -158,9 +158,18 @@ def run_bootstrap_season_pipeline(args: Any) -> None:
 
 def run_startup_check(args: Any) -> None:
     dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
-    df_team, df_player, df_schedule = dfs.load_local_datasets()
-    results = dfs.generate_data_freshness_report(df_team, df_player, df_schedule, today=date.today())
+    # Read-only diagnostic: keep the rebuilt schedule and the report in memory.
+    df_team, df_player, df_schedule = dfs.load_local_datasets(save_schedule=False)
+    results = dfs.generate_data_freshness_report(
+        df_team, df_player, df_schedule, today=date.today(), write_files=False
+    )
+    print(f"Status: {results['status']}")
     print(f"Latest team game date: {results['latest_team_game_date'] or 'N/A'}")
+    print(f"Latest player game date: {results['latest_player_game_date'] or 'N/A'}")
+    print(f"Missing completed games: {len(results['missing_completed_game_ids'])}")
+    print(f"Team/player game ID mismatches: {len(results['team_player_mismatch_game_ids'])}")
+    for warning in results["warnings"]:
+        print(f"  ⚠️ {warning}")
 
 
 def run_update_data(args: Any) -> None:

@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import pandas as pd
 from src.ingestion.data_loader import load_team_games, load_player_games
@@ -165,7 +166,7 @@ def main():
     parser.add_argument(
         "--mock", 
         action="store_true", 
-        help="Generate and use mock/synthetic data if raw data is not yet available"
+        help="Run the feature pipeline on synthetic data; outputs go to data/experimental/mock/"
     )
     parser.add_argument(
         "--build-model-dataset",
@@ -369,20 +370,9 @@ def main():
     # 1. LOAD DATASETS
     print("--- STEP 1: LOADING DATASETS ---")
     
-    # Check if raw files exist. If not, check if we should run in mock mode
-    run_mock = args.mock
-    if not run_mock:
-        # Check if the directories are empty or missing
-        team_empty = not os.path.exists(args.raw_team_dir) or not any(f.endswith('.csv') for f in os.listdir(args.raw_team_dir))
-        player_empty = not os.path.exists(args.raw_player_dir) or not any(f.endswith('.csv') for f in os.listdir(args.raw_player_dir))
-        
-        if team_empty or player_empty:
-            print("⚠️ Raw dataset files not found in standard directories.")
-            print("💡 Automatically enabling --mock mode to run the pipeline with synthetic test data.")
-            print("   (You can place your real CSVs in the raw/ folders later to process them.)")
-            run_mock = True
-
-    if run_mock:
+    # Mock mode only runs when asked for, and its outputs never land on the
+    # real season files (data/ is gitignored, so an overwrite is unrecoverable).
+    if args.mock:
         print("Generating mock/synthetic NBA datasets...")
         df_team_raw = generate_mock_team_games()
         df_player_raw = generate_mock_player_games()
@@ -394,8 +384,27 @@ def main():
             df_player_raw = load_player_games(args.raw_player_dir, season=args.season)
         except Exception as e:
             print(f"❌ Error loading raw datasets: {e}")
-            print("Please check your directories or run with --mock to test the pipeline.")
-            return
+            sys.exit(1)
+        if df_team_raw.empty or df_player_raw.empty:
+            print(f"❌ Raw team/player game logs for season {season} are missing or empty.")
+            print("   Run --update-data first, or pass --mock to test the pipeline with synthetic data.")
+            sys.exit(1)
+
+    if args.mock:
+        mock_dir = os.path.join("data", "experimental", "mock")
+        team_csv_path = os.path.join(mock_dir, "team_features.csv")
+        player_csv_path = os.path.join(mock_dir, "player_features.csv")
+        processed_dir = mock_dir
+        model_v2_csv_path = os.path.join(mock_dir, f"team_model_ready_v2_{token}.csv")
+        report_path = os.path.join(mock_dir, "opponent_feature_report.md")
+        v3_report_path = os.path.join(mock_dir, "team_model_ready_v3_report.md")
+    else:
+        team_csv_path = paths.team_features
+        player_csv_path = paths.player_features
+        processed_dir = "data/processed"
+        model_v2_csv_path = paths.team_model_ready_v2
+        report_path = "reports/audits/opponent_feature_report.md"
+        v3_report_path = "reports/operations/team_model_ready_v3_report.md"
 
     # 2. VALIDATION
     print("\n--- STEP 2: RUNNING VALIDATION CHECKS ---")
@@ -435,12 +444,9 @@ def main():
     # 5. SAVE OUTPUTS
     print("--- STEP 5: SAVING PREPROCESSED FEATURES ---")
     
-    os.makedirs(args.output_dir, exist_ok=True)
-    
-    # File paths
-    team_csv_path = paths.team_features
-    player_csv_path = paths.player_features
-    
+    os.makedirs(os.path.dirname(team_csv_path), exist_ok=True)
+    os.makedirs(os.path.dirname(player_csv_path), exist_ok=True)
+
     # Save team games
     print(f"Saving team features to CSV: {team_csv_path}")
     df_team_features.to_csv(team_csv_path, index=False)
@@ -456,8 +462,7 @@ def main():
         
         # Build V1 Dataset
         df_team_model, dropped_count_v1 = build_team_model_dataset(df_team_features)
-        
-        processed_dir = "data/processed"
+
         os.makedirs(processed_dir, exist_ok=True)
         
         model_csv_path = os.path.join(processed_dir, f"team_model_ready_{token}.csv")
@@ -474,14 +479,11 @@ def main():
         
         # Build V2 Model-Ready Dataset
         df_team_model_v2, dropped_count_v2 = build_team_model_dataset_v2(df_team_features_with_opp)
-        
-        model_v2_csv_path = paths.team_model_ready_v2
-        
+
         print(f"Saving model-ready team features (V2) to CSV: {model_v2_csv_path}")
         df_team_model_v2.to_csv(model_v2_csv_path, index=False)
         
         # Generate Opponent Feature Report
-        report_path = "reports/audits/opponent_feature_report.md"
         print(f"Generating Opponent Join validation report: {report_path}")
         
         # Compute distributions for report
@@ -573,8 +575,7 @@ def main():
             print(f"Saving model-ready team features (V3) to CSV: {model_v3_csv_path}")
             df_team_model_v3.to_csv(model_v3_csv_path, index=False)
             
-            # Programmatically generate reports/operations/team_model_ready_v3_report.md
-            v3_report_path = "reports/operations/team_model_ready_v3_report.md"
+            # Programmatically generate the V3 report (reports/operations/ unless mock)
             print(f"Generating V3 core player availability report: {v3_report_path}")
             
             # We want to show core rosters for LAL, BOS, NYK, SAS, GSW, HOU, POR, TOR
@@ -631,9 +632,9 @@ def main():
     if args.build_v3_dataset:
         print(f"All features and model-ready datasets (V1, V2, V3) saved successfully.")
     elif args.build_model_dataset:
-        print(f"All preprocessed features saved to '{args.output_dir}/' and model-ready datasets (V1, V2) saved to 'data/processed/'")
+        print(f"All preprocessed features saved to '{os.path.dirname(team_csv_path)}/' and model-ready datasets (V1, V2) saved to '{processed_dir}/'")
     else:
-        print(f"All preprocessed features saved to '{args.output_dir}/'")
+        print(f"All preprocessed features saved to '{os.path.dirname(team_csv_path)}/'")
     print("============================================================")
 
 if __name__ == "__main__":

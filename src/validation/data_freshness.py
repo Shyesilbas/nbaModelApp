@@ -29,12 +29,14 @@ def load_local_datasets(
     raw_team_dir: str = "data/raw/team_games",
     raw_player_dir: str = "data/raw/player_games",
     refresh_schedule: bool = True,
-    season: Optional[str] = None
+    season: Optional[str] = None,
+    save_schedule: bool = True
 ) -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     """
     Loads raw team games, raw player games, and the combined schedule dataset.
     When refresh_schedule is True, the combined schedule is rebuilt from the
     raw schedule sources so freshness checks always see the latest schedule.
+    With save_schedule=False a rebuilt schedule is kept in memory only.
     """
     df_team = None
     df_player = None
@@ -52,7 +54,7 @@ def load_local_datasets(
 
     try:
         if refresh_schedule:
-            df_schedule = load_combined_schedule(save=True, season=season)
+            df_schedule = load_combined_schedule(save=save_schedule, season=season)
         else:
             from scripts.data_paths import get_data_paths
             paths = get_data_paths(season)
@@ -60,7 +62,7 @@ def load_local_datasets(
             if os.path.exists(schedule_csv):
                 df_schedule = pd.read_csv(schedule_csv, dtype={"GAME_ID": str})
             else:
-                df_schedule = load_combined_schedule(save=True, season=season)
+                df_schedule = load_combined_schedule(save=save_schedule, season=season)
     except Exception as e:
         print(f"⚠️ Error loading combined schedule: {e}")
 
@@ -336,11 +338,13 @@ def generate_data_freshness_report(
     df_player: pd.DataFrame,
     df_schedule: pd.DataFrame,
     today: Optional[date] = None,
-    output_dir: str = "reports/operations"
+    output_dir: str = "reports/operations",
+    write_files: bool = True
 ) -> Dict[str, Any]:
     """
     Generates validation reports (JSON + Markdown) and writes them to disk.
     Determines status ("OK" | "WARNING" | "ERROR") based on discrepancies.
+    With write_files=False only the results dict is returned.
     """
     if today is None:
         today = date.today()
@@ -472,6 +476,9 @@ def generate_data_freshness_report(
         "finals_warnings": finals_warnings,
         "warnings": warnings
     }
+
+    if not write_files:
+        return results
 
     # Write report files
     os.makedirs(output_dir, exist_ok=True)
