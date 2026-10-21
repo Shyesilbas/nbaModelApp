@@ -1,4 +1,4 @@
-schema_version: score_v10
+schema_version: score
 # Standardized RidgeCV beat the tuned XGBRegressor on every target in
 # walk-forward tests (pace 3.62 vs 3.75, rating 9.31 vs 9.45 MAE).
 estimator: ridge
@@ -36,7 +36,7 @@ margin_features:
   - OPP_DAYS_REST
   - IS_B2B
   - OPP_IS_B2B
-  # roster availability tonight vs form (see win_v10.yaml); -0.13 mean walk-forward margin MAE
+  # roster availability tonight vs form (see win.yaml); -0.13 mean walk-forward margin MAE
   - ABS_DIFF
 margin_extra_features:
   - DEF_RTG_LAST_5

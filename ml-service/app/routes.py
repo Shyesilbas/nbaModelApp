@@ -278,8 +278,8 @@ def explain_game_endpoint(req: ShapExplanationRequest):
             player_status_overrides=req.player_status_overrides,
         )
         
-        win_exp = explain_win_probability(req.home_team, req.away_team, feats, req.model_version)
-        score_exp = explain_score_prediction(req.home_team, req.away_team, feats, req.model_version)
+        win_exp = explain_win_probability(req.home_team, req.away_team, feats)
+        score_exp = explain_score_prediction(req.home_team, req.away_team, feats)
         
         return ShapExplanationResponse(
             home_team=req.home_team.upper(),

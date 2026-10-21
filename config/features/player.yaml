@@ -1,4 +1,4 @@
-schema_version: player_v9
+schema_version: player
 targets:
   TARGET_PTS: pts
   TARGET_REB: reb

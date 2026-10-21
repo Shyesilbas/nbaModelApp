@@ -79,7 +79,7 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
       home_win_probability: data.win_probability.home_win_prob,
       away_win_probability: data.win_probability.away_win_prob,
       confidence_bucket: Math.max(data.win_probability.home_win_prob, data.win_probability.away_win_prob) >= 0.7 ? "STRONG" : "MODERATE",
-      model_version: data.win_probability.model_version || "6.0",
+      model_version: data.win_probability.model_version,
     },
     score_prediction: {
       predicted_home_score: data.score_prediction.home,

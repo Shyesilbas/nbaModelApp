@@ -1,6 +1,6 @@
-schema_version: win_v10
+schema_version: win
 target: WIN
-base_feature_file: models/production/feature_columns_v8.json
+base_feature_file: config/features/win_base_columns.json
 derived_features:
   - PRE_GAME_ELO
   - OPP_PRE_GAME_ELO

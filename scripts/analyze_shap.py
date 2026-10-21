@@ -26,17 +26,12 @@ EXPECTED_TOP_FEATURES_WIN = [
     "HOME_WINRATE_LAST_5", "AWAY_WINRATE_LAST_5", "CURRENT_VENUE_WINRATE_LAST_5"
 ]
 
-def load_win_model_pipeline(model_ver):
-    win_model_path = ROOT / f"models/win_probability_model_{model_ver}.pkl"
-    win_features_path = ROOT / f"models/feature_columns_{model_ver}.json"
-    
-    if not win_model_path.exists() or not win_features_path.exists():
-        # Fallback to production folder if it exists there
-        win_model_path = ROOT / f"models/production/win_probability_model_{model_ver}.pkl"
-        win_features_path = ROOT / f"models/production/feature_columns_{model_ver}.json"
+def load_win_model_pipeline():
+    win_model_path = ROOT / "models/production/win_model.pkl"
+    win_features_path = ROOT / "models/production/win_features.json"
         
     if not win_model_path.exists() or not win_features_path.exists():
-        raise FileNotFoundError(f"Win model {model_ver} not found.")
+        raise FileNotFoundError(f"Win model not found at {win_model_path}.")
         
     model = joblib.load(win_model_path)
     features = json.loads(win_features_path.read_text())
@@ -51,9 +46,9 @@ def load_win_model_pipeline(model_ver):
         
     return pipeline, features, model
 
-def analyze_win_model(home, away, date, model_ver, output_dir):
+def analyze_win_model(home, away, date, output_dir):
     print("\n--- WIN PROBABILITY MODEL (SHAP) ---")
-    pipeline, features, cal_model = load_win_model_pipeline(model_ver)
+    pipeline, features, cal_model = load_win_model_pipeline()
     
     # Build single local inference row
     raw_feats = build_features(home, away, date)
@@ -150,13 +145,12 @@ def main():
     parser.add_argument("--home", required=True, help="Home team abbreviation")
     parser.add_argument("--away", required=True, help="Away team abbreviation")
     parser.add_argument("--date", required=True, help="Game date (YYYY-MM-DD)")
-    parser.add_argument("--model", default="v9", help="Model version")
     args = parser.parse_args()
 
     out_dir = ROOT / "reports" / "shap"
     out_dir.mkdir(parents=True, exist_ok=True)
     
-    win_data = analyze_win_model(args.home, args.away, args.date, args.model, out_dir)
+    win_data = analyze_win_model(args.home, args.away, args.date, out_dir)
     
     result = {
         "game": f"{args.away} @ {args.home} ({args.date})",

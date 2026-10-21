@@ -30,7 +30,7 @@ from functools import lru_cache
 import math
 
 # Same file the WIN loader reads, so the feature order always matches the loaded model.
-MODEL_FEATURE_COLS = resolve_artifact_path("win_model", "feature_columns_path", "models/production/feature_columns_v10.json")
+MODEL_FEATURE_COLS = resolve_artifact_path("win_model", "feature_columns_path", "models/production/win_features.json")
 
 NBA_TEAMS_LOCATIONS = {
     "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
@@ -991,9 +991,9 @@ def compute_player_features_for_inference(
     features["GARBAGE_TIME_SHARE"] = 0.05
     features["CLUTCH_MARGIN"] = 2
 
-    score_meta_path = ROOT / "models/production/score_model_v10_metadata.json"
-    margin_model_path = ROOT / "models/production/score_model_v10_margin.pkl"
-    ridge_margin_path = ROOT / "models/production/score_model_v10_ridge_margin.pkl"
+    score_meta_path = ROOT / "models/production/score_metadata.json"
+    margin_model_path = ROOT / "models/production/score_model_margin.pkl"
+    ridge_margin_path = ROOT / "models/production/score_model_ridge_margin.pkl"
 
     pred_margin = 0.0
     if margin_model_path.exists() and score_meta_path.exists():

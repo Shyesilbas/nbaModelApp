@@ -16,6 +16,7 @@ class TrainingManifestError(ValueError):
 class TrainingManifest:
     path: Path
     raw: Dict[str, Any]
+    release: str
     train_seasons: List[str]
     calibration_season: str | None
     validation_season: str
@@ -71,6 +72,17 @@ def _assert_non_empty_csv(path: Path) -> pd.DataFrame:
     return df
 
 
+def manifest_release(path: str | Path | None = None, *, root: Path | None = None) -> str:
+    """Release from the training manifest without validating the datasets."""
+    project_root = root or Path(__file__).resolve().parents[2]
+    manifest_path = Path(path) if path else project_root / "config" / "training_manifest.yaml"
+    with open(manifest_path, "r") as f:
+        release = (yaml.safe_load(f) or {}).get("release")
+    if not isinstance(release, str) or not release:
+        raise TrainingManifestError("`release` must be a non-empty string such as `v11`.")
+    return release
+
+
 def load_training_manifest(path: str | Path | None = None, *, root: Path | None = None, validate_player_coverage: bool = True) -> TrainingManifest:
     project_root = root or Path(__file__).resolve().parents[2]
     manifest_path = Path(path) if path else project_root / "config" / "training_manifest.yaml"
@@ -84,6 +96,9 @@ def load_training_manifest(path: str | Path | None = None, *, root: Path | None 
     if not isinstance(raw, dict):
         raise TrainingManifestError("Training manifest root must be a mapping.")
 
+    release = raw.get("release")
+    if not isinstance(release, str) or not release:
+        raise TrainingManifestError("`release` must be a non-empty string such as `v11`.")
     train_seasons = _require_list(raw, "train_seasons")
     calibration_season = raw.get("calibration_season")
     if calibration_season is not None and (not isinstance(calibration_season, str) or not calibration_season):
@@ -161,6 +176,7 @@ def load_training_manifest(path: str | Path | None = None, *, root: Path | None 
     return TrainingManifest(
         path=manifest_path,
         raw=raw,
+        release=release,
         train_seasons=train_seasons,
         calibration_season=calibration_season,
         validation_season=validation_season,

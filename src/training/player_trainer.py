@@ -11,6 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import lightgbm as lgb
 from src.training.feature_contract import load_feature_contract
+from src.training.training_manifest import manifest_release
 from src.training.feature_guards import check_feature_matrix
 from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split
 from src.features.player_form import add_player_matchup_features
@@ -19,14 +20,14 @@ from src.training.provenance import build_training_provenance
 warnings.filterwarnings("ignore")
 
 class PlayerModelTrainer:
-    def __init__(self, data_path=None, output_dir=None, version="v9", manifest_metadata=None, holdout_config=None, feature_contract_path=None):
+    def __init__(self, data_path=None, output_dir=None, release=None, manifest_metadata=None, holdout_config=None, feature_contract_path=None):
         root = Path(__file__).resolve().parents[2]
+        self.release = release or manifest_release(root=root)
         self.data_path = Path(data_path or root / "data/experimental/player_model_ready_v4_usg.csv")
         self.output_dir = Path(output_dir or root / "models/experimental")
-        self.version = version
         self.manifest_metadata = manifest_metadata or {}
         self.holdout_config = holdout_config or {}
-        self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/player_v9.yaml", root=root)
+        self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/player.yaml", root=root)
         self.exclude_cols = self.feature_contract.list_value("exclude_columns")
         self.feature_list = self.feature_contract.list_value("features")
         self.required_context_cols = self.feature_contract.list_value("required_context_columns")
@@ -133,7 +134,7 @@ class PlayerModelTrainer:
         feature_guard = check_feature_matrix(X, "PLAYER")
         os.makedirs(self.output_dir, exist_ok=True)
         
-        feature_path = self.output_dir / f"player_{self.version}_features.pkl"
+        feature_path = self.output_dir / f"player_features.pkl"
         joblib.dump(features, feature_path)
         
         metadata_metrics = {}
@@ -175,7 +176,7 @@ class PlayerModelTrainer:
             final_y = y_train if self.holdout_config.get("final_refit_scope") == "train_only" else y
             pipeline.fit(final_X, final_y)
 
-            model_name = f"player_{self.version}_lgb_{short_name}.pkl"
+            model_name = f"player_model_{short_name}.pkl"
             model_path = self.output_dir / model_name
             joblib.dump(pipeline, model_path)
 
@@ -189,13 +190,13 @@ class PlayerModelTrainer:
             }
             
         # The Ridge residual correction was retired; a stale copy would still be loaded and applied.
-        for stale in self.output_dir.glob(f"player_{self.version}_ridge_*.pkl"):
+        for stale in self.output_dir.glob(f"player_model_ridge_*.pkl"):
             stale.unlink()
         player_artifacts = [
-            self.output_dir / f"player_{self.version}_lgb_{target}.pkl" for target in ["pts", "reb", "ast"]
-        ] + [self.output_dir / f"player_{self.version}_features.pkl"]
+            self.output_dir / f"player_model_{target}.pkl" for target in ["pts", "reb", "ast"]
+        ] + [self.output_dir / f"player_features.pkl"]
         metadata = {
-            "version": f"{self.version}_temporal_lgb_candidate",
+            "version": self.release,
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "training_manifest": self.manifest_metadata,
             "feature_contract": self.feature_contract.snapshot,
@@ -227,7 +228,7 @@ class PlayerModelTrainer:
             "evaluation_metrics": metadata_metrics
         }
         
-        metadata_path = self.output_dir / f"player_{self.version}_metadata.json"
+        metadata_path = self.output_dir / f"player_metadata.json"
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=4)
             

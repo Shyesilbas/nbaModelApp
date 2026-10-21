@@ -13,17 +13,18 @@ def _write_manifest(root: Path, train_seasons=None):
     config_dir.mkdir()
     feature_dir = config_dir / "features"
     feature_dir.mkdir()
-    for name in ["win_v9.yaml", "score_v9.yaml", "player_v9.yaml"]:
+    for name in ["win.yaml", "score.yaml", "player.yaml"]:
         (feature_dir / name).write_text(yaml.safe_dump({"schema_version": name.replace(".yaml", "")}))
     manifest = {
+        "release": "v11",
         "train_seasons": train_seasons or ["2024-25"],
         "calibration_season": "2025-26",
         "validation_season": "2025-26",
         "holdout": {"strategy": "season_holdout", "test_size": 0.2, "date_col": "GAME_DATE"},
         "models": {
-            "win": {"enabled": True, "feature_contract": "config/features/win_v9.yaml"},
-            "score": {"enabled": True, "feature_contract": "config/features/score_v9.yaml"},
-            "player": {"enabled": True, "feature_contract": "config/features/player_v9.yaml", "required_seasons": ["2025-26"]},
+            "win": {"enabled": True, "feature_contract": "config/features/win.yaml"},
+            "score": {"enabled": True, "feature_contract": "config/features/score.yaml"},
+            "player": {"enabled": True, "feature_contract": "config/features/player.yaml", "required_seasons": ["2025-26"]},
         },
         "promotion_thresholds": {},
         "required_segments": ["overall", "home"],

@@ -1,6 +1,6 @@
 {
   "model_name": "logistic_regression",
-  "version": "10.2-temporal-candidate",
+  "version": "v11",
   "training_date": "2026-10-20T10:52:31.757744Z",
   "number_of_rows": 14780,
   "number_of_features": 8,
@@ -467,5 +467,6 @@
       }
     ]
   },
-  "target_column": "WIN"
+  "target_column": "WIN",
+  "legacy_version": "10.2-temporal-candidate"
 }

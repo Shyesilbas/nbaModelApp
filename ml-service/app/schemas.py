@@ -22,7 +22,6 @@ class ShapExplanationRequest(BaseModel):
     home_team: str
     away_team: str
     prediction_date: date
-    model_version: Optional[str] = "v9"
     player_status_overrides: Optional[List[PlayerStatusOverride]] = None
 
 

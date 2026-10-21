@@ -16,7 +16,7 @@ from scripts.build_matchup_features import build_features
 class ScorePredictor:
     def __init__(self, metadata_path: Optional[Path] = None):
         self.metadata_path = metadata_path or resolve_artifact_path(
-            "score_model", "metadata_path", "models/production/score_model_v10_metadata.json"
+            "score_model", "metadata_path", "models/production/score_metadata.json"
         )
         self.metadata = {}
         self.pace_model = None
@@ -28,12 +28,12 @@ class ScorePredictor:
         self._load()
 
     def _load(self) -> None:
-        pace_path = resolve_artifact_path("score_model", "total_model_path", "models/production/score_model_v10_pace.pkl")
-        home_path = resolve_artifact_path("score_model", "home_model_path", "models/production/score_model_v10_home_rtg.pkl")
-        away_path = resolve_artifact_path("score_model", "away_model_path", "models/production/score_model_v10_away_rtg.pkl")
-        margin_path = resolve_artifact_path("score_model", "margin_model_path", "models/production/score_model_v10_margin.pkl")
-        ridge_total_path = resolve_artifact_path("score_model", "ridge_total_path", "models/production/score_model_v10_ridge_total.pkl")
-        ridge_margin_path = resolve_artifact_path("score_model", "ridge_margin_path", "models/production/score_model_v10_ridge_margin.pkl")
+        pace_path = resolve_artifact_path("score_model", "total_model_path", "models/production/score_model_pace.pkl")
+        home_path = resolve_artifact_path("score_model", "home_model_path", "models/production/score_model_home_rtg.pkl")
+        away_path = resolve_artifact_path("score_model", "away_model_path", "models/production/score_model_away_rtg.pkl")
+        margin_path = resolve_artifact_path("score_model", "margin_model_path", "models/production/score_model_margin.pkl")
+        ridge_total_path = resolve_artifact_path("score_model", "ridge_total_path", "models/production/score_model_ridge_total.pkl")
+        ridge_margin_path = resolve_artifact_path("score_model", "ridge_margin_path", "models/production/score_model_ridge_margin.pkl")
 
         if Path(self.metadata_path).exists():
             with open(self.metadata_path, "r", encoding="utf-8") as f:

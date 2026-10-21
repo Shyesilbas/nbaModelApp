@@ -224,9 +224,11 @@ export function MatchupTacticalHub({
                 </p>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded-sm border border-border bg-background-primary text-xs font-medium text-text-secondary shrink-0">
-              V10 Hibrit
-            </span>
+            {win.model_version && (
+              <span className="px-2 py-0.5 rounded-sm border border-border bg-background-primary text-xs font-medium text-text-secondary shrink-0">
+                Model {win.model_version}
+              </span>
+            )}
           </div>
         </div>
       </div>

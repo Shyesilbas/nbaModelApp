@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts.artifact_paths import production_release
 from scripts.data_paths import get_data_paths
 from scripts.season_utils import normalize_season, get_default_season
 from scripts.build_matchup_features import build_features
@@ -87,13 +88,13 @@ def get_indicator_df(df):
     indicators["away_rest_advantage"] = (df["OPP_DAYS_REST"] > df["DAYS_REST"]).astype(float)
     return indicators
 
-def predict_single_game(home, away, date, model_ver):
+def predict_single_game(home, away, date):
     # 1. Build features
     features = build_features(home, away, date)
     
     # 2. Predict Win Probability
-    win_model_path = ROOT / f"models/production/win_probability_model_{model_ver}.pkl"
-    win_features_path = ROOT / f"models/production/feature_columns_{model_ver}.json"
+    win_model_path = ROOT / "models/production/win_model.pkl"
+    win_features_path = ROOT / "models/production/win_features.json"
     
     win_prob = 0.5
     if win_model_path.exists() and win_features_path.exists():
@@ -116,11 +117,11 @@ def predict_single_game(home, away, date, model_ver):
             win_prob = (1.0 - blend_weight) * win_prob + blend_weight * elo_prob_home
         
     # 3. Predict Component Scores
-    score_meta_path = ROOT / f"models/production/score_model_{model_ver}_metadata.json"
-    pace_path = ROOT / f"models/production/score_model_{model_ver}_pace.pkl"
-    home_rtg_path = ROOT / f"models/production/score_model_{model_ver}_home_rtg.pkl"
-    away_rtg_path = ROOT / f"models/production/score_model_{model_ver}_away_rtg.pkl"
-    margin_path = ROOT / f"models/production/score_model_{model_ver}_margin.pkl"
+    score_meta_path = ROOT / "models/production/score_metadata.json"
+    pace_path = ROOT / "models/production/score_model_pace.pkl"
+    home_rtg_path = ROOT / "models/production/score_model_home_rtg.pkl"
+    away_rtg_path = ROOT / "models/production/score_model_away_rtg.pkl"
+    margin_path = ROOT / "models/production/score_model_margin.pkl"
     
     pred_home = 110.0
     pred_away = 110.0
@@ -157,8 +158,8 @@ def predict_single_game(home, away, date, model_ver):
         pred_total_raw = pred_pace * (pred_home_rtg + pred_away_rtg) / 100.0
         
         # Apply Ridge Corrections for Pace/Total and Margin
-        ridge_total_path = ROOT / f"models/production/score_model_{model_ver}_ridge_total.pkl"
-        ridge_margin_path = ROOT / f"models/production/score_model_{model_ver}_ridge_margin.pkl"
+        ridge_total_path = ROOT / "models/production/score_model_ridge_total.pkl"
+        ridge_margin_path = ROOT / "models/production/score_model_ridge_margin.pkl"
         
         ind_df = pd.DataFrame([{
             "IS_PLAYOFF": float(features.get("IS_PLAYOFF", 0.0)),
@@ -208,8 +209,8 @@ def main():
     parser = argparse.ArgumentParser(description="NBA Daily Schedule Predictor CLI")
     parser.add_argument("--date", help="Target date to predict games (YYYY-MM-DD). If omitted, latest date in schedule is used.")
     parser.add_argument("--season", help="Target season (e.g. 2025-26)")
-    parser.add_argument("--model", default="v10", choices=["v10"], help="Win/score model version (only v10 ships). Defaults to v10.")
     args = parser.parse_args()
+    release = production_release() or "unknown"
 
     season = normalize_season(args.season) if args.season else get_default_season()
     dp = get_data_paths(season)
@@ -237,7 +238,7 @@ def main():
         print(f"No games scheduled on {target_date} for season {season}.")
         sys.exit(0)
         
-    print(f"Predicting {len(df_games)} games on {target_date} using Model {args.model.upper()}...")
+    print(f"Predicting {len(df_games)} games on {target_date} using models {release}...")
     
     predictions = []
     for _, game in df_games.iterrows():
@@ -245,7 +246,7 @@ def main():
         away = game["AWAY_TEAM_ABBREVIATION"]
         
         try:
-            res = predict_single_game(home, away, target_date, args.model)
+            res = predict_single_game(home, away, target_date)
             predictions.append(res)
         except Exception as e:
             print(f"Error predicting game {away} @ {home}: {e}")
@@ -257,14 +258,14 @@ def main():
     # Build clean output report
     report = [
         f"# NBA Schedule Predictions - {target_date}",
-        f"Generated using Model Suffix: `{args.model.upper()}` on Season `{season}`",
+        f"Generated using models `{release}` on Season `{season}`",
         "",
         "| Away | Home | Winner Prob (Home) | Winner Prob (Away) | Projected Score | Predicted Winner |",
         "| --- | --- | --- | --- | --- | --- |"
     ]
     
     print("\n" + "="*80)
-    print(f"🏀 NBA PREDICTIONS FOR {target_date} ({args.model.upper()})")
+    print(f"🏀 NBA PREDICTIONS FOR {target_date} ({release})")
     print("="*80)
     print(f"{'AWAY':<6} | {'HOME':<6} | {'HOME WIN%':<10} | {'AWAY WIN%':<10} | {'PROJECTED SCORE':<18} | {'PRED WINNER':<12}")
     print("-"*80)
@@ -287,7 +288,7 @@ def main():
     # Save md report
     out_dir = ROOT / "reports" / "predictions"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"schedule_{target_date}_model_{args.model}.md"
+    out_path = out_dir / f"schedule_{target_date}_model_{release}.md"
     out_path.write_text("\n".join(report), encoding="utf-8")
     print(f"Predictions report written to: {out_path}")
 

@@ -14,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.artifact_paths import resolve_artifact_path
 from scripts.data_paths import get_data_paths
 from src.features.player_form import add_player_matchup_features
 from scripts.season_utils import normalize_season, get_default_season
@@ -141,20 +140,30 @@ def check_season_freshness(season):
             
     return report_lines, True
 
-def print_model_info(model_ver):
+def model_release(model_dir):
+    """Release label of the models in model_dir, read from their metadata."""
+    for name in ("win_metadata.json", "score_metadata.json", "player_metadata.json"):
+        path = Path(model_dir) / name
+        if path.exists():
+            version = json.loads(path.read_text()).get("version")
+            if version:
+                return version
+    return Path(model_dir).name
+
+
+def print_model_info(model_dir):
+    model_dir = Path(model_dir)
     report_lines = []
-    report_lines.append(f"### Model Metadata Summary: {model_ver.upper()}")
+    report_lines.append(f"### Model Metadata Summary: {model_release(model_dir)} ({model_dir})")
     
     # Find active metadata files
-    score_meta_path = ROOT / f"models/production/score_model_{model_ver}_metadata.json"
-    player_meta_path = ROOT / f"models/production/player_{model_ver}_metadata.json"
-    if not player_meta_path.exists():
-        player_meta_path = resolve_artifact_path("player_model", "metadata_path", "models/player_v9_metadata.json")
-    win_meta_path = ROOT / "models/production/model_metadata.json"
+    score_meta_path = model_dir / "score_metadata.json"
+    player_meta_path = model_dir / "player_metadata.json"
+    win_meta_path = model_dir / "win_metadata.json"
     
     if score_meta_path.exists():
         score_meta = json.loads(score_meta_path.read_text())
-        report_lines.append(f"- Score Model Version: {score_meta.get('version', 'N/A')}")
+        report_lines.append(f"- Score Model Release: {score_meta.get('version', 'N/A')}")
         report_lines.append(f"  - Pace MAE: {score_meta.get('pace_mae', 'N/A')}")
         report_lines.append(f"  - Home RTG MAE: {score_meta.get('home_rtg_mae', 'N/A')}")
         report_lines.append(f"  - Away RTG MAE: {score_meta.get('away_rtg_mae', 'N/A')}")
@@ -164,21 +173,23 @@ def print_model_info(model_ver):
         
     if player_meta_path.exists():
         player_meta = json.loads(player_meta_path.read_text())
-        report_lines.append(f"- Player Model Version: {player_meta.get('version', 'N/A')}")
+        report_lines.append(f"- Player Model Release: {player_meta.get('version', 'N/A')}")
         report_lines.append(f"  - Last Train Date: {player_meta.get('updated_at', 'N/A')}")
     else:
         report_lines.append(f"- Player Model Metadata: MISSING at {player_meta_path}")
         
     if win_meta_path.exists():
         win_meta = json.loads(win_meta_path.read_text())
-        report_lines.append(f"- Win Model Version: {win_meta.get('version', 'N/A')}")
-        report_lines.append(f"  - Validation Brier Score: {win_meta.get('calibration_eval', {}).get('overall', {}).get('brier', 'N/A')}")
+        report_lines.append(f"- Win Model Release: {win_meta.get('version', 'N/A')}")
+        holdout = win_meta.get("holdout_metrics", {})
+        report_lines.append(f"  - Holdout Brier / ROC-AUC: {holdout.get('brier_score', 'N/A')} / {holdout.get('roc_auc', 'N/A')}")
     else:
         report_lines.append(f"- Win Model Metadata: MISSING at {win_meta_path}")
         
     return report_lines
 
-def evaluate_model_on_season(model_ver, season):
+def evaluate_model_on_season(model_dir, season):
+    model_dir = Path(model_dir)
     # Retrieve paths
     dp = get_data_paths(season)
     
@@ -191,8 +202,8 @@ def evaluate_model_on_season(model_ver, season):
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
     
     # 1. EVALUATE WIN PROBABILITY MODEL
-    win_model_path = ROOT / f"models/production/win_probability_model_{model_ver}.pkl"
-    win_features_path = ROOT / f"models/production/feature_columns_{model_ver}.json"
+    win_model_path = model_dir / "win_model.pkl"
+    win_features_path = model_dir / "win_features.json"
     
     win_results = {}
     if win_model_path.exists() and win_features_path.exists() and "WIN" in df.columns:
@@ -219,15 +230,10 @@ def evaluate_model_on_season(model_ver, season):
                     player_df = player_df.rename(columns={"Game_ID": "GAME_ID"})
                 player_df["GAME_ID"] = player_df["GAME_ID"].astype(str).apply(lambda x: x.split('.')[0].zfill(10))
                 
-                # Player models are versioned separately from win/score (e.g. v10 ships
-                # with player v9), so fall back to the production manifest's player model.
-                player_features_config_path = ROOT / f"models/production/player_{model_ver}_features.pkl"
-                if not player_features_config_path.exists():
-                    player_features_config_path = resolve_artifact_path("player_model", "feature_columns_path", "models/player_v9_features.pkl")
-                    
+                player_features_config_path = model_dir / "player_features.pkl"
                 if player_features_config_path.exists():
                     player_features_cols = joblib.load(player_features_config_path)
-                    # Same derived columns training and PlayerPredictor build (v9+ needs them).
+                    # Same derived columns training and PlayerPredictor build.
                     if "PLAYER_POSITION_GROUP" in player_df.columns:
                         player_df = add_player_matchup_features(player_df)
                     player_df = player_df.dropna(subset=player_features_cols)
@@ -235,9 +241,7 @@ def evaluate_model_on_season(model_ver, season):
                     targets = ["pts", "reb", "ast"]
                     predictions = {}
                     for t in targets:
-                        model_path = ROOT / "models" / "production" / f"player_{model_ver}_lgb_{t}.pkl"
-                        if not model_path.exists():
-                            model_path = resolve_artifact_path("player_model", f"{t}_model_path", f"models/player_v9_lgb_{t}.pkl")
+                        model_path = model_dir / f"player_model_{t}.pkl"
                         if model_path.exists():
                             model = joblib.load(model_path)
                             pred = model.predict(player_df[player_features_cols])
@@ -296,11 +300,11 @@ def evaluate_model_on_season(model_ver, season):
             
     # 2. EVALUATE SCORE MODELS
     score_results = {}
-    score_meta_path = ROOT / f"models/production/score_model_{model_ver}_metadata.json"
-    pace_path = ROOT / f"models/production/score_model_{model_ver}_pace.pkl"
-    home_rtg_path = ROOT / f"models/production/score_model_{model_ver}_home_rtg.pkl"
-    away_rtg_path = ROOT / f"models/production/score_model_{model_ver}_away_rtg.pkl"
-    margin_path = ROOT / f"models/production/score_model_{model_ver}_margin.pkl"
+    score_meta_path = model_dir / "score_metadata.json"
+    pace_path = model_dir / "score_model_pace.pkl"
+    home_rtg_path = model_dir / "score_model_home_rtg.pkl"
+    away_rtg_path = model_dir / "score_model_away_rtg.pkl"
+    margin_path = model_dir / "score_model_margin.pkl"
     
     has_score = all(p.exists() for p in [score_meta_path, pace_path, home_rtg_path, away_rtg_path, margin_path])
     if has_score:
@@ -338,8 +342,8 @@ def evaluate_model_on_season(model_ver, season):
                 eval_df["PRED_TOTAL_RAW"] = eval_df["PRED_PACE"] * (eval_df["PRED_HOME_RTG"] + eval_df["PRED_AWAY_RTG"]) / 100.0
                 
                 # Apply Ridge corrections if available
-                ridge_total_path = ROOT / f"models/production/score_model_{model_ver}_ridge_total.pkl"
-                ridge_margin_path = ROOT / f"models/production/score_model_{model_ver}_ridge_margin.pkl"
+                ridge_total_path = model_dir / "score_model_ridge_total.pkl"
+                ridge_margin_path = model_dir / "score_model_ridge_margin.pkl"
                 
                 if ridge_total_path.exists() and ridge_margin_path.exists():
                     ridge_total = joblib.load(ridge_total_path)
@@ -369,18 +373,20 @@ def evaluate_model_on_season(model_ver, season):
 def main():
     parser = argparse.ArgumentParser(description="NBA Season and Model Reporting/Evaluation CLI")
     parser.add_argument("--season", help="Target season for data stats/freshness or evaluation (e.g. 2025-26)")
-    parser.add_argument("--model", help="Target model version (e.g. v10) to inspect or evaluate")
-    parser.add_argument("--compare-models", nargs=2, metavar=("M1", "M2"), help="Compare two model versions on the specified season")
+    parser.add_argument("--model-info", action="store_true", help="Print release and metrics from the model metadata")
+    parser.add_argument("--evaluate", action="store_true", help="Evaluate the models on --season")
+    parser.add_argument("--model-dir", default=str(ROOT / "models" / "production"), help="Model directory to inspect or evaluate (default: models/production)")
+    parser.add_argument("--compare-models", nargs=2, metavar=("DIR1", "DIR2"), help="Compare two model directories on --season (e.g. models/production models/experimental/holdout_eval)")
     parser.add_argument("--freshness-check", action="store_true", help="Perform freshness and shape sanity check on target season")
     args = parser.parse_args()
 
-    if not any([args.season, args.model, args.compare_models, args.freshness_check]):
+    if not any([args.season, args.model_info, args.evaluate, args.compare_models, args.freshness_check]):
         parser.print_help()
         sys.exit(0)
         
     report = []
     
-    if args.freshness_check or (args.season and not args.model and not args.compare_models):
+    if args.freshness_check or (args.season and not args.evaluate and not args.compare_models):
         season = args.season or get_default_season()
         lines, success = check_season_freshness(season)
         report.extend(lines)
@@ -388,21 +394,25 @@ def main():
         if not success:
             sys.exit(1)
             
-    if args.model and not args.season and not args.compare_models:
-        lines = print_model_info(args.model)
+    if args.model_info:
+        lines = print_model_info(args.model_dir)
         report.extend(lines)
         print("\n".join(lines))
         
-    if args.season and args.model and not args.compare_models:
+    if args.evaluate:
+        if not args.season:
+            print("Error: Specify a target season using --season YYYY-YY to evaluate models.")
+            sys.exit(1)
         season = normalize_season(args.season)
-        print(f"Evaluating model {args.model.upper()} on season {season}...")
-        res = evaluate_model_on_season(args.model, season)
+        release = model_release(args.model_dir)
+        print(f"Evaluating models {release} on season {season}...")
+        res = evaluate_model_on_season(args.model_dir, season)
         
         if "error" in res:
             print(f"Error: {res['error']}")
             sys.exit(1)
             
-        report.append(f"# Model {args.model.upper()} Performance Audit on {season}")
+        report.append(f"# Model {release} Performance Audit on {season}")
         report.append("")
         
         if res.get("win"):
@@ -425,7 +435,7 @@ def main():
             report.append("")
             
         # Write report out
-        out_path = ROOT / "reports" / "evaluation" / f"season_{season}_model_{args.model}_evaluation_report.md"
+        out_path = ROOT / "reports" / "evaluation" / f"season_{season}_model_{release}_evaluation_report.md"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text("\n".join(report), encoding="utf-8")
         print(f"\nWritten performance report to: {out_path}")
@@ -437,21 +447,23 @@ def main():
             sys.exit(1)
             
         season = normalize_season(args.season)
-        m1, m2 = args.compare_models
-        print(f"Comparing model {m1.upper()} vs {m2.upper()} on season {season}...")
+        dir1, dir2 = args.compare_models
+        # Directory names tell apart two copies of one release (production vs holdout_eval).
+        m1, m2 = (f"{model_release(d)} ({Path(d).name})" for d in (dir1, dir2))
+        print(f"Comparing {m1} vs {m2} on season {season}...")
         
-        res1 = evaluate_model_on_season(m1, season)
-        res2 = evaluate_model_on_season(m2, season)
+        res1 = evaluate_model_on_season(dir1, season)
+        res2 = evaluate_model_on_season(dir2, season)
         
         if "error" in res1 or "error" in res2:
             print(f"Error evaluating models: {res1.get('error') or res2.get('error')}")
             sys.exit(1)
             
-        report.append(f"# Model Performance Comparison: {m1.upper()} vs {m2.upper()}")
+        report.append(f"# Model Performance Comparison: {m1} vs {m2}")
         report.append(f"Target season: {season}")
         report.append("")
         
-        report.append("| Metric | " + f"{m1.upper()}" + " | " + f"{m2.upper()}" + " | Delta (" + f"{m2.upper()}-{m1.upper()}" + ") |")
+        report.append("| Metric | " + f"{m1}" + " | " + f"{m2}" + " | Delta (2 - 1) |")
         report.append("| --- | --- | --- | --- |")
         
         # Add win probability comparison
@@ -469,7 +481,7 @@ def main():
             report.append(f"| **Margin MAE** | {s1['margin_mae']:.4f} | {s2['margin_mae']:.4f} | {s2['margin_mae'] - s1['margin_mae']:.4f} |")
             report.append(f"| **Margin Bias** | {s1['margin_bias']:.4f} | {s2['margin_bias']:.4f} | {s2['margin_bias'] - s1['margin_bias']:.4f} |")
             
-        out_path = ROOT / "reports" / "evaluation" / f"compare_{m1}_vs_{m2}_season_{season}.md"
+        out_path = ROOT / "reports" / "evaluation" / f"compare_{Path(dir1).name}_vs_{Path(dir2).name}_season_{season}.md"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text("\n".join(report), encoding="utf-8")
         print(f"\nWritten comparison report to: {out_path}")

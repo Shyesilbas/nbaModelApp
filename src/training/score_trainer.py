@@ -16,6 +16,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 from src.training.feature_contract import load_feature_contract
+from src.training.training_manifest import manifest_release
 from src.training.feature_guards import check_feature_matrix
 from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split
 from src.training.provenance import build_training_provenance
@@ -80,9 +81,9 @@ def get_location_features(row):
         return pd.Series({"TRAVEL_DISTANCE": dist, "TIMEZONE_DIFF": tz_diff, "OPP_TRAVEL_DISTANCE": 0.0, "OPP_TIMEZONE_DIFF": 0.0})
 
 class ScoreModelTrainer:
-    def __init__(self, data_pattern=None, output_dir=None, version="v10", data_files=None, manifest_metadata=None, holdout_config=None, feature_contract_path=None, player_data_path=None, player_models_dir=None):
-        self.version = version
+    def __init__(self, data_pattern=None, output_dir=None, release=None, data_files=None, manifest_metadata=None, holdout_config=None, feature_contract_path=None, player_data_path=None, player_models_dir=None):
         root = Path(__file__).resolve().parents[2]
+        self.release = release or manifest_release(root=root)
         self.data_pattern = data_pattern or str(root / "data/processed/team_model_ready_v3_*.csv")
         self.data_files = [Path(p) for p in data_files] if data_files else None
         self.output_dir = Path(output_dir or root / "models/experimental")
@@ -90,7 +91,7 @@ class ScoreModelTrainer:
         self.player_models_dir = Path(player_models_dir or root / "models/production")
         self.manifest_metadata = manifest_metadata or {}
         self.holdout_config = holdout_config or {}
-        self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/score_v10.yaml", root=root)
+        self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/score.yaml", root=root)
         self.pace_features = self.feature_contract.list_value("pace_features")
         self.base_off_rtg_features = self.feature_contract.list_value("base_off_rtg_features")
         self.home_off_rtg_features = self.base_off_rtg_features.copy()
@@ -118,8 +119,8 @@ class ScoreModelTrainer:
 
             root_models_prod = Path(__file__).resolve().parents[2] / "models/production"
             candidates = [
-                (self.player_models_dir / "player_v9_features.pkl", self.player_models_dir, "player_v9_lgb_"),
-                (root_models_prod / "player_v9_features.pkl", root_models_prod, "player_v9_lgb_"),
+                (self.player_models_dir / "player_features.pkl", self.player_models_dir, "player_model_"),
+                (root_models_prod / "player_features.pkl", root_models_prod, "player_model_"),
             ]
             features_path, models_dir, model_prefix = next(
                 ((p, d, prefix) for p, d, prefix in candidates if p.exists()),
@@ -442,20 +443,20 @@ class ScoreModelTrainer:
         })
 
         os.makedirs(self.output_dir, exist_ok=True)
-        df_oof_export.to_parquet(self.output_dir / f"score_model_{self.version}_oof_margins.parquet", index=False)
-        joblib.dump(pace_model, self.output_dir / f"score_model_{self.version}_pace.pkl")
-        joblib.dump(home_model, self.output_dir / f"score_model_{self.version}_home_rtg.pkl")
-        joblib.dump(away_model, self.output_dir / f"score_model_{self.version}_away_rtg.pkl")
-        joblib.dump(margin_model, self.output_dir / f"score_model_{self.version}_margin.pkl")
-        joblib.dump(ridge_total, self.output_dir / f"score_model_{self.version}_ridge_total.pkl")
-        joblib.dump(ridge_margin, self.output_dir / f"score_model_{self.version}_ridge_margin.pkl")
+        df_oof_export.to_parquet(self.output_dir / f"score_oof_margins.parquet", index=False)
+        joblib.dump(pace_model, self.output_dir / f"score_model_pace.pkl")
+        joblib.dump(home_model, self.output_dir / f"score_model_home_rtg.pkl")
+        joblib.dump(away_model, self.output_dir / f"score_model_away_rtg.pkl")
+        joblib.dump(margin_model, self.output_dir / f"score_model_margin.pkl")
+        joblib.dump(ridge_total, self.output_dir / f"score_model_ridge_total.pkl")
+        joblib.dump(ridge_margin, self.output_dir / f"score_model_ridge_margin.pkl")
         
         score_artifacts = [
-            self.output_dir / f"score_model_{self.version}_{name}.pkl"
+            self.output_dir / f"score_model_{name}.pkl"
             for name in ["pace", "home_rtg", "away_rtg", "margin", "ridge_total", "ridge_margin"]
-        ] + [self.output_dir / f"score_model_{self.version}_oof_margins.parquet"]
+        ] + [self.output_dir / f"score_oof_margins.parquet"]
         metadata = {
-            "version": f"{self.version}_temporal_Ridge_candidate",
+            "version": self.release,
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "training_manifest": self.manifest_metadata,
             "feature_contract": self.feature_contract.snapshot,
@@ -515,7 +516,7 @@ class ScoreModelTrainer:
             "conformal_prediction_intervals": conformal_stats,
         }
         
-        metadata_path = self.output_dir / f"score_model_{self.version}_metadata.json"
+        metadata_path = self.output_dir / f"score_metadata.json"
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=4)
             

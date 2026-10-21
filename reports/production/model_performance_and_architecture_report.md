@@ -84,14 +84,14 @@ For player prediction models:
 All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a holdout copy without the validation season (2025-26) for the promotion gate, then a release model on every eligible season (2020-21..2025-26). The gate compares the holdout copy with the metrics recorded at the previous promotion (`models/production/clean_holdout_metrics.json`) and with simple pregame baselines.
 
 ### 4.1 Win Probability Model
-- **Artifact**: `models/production/win_probability_model_v10.pkl` (and `v9` alias), features in `feature_columns_v10.json`, contract `config/features/win_v10.yaml`.
+- **Artifact**: `models/production/win_model.pkl`, features in `win_features.json`, contract `config/features/win.yaml`.
 - **Algorithm**: `SimpleImputer -> StandardScaler -> LogisticRegression(C=1)`, uncalibrated. Logistic, L1 logistic and LightGBM are compared on expanding-window Brier; logistic wins and isotonic/sigmoid calibration does not improve it.
 - **Features (7)**: `ELO_DIFF`, `IS_HOME`, `CLEAN_NET_RTG_DIFF_LAST_10`, `WINRATE_DIFF_LAST_10`, `REST_DIFF`, `IS_B2B`, `OPP_IS_B2B`, chosen by forward selection on walk-forward folds. `WINRATE_DIFF_LAST_10` has a negative coefficient on purpose: at equal Elo and net rating a higher win rate reflects close-game luck that regresses.
 - **Elo**: pre-game Elo comes from the complete raw game log (the same chain live inference uses), not from the model-ready rows, which lack each team's first games of a season.
 - **Serving**: the first 12 games of a season blend in the pure Elo probability (weight 0.4 decaying to 0); features themselves are not shrunk.
 
 ### 4.2 Score Prediction Model
-- **Artifacts**: `score_model_v10_{pace,home_rtg,away_rtg,margin,ridge_total,ridge_margin}.pkl` and metadata; contract `config/features/score_v10.yaml`.
+- **Artifacts**: `score_model_{pace,home_rtg,away_rtg,margin,ridge_total,ridge_margin}.pkl` and metadata; contract `config/features/score.yaml`.
 - **Structure**: standardized `RidgeCV` models
   1. Pace: `PACE_LAST_10`, `OPP_PACE_LAST_10`.
   2. Home and away offensive rating: `OFF_RTG_LAST_10`, `OPP_DEF_RTG_LAST_10` (from each side's row).
@@ -102,7 +102,7 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 - **Intervals**: conformal offsets from out-of-fold residuals against actual points (80%: total +/-24, margin +/-17.7).
 
 ### 4.3 Player Performance Model
-- **Artifacts**: `player_v9_lgb_{pts,reb,ast}.pkl`, `player_v9_features.pkl`; contract `config/features/player_v9.yaml` (explicit feature list).
+- **Artifacts**: `player_model_{pts,reb,ast}.pkl`, `player_features.pkl`; contract `config/features/player.yaml` (explicit feature list).
 - **Structure**: one LightGBM regressor per target (L1 objective for PTS, which is right-skewed and scored on MAE).
 - **Features (21)**: last-5 and EMA-10 per stat, per-minute production, minutes (last 3, EMA-10, trend), usage EMA-10, rest, home, playoff, position flags (`IS_GUARD`, `IS_BIG`) and the opponent's last-10 allowance to the player's position group (`OPP_POS_{PTS,REB,AST}_ALLOWED_LAST_10`, built by `add_player_matchup_features` for training and inference alike).
 - **Positions** come from `data/canonical/player_metadata.csv`; the primary (first listed) official position decides (F-G -> WING).

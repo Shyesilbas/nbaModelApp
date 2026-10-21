@@ -123,8 +123,8 @@ def main():
   scripts/retrain_pipeline.py [--dry-run | --promote] [--models {win,score,player} ...]
       Retrain, compare against the production champion, and promote if eligible (asks
       first unless --promote). Seasons come from config/training_manifest.yaml.
-  scripts/generate_report.py --season YYYY-YY --model v10
-      Season and model report audit.
+  scripts/generate_report.py --season YYYY-YY --evaluate [--model-dir DIR]
+      Evaluate the production models (or DIR) on a season; --compare-models DIR1 DIR2.
   scripts/detect_drift_and_leakage.py --reference-season YYYY-YY --target-season YYYY-YY
       Data drift and feature leakage detector.
 """

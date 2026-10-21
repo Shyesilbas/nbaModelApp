@@ -1,5 +1,5 @@
 {
-    "version": "v9_temporal_lgb_candidate",
+    "version": "v11",
     "updated_at": "2026-10-19T22:37:22.842153Z",
     "training_manifest": {
         "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
@@ -294,5 +294,6 @@
                 ]
             }
         }
-    }
+    },
+    "legacy_version": "v9_temporal_lgb_candidate"
 }

@@ -21,12 +21,25 @@ from src.training.score_trainer import ScoreModelTrainer
 from src.training.win_trainer import WinModelTrainer
 from src.training.segment_evaluation import evaluate_segments, player_metrics, score_metrics, win_metrics
 from src.training.training_manifest import load_training_manifest
+from scripts.artifact_paths import PRODUCTION_MANIFEST, production_release
 from scripts.data_paths import get_data_paths
 from scripts.generate_report import add_location_features, get_indicator_df
 from src.features.win_strength_features import attach_actual_points
 from src.features.player_form import add_player_matchup_features
 
 CLEAN_HOLDOUT_METRICS_FILE = "clean_holdout_metrics.json"
+
+
+def _set_production_release(release):
+    """Record the promoted release in config/production_artifacts.yaml (top-level `release:` line)."""
+    lines = PRODUCTION_MANIFEST.read_text().splitlines()
+    for i, line in enumerate(lines):
+        if line.startswith("release:"):
+            lines[i] = f"release: {release}"
+            break
+    else:
+        lines.insert(0, f"release: {release}")
+    PRODUCTION_MANIFEST.write_text("\n".join(lines) + "\n")
 
 
 def _season_to_season_ids(season):
@@ -52,11 +65,11 @@ def evaluate_model_files(model_dir, season, segments=None):
         
     # 1. Evaluate Score Model (runs first to produce SCORE_PRED_MARGIN for win evaluation)
     score_results = {}
-    score_meta_path = model_dir / "score_model_v10_metadata.json"
-    pace_path = model_dir / "score_model_v10_pace.pkl"
-    home_rtg_path = model_dir / "score_model_v10_home_rtg.pkl"
-    away_rtg_path = model_dir / "score_model_v10_away_rtg.pkl"
-    margin_path = model_dir / "score_model_v10_margin.pkl"
+    score_meta_path = model_dir / "score_metadata.json"
+    pace_path = model_dir / "score_model_pace.pkl"
+    home_rtg_path = model_dir / "score_model_home_rtg.pkl"
+    away_rtg_path = model_dir / "score_model_away_rtg.pkl"
+    margin_path = model_dir / "score_model_margin.pkl"
     
     has_score = all(p.exists() for p in [score_meta_path, pace_path, home_rtg_path, away_rtg_path, margin_path])
     if has_score:
@@ -91,8 +104,8 @@ def evaluate_model_files(model_dir, season, segments=None):
                 eval_df = home_df.merge(away_eval[["GAME_ID", "PRED_AWAY_RTG"]], on="GAME_ID", how="inner")
                 eval_df["PRED_TOTAL_RAW"] = eval_df["PRED_PACE"] * (eval_df["PRED_HOME_RTG"] + eval_df["PRED_AWAY_RTG"]) / 100.0
                 
-                ridge_total_path = model_dir / "score_model_v10_ridge_total.pkl"
-                ridge_margin_path = model_dir / "score_model_v10_ridge_margin.pkl"
+                ridge_total_path = model_dir / "score_model_ridge_total.pkl"
+                ridge_margin_path = model_dir / "score_model_ridge_margin.pkl"
                 
                 if ridge_total_path.exists() and ridge_margin_path.exists():
                     ridge_total = joblib.load(ridge_total_path)
@@ -127,8 +140,8 @@ def evaluate_model_files(model_dir, season, segments=None):
                 df["SCORE_PRED_MARGIN"] = [home_margins.get(str(gid), 0.0) if is_h else -home_margins.get(str(gid), 0.0) for gid, is_h in zip(df["GAME_ID"], df["IS_HOME"].astype(bool))]
 
     # 2. Evaluate Win Model
-    win_model_path = model_dir / "win_probability_model_v10.pkl"
-    win_features_path = model_dir / "feature_columns_v10.json"
+    win_model_path = model_dir / "win_model.pkl"
+    win_features_path = model_dir / "win_features.json"
     
     win_results = {}
     if win_model_path.exists() and win_features_path.exists() and "WIN" in df.columns:
@@ -174,7 +187,7 @@ def evaluate_model_files(model_dir, season, segments=None):
             }
     player_results = {}
     player_data_path = ROOT / "data" / "experimental" / "player_model_ready_v4_usg.csv"
-    player_features_path = model_dir / "player_v9_features.pkl"
+    player_features_path = model_dir / "player_features.pkl"
     if player_data_path.exists() and player_features_path.exists():
         player_df = pd.read_csv(player_data_path)
         if "SEASON_ID" in player_df.columns:
@@ -185,7 +198,7 @@ def evaluate_model_files(model_dir, season, segments=None):
             player_df = add_player_matchup_features(player_df)
             target_map = {"pts": "TARGET_PTS", "reb": "TARGET_REB", "ast": "TARGET_AST"}
             for short_name, target_col in target_map.items():
-                model_path = model_dir / f"player_v9_lgb_{short_name}.pkl"
+                model_path = model_dir / f"player_model_{short_name}.pkl"
                 if model_path.exists() and target_col in player_df.columns:
                     model = joblib.load(model_path)
                     eval_df = player_df[player_df[target_col].notna()].copy()
@@ -330,8 +343,14 @@ def main():
     validation_season = manifest.validation_season
     if args.season and args.season != validation_season:
         print(f"Warning: --season is deprecated and ignored; manifest validation_season is {validation_season}.")
+    live_release = production_release()
+    print(f"Release:           {manifest.release} (production: {live_release or 'unknown'})")
     print(f"Validation Season: {validation_season}")
     print(f"Dry-run Mode:      {args.dry_run}")
+    if manifest.release == live_release and not args.dry_run:
+        # One release number names one set of models; retraining under the live number would reuse it.
+        print(f"Error: release {manifest.release} is already in production. Bump `release` in {manifest.path} first, or pass --dry-run.")
+        sys.exit(1)
     print("--------------------------------------------------")
     
     experimental_dir = ROOT / "models" / "experimental"
@@ -360,7 +379,7 @@ def main():
             metadata["player"] = PlayerModelTrainer(
                 data_path=manifest.player_dataset_path,
                 output_dir=out_dir,
-                version="v9",
+                release=manifest.release,
                 manifest_metadata=manifest_metadata,
                 holdout_config=holdout,
                 feature_contract_path=manifest.feature_contracts.get("player"),
@@ -375,7 +394,7 @@ def main():
                 score_data_files.append(validation_file)
             metadata["score"] = ScoreModelTrainer(
                 output_dir=out_dir,
-                version="v10",
+                release=manifest.release,
                 data_files=score_data_files,
                 player_data_path=manifest.player_dataset_path,
                 player_models_dir=out_dir,
@@ -398,7 +417,7 @@ def main():
             })
             metadata["win"] = WinModelTrainer(
                 output_dir=out_dir,
-                version="v10",
+                release=manifest.release,
                 player_data_path=manifest.player_dataset_path,
                 player_models_dir=out_dir,
                 score_models_dir=out_dir,
@@ -526,24 +545,24 @@ def main():
         # Copy files to production_dir
         os.makedirs(production_dir, exist_ok=True)
         files_to_copy = [
-            "win_probability_model_v10.pkl",
-            "feature_columns_v10.json",
-            "model_metadata.json",
-            "score_model_v10_pace.pkl",
-            "score_model_v10_home_rtg.pkl",
-            "score_model_v10_away_rtg.pkl",
-            "score_model_v10_margin.pkl",
-            "score_model_v10_ridge_total.pkl",
-            "score_model_v10_ridge_margin.pkl",
-            "score_model_v10_metadata.json",
-            "player_v9_features.pkl",
-            "player_v9_lgb_pts.pkl",
-            "player_v9_lgb_reb.pkl",
-            "player_v9_lgb_ast.pkl",
-            "player_v9_ridge_pts.pkl",
-            "player_v9_ridge_reb.pkl",
-            "player_v9_ridge_ast.pkl",
-            "player_v9_metadata.json",
+            "win_model.pkl",
+            "win_features.json",
+            "win_metadata.json",
+            "score_model_pace.pkl",
+            "score_model_home_rtg.pkl",
+            "score_model_away_rtg.pkl",
+            "score_model_margin.pkl",
+            "score_model_ridge_total.pkl",
+            "score_model_ridge_margin.pkl",
+            "score_metadata.json",
+            "player_features.pkl",
+            "player_model_pts.pkl",
+            "player_model_reb.pkl",
+            "player_model_ast.pkl",
+            "player_model_ridge_pts.pkl",
+            "player_model_ridge_reb.pkl",
+            "player_model_ridge_ast.pkl",
+            "player_metadata.json",
         ]
         # Only promote models trained in this run; experimental/ may hold stale artifacts of the others.
         owner = lambda f: "score" if f.startswith("score_") else "player" if f.startswith("player_") else "win"
@@ -588,7 +607,10 @@ def main():
                 "training_report": str(report_path),
             }
             (production_dir / "leakage_clean_release.json").write_text(json.dumps(release, indent=2))
-        print("Model promotion complete. Production artifacts updated successfully.")
+        _set_production_release(manifest.release)
+        if args.models:
+            print(f"Note: only {', '.join(args.models)} were retrained; the other models keep the release in their own metadata.")
+        print(f"Model promotion complete. Production release is now {manifest.release}.")
     else:
         print("Promotion cancelled. Experimental models left under models/experimental/.")
 

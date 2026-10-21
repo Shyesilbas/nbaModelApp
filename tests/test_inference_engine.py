@@ -34,8 +34,10 @@ class TestInferenceEngine(unittest.TestCase):
             pass
 
     def test_shap_explainer_init(self):
-        explainer = ShapExplainer(model_version="v9")
-        self.assertEqual(explainer.model_version, "v9")
+        # Artifact names carry no version, so the explainer takes no version argument.
+        explainer = ShapExplainer()
+        self.assertTrue(callable(explainer.explain_win_probability))
+        self.assertTrue(callable(explainer.explain_score_prediction))
 
 
 if __name__ == "__main__":

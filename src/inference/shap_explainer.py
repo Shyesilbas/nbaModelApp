@@ -27,9 +27,6 @@ def linear_contributions(model, X: pd.DataFrame):
 
 
 class ShapExplainer:
-    def __init__(self, model_version: str = "v10"):
-        self.model_version = model_version
-
     def explain_win_probability(
         self,
         features_dict: Dict[str, Any],
@@ -37,10 +34,10 @@ class ShapExplainer:
         win_features_path: Optional[Path] = None,
     ) -> Optional[Dict[str, Any]]:
         m_path = win_model_path or resolve_artifact_path(
-            "win_model", "model_path", f"models/production/win_probability_model_{self.model_version}.pkl"
+            "win_model", "model_path", "models/production/win_model.pkl"
         )
         f_path = win_features_path or resolve_artifact_path(
-            "win_model", "feature_columns_path", f"models/production/feature_columns_{self.model_version}.json"
+            "win_model", "feature_columns_path", "models/production/win_features.json"
         )
 
         if not Path(m_path).exists() or not Path(f_path).exists():
@@ -141,30 +138,30 @@ class ShapExplainer:
         meta_path: Optional[Path] = None,
     ) -> Optional[Dict[str, Any]]:
         m_path = meta_path or resolve_artifact_path(
-            "score_model", "metadata_path", f"models/production/score_model_{self.model_version}_metadata.json"
+            "score_model", "metadata_path", "models/production/score_metadata.json"
         )
         pace_path = resolve_artifact_path(
-            "score_model", "total_model_path", f"models/production/score_model_{self.model_version}_pace.pkl"
+            "score_model", "total_model_path", "models/production/score_model_pace.pkl"
         )
         if not Path(pace_path).exists():
             pace_path = resolve_artifact_path(
-                "score_model", "pace_model_path", f"models/production/score_model_{self.model_version}_pace.pkl"
+                "score_model", "pace_model_path", "models/production/score_model_pace.pkl"
             )
 
         home_rtg_path = resolve_artifact_path(
-            "score_model", "home_model_path", f"models/production/score_model_{self.model_version}_home_rtg.pkl"
+            "score_model", "home_model_path", "models/production/score_model_home_rtg.pkl"
         )
         if not Path(home_rtg_path).exists():
             home_rtg_path = resolve_artifact_path(
-                "score_model", "home_rtg_model_path", f"models/production/score_model_{self.model_version}_home_rtg.pkl"
+                "score_model", "home_rtg_model_path", "models/production/score_model_home_rtg.pkl"
             )
 
         away_rtg_path = resolve_artifact_path(
-            "score_model", "away_model_path", f"models/production/score_model_{self.model_version}_away_rtg.pkl"
+            "score_model", "away_model_path", "models/production/score_model_away_rtg.pkl"
         )
         if not Path(away_rtg_path).exists():
             away_rtg_path = resolve_artifact_path(
-                "score_model", "away_rtg_model_path", f"models/production/score_model_{self.model_version}_away_rtg.pkl"
+                "score_model", "away_rtg_model_path", "models/production/score_model_away_rtg.pkl"
             )
 
         if not all(Path(p).exists() for p in [m_path, pace_path, home_rtg_path, away_rtg_path]):

@@ -22,14 +22,14 @@ PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY
 
 To inspect active model architectures, feature contracts, and empirical benchmark parameters:
 ```bash
-PYTHONPATH=. python3 scripts/generate_report.py --model {v9, v10}
+PYTHONPATH=. python3 scripts/generate_report.py --model-info [--model-dir models/production]
 ```
 
 ### Information Inspected:
 - Model family (WIN `logistic_regression`, SCORE `ridge`, PLAYER LightGBM).
-- Feature contracts from `config/features/` (e.g. `win_v10.yaml`, `score_v9.yaml`).
+- Feature contracts from `config/features/` (e.g. `win.yaml`, `score.yaml`, `player.yaml`).
 - Calibration parameters (SCORE Ridge residual coefficients for Total/Margin; WIN and PLAYER have none).
-- Base holdout metrics recorded in `models/production/model_metadata.json`.
+- Base holdout metrics recorded in `models/production/win_metadata.json`.
 
 ---
 
@@ -37,14 +37,14 @@ PYTHONPATH=. python3 scripts/generate_report.py --model {v9, v10}
 
 To test a model artifact dynamically against the completed outcomes of any target season:
 ```bash
-PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY --model {v9, v10}
+PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY --evaluate [--model-dir models/production]
 ```
 
 ### Execution Flow:
 1. Loads the season's V3 team dataset from CSV.
 2. Injects rolling feature states (Continuous Elo, Dean Oliver Four Factors, schedule fatigue).
 3. If win projection aggregates are required, calculates player projection averages dynamically.
-4. Generates performance evaluation reports saved to `reports/evaluation/season_{season}_model_{model}_evaluation_report.md`:
+4. Generates performance evaluation reports saved to `reports/evaluation/season_{season}_model_{release}_evaluation_report.md`:
    - **Win Probability**: Accuracy, ROC-AUC, Brier score, Log-Loss.
    - **Score Component**: Total points MAE/Bias and Margin MAE/Bias.
 
@@ -52,9 +52,9 @@ PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY --model {v9, v1
 
 ## 4. Side-by-Side Model Comparisons (Champion vs Challenger)
 
-To compare two model versions on a specific season:
+To compare two model directories on a specific season, e.g. production against the holdout copies that never saw 2025-26:
 ```bash
-PYTHONPATH=. python3 scripts/generate_report.py --compare-models v9 v10 --season YYYY-YY
+PYTHONPATH=. python3 scripts/generate_report.py --compare-models models/production models/experimental/holdout_eval --season 2025-26
 ```
 
 ### Output:
@@ -66,7 +66,7 @@ Generates a side-by-side comparative markdown table detailing accuracy deltas, B
 
 To predict game outcomes, win probabilities, and projected scores for an entire scheduled date:
 ```bash
-PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY [--model v10]
+PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY
 ```
 
 ### Features:

@@ -12,9 +12,9 @@ This file tracks the overall status of the project.
 
 | Model | Artifact | Status |
 |-------|----------|--------|
-| WIN | `models/production/win_probability_model_v10.pkl` (and `v9` alias) | **ACTIVE** — uncalibrated logistic regression, 8 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs, **ABS_DIFF roster availability**) |
-| SCORE home/away/total/margin | `models/production/score_model_v10_*.pkl` (and `v9` alias) | **ACTIVE** — Ridge pace (2 features) and offensive-rating models (own/opponent roster availability added), Ridge margin on the WIN inputs incl. ABS_DIFF, Ridge residual correction; actual-point targets |
-| PLAYER PTS/REB/AST | `models/production/player_v9_lgb_*.pkl` | **ACTIVE** — LightGBM per target, 21 features incl. position flags and opponent allowance to the position; no residual correction |
+| WIN | `models/production/win_model.pkl` | **ACTIVE** — uncalibrated logistic regression, 8 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs, **ABS_DIFF roster availability**) |
+| SCORE home/away/total/margin | `models/production/score_model_*.pkl` | **ACTIVE** — Ridge pace (2 features) and offensive-rating models (own/opponent roster availability added), Ridge margin on the WIN inputs incl. ABS_DIFF, Ridge residual correction; actual-point targets |
+| PLAYER PTS/REB/AST | `models/production/player_model_*.pkl` | **ACTIVE** — LightGBM per target, 21 features incl. position flags and opponent allowance to the position; no residual correction |
 
 All three are trained on 2020-21..2025-26. Honest walk-forward (2021-22..2025-26, true availability known): WIN Brier 0.2106 vs 0.2157 for Elo + home court; SCORE total MAE 14.90 vs 14.95 and margin MAE 10.83 vs 11.41 for last-10 real points; PLAYER MAE PTS 4.54 / REB 1.91 / AST 1.32 vs EMA-10 4.63 / 1.93 / 1.33 (`reports/evaluation/multi_season_walk_forward_backtest.md`).
 
@@ -42,7 +42,7 @@ All three are trained on 2020-21..2025-26. Honest walk-forward (2021-22..2025-26
 - [X] Promote WIN v9 strength-aware candidate after segment evaluation
 - [X] Comprehensive cross-season model quality, leakage and train-serve skew audit (rapor silindi)
 - [X] Fix ContinuousEloEngine margin calculation scale mismatch between training and live inference
-- [X] Remove box-score `PLAYED_COUNT` leakage from score model contract (`score_v10.yaml`)
+- [X] Remove box-score `PLAYED_COUNT` leakage from score model contract (`score.yaml`)
 - [X] Export and integrate 5-Fold OOF score margins into WIN probability model
 - [X] Promote V10.1 production models (WIN & SCORE) upon explicit user approval
 - [X] Multi-season expanding-window walk-forward backtest across 5 unseen seasons (2021-22 to 2025-26), now on the production configurations with strong baselines

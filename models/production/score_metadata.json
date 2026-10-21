@@ -1,5 +1,5 @@
 {
-    "version": "v10_temporal_Ridge_candidate",
+    "version": "v11",
     "updated_at": "2026-10-20T10:52:26.852449Z",
     "training_manifest": {
         "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
@@ -535,5 +535,6 @@
             }
         },
         "calibration_samples": 4781
-    }
+    },
+    "legacy_version": "v10_temporal_Ridge_candidate"
 }

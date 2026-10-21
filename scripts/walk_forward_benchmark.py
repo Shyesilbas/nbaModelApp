@@ -135,7 +135,7 @@ def run_walk_forward_backtest():
     print(f"Total processed team rows: {len(data)}")
 
     # Load player features and data
-    player_feat_path = ROOT / "models/production/player_v9_features.pkl"
+    player_feat_path = ROOT / "models/production/player_features.pkl"
     if player_feat_path.exists():
         import joblib
         player_features = joblib.load(player_feat_path)
@@ -146,13 +146,13 @@ def run_walk_forward_backtest():
     print(f"Total processed player rows: {len(player_data)}")
 
     # Load feature columns
-    feat_v10_path = ROOT / "models/production/feature_columns_v10.json"
-    if feat_v10_path.exists():
-        win_features = [f for f in json.loads(feat_v10_path.read_text()) if f in data.columns and f != "SCORE_PRED_MARGIN"]
+    win_features_path = ROOT / "models/production/win_features.json"
+    if win_features_path.exists():
+        win_features = [f for f in json.loads(win_features_path.read_text()) if f in data.columns and f != "SCORE_PRED_MARGIN"]
     else:
         win_features = ["ELO_DIFF", "WINRATE_DIFF_LAST_10", "REST_DIFF", "NET_RTG_DIFF_LAST_10", "EFG_DIFF_LAST_10", "PACE_COLLISION"]
 
-    score_meta_path = ROOT / "models/production/score_model_v10_metadata.json"
+    score_meta_path = ROOT / "models/production/score_metadata.json"
     if score_meta_path.exists():
         s_meta = json.loads(score_meta_path.read_text())
         pace_features = s_meta["pace_features"]

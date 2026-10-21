@@ -30,7 +30,7 @@ export function ModelDiagnostics({ modelStatus, result }: { modelStatus: any; re
           {[
             { label: "ROC-AUC", value: winModel?.metrics?.roc_auc?.toFixed(4) },
             { label: "Doğruluk", value: winModel?.metrics?.accuracy ? `%${(winModel.metrics.accuracy * 100).toFixed(1)}` : null },
-            { label: "Model Sürümü", value: result?.win_probability?.model_version ? (result.win_probability.model_version.startsWith("v") ? result.win_probability.model_version : `v${result.win_probability.model_version}`) : "v10.0" },
+            { label: "Model Sürümü", value: result?.win_probability?.model_version },
             { label: "Ev H-MAE", value: scoreModel?.metrics?.home_mae?.toFixed(2) },
             { label: "Dep A-MAE", value: scoreModel?.metrics?.away_mae?.toFixed(2) },
           ]

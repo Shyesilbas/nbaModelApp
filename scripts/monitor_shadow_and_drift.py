@@ -53,6 +53,7 @@ def load_actual_results() -> pd.DataFrame:
 
 
 def generate_bootstrap_shadow_predictions(count: int = 50) -> list[dict]:
+    from scripts.artifact_paths import production_release
     """Generates synthetic shadow log rows from recent 2025-26 unseen games if log is fresh."""
     p = ROOT / "data/processed/team_model_ready_v3_2025_26.csv"
     if not p.exists():
@@ -72,7 +73,7 @@ def generate_bootstrap_shadow_predictions(count: int = 50) -> list[dict]:
             "prediction_date": str(r["GAME_DATE"]),
             "home_team": str(r.get("TEAM_ABBREVIATION", "HOM")),
             "away_team": str(r.get("OPPONENT_ABBREVIATION", "AWY")),
-            "model_version": "v10.1_shadow",
+            "model_version": f"{production_release()}_shadow",
             "win_probability": round(prob, 4),
             "predicted_home_score": round(pred_home, 1),
             "predicted_away_score": round(pred_away, 1),

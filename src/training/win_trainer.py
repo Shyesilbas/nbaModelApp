@@ -14,6 +14,7 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
                              roc_auc_score, brier_score_loss, log_loss)
 from src.training.feature_contract import load_feature_contract, resolve_feature_list
+from src.training.training_manifest import manifest_release
 from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split, expanding_window_date_splits
 from src.training.provenance import build_training_provenance
 
@@ -95,7 +96,7 @@ class WinModelTrainer:
         self,
         data_path=None,
         output_dir=None,
-        version="v10",
+        release=None,
         player_data_path=None,
         player_models_dir=None,
         score_models_dir=None,
@@ -104,8 +105,8 @@ class WinModelTrainer:
         holdout_config=None,
         feature_contract_path=None,
     ):
-        self.version = version
         root = Path(__file__).resolve().parents[2]
+        self.release = release or manifest_release(root=root)
         self.data_pattern = data_path or str(root / "data/processed/team_model_ready_v3_*.csv")
         self.data_files = [Path(p) for p in data_files] if data_files else None
         self.output_dir = Path(output_dir or root / "models/experimental")
@@ -114,7 +115,7 @@ class WinModelTrainer:
         self.score_models_dir = Path(score_models_dir or self.output_dir)
         self.manifest_metadata = manifest_metadata or {}
         self.holdout_config = holdout_config or {}
-        self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/win_v10.yaml", root=root)
+        self.feature_contract = load_feature_contract(feature_contract_path or root / "config/features/win.yaml", root=root)
         self.target_col = self.feature_contract.raw.get("target", "WIN")
         excluded = set(self.feature_contract.list_value("excluded_features"))
         # An excluded derived feature (SCORE_PRED_MARGIN) is never built, so it cannot be selected.
@@ -209,8 +210,8 @@ class WinModelTrainer:
 
                 root_models_prod = Path(__file__).resolve().parents[2] / "models/production"
                 candidates = [
-                    (self.player_models_dir / "player_v9_features.pkl", self.player_models_dir, "player_v9_lgb_"),
-                    (root_models_prod / "player_v9_features.pkl", root_models_prod, "player_v9_lgb_"),
+                    (self.player_models_dir / "player_features.pkl", self.player_models_dir, "player_model_"),
+                    (root_models_prod / "player_features.pkl", root_models_prod, "player_model_"),
                 ]
                 features_path, models_dir, model_prefix = next(
                     ((p, d, prefix) for p, d, prefix in candidates if p.exists()),
@@ -301,9 +302,9 @@ class WinModelTrainer:
 
         root_prod = Path(__file__).resolve().parents[2] / "models/production"
         candidates = [
-            (self.score_models_dir / "score_model_v10_margin.pkl", self.score_models_dir / "score_model_v10_metadata.json", self.score_models_dir / "score_model_v10_ridge_margin.pkl"),
-            (self.output_dir / "score_model_v10_margin.pkl", self.output_dir / "score_model_v10_metadata.json", self.output_dir / "score_model_v10_ridge_margin.pkl"),
-            (root_prod / "score_model_v10_margin.pkl", root_prod / "score_model_v10_metadata.json", root_prod / "score_model_v10_ridge_margin.pkl"),
+            (self.score_models_dir / "score_model_margin.pkl", self.score_models_dir / "score_metadata.json", self.score_models_dir / "score_model_ridge_margin.pkl"),
+            (self.output_dir / "score_model_margin.pkl", self.output_dir / "score_metadata.json", self.output_dir / "score_model_ridge_margin.pkl"),
+            (root_prod / "score_model_margin.pkl", root_prod / "score_metadata.json", root_prod / "score_model_ridge_margin.pkl"),
         ]
         margin_model_path, meta_path, ridge_path = next(
             ((m, meta, r) for m, meta, r in candidates if m.exists() and meta.exists()),
@@ -314,11 +315,9 @@ class WinModelTrainer:
             return df
 
         oof_candidates = [
-            self.score_models_dir / f"score_model_{self.version}_oof_margins.parquet",
-            self.output_dir / f"score_model_{self.version}_oof_margins.parquet",
-            self.score_models_dir / "score_model_v10_oof_margins.parquet",
-            self.output_dir / "score_model_v10_oof_margins.parquet",
-            root_prod / "score_model_v10_oof_margins.parquet",
+            self.score_models_dir / "score_oof_margins.parquet",
+            self.output_dir / "score_oof_margins.parquet",
+            root_prod / "score_oof_margins.parquet",
         ]
         oof_path = next((p for p in oof_candidates if p.exists()), None)
         if oof_path is None:
@@ -615,18 +614,18 @@ class WinModelTrainer:
             lambda yt, p: float(log_loss(yt, np.clip(p, 1e-6, 1 - 1e-6))),
         )
 
-        model_path = self.output_dir / f"win_probability_model_{self.version}.pkl"
+        model_path = self.output_dir / f"win_model.pkl"
         joblib.dump(final_model, model_path)
         
         feature_cols = X.columns.tolist()
-        feat_path = self.output_dir / f"feature_columns_{self.version}.json"
+        feat_path = self.output_dir / f"win_features.json"
         with open(feat_path, "w") as f:
             json.dump(feature_cols, f, indent=2)
             
         win_artifacts = [model_path, feat_path]
         metadata = {
             "model_name": best_family,
-            "version": "10.2-temporal-candidate" if self.version == "v10" else "9.2-temporal-candidate",
+            "version": self.release,
             "training_date": datetime.utcnow().isoformat() + "Z",
             "number_of_rows": int(df.shape[0]),
             "number_of_features": int(X.shape[1]),
@@ -665,7 +664,7 @@ class WinModelTrainer:
             "target_column": self.target_col
         }
         
-        meta_path = self.output_dir / "model_metadata.json"
+        meta_path = self.output_dir / "win_metadata.json"
         with open(meta_path, "w") as f:
             json.dump(metadata, f, indent=2)
             

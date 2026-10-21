@@ -76,8 +76,8 @@ def predict_win(seasons, test_season, model_dir: Path) -> pd.DataFrame:
     df, _ = trainer.load_training_dataset(trainer.resolve_dataset_files())
     df = trainer.apply_score_prediction_enrichment(df)
     X, y, meta, _ = trainer.prepare_features(df)
-    model = joblib.load(model_dir / "win_probability_model_v10.pkl")
-    cols = json.loads((model_dir / "feature_columns_v10.json").read_text())
+    model = joblib.load(model_dir / "win_model.pkl")
+    cols = json.loads((model_dir / "win_features.json").read_text())
     mask = (season_of(meta["GAME_DATE"]) == test_season).to_numpy() & X["IS_HOME"].astype(bool).to_numpy()
     p = model.predict_proba(X.loc[mask, cols])[:, 1]
     return pd.DataFrame({
@@ -96,8 +96,8 @@ def predict_score(seasons, test_season, model_dir: Path) -> pd.DataFrame:
     df = trainer.prepare_frame(df)
     df = df[season_of(df["GAME_DATE"]) == test_season].copy()
     df["GAME_ID"] = df["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
-    meta = json.loads((model_dir / "score_model_v10_metadata.json").read_text())
-    load = lambda name: joblib.load(model_dir / f"score_model_v10_{name}.pkl")
+    meta = json.loads((model_dir / "score_metadata.json").read_text())
+    load = lambda name: joblib.load(model_dir / f"score_model_{name}.pkl")
     home = df[df["IS_HOME"] == True].set_index("GAME_ID")
     away = df[df["IS_HOME"] == False].set_index("GAME_ID")
     games = home.index.intersection(away.index)
@@ -131,12 +131,12 @@ def predict_score(seasons, test_season, model_dir: Path) -> pd.DataFrame:
 def predict_player(test_season, model_dir: Path) -> pd.DataFrame:
     df = pd.read_csv(PLAYER_DATA)
     df = df[season_of(df["GAME_DATE"]) == test_season].copy()
-    features = joblib.load(model_dir / "player_v9_features.pkl")
+    features = joblib.load(model_dir / "player_features.pkl")
     out = pd.DataFrame({"GAME_ID": df["GAME_ID"].astype(str), "PLAYER_ID": df.get("Player_ID", df.get("PLAYER_ID"))})
     df = add_player_matchup_features(df)
     X = df[features].apply(pd.to_numeric, errors="coerce")
     for target, short in [("TARGET_PTS", "pts"), ("TARGET_REB", "reb"), ("TARGET_AST", "ast")]:
-        raw = joblib.load(model_dir / f"player_v9_lgb_{short}.pkl").predict(X)
+        raw = joblib.load(model_dir / f"player_model_{short}.pkl").predict(X)
         out[f"PRED_{short.upper()}"] = np.maximum(0.0, raw)
         out[f"REAL_{short.upper()}"] = df[target].to_numpy()
     return out

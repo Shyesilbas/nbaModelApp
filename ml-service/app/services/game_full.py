@@ -3,6 +3,7 @@ import logging
 from typing import Any, Dict, List, Tuple
 import pandas as pd
 
+from scripts.artifact_paths import production_release
 from scripts.build_matchup_features import build_features
 from scripts.inference.top_down_scaling import apply_top_down_scaling
 
@@ -283,7 +284,7 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
             home_team=home_team,
             away_team=away_team,
             prediction_date=pred_date_str,
-            model_version=win_resp.model_version if win_resp else "v10.1",
+            model_version=win_resp.model_version if win_resp else production_release(),
             win_probability=win_resp.home_win_probability if win_resp else 0.5,
             predicted_home_score=score_values["home_score"],
             predicted_away_score=score_values["away_score"],

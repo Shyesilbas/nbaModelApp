@@ -42,12 +42,22 @@ def load_production_manifest() -> Dict[str, Any]:
                 if line.endswith(":"):
                     current_section = line[:-1]
                     data[current_section] = {}
+                elif ":" in line:
+                    key, value = line.split(":", 1)
+                    data[key.strip()] = _parse_scalar(value)
+                    current_section = None
                 continue
             if current_section is None or ":" not in line:
                 continue
             key, value = line.strip().split(":", 1)
             data[current_section][key] = _parse_scalar(value)
         return data
+
+
+def production_release() -> str | None:
+    """Release of the production models (e.g. "v11"); artifact file names carry no version."""
+    release = load_production_manifest().get("release")
+    return release if isinstance(release, str) and release else None
 
 
 def resolve_artifact_path(section: str, key: str, fallback: str) -> Path:

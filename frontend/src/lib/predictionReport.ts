@@ -598,7 +598,7 @@ const aInfo = getTeamInfo(resData.away_team || fallbackAway);
         </div>
 
         <div class="footer-section">
-          <div>Model Version: ${resData.win_probability?.model_version ? (resData.win_probability.model_version.startsWith('v') ? resData.win_probability.model_version : 'v' + resData.win_probability.model_version) : 'v6.0'} · Score Model: ${resData.score_prediction?.model_version ? (resData.score_prediction.model_version.startsWith('v') ? resData.score_prediction.model_version : 'v' + resData.score_prediction.model_version) : 'v6.0'}</div>
+          <div>Model: ${resData.win_probability?.model_version ?? resData.score_prediction?.model_version ?? '—'}</div>
           <div>Report generated automatically. All predictions are statistical estimates.</div>
         </div>
 

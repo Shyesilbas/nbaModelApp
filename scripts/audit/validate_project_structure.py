@@ -33,30 +33,43 @@ def main() -> int:
                     _check(candidate, errors)
 
     required = [
-        ROOT / "models/production/win_probability_model_v10.pkl",
-        ROOT / "models/production/feature_columns_v10.json",
-        ROOT / "models/production/model_metadata.json",
-        ROOT / "models/production/score_model_v10_home_rtg.pkl",
-        ROOT / "models/production/score_model_v10_away_rtg.pkl",
-        ROOT / "models/production/score_model_v10_pace.pkl",
-        ROOT / "models/production/score_model_v10_margin.pkl",
-        ROOT / "models/production/score_model_v10_ridge_total.pkl",
-        ROOT / "models/production/score_model_v10_ridge_margin.pkl",
-        ROOT / "models/production/score_model_v10_metadata.json",
-        ROOT / "models/production/player_v9_lgb_pts.pkl",
-        ROOT / "models/production/player_v9_lgb_reb.pkl",
-        ROOT / "models/production/player_v9_lgb_ast.pkl",
-        ROOT / "models/production/player_v9_features.pkl",
-        ROOT / "models/production/player_v9_metadata.json",
+        ROOT / "models/production/win_model.pkl",
+        ROOT / "models/production/win_features.json",
+        ROOT / "models/production/win_metadata.json",
+        ROOT / "models/production/score_model_home_rtg.pkl",
+        ROOT / "models/production/score_model_away_rtg.pkl",
+        ROOT / "models/production/score_model_pace.pkl",
+        ROOT / "models/production/score_model_margin.pkl",
+        ROOT / "models/production/score_model_ridge_total.pkl",
+        ROOT / "models/production/score_model_ridge_margin.pkl",
+        ROOT / "models/production/score_metadata.json",
+        ROOT / "models/production/player_model_pts.pkl",
+        ROOT / "models/production/player_model_reb.pkl",
+        ROOT / "models/production/player_model_ast.pkl",
+        ROOT / "models/production/player_features.pkl",
+        ROOT / "models/production/player_metadata.json",
         ROOT / "data/production/core_players.csv",
     ]
     for path in required:
         _check(path, errors)
 
+    # One release names all production models; a partial promotion leaves older ones behind.
+    warnings: list[str] = []
+    release = manifest.get("release") if manifest else None
+    if not isinstance(release, str) or not release:
+        errors.append("config/production_artifacts.yaml has no top-level `release`")
+    else:
+        for name in ("win_metadata.json", "score_metadata.json", "player_metadata.json"):
+            path = ROOT / "models/production" / name
+            if path.exists():
+                version = json.loads(path.read_text()).get("version")
+                if version != release:
+                    warnings.append(f"{name} is release {version}, production manifest says {release}")
+
     if errors:
         print(json.dumps({"status": "fail", "errors": errors}, indent=2))
         return 1
-    print(json.dumps({"status": "pass", "checked": len(required)}, indent=2))
+    print(json.dumps({"status": "pass", "release": release, "checked": len(required), "warnings": warnings}, indent=2))
     return 0
 
 

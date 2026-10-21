@@ -66,10 +66,12 @@ export function MatchupHeroCard({
       {/* Top Metadata and Actions Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border-light">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-background-secondary border border-border text-text-secondary text-xs font-medium">
-            <Cpu size={14} className="text-primary" />
-            <span>V10 Tahmin Motoru</span>
-          </span>
+          {win.model_version && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-background-secondary border border-border text-text-secondary text-xs font-medium">
+              <Cpu size={14} className="text-primary" />
+              <span>Model {win.model_version}</span>
+            </span>
+          )}
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-background-secondary border border-border text-text-secondary text-xs font-medium tabular-nums">
             <Calendar size={13} />
             <span>{formatDate(date)}</span>

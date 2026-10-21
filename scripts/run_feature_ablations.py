@@ -59,9 +59,9 @@ def run_ablation_study():
         "IS_B2B", "OPP_IS_B2B", "CLOSE_STRENGTH_REST_DIFF", "PLAYOFF_REST_DIFF"
     ]
 
-    feat_v10_path = ROOT / "models/production/feature_columns_v10.json"
-    if feat_v10_path.exists():
-        family_5_full_prod = [f for f in json.loads(feat_v10_path.read_text()) if f in home_data.columns and f != "SCORE_PRED_MARGIN"]
+    win_features_path = ROOT / "models/production/win_features.json"
+    if win_features_path.exists():
+        family_5_full_prod = [f for f in json.loads(win_features_path.read_text()) if f in home_data.columns and f != "SCORE_PRED_MARGIN"]
     else:
         family_5_full_prod = family_4_fatigue
 

@@ -26,10 +26,10 @@ class WinPredictor:
         features_path: Optional[Path] = None,
     ):
         self.model_path = model_path or resolve_artifact_path(
-            "win_model", "model_path", "models/production/win_probability_model_v10.pkl"
+            "win_model", "model_path", "models/production/win_model.pkl"
         )
         self.features_path = features_path or resolve_artifact_path(
-            "win_model", "feature_columns_path", "models/production/feature_columns_v10.json"
+            "win_model", "feature_columns_path", "models/production/win_features.json"
         )
         self.model = None
         self.feature_cols = []

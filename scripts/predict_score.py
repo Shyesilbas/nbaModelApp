@@ -24,7 +24,7 @@ def load_models_and_metadata():
     away_model_path = resolve_artifact_path("score_model", "away_model_path", "models/away_score_model_v2.pkl")
     total_model_path = resolve_artifact_path("score_model", "total_model_path", "models/direct_total_points_model_v2.pkl")
     diff_model_path = resolve_artifact_path("score_model", "margin_model_path", "models/direct_point_diff_model_v2.pkl")
-    metadata_path = resolve_artifact_path("score_model", "metadata_path", "models/score_model_v2_metadata.json")
+    metadata_path = resolve_artifact_path("score_model", "metadata_path", "models/score_metadata.json")
     for p in [home_model_path, away_model_path, total_model_path, diff_model_path, metadata_path]:
         if not p.exists():
             raise FileNotFoundError(f"Model file not found at {p}. Run training script prepare_score_model.py first.")

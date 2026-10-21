@@ -34,19 +34,6 @@ def _score_paths(version: int):
     }
 
 
-def _player_paths(version: int, kind: str):
-    base = ROOT / "models" / "production"
-    return {
-        "pts": base / f"player_v{version}_{kind}_pts.pkl",
-        "reb": base / f"player_v{version}_{kind}_reb.pkl",
-        "ast": base / f"player_v{version}_{kind}_ast.pkl",
-        "features": base / f"player_v{version}_features.pkl",
-        "ridge_pts": base / f"player_v{version}_ridge_pts.pkl",
-        "ridge_reb": base / f"player_v{version}_ridge_reb.pkl",
-        "ridge_ast": base / f"player_v{version}_ridge_ast.pkl",
-    }
-
-
 def _patch_logistic_regression_compat(model):
     """Backfill attrs expected by older sklearn runtimes when loading newer pickles."""
     candidates = []
@@ -73,9 +60,9 @@ class ModelLoader:
         self.metadata = None
 
     def load(self):
-        model_path = resolve_artifact_path("win_model", "model_path", "models/production/win_probability_model_v10.pkl")
-        features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/production/feature_columns_v10.json")
-        metadata_path = resolve_artifact_path("win_model", "metadata_path", "models/model_metadata.json")
+        model_path = resolve_artifact_path("win_model", "model_path", "models/production/win_model.pkl")
+        features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/production/win_features.json")
+        metadata_path = resolve_artifact_path("win_model", "metadata_path", "models/win_metadata.json")
         if not model_path.exists():
             raise FileNotFoundError(f"Model file not found at {model_path}")
         if not features_path.exists():
@@ -117,13 +104,13 @@ class ScoreModelLoader:
 
     def load(self):
         manifest_paths = {
-            "pace": resolve_artifact_path("score_model", "total_model_path", "models/production/score_model_v10_pace.pkl"),
-            "home_rtg": resolve_artifact_path("score_model", "home_model_path", "models/production/score_model_v10_home_rtg.pkl"),
-            "away_rtg": resolve_artifact_path("score_model", "away_model_path", "models/production/score_model_v10_away_rtg.pkl"),
-            "margin": resolve_artifact_path("score_model", "margin_model_path", "models/production/score_model_v10_margin.pkl"),
-            "metadata": resolve_artifact_path("score_model", "metadata_path", "models/production/score_model_v10_metadata.json"),
-            "ridge_total": resolve_artifact_path("score_model", "ridge_total_path", "models/production/score_model_v10_ridge_total.pkl"),
-            "ridge_margin": resolve_artifact_path("score_model", "ridge_margin_path", "models/production/score_model_v10_ridge_margin.pkl"),
+            "pace": resolve_artifact_path("score_model", "total_model_path", "models/production/score_model_pace.pkl"),
+            "home_rtg": resolve_artifact_path("score_model", "home_model_path", "models/production/score_model_home_rtg.pkl"),
+            "away_rtg": resolve_artifact_path("score_model", "away_model_path", "models/production/score_model_away_rtg.pkl"),
+            "margin": resolve_artifact_path("score_model", "margin_model_path", "models/production/score_model_margin.pkl"),
+            "metadata": resolve_artifact_path("score_model", "metadata_path", "models/production/score_metadata.json"),
+            "ridge_total": resolve_artifact_path("score_model", "ridge_total_path", "models/production/score_model_ridge_total.pkl"),
+            "ridge_margin": resolve_artifact_path("score_model", "ridge_margin_path", "models/production/score_model_ridge_margin.pkl"),
         }
 
         required_keys = ["pace", "home_rtg", "away_rtg", "margin", "metadata"]
@@ -179,9 +166,9 @@ class PlayerModelLoader:
         self.reb_model = None
         self.ast_model = None
         self.feature_cols = None
-        self.version = "player_v3_ridge"
+        self.version = None
 
-    def _load_bundle(self, paths, version: str, message: str):
+    def _load_bundle(self, paths, version: Optional[str], message: str):
         self.pts_model = joblib.load(paths["pts"])
         self.reb_model = joblib.load(paths["reb"])
         self.ast_model = joblib.load(paths["ast"])
@@ -190,44 +177,17 @@ class PlayerModelLoader:
         print(message)
 
     def load(self):
-        pts_path = resolve_artifact_path("player_model", "pts_model_path", "models/production/player_v9_lgb_pts.pkl")
-        reb_path = resolve_artifact_path("player_model", "reb_model_path", "models/production/player_v9_lgb_reb.pkl")
-        ast_path = resolve_artifact_path("player_model", "ast_model_path", "models/production/player_v9_lgb_ast.pkl")
-        features_path = resolve_artifact_path("player_model", "feature_columns_path", "models/production/player_v9_features.pkl")
+        paths = {
+            "pts": resolve_artifact_path("player_model", "pts_model_path", "models/production/player_model_pts.pkl"),
+            "reb": resolve_artifact_path("player_model", "reb_model_path", "models/production/player_model_reb.pkl"),
+            "ast": resolve_artifact_path("player_model", "ast_model_path", "models/production/player_model_ast.pkl"),
+            "features": resolve_artifact_path("player_model", "feature_columns_path", "models/production/player_features.pkl"),
+        }
+        if not _all_exist(paths.values()):
+            raise FileNotFoundError("No player models could be loaded.")
+        metadata_path = resolve_artifact_path("player_model", "metadata_path", "models/production/player_metadata.json")
+        release = json.loads(metadata_path.read_text()).get("version") if metadata_path.exists() else None
+        self._load_bundle(paths, release, f"Loaded player models (release {release}) successfully.")
 
-
-        v9_exists = all(p.exists() for p in [pts_path, reb_path, ast_path, features_path])
-        if not v9_exists:
-            pts_path = ROOT / "models/production/player_v9_lgb_pts.pkl"
-            reb_path = ROOT / "models/production/player_v9_lgb_reb.pkl"
-            ast_path = ROOT / "models/production/player_v9_lgb_ast.pkl"
-            features_path = ROOT / "models/production/player_v9_features.pkl"
-
-        v9_actual_exists = all(p.exists() for p in [pts_path, reb_path, ast_path, features_path])
-        if v9_actual_exists:
-            self._load_bundle(
-                {"pts": pts_path, "reb": reb_path, "ast": ast_path, "features": features_path},
-                "player_v9_lgb",
-                "Loaded V9 LightGBM Player Models successfully."
-            )
-            return
-
-        # Fallbacks:
-        # V8
-        for version, kind, label in [
-            (8, "lgb", "Loaded V8 LightGBM Player Models successfully."),
-            (7, "lgb", "Loaded V7 LightGBM Player Models successfully."),
-            (6, "lgb", "Loaded V6 LightGBM Player Models successfully."),
-            (5, "lgb", "Loaded V5 LightGBM Player Models as fallback."),
-            (4, "lgb", "Loaded V4 LightGBM Player Models as fallback."),
-            (3, "ridge", "Loaded V3 Ridge Player Models as fallback."),
-        ]:
-            paths = _player_paths(version, kind)
-            if _all_exist(paths[k] for k in ["pts", "reb", "ast", "features"]):
-                self._load_bundle(paths, f"player_v{version}_{kind}", label)
-                return
-
-        raise FileNotFoundError("No player models could be loaded.")
-
-    def get_version(self) -> str:
+    def get_version(self) -> Optional[str]:
         return self.version

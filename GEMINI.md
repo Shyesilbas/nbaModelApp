@@ -45,13 +45,13 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 - Package Frontend Schedule Context: `PYTHONPATH=. python3 main.py --build-schedule-context`
 - Build Frontend Store (per-season SQLite, closed seasons skipped): `PYTHONPATH=. python3 scripts/build_frontend_store.py`
 - Roster & Core Player Analysis: `PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis`
-- Daily Schedule Matchups Predictor: `PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY [--model v10]`
+- Daily Schedule Matchups Predictor: `PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY`
 
 ### Quality Control & Audits
 - Verify Project Structure: `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py`
 - Verify Path Refactoring: `PYTHONPATH=. python3 scripts/audit/validate_season_path_refactor.py`
-- Season & Model Report Audit: `PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY --model {v8, v9}`
-- Model Side-by-Side Comparison: `PYTHONPATH=. python3 scripts/generate_report.py --compare-models v8 v9 --season YYYY-YY`
+- Season & Model Report Audit: `PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY --evaluate`
+- Model Side-by-Side Comparison: `PYTHONPATH=. python3 scripts/generate_report.py --compare-models models/production models/experimental/holdout_eval --season YYYY-YY`
 - Data Drift & Feature Leakage Detector: `PYTHONPATH=. python3 scripts/detect_drift_and_leakage.py --reference-season YYYY-YY --target-season YYYY-YY`
 
 ### New Season Onboarding Workflow

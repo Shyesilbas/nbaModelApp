@@ -1,3 +1,7 @@
+# Release stamped into every model's metadata by this training run. Bump it before
+# retraining; promotion copies it to config/production_artifacts.yaml.
+release: v11
+
 train_seasons:
   - "2020-21"
   - "2021-22"
@@ -17,13 +21,13 @@ holdout:
 models:
   win:
     enabled: true
-    feature_contract: config/features/win_v10.yaml
+    feature_contract: config/features/win.yaml
   score:
     enabled: true
-    feature_contract: config/features/score_v10.yaml
+    feature_contract: config/features/score.yaml
   player:
     enabled: true
-    feature_contract: config/features/player_v9.yaml
+    feature_contract: config/features/player.yaml
     required_seasons:
       - "2020-21"
       - "2021-22"

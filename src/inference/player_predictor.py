@@ -16,10 +16,10 @@ from src.features.player_form import add_player_matchup_features
 class PlayerPredictor:
     def __init__(self, metadata_path: Optional[Path] = None):
         self.metadata_path = metadata_path or resolve_artifact_path(
-            "player_model", "metadata_path", "models/player_v9_metadata.json"
+            "player_model", "metadata_path", "models/player_metadata.json"
         )
         self.features_path = resolve_artifact_path(
-            "player_model", "feature_columns_path", "models/player_v9_features.pkl"
+            "player_model", "feature_columns_path", "models/player_features.pkl"
         )
         self.metadata = {}
         self.feature_cols = []
@@ -29,9 +29,9 @@ class PlayerPredictor:
         self._load()
 
     def _load(self) -> None:
-        pts_path = resolve_artifact_path("player_model", "pts_model_path", "models/player_v9_lgb_pts.pkl")
-        reb_path = resolve_artifact_path("player_model", "reb_model_path", "models/player_v9_lgb_reb.pkl")
-        ast_path = resolve_artifact_path("player_model", "ast_model_path", "models/player_v9_lgb_ast.pkl")
+        pts_path = resolve_artifact_path("player_model", "pts_model_path", "models/player_model_pts.pkl")
+        reb_path = resolve_artifact_path("player_model", "reb_model_path", "models/player_model_reb.pkl")
+        ast_path = resolve_artifact_path("player_model", "ast_model_path", "models/player_model_ast.pkl")
 
         if Path(self.metadata_path).exists():
             with open(self.metadata_path, "r", encoding="utf-8") as f:
