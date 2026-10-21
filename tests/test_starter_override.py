@@ -60,17 +60,19 @@ def test_role_model_replaces_fixed_rule_when_fitted():
     import numpy as np
     from src.features.starter_history import RoleMinutesModel
 
-    # minutes = 0 + 1.0 * base + 5 * started: a starter is a shift, not a floor
-    model = RoleMinutesModel(coef=np.array([0.0, 1.0, 5.0, 0.0, 0.0]))
-    assert model.minutes(1, 10.0, True) == 15.0
-    assert model.minutes(1, 30.0, False) == 30.0
+    # promoted reserve: 17 + 0.5*base, benched starter: 5 + 0.65*base; rate 0 = usual reserve, 1 = usual starter
+    model = RoleMinutesModel(coef=np.array([17.0, 0.5, 5.0, 0.65]), rates={1: 0.0, 2: 1.0, 3: 1.0, 4: 0.0})
+    assert abs(model.minutes(1, 10.0, True) - 22.0) < 1e-9    # promoted: not the 26 floor
+    assert abs(model.minutes(2, 30.0, False) - 24.5) < 1e-9   # benched starter
+    assert model.minutes(3, 30.0, True) == 30.0               # usual starter starting: baseline
+    assert model.minutes(4, 12.0, False) == 12.0              # usual reserve on the bench: baseline
     assert RoleMinutesModel().minutes(1, 30.0, True) is None  # unfitted: caller keeps the fixed rule
 
     ov = {2: _entry(is_starter=False), 9: _entry(is_starter=True)}
     fixed = redistribute_usage_and_minutes(_roster(), ov).set_index("PLAYER_ID")["PROJ_MIN"]
     learned = redistribute_usage_and_minutes(_roster(), ov, role_model=model).set_index("PLAYER_ID")["PROJ_MIN"]
-    assert learned[9] < fixed[9]  # a 10-minute player flagged starter gets 15, not the 26 floor
-    assert learned[2] > fixed[2]  # the benched 30-minute player keeps 30, not the 22 cap
+    assert learned[9] < fixed[9]  # a 10-minute reserve flagged starter gets ~22, not the 26 floor
+    assert learned[2] > fixed[2]  # a benched usual starter drops to ~27, not to the 22 cap
 
 
 def test_role_model_fit_and_fallback_on_small_data():

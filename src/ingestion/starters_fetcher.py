@@ -70,3 +70,18 @@ def collect_starters(game_ids: Iterable[str], season: Optional[str] = None) -> i
     if frames:
         append_starters(pd.concat(frames, ignore_index=True), season)
     return len(frames)
+
+
+def missing_starter_game_ids(season: Optional[str] = None, limit: int = 100) -> list:
+    """Played non-preseason games of the season that have player logs but no starter record yet.
+
+    A transient API failure at ingest time leaves a game here; the next update completes it.
+    ``limit`` keeps one update short when a whole past season was never backfilled."""
+    from scripts.data_paths import get_data_paths
+    games_csv = Path(get_data_paths(season).player_games_raw)
+    if not games_csv.exists():
+        return []
+    played = pd.read_csv(games_csv, usecols=["Game_ID"], dtype=str)["Game_ID"].str.zfill(10).unique()
+    path = starters_path(season)
+    have = set(pd.read_csv(path, dtype={"Game_ID": str})["Game_ID"].str.zfill(10)) if path.exists() else set()
+    return [g for g in played if not g.startswith("001") and g not in have][:limit]

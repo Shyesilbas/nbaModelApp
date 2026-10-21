@@ -153,7 +153,8 @@ class UpdateDataService:
             # Starter flags are only available from the box score, so they are recorded as games land.
             try:
                 from src.ingestion.starters_fetcher import collect_starters
-                n_games = collect_starters(missing_game_ids, season=self.season)
+                from src.ingestion.starters_fetcher import missing_starter_game_ids
+                n_games = collect_starters(list(dict.fromkeys(list(missing_game_ids) + missing_starter_game_ids(season=self.season))), season=self.season)
                 print(f"Recorded starters for {n_games} game(s).")
             except Exception as e:
                 print(f"Error recording starters: {e}")

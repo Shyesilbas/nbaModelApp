@@ -1,8 +1,8 @@
 """Role-conditional minutes learned from recorded starter flags.
 
 Starting does not guarantee minutes (foul trouble, blowouts), so the role is a shift in the
-expectation, not a floor or a cap: minutes = f(baseline, started, usual start rate), fitted on
-games with a recorded starter flag. Baseline is the same EWMA(span 10) of previous minutes the
+expectation, not a floor or a cap. A reserve promoted to starter lands near 17 + 0.5 * baseline, a
+usual starter benched near 5 + 0.65 * baseline (fitted lines), blended by how often he usually starts. Baseline is the same EWMA(span 10) of previous minutes the
 player model uses as MIN_EMA_10.
 """
 from dataclasses import dataclass, field
@@ -13,19 +13,13 @@ import pandas as pd
 
 BASE_SPAN = 10
 RATE_WINDOW = 10
-MIN_TRAIN_ROWS = 5000  # below this the fixed rule stays in charge
-RIDGE = 1.0
+MIN_ROLE_CHANGES = 200  # promoted / benched games needed per line; below this the fixed rule stays in charge
 MAX_MINUTES = 44.0
 
 
 def _rate_proxy(base) -> np.ndarray:
     """Start rate guessed from baseline minutes, for players with no recorded starter games."""
     return np.clip((np.asarray(base, dtype=float) - 20.0) / 12.0, 0.0, 1.0)
-
-
-def _features(base, start, rate) -> np.ndarray:
-    base, start, rate = (np.asarray(x, dtype=float) for x in (base, start, rate))
-    return np.column_stack([np.ones_like(base), base, start, rate, start * rate])
 
 
 def _prepare(starters: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame:
@@ -48,9 +42,23 @@ def _prepare(starters: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame
     return m
 
 
+def _line(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    return np.linalg.lstsq(np.column_stack([np.ones_like(x), x]), y, rcond=None)[0]
+
+
+def _rule_minutes(coef: np.ndarray, base, flag, rate):
+    """Role-adjusted minutes: a usual starter keeps his baseline when he starts, a usual reserve when he
+    does not; a promoted reserve / benched starter moves along his fitted line, blended by start rate."""
+    base, flag, rate = (np.asarray(x, dtype=float) for x in (base, flag, rate))
+    w = np.clip(rate, 0.0, 1.0)
+    up, down = coef[0] + coef[1] * base, coef[2] + coef[3] * base
+    out = np.where(flag == 1, w * base + (1 - w) * up, w * down + (1 - w) * base)
+    return np.clip(out, 0.0, MAX_MINUTES)
+
+
 @dataclass
 class RoleMinutesModel:
-    coef: Optional[np.ndarray] = None
+    coef: Optional[np.ndarray] = None  # [a, b, c, d]: promoted = a + b*base, benched = c + d*base
     rates: Dict[int, float] = field(default_factory=dict)  # each player's current start rate
     n_train: int = 0
 
@@ -60,52 +68,51 @@ class RoleMinutesModel:
             return None
         rate = self.rates.get(int(player_id))
         rate = float(_rate_proxy([base])[0]) if rate is None else rate
-        pred = float((_features([base], [1.0 if is_starter else 0.0], [rate]) @ self.coef)[0])
-        return float(np.clip(pred, 0.0, MAX_MINUTES))
+        return float(_rule_minutes(self.coef, [base], [1.0 if is_starter else 0.0], [rate])[0])
 
 
-def fit_role_model(starters: Optional[pd.DataFrame], player_games: Optional[pd.DataFrame]) -> RoleMinutesModel:
-    """Fit on every game with a recorded starter flag; an empty model if there is too little data."""
-    if starters is None or starters.empty or player_games is None or player_games.empty:
-        return RoleMinutesModel()
-    m = _prepare(starters, player_games)
-    rec = m[m["IS_STARTER"].notna() & m["BASE"].notna()].copy()
-    # a player's current rate: his last RATE_WINDOW recorded games
-    flagged = m[m["IS_STARTER"].notna()].groupby("Player_ID")["IS_STARTER"]
-    last, count = flagged.apply(lambda x: x.tail(RATE_WINDOW).mean()), flagged.size()
-    rates = {int(k): float(v) for k, v in last.items() if count[k] >= 3}
-    rec["RATE"] = rec["RATE"].fillna(pd.Series(_rate_proxy(rec["BASE"]), index=rec.index))
-    if len(rec) < MIN_TRAIN_ROWS:
-        return RoleMinutesModel(rates=rates, n_train=len(rec))
-    X = _features(rec["BASE"], rec["IS_STARTER"], rec["RATE"])
-    y = rec["MIN"].to_numpy(dtype=float)
-    pen = RIDGE * np.eye(X.shape[1])
-    pen[0, 0] = 0.0
-    coef = np.linalg.solve(X.T @ X + pen, X.T @ y)
-    return RoleMinutesModel(coef=coef, rates=rates, n_train=len(rec))
-
-
-def evaluate_role_model(starters: pd.DataFrame, player_games: pd.DataFrame, holdout_frac: float = 0.2) -> dict:
-    """Out-of-time MAE of the role model vs. the previous fixed floor/cap rule, on the latest games."""
+def _training_frame(starters: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame:
     m = _prepare(starters, player_games)
     rec = m[m["IS_STARTER"].notna() & m["BASE"].notna()].sort_values("GAME_DATE").copy()
     rec["RATE"] = rec["RATE"].fillna(pd.Series(_rate_proxy(rec["BASE"]), index=rec.index))
+    return rec
+
+
+def _fit_lines(rec: pd.DataFrame) -> Optional[np.ndarray]:
+    promoted = rec[(rec["IS_STARTER"] == 1) & (rec["RATE"] < 0.5)]
+    benched = rec[(rec["IS_STARTER"] == 0) & (rec["RATE"] >= 0.5)]
+    if len(promoted) < MIN_ROLE_CHANGES or len(benched) < MIN_ROLE_CHANGES:
+        return None
+    return np.concatenate([_line(promoted["BASE"].to_numpy(float), promoted["MIN"].to_numpy(float)),
+                           _line(benched["BASE"].to_numpy(float), benched["MIN"].to_numpy(float))])
+
+
+def fit_role_model(starters: Optional[pd.DataFrame], player_games: Optional[pd.DataFrame]) -> RoleMinutesModel:
+    """Fit on games with a recorded starter flag; an unfitted model if too few role changes were seen."""
+    if starters is None or starters.empty or player_games is None or player_games.empty:
+        return RoleMinutesModel()
+    rec = _training_frame(starters, player_games)
+    flagged = rec.groupby("Player_ID")["IS_STARTER"]
+    last, count = flagged.apply(lambda x: x.tail(RATE_WINDOW).mean()), flagged.size()
+    rates = {int(k): float(v) for k, v in last.items() if count[k] >= 3}
+    return RoleMinutesModel(coef=_fit_lines(rec), rates=rates, n_train=len(rec))
+
+
+def evaluate_role_model(starters: pd.DataFrame, player_games: pd.DataFrame, holdout_frac: float = 0.2) -> dict:
+    """Out-of-time MAE of the role rule vs. the previous fixed floor/cap rule, on the latest games."""
+    rec = _training_frame(starters, player_games)
     cut = int(len(rec) * (1 - holdout_frac))
     tr, te = rec.iloc[:cut], rec.iloc[cut:]
-    X, y = _features(tr["BASE"], tr["IS_STARTER"], tr["RATE"]), tr["MIN"].to_numpy(dtype=float)
-    pen = RIDGE * np.eye(X.shape[1])
-    pen[0, 0] = 0.0
-    coef = np.linalg.solve(X.T @ X + pen, X.T @ y)
-    pred = np.clip(_features(te["BASE"], te["IS_STARTER"], te["RATE"]) @ coef, 0.0, MAX_MINUTES)
+    coef = _fit_lines(tr)
+    truth = te["MIN"].to_numpy(float)
     static = np.where(te["IS_STARTER"] == 1, np.maximum(te["BASE"], 26.0), np.minimum(te["BASE"], 22.0))
-    truth = te["MIN"].to_numpy(dtype=float)
-    return {
-        "n_train": len(tr), "n_test": len(te),
-        "mae_baseline_only": float(np.abs(te["BASE"].to_numpy() - truth).mean()),
-        "mae_static_rule": float(np.abs(static - truth).mean()),
-        "mae_role_model": float(np.abs(pred - truth).mean()),
-        "coef": dict(zip(["const", "base", "start", "rate", "start_x_rate"], np.round(coef, 3).tolist())),
-    }
+    out = {"n_train": len(tr), "n_test": len(te),
+           "mae_baseline_only": float(np.abs(te["BASE"].to_numpy() - truth).mean()),
+           "mae_static_rule": float(np.abs(static - truth).mean())}
+    if coef is not None:
+        pred = _rule_minutes(coef, te["BASE"], te["IS_STARTER"], te["RATE"])
+        out.update(mae_role_rule=float(np.abs(pred - truth).mean()), coef=np.round(coef, 3).tolist())
+    return out
 
 
 def load_role_inputs(seasons: Sequence[str]):
