@@ -33,3 +33,10 @@ def write_csv_atomic(df: pd.DataFrame, path, **kwargs) -> None:
     kwargs.setdefault("index", False)
     _atomic_write(path, lambda tmp: df.to_csv(tmp, **kwargs))
 
+
+def write_text_atomic(text: str, path) -> None:
+    def write(tmp: str) -> None:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+
+    _atomic_write(path, write)

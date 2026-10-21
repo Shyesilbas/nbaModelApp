@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.ingestion.atomic_io import write_text_atomic
 from src.ingestion.nba_api_client import call_nba_api
 
 STAT_KEYS = ("pts", "fgm", "fga", "fg3m", "fg3a", "ftm", "fta", "reb", "ast", "stl", "blk", "pf", "tov")
@@ -396,8 +397,7 @@ def select_games(args: argparse.Namespace) -> list[dict[str, Any]]:
 def write_payload(payload: dict[str, Any], out_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{payload['game_id']}.json"
-    with out_path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+    write_text_atomic(json.dumps(payload, indent=2), out_path)
     return out_path
 
 
