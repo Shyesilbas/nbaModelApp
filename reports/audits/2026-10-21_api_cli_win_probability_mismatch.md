@@ -1,6 +1,6 @@
 # API ile CLI farklı WIN olasılığı veriyor
 
-**Durum:** Kısmen çözüldü (2026-10-21, seçenek A). Kalan: backtest/README olasılık netleşmesi (son madde).
+**Durum:** Çözüldü (2026-10-21, seçenek A).
 **Bulunduğu yer:** 3. aşama doğrulaması. API çıktısı taşımadan önce ve sonra birebir aynıydı, yani fark yeniden düzenlemeden gelmiyor; önceden de vardı.
 
 ## Belirti
@@ -59,4 +59,4 @@ Ek bulgu: `predict_daily_schedule.py` Elo payında ev avantajını 100 alıyordu
 - [x] Tek harmanlama fonksiyonu (`src/inference/win_blend.py`), API, predict_matchup, predict_daily_schedule, WinPredictor ve SHAP ona bağlı
 - [x] SHAP yanıtı harmanlamayı gösteriyor
 - [x] Model raporundaki "12 maç" düzeltildi
-- [ ] Backtest'lerin ölçtüğü olasılık netleşti, README metrikleri etiketlendi
+- [x] Backtest'lerin ölçtüğü olasılık netleşti, README metrikleri etiketlendi (offline walk-forward = ham model, `live.py` = harmanlı; ilk 250 maçta harmanlı Brier 0.2185 vs ham 0.2204, harmanlı 95 maçta)

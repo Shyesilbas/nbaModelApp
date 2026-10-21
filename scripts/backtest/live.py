@@ -29,7 +29,7 @@ def _build(build_features, team, opponent, date, season):
 
 def _predict_game(game):
     import contextlib, io
-    from app import service as svc
+    from src.api.services import win_prediction as svc
     from src.api.schemas import ScorePredictionRequest, WinProbRequest
     from src.api.services.score_prediction import predict_score
     from src.features.build_matchup_features import build_features
