@@ -11,15 +11,13 @@ class DataFreshnessService:
     checks from higher-level code or tests.
     """
 
-    def __init__(self, raw_team_dir: str = "data/raw/team_games", raw_player_dir: str = "data/raw/player_games", refresh_schedule: bool = True, season: Optional[str] = None):
-        self.raw_team_dir = raw_team_dir
-        self.raw_player_dir = raw_player_dir
+    def __init__(self, refresh_schedule: bool = True, season: Optional[str] = None):
         self.refresh_schedule = refresh_schedule
         self.season = season
 
     def load_local_datasets(self, refresh_schedule: Optional[bool] = None, save_schedule: bool = True) -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
         ref_sched = refresh_schedule if refresh_schedule is not None else self.refresh_schedule
-        return df_mod.load_local_datasets(self.raw_team_dir, self.raw_player_dir, refresh_schedule=ref_sched, season=self.season, save_schedule=save_schedule)
+        return df_mod.load_local_datasets(refresh_schedule=ref_sched, season=self.season, save_schedule=save_schedule)
 
     def get_latest_team_game_date(self, df_team: pd.DataFrame) -> Optional[str]:
         return df_mod.get_latest_team_game_date(df_team)

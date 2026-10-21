@@ -26,8 +26,6 @@ from src.ingestion.schedule_loader import load_combined_schedule
 
 
 def load_local_datasets(
-    raw_team_dir: str = "data/raw/team_games",
-    raw_player_dir: str = "data/raw/player_games",
     refresh_schedule: bool = True,
     season: Optional[str] = None,
     save_schedule: bool = True
@@ -43,14 +41,14 @@ def load_local_datasets(
     df_schedule = None
 
     try:
-        df_team = load_team_games(raw_team_dir, season=season)
+        df_team = load_team_games(season=season)
     except Exception as e:
-        print(f"⚠️ Error loading team games from '{raw_team_dir}': {e}")
+        print(f"⚠️ Error loading team games for season {season}: {e}")
 
     try:
-        df_player = load_player_games(raw_player_dir, season=season)
+        df_player = load_player_games(season=season)
     except Exception as e:
-        print(f"⚠️ Error loading player games from '{raw_player_dir}': {e}")
+        print(f"⚠️ Error loading player games for season {season}: {e}")
 
     try:
         if refresh_schedule:

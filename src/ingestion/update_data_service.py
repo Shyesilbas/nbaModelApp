@@ -9,20 +9,14 @@ from src.ingestion.team_games_fetcher import fetch_missing_team_games_by_game_id
 from src.ingestion.player_games_fetcher import fetch_missing_player_games_by_game_ids, append_player_games_to_raw_dataset
 from src.orchestration.pipeline_runner import PipelineRunner
 from src.core.season_utils import get_default_season
-from src.core.data_paths import get_data_paths
 from src.ingestion.atomic_io import write_csv_atomic
 
 
 class UpdateDataService:
     """Service to perform the full update-data pipeline (refresh schedule, fetch missing games, append, and optionally rebuilds)."""
 
-    def __init__(self, raw_team_dir: str = "data/raw/team_games", raw_player_dir: str = "data/raw/player_games", fetch_workers: int = 4, skip_post_update_rebuilds: bool = False, season: str = None):
+    def __init__(self, fetch_workers: int = 4, skip_post_update_rebuilds: bool = False, season: str = None):
         self.season = season or get_default_season()
-        paths = get_data_paths(self.season)
-        default_team_dir = os.path.normpath("data/raw/team_games")
-        default_player_dir = os.path.normpath("data/raw/player_games")
-        self.raw_team_dir = os.path.dirname(paths.team_games_raw) if os.path.normpath(raw_team_dir) == default_team_dir else raw_team_dir
-        self.raw_player_dir = os.path.dirname(paths.player_games_raw) if os.path.normpath(raw_player_dir) == default_player_dir else raw_player_dir
         self.fetch_workers = fetch_workers
         self.skip_post_update_rebuilds = skip_post_update_rebuilds
 
@@ -39,7 +33,7 @@ class UpdateDataService:
 
         # Step 2: Load local datasets and detect missing completed games
         print("Step 2: Performing data freshness validation...")
-        dfs = DataFreshnessService(raw_team_dir=self.raw_team_dir, raw_player_dir=self.raw_player_dir, season=self.season)
+        dfs = DataFreshnessService(season=self.season)
         df_team_pre, df_player_pre, df_schedule = dfs.load_local_datasets(refresh_schedule=True)
 
         # Bulk fetch season if datasets are missing or empty
@@ -167,11 +161,7 @@ class UpdateDataService:
 
         rebuilds_ran = not self.skip_post_update_rebuilds
         if rebuilds_ran:
-            runner = PipelineRunner(
-                season=self.season,
-                raw_team_dir=self.raw_team_dir,
-                raw_player_dir=self.raw_player_dir,
-            )
+            runner = PipelineRunner(season=self.season)
 
             print("\nStep 6: Re-running feature pipeline sync...")
             runner.sync_features()

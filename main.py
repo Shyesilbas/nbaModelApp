@@ -154,24 +154,6 @@ def main():
         help="Output scope (production or experimental)"
     )
     parser.add_argument(
-        "--raw-team-dir", 
-        type=str, 
-        default="data/raw/team_games",
-        help="Directory containing raw team game log CSVs"
-    )
-    parser.add_argument(
-        "--raw-player-dir", 
-        type=str, 
-        default="data/raw/player_games",
-        help="Directory containing raw player game log CSVs"
-    )
-    parser.add_argument(
-        "--output-dir", 
-        type=str, 
-        default="data/features",
-        help="Directory to save engineered features"
-    )
-    parser.add_argument(
         "--mock", 
         action="store_true", 
         help="Run the feature pipeline on synthetic data; outputs go to data/experimental/mock/"
@@ -311,11 +293,8 @@ def main():
     season = normalize_season(args.season or get_default_season())
     token = season_to_file_token(season)
 
-    # Overwrite dirs dynamically if a specific season is provided
+    # An explicit season always writes the production season files.
     if args.season:
-        args.raw_team_dir = os.path.dirname(paths.team_games_raw)
-        args.raw_player_dir = os.path.dirname(paths.player_games_raw)
-        args.output_dir = os.path.dirname(paths.team_features)
         args.output_scope = "production"
 
     if PipelineOrchestrator(args).dispatch():
@@ -420,8 +399,8 @@ def main():
         print(f"Generated mock player games: {df_player_raw.shape[0]} rows.")
     else:
         try:
-            df_team_raw = load_team_games(args.raw_team_dir, season=args.season)
-            df_player_raw = load_player_games(args.raw_player_dir, season=args.season)
+            df_team_raw = load_team_games(season=args.season)
+            df_player_raw = load_player_games(season=args.season)
         except Exception as e:
             print(f"❌ Error loading raw datasets: {e}")
             sys.exit(1)
@@ -657,7 +636,13 @@ def main():
                 f.write("## 5. Sample Rows (Core Player Availability & Metrics)\n")
                 f.write(_df_to_markdown(v3_sample_df))
                 f.write("\n")
-    
+
+    # The team features and V3 written above lack the box-score features; add them so this run
+    # leaves the same files as rebuild_training_data and --update-data (38 columns otherwise lost).
+    if not args.mock:
+        from src.features.enrich_v3_boxscore_features import enrich_all_seasons
+        enrich_all_seasons([season])
+
     print("\n============================================================")
     print("🎉 PIPELINE RUN COMPLETED SUCCESSFULLY! 🎉")
     if args.build_v3_dataset:

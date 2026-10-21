@@ -44,7 +44,7 @@ def run_boxscore_pipeline_cli(args: Any) -> None:
 
 
 def run_data_freshness_pipeline(args: Any) -> None:
-    dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
+    dfs = DataFreshnessService(season=args.season)
     df_team, df_player, df_schedule = dfs.load_local_datasets()
     results = dfs.generate_data_freshness_report(df_team, df_player, df_schedule, today=date.today())
     print("DATA FRESHNESS CHECK")
@@ -54,13 +54,7 @@ def run_data_freshness_pipeline(args: Any) -> None:
 
 
 def run_sync_pipeline(args: Any) -> bool:
-    runner = PipelineRunner(
-        season=args.season,
-        raw_team_dir=args.raw_team_dir,
-        raw_player_dir=args.raw_player_dir,
-        output_scope=args.output_scope,
-        output_dir=args.output_dir,
-    )
+    runner = PipelineRunner(season=args.season, output_scope=args.output_scope)
     result = runner.sync_features()
     season = normalize_season(args.season or get_default_season())
     token = season_to_file_token(season)
@@ -86,13 +80,7 @@ def run_game_results_regeneration() -> None:
 
 
 def run_build_enhanced_v2(args: Any) -> None:
-    runner = PipelineRunner(
-        season=args.season,
-        raw_team_dir=args.raw_team_dir,
-        raw_player_dir=args.raw_player_dir,
-        output_scope=args.output_scope,
-        output_dir=args.output_dir,
-    )
+    runner = PipelineRunner(season=args.season, output_scope=args.output_scope)
     df_team_model_v2, _ = runner.build_model_ready_v2()
     season = normalize_season(args.season or get_default_season())
     token = season_to_file_token(season)
@@ -109,7 +97,7 @@ def run_pre_model_readiness_pipeline(args: Any) -> None:
     run_sync_pipeline(args)
     run_game_results_regeneration()
     run_build_enhanced_v2(args)
-    dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
+    dfs = DataFreshnessService(season=args.season)
     df_team, df_player, df_schedule = dfs.load_local_datasets()
     dfs.generate_data_freshness_report(df_team, df_player, df_schedule, today=date.today())
     build_frontend_store([args.season or get_default_season()])
@@ -130,7 +118,7 @@ def run_bootstrap_season_pipeline(args: Any) -> None:
 
     rebuild_season(season)
     enrich_all_seasons([season])
-    dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
+    dfs = DataFreshnessService(season=args.season)
     df_team, df_player, df_schedule = dfs.load_local_datasets()
     dfs.generate_data_freshness_report(df_team, df_player, df_schedule, today=date.today())
     build_frontend_store([season or get_default_season()])
@@ -155,7 +143,7 @@ def run_bootstrap_season_pipeline(args: Any) -> None:
 
 
 def run_startup_check(args: Any) -> None:
-    dfs = DataFreshnessService(raw_team_dir=args.raw_team_dir, raw_player_dir=args.raw_player_dir)
+    dfs = DataFreshnessService(season=args.season)
     # Read-only diagnostic: keep the rebuilt schedule and the report in memory.
     df_team, df_player, df_schedule = dfs.load_local_datasets(save_schedule=False)
     results = dfs.generate_data_freshness_report(
@@ -172,8 +160,6 @@ def run_startup_check(args: Any) -> None:
 
 def run_update_data(args: Any) -> None:
     svc = UpdateDataService(
-        raw_team_dir=args.raw_team_dir,
-        raw_player_dir=args.raw_player_dir,
         fetch_workers=args.fetch_workers,
         skip_post_update_rebuilds=args.skip_post_update_rebuilds,
         season=args.season,

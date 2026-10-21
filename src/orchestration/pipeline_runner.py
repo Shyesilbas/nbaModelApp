@@ -38,22 +38,16 @@ class PipelineRunner:
     def __init__(
         self,
         season: Optional[str] = None,
-        raw_team_dir: str = "data/raw/team_games",
-        raw_player_dir: str = "data/raw/player_games",
         output_scope: str = "production",
-        output_dir: str = "data/features",
     ) -> None:
         self.season = normalize_season(season or get_default_season())
         self.token = season_to_file_token(self.season)
-        self.raw_team_dir = raw_team_dir
-        self.raw_player_dir = raw_player_dir
         self.output_scope = output_scope
-        self.output_dir = output_dir
         self.paths = get_data_paths(self.season)
 
     def sync_features(self) -> PipelineResult:
-        df_team_raw = load_team_games(self.raw_team_dir, season=self.season)
-        df_player_raw = load_player_games(self.raw_player_dir, season=self.season)
+        df_team_raw = load_team_games(season=self.season)
+        df_player_raw = load_player_games(season=self.season)
 
         df_team_clean = sort_team_games(clean_dates(df_team_raw, "GAME_DATE"))
         df_player_clean = sort_player_games(clean_dates(df_player_raw, "GAME_DATE"))
@@ -67,7 +61,6 @@ class PipelineRunner:
         except Exception:
             df_player_features = pd.DataFrame()
 
-        os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(os.path.dirname(self.paths.team_features), exist_ok=True)
         os.makedirs(os.path.dirname(self.paths.player_features), exist_ok=True)
 
@@ -84,6 +77,11 @@ class PipelineRunner:
         df_team_features.to_csv(team_csv, index=False)
         if not df_player_features.empty:
             df_player_features.to_csv(player_csv, index=False)
+        if self.output_scope == "production":
+            # Box-score features live only in the enrichment step; without it the season's
+            # team_features.csv would lose them (the V3 file is re-enriched as well, idempotently).
+            from src.features.enrich_v3_boxscore_features import enrich_all_seasons
+            enrich_all_seasons([self.season])
 
         return PipelineResult(
             status="SUCCESS",
@@ -98,7 +96,7 @@ class PipelineRunner:
         )
 
     def build_model_ready_v2(self) -> Tuple[pd.DataFrame, int]:
-        df_team_raw = load_team_games(self.raw_team_dir, season=self.season)
+        df_team_raw = load_team_games(season=self.season)
         df_team_clean = sort_team_games(clean_dates(df_team_raw, "GAME_DATE"))
         df_team_features = build_team_features(df_team_clean, season_dir=self.paths.season_dir)
         df_team_features_with_opp = build_opponent_features(df_team_features)
@@ -107,7 +105,7 @@ class PipelineRunner:
     def build_model_ready_v3(self, df_player_features: pd.DataFrame) -> Tuple[pd.DataFrame, int]:
         from src.features.core_player_availability_features import build_core_player_availability_features
 
-        df_team_raw = load_team_games(self.raw_team_dir, season=self.season)
+        df_team_raw = load_team_games(season=self.season)
         df_team_clean = sort_team_games(clean_dates(df_team_raw, "GAME_DATE"))
         df_team_features = build_team_features(df_team_clean, season_dir=self.paths.season_dir)
         df_team_features_with_opp = build_opponent_features(df_team_features)
