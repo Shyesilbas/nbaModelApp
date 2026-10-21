@@ -95,7 +95,7 @@ export default function FixturesTab({
   const [seasonTypeFilter, setSeasonTypeFilter] = useState<SeasonTypeFilter>(
     () => (sessionStorage.getItem("nba-results-type") as SeasonTypeFilter | null) ?? "all"
   );
-  const [selectedDate, setSelectedDate] = useState<string>(
+  const [pickedDate, setSelectedDate] = useState<string>(
     () => sessionStorage.getItem("nba-results-date") ?? ""
   );
   const [isDateMenuOpen, setIsDateMenuOpen] = useState<boolean>(false);
@@ -128,12 +128,12 @@ export default function FixturesTab({
     sessionStorage.setItem("nba-fixtures-active-view", activeView);
     sessionStorage.setItem("nba-results-search", search);
     sessionStorage.setItem("nba-results-type", seasonTypeFilter);
-    sessionStorage.setItem("nba-results-date", selectedDate);
+    sessionStorage.setItem("nba-results-date", pickedDate);
     sessionStorage.setItem("nba-results-season", selectedSeason);
     if (selectedGameId) sessionStorage.setItem("nba-results-game", selectedGameId);
     else sessionStorage.removeItem("nba-results-game");
     sessionStorage.setItem("nba-results-detail-tab", initialDetailTab);
-  }, [activeView, search, seasonTypeFilter, selectedDate, selectedSeason, selectedGameId, initialDetailTab]);
+  }, [activeView, search, seasonTypeFilter, pickedDate, selectedSeason, selectedGameId, initialDetailTab]);
 
   // Load available seasons
   useEffect(() => {
@@ -205,15 +205,12 @@ export default function FixturesTab({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   }, []);
 
-  // Auto-select initial active date
-  useEffect(() => {
-    if (uniqueDates.length > 0) {
-      const defaultDate = uniqueDates.find((day) => day >= todayStr) ?? uniqueDates[uniqueDates.length - 1];
-      setSelectedDate((current) => (uniqueDates.includes(current) ? current : defaultDate));
-    } else {
-      setSelectedDate("");
-    }
-  }, [selectedSeason, seasonTypeFilter, uniqueDates, todayStr]);
+  // The picked day, or the next game day (else the last one) when it is not in the list.
+  // Derived during render: fixing it up in an effect first rendered every game of the season.
+  const selectedDate = useMemo(() => {
+    if (uniqueDates.includes(pickedDate)) return pickedDate;
+    return uniqueDates.find((day) => day >= todayStr) ?? uniqueDates[uniqueDates.length - 1] ?? "";
+  }, [uniqueDates, pickedDate, todayStr]);
 
   const selectedDateIndex = uniqueDates.indexOf(selectedDate);
 

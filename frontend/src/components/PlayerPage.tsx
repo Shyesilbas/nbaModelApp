@@ -707,6 +707,11 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
   const [opponentSearch, setOpponentSearch] = useState("");
 
   useEffect(() => {
+    // Start the opened player's history now instead of after the profile list arrives;
+    // handleSelectPlayer reuses this request.
+    if (initialPlayerId != null) {
+      loadPrivateApi(`/frontend-data-api/players/${encodeURIComponent(String(initialPlayerId))}`).catch(() => {});
+    }
     const load = async () => {
       try {
         loadPrivateApi<string[]>("/frontend-data-api/seasons")

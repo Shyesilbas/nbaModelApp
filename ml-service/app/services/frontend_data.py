@@ -12,7 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, Response
 
 from scripts.season_utils import get_default_season
 from src.frontend_store.store import connect_ro, global_db_path, season_db_path, stored_seasons
@@ -48,6 +48,16 @@ def _season_from_game_id(game_id: str) -> str:
     return f"{start_year}-{str(start_year + 1)[-2:]}"
 
 
+def _json_response(text: str) -> Response:
+    """Send JSON text from the store as is. Returning the parsed object makes FastAPI walk it
+    with jsonable_encoder, which alone takes ~0.3 s for the 1.2 MB player averages."""
+    return Response(content=text, media_type="application/json")
+
+
+def _doc_response(text: str | None, default: Any) -> Response:
+    return _json_response(text if text is not None else json.dumps(default))
+
+
 def _mtime(path: Path) -> int:
     return path.stat().st_mtime_ns if path.exists() else 0
 
@@ -60,65 +70,66 @@ def _season_conn(season: str) -> sqlite3.Connection:
 
 
 @lru_cache(maxsize=64)
-def _doc(db_path: str, name: str, mtime_ns: int) -> Any:
+def _doc(db_path: str, name: str, mtime_ns: int) -> str | None:
+    """JSON text of a stored document."""
     del mtime_ns  # part of the cache key: a rebuilt store invalidates the entry
     conn = connect_ro(Path(db_path))
     if conn is None:
         return None
     try:
         row = conn.execute("SELECT data_json FROM docs WHERE name = ?", (name,)).fetchone()
-        return json.loads(row[0]) if row else None
+        return row[0] if row else None
     finally:
         conn.close()
 
 
-def _season_doc(season: str, name: str) -> Any:
+def _season_doc(season: str, name: str) -> str | None:
     path = season_db_path(season)
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"No frontend data for season {season}")
     return _doc(str(path), name, _mtime(path))
 
 
-def _global_doc(name: str) -> Any:
+def _global_doc(name: str) -> str | None:
     path = global_db_path()
     if not path.exists():
         raise HTTPException(status_code=503, detail="Frontend store not built; run scripts/build_frontend_store.py")
     return _doc(str(path), name, _mtime(path))
 
 
-def get_seasons(request: Request) -> list[str]:
+def get_seasons(request: Request) -> Response:
     _check_token(request)
-    return _global_doc("seasons") or stored_seasons()
+    return _doc_response(_global_doc("seasons"), stored_seasons())
 
 
-def get_player_profiles(request: Request) -> Any:
+def get_player_profiles(request: Request) -> Response:
     _check_token(request)
-    return _global_doc("player_profiles") or []
+    return _doc_response(_global_doc("player_profiles"), [])
 
 
-def get_player_season_averages(request: Request) -> Any:
+def get_player_season_averages(request: Request) -> Response:
     _check_token(request)
-    return _global_doc("player_season_averages") or {}
+    return _doc_response(_global_doc("player_season_averages"), {})
 
 
-def get_trades(request: Request) -> Any:
+def get_trades(request: Request) -> Response:
     _check_token(request)
-    return _global_doc("trades") or []
+    return _doc_response(_global_doc("trades"), [])
 
 
-def get_team_rosters(request: Request, season: str | None = None) -> Any:
+def get_team_rosters(request: Request, season: str | None = None) -> Response:
     _check_token(request)
-    return _season_doc(season or DEFAULT_SEASON, "team_rosters") or []
+    return _doc_response(_season_doc(season or DEFAULT_SEASON, "team_rosters"), [])
 
 
-def get_multi_team_players(request: Request, season: str | None = None) -> Any:
+def get_multi_team_players(request: Request, season: str | None = None) -> Response:
     _check_token(request)
-    return _season_doc(season or DEFAULT_SEASON, "multi_team_players") or []
+    return _doc_response(_season_doc(season or DEFAULT_SEASON, "multi_team_players"), [])
 
 
-def get_game_results(request: Request, season: str | None = None) -> Any:
+def get_game_results(request: Request, season: str | None = None) -> Response:
     _check_token(request)
-    return _season_doc(season or DEFAULT_SEASON, "game_results") or []
+    return _doc_response(_season_doc(season or DEFAULT_SEASON, "game_results"), [])
 
 
 def get_game_index(
@@ -126,7 +137,7 @@ def get_game_index(
     season: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
-) -> Any:
+) -> Response:
     _check_token(request)
     conn = _season_conn(season or DEFAULT_SEASON)
     try:
@@ -138,7 +149,7 @@ def get_game_index(
         rows = conn.execute(sql + " ORDER BY game_date, game_id", params).fetchall()
     finally:
         conn.close()
-    return [json.loads(r[0]) for r in rows]
+    return _json_response("[" + ",".join(r[0] for r in rows) + "]")
 
 
 def get_season_weeks(request: Request, season: str | None = None) -> list[dict[str, Any]]:
@@ -209,7 +220,7 @@ def get_play_by_play(game_id: str, request: Request, season: str | None = None) 
         finally:
             conn.close()
         if row:
-            return json.loads(row[0])
+            return _json_response(row[0])
 
     # Not in the store yet (e.g. fetched after the last build): condense the raw file.
     from src.frontend_store.pbp_moments import condense_payload
@@ -220,11 +231,11 @@ def get_play_by_play(game_id: str, request: Request, season: str | None = None) 
     return condense_payload(json.loads(path.read_text(encoding="utf-8")))
 
 
-def get_player_history(player_id: str, request: Request) -> Any:
+def get_player_history(player_id: str, request: Request) -> Response:
     _check_token(request)
     pid = str(player_id)
-    games: dict[str, Any] = {}
-    averages: dict[str, Any] = {}
+    games: list[str] = []
+    averages: list[str] = []
     for season in stored_seasons():
         conn = connect_ro(season_db_path(season))
         if conn is None:
@@ -234,9 +245,11 @@ def get_player_history(player_id: str, request: Request) -> Any:
         finally:
             conn.close()
         if row:
-            games[season] = json.loads(row[0])
-            averages[season] = json.loads(row[1])
-    return {"player_id": pid, "games": games, "averages": averages}
+            games.append(f"{json.dumps(season)}:{row[0]}")
+            averages.append(f"{json.dumps(season)}:{row[1]}")
+    return _json_response(
+        f'{{"player_id":{json.dumps(pid)},"games":{{{",".join(games)}}},"averages":{{{",".join(averages)}}}}}'
+    )
 
 
 def warm_up_cache() -> None:

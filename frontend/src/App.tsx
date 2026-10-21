@@ -153,11 +153,7 @@ export default function App() {
         <main className="mx-auto w-full max-w-6xl p-4 lg:p-8">
 
           <div>
-            {loading ? (
-              <div className="flex h-72 flex-col items-center justify-center gap-3">
-                <p className="text-sm text-text-secondary">Loading stats and models...</p>
-              </div>
-            ) : error ? (
+            {error ? (
               <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-4 rounded border border-border bg-background-primary p-6 text-center">
                 <div className="text-status-error">
                   <RefreshCw size={24} strokeWidth={1.5} />
@@ -196,7 +192,11 @@ export default function App() {
                   }
                 >
                   {activeTab === "player-profile" && <PlayerPage initialPlayerId={profileTargetPlayerId} />}
-                  {activeTab === "team-explorer" && (
+                  {activeTab === "team-explorer" && (loading ? (
+                    <div className="flex h-72 flex-col items-center justify-center gap-3">
+                      <p className="text-sm text-text-secondary">Loading rosters...</p>
+                    </div>
+                  ) : (
                     <TeamExplorer
                       rosters={rosters}
                       initialTeam={targetTeam ?? undefined}
@@ -205,7 +205,7 @@ export default function App() {
                         setActiveTab("player-profile");
                       }}
                     />
-                  )}
+                  ))}
                   {activeTab === "multi-team" && <TradeBoard />}
                   {activeTab === "nba-prediction" && (
                     <NbaPrediction

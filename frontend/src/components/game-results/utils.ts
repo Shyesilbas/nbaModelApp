@@ -10,13 +10,9 @@ export const fmtInt = (v: number | null) => (v != null ? Math.round(v).toString(
 export const fmtPair = (made: number | null | undefined, att: number | null | undefined) =>
   made != null || att != null ? `${fmtInt(made ?? null)} / ${fmtInt(att ?? null)}` : "-";
 
-export const fmtDate = (d: string) =>
-  new Date(d + "T12:00:00").toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+const DATE_EN = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+
+export const fmtDate = (d: string) => DATE_EN.format(new Date(d + "T12:00:00"));
 
 export const parseMinutes = (val: number | string | null | undefined): number => {
   if (val == null) return -1;
@@ -175,12 +171,15 @@ export function parseOfficials(rawList: unknown): ParsedOfficial[] {
     .filter((o): o is ParsedOfficial => Boolean(o && o.cleanName));
 }
 
+// toLocaleTimeString with options builds a new formatter on every call (~1 ms each).
+const TIPOFF_TR = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", hour12: false });
+
 /** Scheduled tip-off in Turkey time (HH:mm), or null when the feed has no start time. */
 export function fmtTipoffTR(startUtc?: string | null): string | null {
   if (!startUtc) return null;
   const t = new Date(startUtc);
   if (isNaN(t.getTime())) return null;
-  return `${t.toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", hour12: false })} TSİ`;
+  return `${TIPOFF_TR.format(t)} TSİ`;
 }
 
 export function isGameEligibleForRefresh(game: {
