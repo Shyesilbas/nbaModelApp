@@ -81,6 +81,67 @@ def load_player_features(seasons):
         
     return pd.concat(player_dfs, ignore_index=True)
 
+ALLOWANCE_WINDOW = 10
+
+
+def add_usage_pct(df_player: pd.DataFrame) -> pd.DataFrame:
+    """USG_PCT per player game from team totals of the same game (shared by training and live inference)."""
+    df_player = df_player.copy()
+    for col in ["MIN", "FGA", "FTA", "TOV"]:
+        df_player[col] = pd.to_numeric(df_player[col], errors="coerce").fillna(0.0)
+
+    team_totals = df_player.groupby(["GAME_ID", "TEAM_ABBREVIATION"])[["MIN", "FGA", "FTA", "TOV"]].sum().reset_index()
+    team_totals = team_totals.rename(columns={
+        "MIN": "TEAM_MIN",
+        "FGA": "TEAM_FGA",
+        "FTA": "TEAM_FTA",
+        "TOV": "TEAM_TOV"
+    })
+
+    df_player = df_player.merge(team_totals, on=["GAME_ID", "TEAM_ABBREVIATION"], how="left")
+
+    denom = df_player["MIN"] * (df_player["TEAM_FGA"] + 0.44 * df_player["TEAM_FTA"] + df_player["TEAM_TOV"])
+    num = 100 * (df_player["FGA"] + 0.44 * df_player["FTA"] + df_player["TOV"]) * (df_player["TEAM_MIN"] / 5.0)
+
+    df_player["USG_PCT"] = np.where(denom > 0, num / denom, 0.0)
+    return df_player
+
+
+def position_totals_by_game(df_raw: pd.DataFrame, df_meta: pd.DataFrame):
+    """PTS/REB/AST each team scored per position group in each game, keyed by the opponent (OPP_TEAM)."""
+    df_raw = df_raw.copy()
+    df_raw["TEAM"] = df_raw["MATCHUP"].str[:3]
+    df_raw["OPP_TEAM"] = df_raw["MATCHUP"].str[-3:]
+    df_raw['GAME_DATE'] = pd.to_datetime(df_raw['GAME_DATE'], format='mixed')
+
+    df_raw = df_raw.merge(df_meta[["PLAYER_ID", "POSITION_GROUP"]], left_on="Player_ID", right_on="PLAYER_ID", how="left")
+    df_raw["POSITION_GROUP"] = df_raw["POSITION_GROUP"].fillna("UNKNOWN")
+
+    pos_stats = df_raw.groupby(["Game_ID", "GAME_DATE", "TEAM", "OPP_TEAM", "POSITION_GROUP"]).agg({
+        "PTS": "sum",
+        "REB": "sum",
+        "AST": "sum"
+    }).reset_index()
+
+    pivot_stats = pos_stats.pivot_table(
+        index=["Game_ID", "GAME_DATE", "TEAM", "OPP_TEAM"],
+        columns="POSITION_GROUP",
+        values=["PTS", "REB", "AST"],
+        fill_value=0
+    ).reset_index()
+
+    pivot_stats.columns = [f"{col[0]}_{col[1]}" if col[1] else col[0] for col in pivot_stats.columns]
+
+    pivot_stats = pivot_stats.sort_values(["OPP_TEAM", "GAME_DATE"])
+    stat_cols = [c for c in pivot_stats.columns if c.startswith("PTS_") or c.startswith("REB_") or c.startswith("AST_")]
+    return pivot_stats, stat_cols
+
+
+def allowance_column_names(stat_cols) -> dict:
+    """PTS_GUARD -> OPP_GUARD_PTS_ALLOWED_LAST_10."""
+    return {col: f"OPP_{col.split('_')[1]}_{col.split('_')[0]}_ALLOWED_LAST_{ALLOWANCE_WINDOW}" for col in stat_cols}
+
+
 def build_player_dataset_v4(seasons=None, output_path=None, custom_metadata_df=None):
     if seasons is None:
         seasons = ["2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"]
@@ -96,23 +157,7 @@ def build_player_dataset_v4(seasons=None, output_path=None, custom_metadata_df=N
     
     df_player["TEAM_ABBREVIATION"] = df_player["MATCHUP"].str.split(" ").str[0]
     
-    for col in ["MIN", "FGA", "FTA", "TOV"]:
-        df_player[col] = pd.to_numeric(df_player[col], errors="coerce").fillna(0.0)
-        
-    team_totals = df_player.groupby(["GAME_ID", "TEAM_ABBREVIATION"])[["MIN", "FGA", "FTA", "TOV"]].sum().reset_index()
-    team_totals = team_totals.rename(columns={
-        "MIN": "TEAM_MIN",
-        "FGA": "TEAM_FGA",
-        "FTA": "TEAM_FTA",
-        "TOV": "TEAM_TOV"
-    })
-    
-    df_player = df_player.merge(team_totals, on=["GAME_ID", "TEAM_ABBREVIATION"], how="left")
-    
-    denom = df_player["MIN"] * (df_player["TEAM_FGA"] + 0.44 * df_player["TEAM_FTA"] + df_player["TEAM_TOV"])
-    num = 100 * (df_player["FGA"] + 0.44 * df_player["FTA"] + df_player["TOV"]) * (df_player["TEAM_MIN"] / 5.0)
-    
-    df_player["USG_PCT"] = np.where(denom > 0, num / denom, 0.0)
+    df_player = add_usage_pct(df_player)
     
     for col in ["PTS", "REB", "AST", "PLUS_MINUS"]:
         df_player[col] = pd.to_numeric(df_player[col], errors="coerce")
@@ -157,38 +202,13 @@ def build_player_dataset_v4(seasons=None, output_path=None, custom_metadata_df=N
         
     df_raw = pd.concat(raw_player_dfs, ignore_index=True)
     
-    df_raw["TEAM"] = df_raw["MATCHUP"].str[:3]
-    df_raw["OPP_TEAM"] = df_raw["MATCHUP"].str[-3:]
-    df_raw['GAME_DATE'] = pd.to_datetime(df_raw['GAME_DATE'], format='mixed')
-    
-    df_raw = df_raw.merge(df_meta[["PLAYER_ID", "POSITION_GROUP"]], left_on="Player_ID", right_on="PLAYER_ID", how="left")
-    df_raw["POSITION_GROUP"] = df_raw["POSITION_GROUP"].fillna("UNKNOWN")
-    
-    pos_stats = df_raw.groupby(["Game_ID", "GAME_DATE", "TEAM", "OPP_TEAM", "POSITION_GROUP"]).agg({
-        "PTS": "sum",
-        "REB": "sum",
-        "AST": "sum"
-    }).reset_index()
-    
-    pivot_stats = pos_stats.pivot_table(
-        index=["Game_ID", "GAME_DATE", "TEAM", "OPP_TEAM"],
-        columns="POSITION_GROUP",
-        values=["PTS", "REB", "AST"],
-        fill_value=0
-    ).reset_index()
-    
-    pivot_stats.columns = [f"{col[0]}_{col[1]}" if col[1] else col[0] for col in pivot_stats.columns]
-    
-    pivot_stats = pivot_stats.sort_values(["OPP_TEAM", "GAME_DATE"])
-    stat_cols = [c for c in pivot_stats.columns if c.startswith("PTS_") or c.startswith("REB_") or c.startswith("AST_")]
-    
+    pivot_stats, stat_cols = position_totals_by_game(df_raw, df_meta)
+
     rolling_features = []
     for opp_team, group in pivot_stats.groupby("OPP_TEAM"):
         group = group.sort_values("GAME_DATE")
-        rolled = group[stat_cols].shift(1).rolling(window=10, min_periods=1).mean()
-        
-        rename_dict = {col: f"OPP_{col.split('_')[1]}_{col.split('_')[0]}_ALLOWED_LAST_10" for col in stat_cols}
-        rolled = rolled.rename(columns=rename_dict)
+        rolled = group[stat_cols].shift(1).rolling(window=ALLOWANCE_WINDOW, min_periods=1).mean()
+        rolled = rolled.rename(columns=allowance_column_names(stat_cols))
         
         rolled["Game_ID"] = group["Game_ID"]
         rolled["OPP_TEAM"] = opp_team

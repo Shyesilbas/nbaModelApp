@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 from src.core.data_paths import PLAYER_METADATA_CSV, PLAYER_TRAINING_CSV, get_data_paths
 from src.core.season_utils import date_to_season
+from src.processing.cleaning import clean_minutes_column
 from src.analysis.roster_transactions import MOVEMENTS_PATH, roster_as_of
 from src.features.player_form import RAW_GAME_COLUMNS, add_player_matchup_features, pregame_player_rows
 
@@ -67,6 +68,24 @@ def is_playoff_date(dt) -> int:
     if dt.month == 4 and dt.day >= 12:
         return 1
     return 0
+
+
+def scheduled_is_playoff(dt, home_team: str = None, away_team: str = None, season: str = None) -> int:
+    """Postseason flag (play-in included, as in training) from the schedule; month rule if the game is not listed."""
+    try:
+        sched_p = Path(get_data_paths(season or date_to_season(dt)).schedule_combined)
+        if sched_p.exists():
+            df_sched = pd.read_csv(sched_p, usecols=lambda c: c in {"GAME_DATE", "HOME_TEAM_ABBREVIATION", "AWAY_TEAM_ABBREVIATION", "SEASON_TYPE"})
+            match = df_sched[
+                (pd.to_datetime(df_sched["GAME_DATE"]).dt.date == dt.date())
+                & (df_sched["HOME_TEAM_ABBREVIATION"] == home_team)
+                & (df_sched["AWAY_TEAM_ABBREVIATION"] == away_team)
+            ]
+            if not match.empty:
+                return int(str(match.iloc[0]["SEASON_TYPE"]) in {"Playoffs", "PlayIn", "NBA Finals"})
+    except Exception:
+        pass
+    return is_playoff_date(dt)
 
 
 def is_preseason_match(dt, home_team: str = None, away_team: str = None, season: str = None) -> bool:
@@ -238,13 +257,76 @@ def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _non_preseason_logs(season: str) -> pd.DataFrame:
+    path = Path(get_data_paths(season).player_games_raw)
+    if not path.exists():
+        return pd.DataFrame()
+    raw = pd.read_csv(path, dtype={"Game_ID": str})
+    return raw[~raw["Game_ID"].str.zfill(10).str.startswith("001")].copy()
+
+
+def season_rows_from_raw(season: str) -> pd.DataFrame:
+    """This season's player games in the model-ready layout (GAME_* raw columns incl. USG_PCT).
+
+    Built straight from the raw box scores, so a game ingested by any path (daily update or the
+    on-demand refresh) reaches player form at once, with usage computed as in training.
+    """
+    from src.processing.player_dataset_builder import add_usage_pct
+
+    raw = _non_preseason_logs(season)
+    if raw.empty:
+        return raw
+    raw = clean_minutes_column(raw, "MIN")
+    raw["GAME_ID"] = raw["Game_ID"].str.zfill(10)
+    raw["TEAM_ABBREVIATION"] = raw["MATCHUP"].str.split(" ").str[0]
+    raw["OPPONENT_ABBREVIATION"] = raw["MATCHUP"].str.split().str[-1]
+    raw["IS_HOME"] = raw["MATCHUP"].str.contains("vs.", regex=False).astype(int)
+    raw["GAME_DATE"] = pd.to_datetime(raw["GAME_DATE"])
+    raw = add_usage_pct(raw)
+    for col in ("PTS", "REB", "AST", "PLUS_MINUS"):
+        raw[col] = pd.to_numeric(raw[col], errors="coerce")
+    for col, kept in RAW_GAME_COLUMNS.items():
+        raw[kept] = raw[col]
+    raw["PLAYER_ID"] = raw["Player_ID"]
+    keep = ["SEASON_ID", "PLAYER_ID", "GAME_ID", "GAME_DATE", "MATCHUP", "PLAYER_NAME", "SEASON_TYPE",
+            "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION", "IS_HOME", *RAW_GAME_COLUMNS, *RAW_GAME_COLUMNS.values()]
+    out = raw[[c for c in keep if c in raw.columns]].copy()
+    out["_LIVE_ROW"] = True
+    return out
+
+
+@lru_cache(maxsize=8)
+def _position_totals(seasons: tuple, _mtimes: tuple):
+    from src.processing.player_dataset_builder import position_totals_by_game
+
+    raw = pd.concat([_non_preseason_logs(s) for s in seasons], ignore_index=True)
+    meta = pd.read_csv(PLAYER_METADATA_CSV, usecols=["PLAYER_ID", "POSITION_GROUP"]).drop_duplicates("PLAYER_ID")
+    return position_totals_by_game(raw, meta)
+
+
+def opponent_allowance(opponent_team: str, pred_dt, season: str) -> dict:
+    """OPP_{POS}_{STAT}_ALLOWED_LAST_10 for a game on ``pred_dt``: what the opponent allowed per
+    position group over its last 10 games before that date, as the training rows define it."""
+    from src.features.build_matchup_features import previous_season
+    from src.processing.player_dataset_builder import ALLOWANCE_WINDOW, allowance_column_names
+
+    seasons = (previous_season(season), season)
+    paths = [Path(get_data_paths(s).player_games_raw) for s in seasons]
+    pivot, stat_cols = _position_totals(seasons, tuple(p.stat().st_mtime_ns if p.exists() else 0 for p in paths))
+    games = pivot[(pivot["OPP_TEAM"] == opponent_team) & (pivot["GAME_DATE"] < pd.Timestamp(pred_dt))]
+    if games.empty:
+        return {}
+    recent = games.sort_values("GAME_DATE").tail(ALLOWANCE_WINDOW)[stat_cols].mean()
+    return recent.rename(allowance_column_names(stat_cols)).to_dict()
+
+
 def _load_player_dataset(season: str = None):
     global _player_df_cache
 
     v4_path = PLAYER_TRAINING_CSV
     season_path = None
     if season:
-        season_path = ROOT / f"data/season={season}/features/player_features.csv"
+        season_path = Path(get_data_paths(season).player_games_raw)
 
     # Keyed by file versions so a data refresh is picked up without restarting the service.
     meta_path = PLAYER_METADATA_CSV
@@ -257,8 +339,8 @@ def _load_player_dataset(season: str = None):
     dfs = []
     if v4_path.exists():
         dfs.append(pd.read_csv(v4_path))
-    if season_path is not None:
-        dfs.append(pd.read_csv(season_path))
+    if season_path is not None and season_path.exists():
+        dfs.append(season_rows_from_raw(season))
 
     if not dfs:
         raise FileNotFoundError("Player dataset (V3 or V4) missing for player inference.")
@@ -411,6 +493,17 @@ def _filter_recent_active(candidates, past_df, team: str, active_ids=None):
     return filtered if len(filtered) > 0 else candidates
 
 
+def _opponent_context(past_df, opponent_team: str, pred_dt, season: str) -> dict:
+    """Opponent allowance from the raw box scores up to the game; the stored-row lookup is the fallback."""
+    try:
+        values = opponent_allowance(opponent_team, pred_dt, season)
+        if values:
+            return values
+    except Exception as exc:
+        logger.warning("Opponent allowance from raw logs failed for %s: %s", opponent_team, exc)
+    return _defense_context(past_df, opponent_team)
+
+
 def _defense_context(past_df, opponent_team: str):
     defense_rows = past_df[past_df["OPPONENT_ABBREVIATION"] == opponent_team].sort_values("GAME_DATE").tail(1)
     if len(defense_rows) == 0:
@@ -473,10 +566,10 @@ def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, predictio
     if len(home_roster) == 0 or len(away_roster) == 0:
         raise ValueError(f"No active players found for {home_team} or {away_team} before {prediction_date}")
 
-    home_X = _build_inference_df(home_roster, True, _defense_context(past_df, away_team))
-    away_X = _build_inference_df(away_roster, False, _defense_context(past_df, home_team))
+    home_X = _build_inference_df(home_roster, True, _opponent_context(past_df, away_team, pred_dt, season))
+    away_X = _build_inference_df(away_roster, False, _opponent_context(past_df, home_team, pred_dt, season))
 
-    is_playoff = is_playoff_date(pred_dt)
+    is_playoff = scheduled_is_playoff(pred_dt, home_team, away_team, season)
     home_X["IS_PLAYOFF"] = is_playoff
     away_X["IS_PLAYOFF"] = is_playoff
 
@@ -536,8 +629,11 @@ def _roster_frames(home_team, away_team, prediction_date, is_preseason=None, rol
 
     df = _load_player_dataset(season)
 
-    historical_home = df[(df['TEAM_ABBREVIATION'] == home_team) & (df['GAME_DATE'] == pred_dt)].copy()
-    historical_away = df[(df['TEAM_ABBREVIATION'] == away_team) & (df['GAME_DATE'] == pred_dt)].copy()
+    # A played game from the model-ready dataset reuses its stored pregame rows; this season's
+    # rows come from the raw box scores and carry no form features, so they are rolled forward.
+    stored = df[~df["_LIVE_ROW"].eq(True)] if "_LIVE_ROW" in df.columns else df
+    historical_home = stored[(stored['TEAM_ABBREVIATION'] == home_team) & (stored['GAME_DATE'] == pred_dt)].copy()
+    historical_away = stored[(stored['TEAM_ABBREVIATION'] == away_team) & (stored['GAME_DATE'] == pred_dt)].copy()
 
     if len(historical_home) > 0 and len(historical_away) > 0:
         home_X = historical_home
