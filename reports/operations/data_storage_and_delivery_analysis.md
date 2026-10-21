@@ -167,3 +167,27 @@ Karar: A (tek kanal: SQLite + API). Sezon, Finalleri bir takım 4 galibiyetle ka
 | `players/{id}` | 0.17 sn | 0.04 sn |
 
 **Player Profile**: sayfaya ilk girişte içerik 0.9-1.2 sn yerine 0.42-0.49 sn'de görünüyor. Seçili oyuncunun geçmişi artık profil listesini beklemeden isteniyor (`PlayerPage.tsx`). Sonraki girişler zaten 60-130 ms; veri sayfa açık kaldıkça bellekte tutuluyor.
+
+## 12. "Tamamlananları çek" butonu ile veri saklama (2026-10-21, kontrol edildi)
+
+Akış (`ml-service/app/services/game_data_refresh.py`), maç başına sırasıyla:
+1. Ham takım ve oyuncu satırları eklenir. Tekilleştirme, veri kontratı ve atomik yazım yapılır.
+2. Box score'lar ve `game_results.csv` yeniden üretilir.
+3. PBP dosyası ve PBP durum özellikleri yazılır.
+4. Aktif sezon ve global depo yeniden kurulur.
+
+Günlük güncellemenin Step 6-9b yeniden işleme adımları koşulsuz çalışır. Bu yüzden butonla çekilen maçlar da bir sonraki güncellemede özellik ve model verisine girer.
+
+**Kontrol**: 2026-27'deki 70 maçın hepsi her katmanda eksiksiz:
+- ham veri: maç başına 2 takım satırı ve oyuncu satırları;
+- box score'lar ve `game_results`;
+- depoda "Final" durumu, oyuncu box score'u ve maç detayı.
+
+Depodaki skorlar ham veriyle birebir aynı. Çekilmiş bir maç tekrar yenilendiğinde bütün dosyalar içerik olarak aynı kaldı (idempotent). Tekrar eden anahtar yok.
+
+**Düzeltilenler**:
+- `game_results.csv` box score adımı tarafından zaten atomik olarak üretiliyordu; aynı değerleri ikinci kez, atomik olmadan yazan yama kaldırıldı.
+- `pbp_situational_features.csv` ve PBP JSON yazımı atomik yapıldı (`write_text_atomic`).
+- Tek maç ve toplu yenileme aynı anda çalışıp birbirinin satırlarını ezebiliyordu. `_ingest_lock` ile sıraya alındı. Test: `tests/test_game_data_refresh.py`.
+
+**Bilinen**: 3 hazırlık maçının PBP verisi yok; bu durumda PBP adımı yenilemeyi düşürmeden atlanıyor. Kilit sadece API süreci içinde geçerli. Butonla aynı anda terminalden `update_data` çalıştırılmamalı.
