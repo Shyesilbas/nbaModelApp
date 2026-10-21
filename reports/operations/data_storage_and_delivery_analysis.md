@@ -144,7 +144,26 @@ Karar: A (tek kanal: SQLite + API). Sezon, Finalleri bir takım 4 galibiyetle ka
 **Kaldırılan üreticiler**: `export_frontend_data.py`, `export_player_profiles.py`, `export_all_seasons_games.py`, `build_frontend_db.py`, `export_archive_pack.py`, `src/export/`, `src/processing/schedule_context_service.py` (kullanılmıyordu). `BoxscoreService` artık JSON, game_details ve highlights yazmıyor; sadece aktif sezonun maç özeti önbelleğini dolduruyor. `build_play_by_play.py` maç listesini pipeline verisinden okuyor ve frontend'e kopya yazmıyor. PBP sıkıştırma kodu `src/frontend_store/pbp_moments.py` dosyasına taşındı.
 
 **Açık kalanlar**:
-- `.git` geçmişi eski frontend JSON'larını hâlâ içeriyor (~216 MB). Küçültmek için geçmişin yeniden yazılması (`git filter-repo`) ve force-push gerekiyor.
+- ~~`.git` geçmişi eski frontend JSON'larını içeriyor (~216 MB)~~ ÇÖZÜLDÜ (2026-10-21): `git filter-repo` ile `frontend/public/data/`, `data/frontend` ve izlenmesi bırakılan `data/` dosyaları bütün geçmişten çıkarıldı, `main` force-push edildi. `.git` 216 MB → 6.6 MB; HEAD ağacı (`d5c87ff`) birebir aynı kaldı. GitHub'da sadece `main` var; eski `vercel`/`claude` dalları ve Codex worktree'si silindi. Geçici yedekler (187 MB geçmiş bundle'ı, ~960 MB eski frontend/Parquet kopyası) doğrulamadan sonra silindi.
 - ~~`data/` katmanlarında CSV + Parquet ikilisi~~ ÇÖZÜLDÜ (2026-10-21): tek format CSV. 119 çiftin 3'ünde içerik farklıydı ve hepsinde CSV daha yeniydi; 14 Parquet bayattı. Bütün Parquet yazımları ve "ikisinden yenisini oku" mantığı kaldırıldı, `pbp_situational_features` CSV'ye çevrildi. Kopyalar `data/`'dan çıkarıldı (43 MB). WIN, skor ve oyuncu tahminleri 4 maçta (2 güncel, 2 geçmiş sezon) önce ve sonra birebir aynı.
 - ~~Git'te izlenen `data/` dosyaları~~ ÇÖZÜLDÜ (2026-10-21): sadece yeniden üretilemeyen girdiler (oyuncu metadata'sı, 2026-27 bootstrap roster/core/Elo) izleniyor.
 
+
+## 11. Sayfa yükleme performansı (2026-10-21, ÇÖZÜLDÜ)
+
+Ölçümler: headless Chrome üzerinden CDP ile, Vite dev sunucusunda, sıcak API.
+
+**Fikstür sayfası** (güncel sezon, 1273 maç): sayfa ~9.5 sn yerine ~1.8 sn'de tamamen yükleniyor. Kullanıcı tarafında hissedilen gecikme 3-4 sn idi.
+- Seçili tarih bir effect ile belirleniyordu. Veri gelmeden önce tarihi `""` yapıyordu, bu yüzden ilk render sezonun bütün maçlarını çizip sonra atıyordu. Tarih artık render sırasında hesaplanıyor (`FixturesTab.tsx`).
+- `fmtTipoffTR` ve `fmtDate` her çağrıda yeni bir `Intl` biçimlendirici kuruyordu (~1 ms/çağrı, toplamda ~1 sn CPU). Artık tek biçimlendirici paylaşılıyor (`game-results/utils.ts`).
+- App, sadece Team Explorer'ın kullandığı `team-rosters` gelmeden hiçbir sekmeyi göstermiyordu. Artık sadece o sekme bekliyor (`App.tsx`).
+
+**API**: depodaki JSON metni olduğu gibi gönderiliyor. Önceden parse edilip FastAPI'nin `jsonable_encoder`'ından geçiriliyordu; 1.2 MB'lık belgede bu tek başına 0.3 sn sürüyordu.
+
+| Endpoint | Önce | Sonra |
+|---|---|---|
+| `player-season-averages` (1.2 MB) | 0.40 sn | 0.003-0.03 sn |
+| `games?season=` (1.4 MB) | 0.18 sn | 0.03 sn |
+| `players/{id}` | 0.17 sn | 0.04 sn |
+
+**Player Profile**: sayfaya ilk girişte içerik 0.9-1.2 sn yerine 0.42-0.49 sn'de görünüyor. Seçili oyuncunun geçmişi artık profil listesini beklemeden isteniyor (`PlayerPage.tsx`). Sonraki girişler zaten 60-130 ms; veri sayfa açık kaldıkça bellekte tutuluyor.

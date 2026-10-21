@@ -164,7 +164,7 @@ Yapılan kod incelemeleri ve refaktör çalışmaları sonucunda veri hattında 
 
 ### 10. Depo Boyutu ve Frontend Veri Teslimi (ÇÖZÜLDÜ, 2026-10-21)
 - **Çözüm**: Deploy kaldırıldıktan sonra frontend tamamen API'ye taşındı. `frontend/public/data/` (~800 MB üretilmiş JSON + eski SQLite) kaldırıldı ve git'ten çıkarıldı (1266 dosya, 184 MB'ı `player_games/*.json`). Yerine sezon başına SQLite deposu geldi (`data/frontend_store/`, gitignore'da). Ayrıntılar: [data_storage_and_delivery_analysis.md](data_storage_and_delivery_analysis.md).
-- `.git` geçmişi hâlâ eski dosyaları içeriyor (~216 MB); küçültmek için geçmişin yeniden yazılması gerekir (ayrı karar).
+- Git geçmişi de temizlendi (2026-10-21): `git filter-repo` ile üretilmiş veri dosyaları bütün commit'lerden çıkarıldı ve `main` force-push edildi. `.git` 216 MB'tan 6.6 MB'a indi, HEAD ağacı değişmedi. Eski uzak dallar ve Codex worktree'si silindi.
 
 ### 11. Ölçülmemiş Performans İddiaları (ÇÖZÜLDÜ, 2026-10-21)
 - **Çözüm**: `docs/pipeline_overview.md` içindeki rakamlar ölçülüp düzeltildi (MacBook, sıcak cache):
