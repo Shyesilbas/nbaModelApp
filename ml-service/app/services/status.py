@@ -83,7 +83,7 @@ def _experimental_candidate():
 
 
 def get_model_status() -> ModelStatusResponse:
-    win_model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v9.pkl")
+    win_model_path = resolve_artifact_path("win_model", "model_path", "models/production/win_probability_model_v10.pkl")
     win_info = WinModelInfo(
         active=svc.loader.model is not None,
         scope="production",
@@ -92,10 +92,10 @@ def get_model_status() -> ModelStatusResponse:
         metrics=_extract_win_metrics(svc.loader.metadata)
     )
 
-    home_model_path = svc.score_loader.home_rtg_path or (svc.ROOT / "models/production/score_model_v4_home_rtg.pkl")
-    away_model_path = svc.score_loader.away_rtg_path or (svc.ROOT / "models/production/score_model_v4_away_rtg.pkl")
-    total_model_path = svc.score_loader.pace_path or (svc.ROOT / "models/production/score_model_v4_pace.pkl")
-    margin_model_path = svc.score_loader.margin_path or (svc.ROOT / "models/production/score_model_v4_margin.pkl")
+    home_model_path = svc.score_loader.home_rtg_path or resolve_artifact_path("score_model", "home_model_path", "models/production/score_model_v10_home_rtg.pkl")
+    away_model_path = svc.score_loader.away_rtg_path or resolve_artifact_path("score_model", "away_model_path", "models/production/score_model_v10_away_rtg.pkl")
+    total_model_path = svc.score_loader.pace_path or resolve_artifact_path("score_model", "total_model_path", "models/production/score_model_v10_pace.pkl")
+    margin_model_path = svc.score_loader.margin_path or resolve_artifact_path("score_model", "margin_model_path", "models/production/score_model_v10_margin.pkl")
 
     score_metrics = ModelMetrics()
     if svc.score_loader.metadata:

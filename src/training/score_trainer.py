@@ -449,14 +449,6 @@ class ScoreModelTrainer:
         joblib.dump(margin_model, self.output_dir / f"score_model_{self.version}_margin.pkl")
         joblib.dump(ridge_total, self.output_dir / f"score_model_{self.version}_ridge_total.pkl")
         joblib.dump(ridge_margin, self.output_dir / f"score_model_{self.version}_ridge_margin.pkl")
-        if self.version == "v10":
-            df_oof_export.to_parquet(self.output_dir / "score_model_v9_oof_margins.parquet", index=False)
-            joblib.dump(pace_model, self.output_dir / "score_model_v9_pace.pkl")
-            joblib.dump(home_model, self.output_dir / "score_model_v9_home_rtg.pkl")
-            joblib.dump(away_model, self.output_dir / "score_model_v9_away_rtg.pkl")
-            joblib.dump(margin_model, self.output_dir / "score_model_v9_margin.pkl")
-            joblib.dump(ridge_total, self.output_dir / "score_model_v9_ridge_total.pkl")
-            joblib.dump(ridge_margin, self.output_dir / "score_model_v9_ridge_margin.pkl")
         
         score_artifacts = [
             self.output_dir / f"score_model_{self.version}_{name}.pkl"
@@ -526,9 +518,6 @@ class ScoreModelTrainer:
         metadata_path = self.output_dir / f"score_model_{self.version}_metadata.json"
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=4)
-        if self.version == "v10":
-            with open(self.output_dir / "score_model_v9_metadata.json", "w") as f:
-                json.dump(metadata, f, indent=4)
             
         return metadata
 

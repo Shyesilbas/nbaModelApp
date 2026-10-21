@@ -208,7 +208,7 @@ def main():
     parser = argparse.ArgumentParser(description="NBA Daily Schedule Predictor CLI")
     parser.add_argument("--date", help="Target date to predict games (YYYY-MM-DD). If omitted, latest date in schedule is used.")
     parser.add_argument("--season", help="Target season (e.g. 2025-26)")
-    parser.add_argument("--model", default="v10", help="Model version to use (v9 or v10). Defaults to v10.")
+    parser.add_argument("--model", default="v10", choices=["v10"], help="Win/score model version (only v10 ships). Defaults to v10.")
     args = parser.parse_args()
 
     season = normalize_season(args.season) if args.season else get_default_season()

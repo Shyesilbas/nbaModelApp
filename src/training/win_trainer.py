@@ -211,16 +211,6 @@ class WinModelTrainer:
                 candidates = [
                     (self.player_models_dir / "player_v9_features.pkl", self.player_models_dir, "player_v9_lgb_"),
                     (root_models_prod / "player_v9_features.pkl", root_models_prod, "player_v9_lgb_"),
-                    (self.player_models_dir / "player_v8_features.pkl", self.player_models_dir, "player_v8_lgb_"),
-                    (root_models_prod / "player_v8_features.pkl", root_models_prod, "player_v8_lgb_"),
-                    (self.player_models_dir / "player_v7_features.pkl", self.player_models_dir, "player_v7_lgb_"),
-                    (root_models_prod / "player_v7_features.pkl", root_models_prod, "player_v7_lgb_"),
-                    (self.player_models_dir / "player_v6_features.pkl", self.player_models_dir, "player_v6_lgb_"),
-                    (root_models_prod / "player_v6_features.pkl", root_models_prod, "player_v6_lgb_"),
-                    (self.player_models_dir / "player_v5_features.pkl", self.player_models_dir, "player_v5_lgb_"),
-                    (root_models_prod / "player_v5_features.pkl", root_models_prod, "player_v5_lgb_"),
-                    (self.player_models_dir / "player_v4_features.pkl", self.player_models_dir, "player_v4_lgb_"),
-                    (root_models_prod / "player_v4_features.pkl", root_models_prod, "player_v4_lgb_"),
                 ]
                 features_path, models_dir, model_prefix = next(
                     ((p, d, prefix) for p, d, prefix in candidates if p.exists()),
@@ -314,9 +304,6 @@ class WinModelTrainer:
             (self.score_models_dir / "score_model_v10_margin.pkl", self.score_models_dir / "score_model_v10_metadata.json", self.score_models_dir / "score_model_v10_ridge_margin.pkl"),
             (self.output_dir / "score_model_v10_margin.pkl", self.output_dir / "score_model_v10_metadata.json", self.output_dir / "score_model_v10_ridge_margin.pkl"),
             (root_prod / "score_model_v10_margin.pkl", root_prod / "score_model_v10_metadata.json", root_prod / "score_model_v10_ridge_margin.pkl"),
-            (self.score_models_dir / "score_model_v9_margin.pkl", self.score_models_dir / "score_model_v9_metadata.json", self.score_models_dir / "score_model_v9_ridge_margin.pkl"),
-            (self.output_dir / "score_model_v9_margin.pkl", self.output_dir / "score_model_v9_metadata.json", self.output_dir / "score_model_v9_ridge_margin.pkl"),
-            (root_prod / "score_model_v9_margin.pkl", root_prod / "score_model_v9_metadata.json", root_prod / "score_model_v9_ridge_margin.pkl"),
         ]
         margin_model_path, meta_path, ridge_path = next(
             ((m, meta, r) for m, meta, r in candidates if m.exists() and meta.exists()),
@@ -630,16 +617,11 @@ class WinModelTrainer:
 
         model_path = self.output_dir / f"win_probability_model_{self.version}.pkl"
         joblib.dump(final_model, model_path)
-        if self.version == "v10":
-            joblib.dump(final_model, self.output_dir / "win_probability_model_v9.pkl")
         
         feature_cols = X.columns.tolist()
         feat_path = self.output_dir / f"feature_columns_{self.version}.json"
         with open(feat_path, "w") as f:
             json.dump(feature_cols, f, indent=2)
-        if self.version == "v10":
-            with open(self.output_dir / "feature_columns_v9.json", "w") as f:
-                json.dump(feature_cols, f, indent=2)
             
         win_artifacts = [model_path, feat_path]
         metadata = {

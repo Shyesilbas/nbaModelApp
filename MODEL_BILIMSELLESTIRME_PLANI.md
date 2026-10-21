@@ -8,7 +8,7 @@ Bu belge kod değişikliği değil, mevcut kod ve artefakt incelemesine dayalı 
 
 ## Uygulama günlüğü — 2026-10-04
 
-Planın uygulamasına başlandı. Kaynak kodda aşağıdaki değişiklikler yapıldı ve ardından 2025–26 dış sezon testiyle adaylar eğitildi. 2026-10-04 tarihli son temiz aday, leakage-clean serbest bırakma kaydıyla üretime alındı; önceki şampiyon yedeği `models/production/replaced_leaky/20261004_130707/` altında tutuldu. Bu karar, eski şampiyonun yüksek ama sızıntı riski taşıyan metriğini takip etmek yerine temiz pregame ölçüm ve baseline koşullarına dayandırıldı.
+Planın uygulamasına başlandı. Kaynak kodda aşağıdaki değişiklikler yapıldı ve ardından 2025–26 dış sezon testiyle adaylar eğitildi. 2026-10-04 tarihli son temiz aday, leakage-clean serbest bırakma kaydıyla üretime alındı; önceki şampiyon yedeği `models/production/replaced_leaky/20261004_130707/` altında tutuldu (2026-10-21'de model klasörü temizliğinde silindi). Bu karar, eski şampiyonun yüksek ama sızıntı riski taşıyan metriğini takip etmek yerine temiz pregame ölçüm ve baseline koşullarına dayandırıldı.
 
 - SCORE holdout tahminleri artık tüm veriyle refit edilmiş modelden değil, holdout öncesi eğitimden geliyor. Hiperparametre araması tarih sıralı ve aynı maç gününü katlar arasında bölmüyor.
 - SCORE OOF tahminleri expanding-window tarih bloklarıyla üretiliyor. Ridge margin düzeltmesi de her tarih için yalnızca önceki OOF artıklarla fit ediliyor. Geçmiş OOF satırı eksikse tam veri modeliyle doldurulmuyor.
@@ -291,7 +291,7 @@ Sabit eşikleri bir defa belirleyip sonsuza dek korumak yerine, mevcut şampiyon
 - Eğitim governance özeti: `reports/operations/training_governance_status.md` (silindi)
 # Uygulama durumu — 2026-10-04
 
-Leakage azaltma ve üretim adayı değerlendirmesi `reports/evaluation/training_run_20261004_130707.md` (silindi) içinde kayıtlı. Bilinen sızıntılı eski şampiyon yedeklenerek temiz aday üretime alınmış; geri dönüş kopyası [models/production/replaced_leaky/20261004_130707/](models/production/replaced_leaky/20261004_130707/) altında tutulmuştur.
+Leakage azaltma ve üretim adayı değerlendirmesi `reports/evaluation/training_run_20261004_130707.md` (silindi) içinde kayıtlı. Bilinen sızıntılı eski şampiyon yedeklenerek temiz aday üretime alınmış; geri dönüş kopyası `models/production/replaced_leaky/20261004_130707/` altında tutulmuştu (2026-10-21'de silindi).
 
 ## 1. Tam Üretim Yığını Çok Sezonlu Walk-Forward Backtest (WIN, SCORE, PLAYER)
 

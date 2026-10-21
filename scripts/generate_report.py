@@ -369,7 +369,7 @@ def evaluate_model_on_season(model_ver, season):
 def main():
     parser = argparse.ArgumentParser(description="NBA Season and Model Reporting/Evaluation CLI")
     parser.add_argument("--season", help="Target season for data stats/freshness or evaluation (e.g. 2025-26)")
-    parser.add_argument("--model", help="Target model version (e.g. v9 or v10) to inspect or evaluate")
+    parser.add_argument("--model", help="Target model version (e.g. v10) to inspect or evaluate")
     parser.add_argument("--compare-models", nargs=2, metavar=("M1", "M2"), help="Compare two model versions on the specified season")
     parser.add_argument("--freshness-check", action="store_true", help="Perform freshness and shape sanity check on target season")
     args = parser.parse_args()

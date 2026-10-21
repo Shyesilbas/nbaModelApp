@@ -73,8 +73,8 @@ class ModelLoader:
         self.metadata = None
 
     def load(self):
-        model_path = resolve_artifact_path("win_model", "model_path", "models/win_probability_model_v9.pkl")
-        features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/feature_columns_v9.json")
+        model_path = resolve_artifact_path("win_model", "model_path", "models/production/win_probability_model_v10.pkl")
+        features_path = resolve_artifact_path("win_model", "feature_columns_path", "models/production/feature_columns_v10.json")
         metadata_path = resolve_artifact_path("win_model", "metadata_path", "models/model_metadata.json")
         if not model_path.exists():
             raise FileNotFoundError(f"Model file not found at {model_path}")
@@ -117,13 +117,13 @@ class ScoreModelLoader:
 
     def load(self):
         manifest_paths = {
-            "pace": resolve_artifact_path("score_model", "total_model_path", "models/production/score_model_v9_pace.pkl"),
-            "home_rtg": resolve_artifact_path("score_model", "home_model_path", "models/production/score_model_v9_home_rtg.pkl"),
-            "away_rtg": resolve_artifact_path("score_model", "away_model_path", "models/production/score_model_v9_away_rtg.pkl"),
-            "margin": resolve_artifact_path("score_model", "margin_model_path", "models/production/score_model_v9_margin.pkl"),
-            "metadata": resolve_artifact_path("score_model", "metadata_path", "models/production/score_model_v9_metadata.json"),
-            "ridge_total": resolve_artifact_path("score_model", "ridge_total_path", "models/production/score_model_v9_ridge_total.pkl"),
-            "ridge_margin": resolve_artifact_path("score_model", "ridge_margin_path", "models/production/score_model_v9_ridge_margin.pkl"),
+            "pace": resolve_artifact_path("score_model", "total_model_path", "models/production/score_model_v10_pace.pkl"),
+            "home_rtg": resolve_artifact_path("score_model", "home_model_path", "models/production/score_model_v10_home_rtg.pkl"),
+            "away_rtg": resolve_artifact_path("score_model", "away_model_path", "models/production/score_model_v10_away_rtg.pkl"),
+            "margin": resolve_artifact_path("score_model", "margin_model_path", "models/production/score_model_v10_margin.pkl"),
+            "metadata": resolve_artifact_path("score_model", "metadata_path", "models/production/score_model_v10_metadata.json"),
+            "ridge_total": resolve_artifact_path("score_model", "ridge_total_path", "models/production/score_model_v10_ridge_total.pkl"),
+            "ridge_margin": resolve_artifact_path("score_model", "ridge_margin_path", "models/production/score_model_v10_ridge_margin.pkl"),
         }
 
         required_keys = ["pace", "home_rtg", "away_rtg", "margin", "metadata"]
@@ -169,8 +169,8 @@ class ScoreModelLoader:
 
     def get_version(self) -> Optional[str]:
         if self.metadata:
-            return self.metadata.get("version", "score_v4")
-        return "score_v4"
+            return self.metadata.get("version")
+        return None
 
 
 class PlayerModelLoader:

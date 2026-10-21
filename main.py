@@ -118,12 +118,12 @@ def main():
       with current regular-season games. Also runs automatically in --update-data (Step 9b).
   scripts/build_frontend_store.py [--season YYYY-YY] [--force]
       Build the SQLite store the API serves frontend data from. Closed seasons are built once.
-  scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY [--model {v9,v10}]
-      Predict all matchups for a given date (default model: v10).
+  scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY
+      Predict all matchups for a given date with the production models.
   scripts/retrain_pipeline.py [--dry-run | --promote] [--models {win,score,player} ...]
       Retrain, compare against the production champion, and promote if eligible (asks
       first unless --promote). Seasons come from config/training_manifest.yaml.
-  scripts/generate_report.py --season YYYY-YY --model {v9,v10}
+  scripts/generate_report.py --season YYYY-YY --model v10
       Season and model report audit.
   scripts/detect_drift_and_leakage.py --reference-season YYYY-YY --target-season YYYY-YY
       Data drift and feature leakage detector.

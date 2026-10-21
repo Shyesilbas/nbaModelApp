@@ -52,11 +52,11 @@ def evaluate_model_files(model_dir, season, segments=None):
         
     # 1. Evaluate Score Model (runs first to produce SCORE_PRED_MARGIN for win evaluation)
     score_results = {}
-    score_meta_path = model_dir / "score_model_v10_metadata.json" if (model_dir / "score_model_v10_metadata.json").exists() else model_dir / "score_model_v9_metadata.json"
-    pace_path = model_dir / "score_model_v10_pace.pkl" if (model_dir / "score_model_v10_pace.pkl").exists() else model_dir / "score_model_v9_pace.pkl"
-    home_rtg_path = model_dir / "score_model_v10_home_rtg.pkl" if (model_dir / "score_model_v10_home_rtg.pkl").exists() else model_dir / "score_model_v9_home_rtg.pkl"
-    away_rtg_path = model_dir / "score_model_v10_away_rtg.pkl" if (model_dir / "score_model_v10_away_rtg.pkl").exists() else model_dir / "score_model_v9_away_rtg.pkl"
-    margin_path = model_dir / "score_model_v10_margin.pkl" if (model_dir / "score_model_v10_margin.pkl").exists() else model_dir / "score_model_v9_margin.pkl"
+    score_meta_path = model_dir / "score_model_v10_metadata.json"
+    pace_path = model_dir / "score_model_v10_pace.pkl"
+    home_rtg_path = model_dir / "score_model_v10_home_rtg.pkl"
+    away_rtg_path = model_dir / "score_model_v10_away_rtg.pkl"
+    margin_path = model_dir / "score_model_v10_margin.pkl"
     
     has_score = all(p.exists() for p in [score_meta_path, pace_path, home_rtg_path, away_rtg_path, margin_path])
     if has_score:
@@ -91,8 +91,8 @@ def evaluate_model_files(model_dir, season, segments=None):
                 eval_df = home_df.merge(away_eval[["GAME_ID", "PRED_AWAY_RTG"]], on="GAME_ID", how="inner")
                 eval_df["PRED_TOTAL_RAW"] = eval_df["PRED_PACE"] * (eval_df["PRED_HOME_RTG"] + eval_df["PRED_AWAY_RTG"]) / 100.0
                 
-                ridge_total_path = model_dir / "score_model_v10_ridge_total.pkl" if (model_dir / "score_model_v10_ridge_total.pkl").exists() else model_dir / "score_model_v9_ridge_total.pkl"
-                ridge_margin_path = model_dir / "score_model_v10_ridge_margin.pkl" if (model_dir / "score_model_v10_ridge_margin.pkl").exists() else model_dir / "score_model_v9_ridge_margin.pkl"
+                ridge_total_path = model_dir / "score_model_v10_ridge_total.pkl"
+                ridge_margin_path = model_dir / "score_model_v10_ridge_margin.pkl"
                 
                 if ridge_total_path.exists() and ridge_margin_path.exists():
                     ridge_total = joblib.load(ridge_total_path)
@@ -127,8 +127,8 @@ def evaluate_model_files(model_dir, season, segments=None):
                 df["SCORE_PRED_MARGIN"] = [home_margins.get(str(gid), 0.0) if is_h else -home_margins.get(str(gid), 0.0) for gid, is_h in zip(df["GAME_ID"], df["IS_HOME"].astype(bool))]
 
     # 2. Evaluate Win Model
-    win_model_path = model_dir / "win_probability_model_v10.pkl" if (model_dir / "win_probability_model_v10.pkl").exists() else model_dir / "win_probability_model_v9.pkl"
-    win_features_path = model_dir / "feature_columns_v10.json" if (model_dir / "feature_columns_v10.json").exists() else model_dir / "feature_columns_v9.json"
+    win_model_path = model_dir / "win_probability_model_v10.pkl"
+    win_features_path = model_dir / "feature_columns_v10.json"
     
     win_results = {}
     if win_model_path.exists() and win_features_path.exists() and "WIN" in df.columns:
@@ -527,9 +527,7 @@ def main():
         os.makedirs(production_dir, exist_ok=True)
         files_to_copy = [
             "win_probability_model_v10.pkl",
-            "win_probability_model_v9.pkl",
             "feature_columns_v10.json",
-            "feature_columns_v9.json",
             "model_metadata.json",
             "score_model_v10_pace.pkl",
             "score_model_v10_home_rtg.pkl",
@@ -538,13 +536,6 @@ def main():
             "score_model_v10_ridge_total.pkl",
             "score_model_v10_ridge_margin.pkl",
             "score_model_v10_metadata.json",
-            "score_model_v9_pace.pkl",
-            "score_model_v9_home_rtg.pkl",
-            "score_model_v9_away_rtg.pkl",
-            "score_model_v9_margin.pkl",
-            "score_model_v9_ridge_total.pkl",
-            "score_model_v9_ridge_margin.pkl",
-            "score_model_v9_metadata.json",
             "player_v9_features.pkl",
             "player_v9_lgb_pts.pkl",
             "player_v9_lgb_reb.pkl",

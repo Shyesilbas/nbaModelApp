@@ -994,10 +994,6 @@ def compute_player_features_for_inference(
     score_meta_path = ROOT / "models/production/score_model_v10_metadata.json"
     margin_model_path = ROOT / "models/production/score_model_v10_margin.pkl"
     ridge_margin_path = ROOT / "models/production/score_model_v10_ridge_margin.pkl"
-    if not margin_model_path.exists():
-        score_meta_path = ROOT / "models/production/score_model_v9_metadata.json"
-        margin_model_path = ROOT / "models/production/score_model_v9_margin.pkl"
-        ridge_margin_path = ROOT / "models/production/score_model_v9_ridge_margin.pkl"
 
     pred_margin = 0.0
     if margin_model_path.exists() and score_meta_path.exists():
