@@ -44,8 +44,8 @@ def _infer_season_from_game_id(game_id: str) -> str:
 
 
 def _resolve_game(gid: str, season: str | None) -> tuple[str, str, str | None, str | None]:
-    from scripts.data_paths import get_data_paths
-    from scripts.season_utils import normalize_season
+    from src.core.data_paths import get_data_paths
+    from src.core.season_utils import normalize_season
 
     resolved_season = normalize_season(season) if season else _infer_season_from_game_id(gid)
 
@@ -105,7 +105,7 @@ def start_refresh(game_id: str, season: str | None = None) -> dict[str, Any]:
 
 def missing_game_ids(game_ids: list[str], season: str | None = None) -> list[str]:
     """Games whose player box scores are not in the raw dataset yet."""
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
 
     gids = list(dict.fromkeys(_game_id(g) for g in game_ids))
     have: dict[str, set[str]] = {}
@@ -197,8 +197,8 @@ def _refresh_locked(game_id: str, season: str, home_team: str | None, away_team:
             fetch_missing_player_games_by_game_ids,
         )
         from src.ingestion.boxscore_service import BoxscoreService
-        from scripts.build_play_by_play import build_play_by_play_payload, write_payload
-        from scripts.season_utils import normalize_season
+        from src.processing.build_play_by_play import build_play_by_play_payload, write_payload
+        from src.core.season_utils import normalize_season
         from src.ingestion.atomic_io import write_csv_atomic
 
         season_key = normalize_season(season)

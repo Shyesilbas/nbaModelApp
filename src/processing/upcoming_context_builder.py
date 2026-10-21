@@ -22,8 +22,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import get_default_season, season_to_file_token
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import get_default_season, season_to_file_token
 
 # ─────────────────────────────────────────────
 def _get_latest_team_features(v2_df: pd.DataFrame) -> pd.DataFrame:

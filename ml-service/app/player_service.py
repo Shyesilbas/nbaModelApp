@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.season_utils import date_to_season
+from src.core.season_utils import date_to_season
 from src.analysis.roster_transactions import MOVEMENTS_PATH, roster_as_of
 from src.features.player_form import add_player_matchup_features, pregame_player_rows
 
@@ -29,7 +29,7 @@ def is_playoff_date(dt) -> int:
 
 def is_preseason_match(dt, home_team: str = None, away_team: str = None, season: str = None) -> bool:
     try:
-        from scripts.data_paths import get_data_paths
+        from src.core.data_paths import get_data_paths
         from pathlib import Path
         s = season or date_to_season(dt)
         dp = get_data_paths(s)

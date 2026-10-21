@@ -1,7 +1,7 @@
 import pytest
 
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import normalize_season
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import normalize_season
 
 
 @pytest.mark.parametrize("raw,want", [
@@ -25,7 +25,7 @@ def test_env_overrides_yaml(monkeypatch):
 
 def test_date_to_season_boundary():
     import pandas as pd
-    from scripts.season_utils import date_to_season, season_labels
+    from src.core.season_utils import date_to_season, season_labels
     cases = {"2026-07-31": "2025-26", "2026-08-01": "2026-27", "2026-09-30": "2026-27", "2027-01-05": "2026-27"}
     for d, want in cases.items():
         assert date_to_season(pd.Timestamp(d)) == want

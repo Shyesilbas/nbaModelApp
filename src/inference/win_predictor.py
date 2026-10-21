@@ -9,7 +9,7 @@ from typing import Dict, Any, Tuple, Optional
 import pandas as pd
 import joblib
 
-from scripts.artifact_paths import resolve_artifact_path
+from src.core.artifact_paths import resolve_artifact_path
 
 CONFIDENCE_BUCKETS = [
     (0.5, 0.55, "Toss-up"),

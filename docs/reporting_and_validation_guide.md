@@ -84,7 +84,7 @@ Run these commands after any path refactoring or pipeline update:
 PYTHONPATH=. python3 scripts/audit/validate_project_structure.py
 PYTHONPATH=. python3 scripts/audit/validate_season_path_refactor.py
 ```
-- Validates the single source of truth in `scripts/data_paths.py`.
+- Validates the single source of truth in `src/core/data_paths.py`.
 - Checks production artifact manifests and verifies season-scoped path isolation.
 
 ---

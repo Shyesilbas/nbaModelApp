@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
-from scripts.build_matchup_features import build_features
+from src.features.build_matchup_features import build_features
 
 from .. import service as svc
 from ..schemas import ScorePredictionRequest, ScorePredictionResponse, WinProbRequest, WinProbResponse

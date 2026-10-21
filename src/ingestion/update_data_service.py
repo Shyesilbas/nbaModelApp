@@ -8,8 +8,8 @@ from src.validation.data_freshness_service import DataFreshnessService
 from src.ingestion.team_games_fetcher import fetch_missing_team_games_by_game_ids, append_team_games_to_raw_dataset
 from src.ingestion.player_games_fetcher import fetch_missing_player_games_by_game_ids, append_player_games_to_raw_dataset
 from src.orchestration.pipeline_runner import PipelineRunner
-from scripts.season_utils import get_default_season
-from scripts.data_paths import get_data_paths
+from src.core.season_utils import get_default_season
+from src.core.data_paths import get_data_paths
 from src.ingestion.atomic_io import write_csv_atomic
 
 
@@ -197,8 +197,8 @@ class UpdateDataService:
 
             print("\nStep 8b: Rebuilding training-ready V3 dataset for the season...")
             try:
-                from scripts.feature_engineering.enrich_v3_boxscore_features import enrich_all_seasons
-                from scripts.rebuild_training_data import rebuild_season
+                from src.features.enrich_v3_boxscore_features import enrich_all_seasons
+                from src.processing.rebuild_training_data import rebuild_season
                 rebuild_season(self.season)
                 enrich_all_seasons([self.season])
             except Exception as e:
@@ -210,14 +210,14 @@ class UpdateDataService:
 
             print("\nStep 9a: Refreshing player movements (trades, signings, waivers)...")
             try:
-                from scripts.ingest.ingest_transactions import ingest_transactions
+                from src.ingestion.ingest_transactions import ingest_transactions
                 ingest_transactions()
             except Exception as e:
                 print(f"Warning: player movement refresh failed, using the cached feed: {e}")
 
             print("\nStep 9b: Refreshing live roster and the frontend store...")
             try:
-                from scripts.refresh_current_season_views import refresh_current_season_views
+                from src.orchestration.refresh_current_season_views import refresh_current_season_views
                 refresh_current_season_views(self.season)
             except Exception as e:
                 print(f"Warning: current season view refresh failed: {e}")

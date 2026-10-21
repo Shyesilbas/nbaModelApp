@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 # Single season boundary for every date -> season mapping (no games are played in Aug-Sep).
 SEASON_START_MONTH = 8

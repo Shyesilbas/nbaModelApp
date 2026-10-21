@@ -300,11 +300,11 @@ def main():
     if args.skip_post_update_rebuilds and not args.update_data:
         parser.error("--skip-post-update-rebuilds only applies to --update-data")
 
-    from scripts.data_paths import get_data_paths
-    from scripts.season_utils import season_to_file_token, normalize_season
+    from src.core.data_paths import get_data_paths
+    from src.core.season_utils import season_to_file_token, normalize_season
     
     paths = get_data_paths(args.season)
-    from scripts.season_utils import get_default_season
+    from src.core.season_utils import get_default_season
     season = normalize_season(args.season or get_default_season())
     token = season_to_file_token(season)
 

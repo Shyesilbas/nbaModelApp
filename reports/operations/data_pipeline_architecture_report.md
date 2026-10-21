@@ -44,9 +44,9 @@ Sistemin veri toplama katmanı [src/ingestion/](../../src/ingestion) dizininde y
 Sistemde sezon bazlı parametreler ve dosya yolları dinamik olarak yönetilir:
 
 1. **Season Path Resolver**:
-   - [scripts/data_paths.py](../../scripts/data_paths.py) içinde bulunan `get_data_paths(season)` fonksiyonu, sistemin tek dosya yolu yöneticisidir.
+   - [src/core/data_paths.py](../../src/core/data_paths.py) içinde bulunan `get_data_paths(season)` fonksiyonu, sistemin tek dosya yolu yöneticisidir.
    - [config/data_sources.yaml](../../config/data_sources.yaml) içindeki tanımlara göre `data/raw/`, `data/processed/` ve `data/features/` dizinlerinin yollarını belirler. Sezon ismini (örn: `2024-25`) dosya token'ına (örn: `2024_25`) dönüştürerek dinamik dosya yolları oluşturur.
-   - [scripts/season_utils.py](../../scripts/season_utils.py) sezon formatlarını normalize eder (örn: `2024-2025` veya `2024_25` girdilerini `2024-25` standardına getirir). Ayrıca veri kümelerine yanlış sezon verilerinin karışmasını engellemek için tarih ve `GAME_ID` prefix doğrulamaları yapar.
+   - [src/core/season_utils.py](../../src/core/season_utils.py) sezon formatlarını normalize eder (örn: `2024-2025` veya `2024_25` girdilerini `2024-25` standardına getirir). Ayrıca veri kümelerine yanlış sezon verilerinin karışmasını engellemek için tarih ve `GAME_ID` prefix doğrulamaları yapar.
 
 2. **Yeni Sezon Bootstrapping**:
    - Yeni bir sezon eklemek veya mevcut sezonu sıfırdan kurmak için tek bir CLI komutu kullanılır:
@@ -97,7 +97,7 @@ Oyuncuların sezon içinde takım değiştirmesi (Trade, Waiver, Release), stati
 Sistem bu sorunu şu şekilde çözer:
 
 1. **İşlem Günlüğü (Transactions Log) Durumu**:
-   - [scripts/ingest/ingest_transactions.py](../../scripts/ingest/ingest_transactions.py) resmi NBA Player Movement feed'ini `data/transactions/player_movement.csv` dosyasına indirir; [scripts/ingest/ingest_espn_transactions.py](../../scripts/ingest/ingest_espn_transactions.py) ESPN hareket listesini `espn_transactions.csv` olarak tamamlar.
+   - [src/ingestion/ingest_transactions.py](../../src/ingestion/ingest_transactions.py) resmi NBA Player Movement feed'ini `data/transactions/player_movement.csv` dosyasına indirir; [scripts/ingest/ingest_espn_transactions.py](../../scripts/ingest/ingest_espn_transactions.py) ESPN hareket listesini `espn_transactions.csv` olarak tamamlar.
    - Feed `--update-data` akışında (Step 9a) her gün yenilenir.
    - [src/analysis/roster_transactions.py](../../src/analysis/roster_transactions.py) feed'deki Trade / Signing / AwardOnWaivers / Waive hareketlerini sezon roster'ına uygular. Canlı oyuncu tahmini (`ml-service/app/player_service.py`, maç tarihine kadarki hareketler) ve frontend canlı roster'ı (`live_roster_refresh.py`, oyuncunun son maçından sonraki hareketler) bu modülü kullanır. Öncesinde 6 Ekim'de dondurulmuş roster, 17 Ekim'de waive edilen 105 oyuncuyu hâlâ takımlarında gösteriyordu.
    - Trade export'u ve çok takımlı takas tarihlerinin zenginleştirilmesi de aynı feed'i kullanır.
@@ -117,8 +117,8 @@ Sistem bu sorunu şu şekilde çözer:
 | Dosya Yolu | Görevi / İşlevi |
 | :--- | :--- |
 | [main.py](../../main.py) | Projenin ana CLI giriş noktası. Parametrelere göre orchestrator'ı çağırır ve roster/feature analizlerini başlatır. |
-| [scripts/data_paths.py](../../scripts/data_paths.py) | Sezon parametresini alarak tüm okuma/yazma işlemlerinin dosya yollarını merkezi olarak çözen sınıf. |
-| [scripts/season_utils.py](../../scripts/season_utils.py) | Sezon isimlerini normalize eder ve veri setlerinin tarihsel sınırlarını denetler. |
+| [src/core/data_paths.py](../../src/core/data_paths.py) | Sezon parametresini alarak tüm okuma/yazma işlemlerinin dosya yollarını merkezi olarak çözen sınıf. |
+| [src/core/season_utils.py](../../src/core/season_utils.py) | Sezon isimlerini normalize eder ve veri setlerinin tarihsel sınırlarını denetler. |
 | [src/ingestion/update_data_service.py](../../src/ingestion/update_data_service.py) | Fikstürü güncelleyen, eksik tamamlanmış maçları tespit edip NBA API'den çeken ve veri setlerini güncelleyen ana servis. |
 | [src/validation/data_freshness.py](../../src/validation/data_freshness.py) | Yerel verilerin güncelliğini fikstürle karşılaştırarak eksik maçları raporlar, Markdown ve JSON formatında rapor yazar. |
 | [src/analysis/roster_analysis.py](../../src/analysis/roster_analysis.py) | Oyuncu istatistiklerini derleyerek her takım için Core oyuncuları ve Importance skorlarını hesaplar. |
@@ -136,7 +136,7 @@ Sistem bu sorunu şu şekilde çözer:
 Yapılan kod incelemeleri ve refaktör çalışmaları sonucunda veri hattında çözülen kritik noktalar ve gelecek geliştirme alanları aşağıda listelenmiştir:
 
 ### 1. Ingestion Kodlarında Sabit Kodlanmış (Hardcoded) Sezon Tanımları (ÇÖZÜLDÜ)
-- **Çözüm**: [build_observed_affiliation_events.py](../../scripts/ingest/build_observed_affiliation_events.py) ve [roster_snapshot_generator.py](../../scripts/ingest/roster_snapshot_generator.py) script'leri CLI parametresi olarak `--season` kabul edecek ve yolları doğrudan `scripts.data_paths.get_data_paths` üzerinden dinamik çözecek şekilde refaktör edilmiştir.
+- **Çözüm**: [build_observed_affiliation_events.py](../../scripts/ingest/build_observed_affiliation_events.py) ve [roster_snapshot_generator.py](../../scripts/ingest/roster_snapshot_generator.py) script'leri CLI parametresi olarak `--season` kabul edecek ve yolları doğrudan `src.core.data_paths.get_data_paths` üzerinden dinamik çözecek şekilde refaktör edilmiştir.
 
 ### 2. Core Player Listesinin Statik Üretim Yolu ve Manuel Senkronizasyon (ÇÖZÜLDÜ)
 - **Çözüm**: Roster analizi çalıştırıldığında (`main.py --run-roster-analysis`) üretilen `core_players.csv` dosyası manifest kurallarına göre `data/production/` ve `data/canonical/` dizinlerine otomatik olarak kopyalanmakta ve senkronize edilmektedir.

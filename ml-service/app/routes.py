@@ -38,7 +38,7 @@ from .services.player_prediction import predict_players
 from .services.score_prediction import predict_score
 from .services.status import get_model_status
 from .services.shap_service import explain_win_probability, explain_score_prediction
-from scripts.build_matchup_features import build_features
+from src.features.build_matchup_features import build_features
 
 router = APIRouter()
 

@@ -6,7 +6,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from scripts.artifact_paths import load_production_manifest
+from src.core.artifact_paths import load_production_manifest
 
 
 def _check(path: Path, errors: list[str]) -> None:

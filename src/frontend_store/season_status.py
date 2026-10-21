@@ -8,7 +8,7 @@ import os
 
 import pandas as pd
 
-from scripts.data_paths import get_data_paths
+from src.core.data_paths import get_data_paths
 
 CLOSED = "closed"
 ACTIVE = "active"

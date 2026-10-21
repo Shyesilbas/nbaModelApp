@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.data_paths import get_data_paths  # noqa: E402
+from src.core.data_paths import get_data_paths  # noqa: E402
 from src.ingestion.starters_fetcher import append_starters, fetch_game_starters, starters_path  # noqa: E402
 
 SEASONS = ["2025-26", "2024-25", "2023-24"]

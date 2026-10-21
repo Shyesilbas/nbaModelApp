@@ -56,7 +56,7 @@ def load_team_games(data_dir: str = "data/raw/team_games", season: Optional[str]
     Returns:
         pd.DataFrame: The loaded team game logs DataFrame, or empty if file does not exist.
     """
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     paths = get_data_paths(season)
     default_name = os.path.basename(paths.team_games_raw)
     specific_path = os.path.join(data_dir, default_name)
@@ -79,7 +79,7 @@ def load_player_games(data_dir: str = "data/raw/player_games", season: Optional[
     Returns:
         pd.DataFrame: The loaded player game logs DataFrame, or empty if file does not exist.
     """
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     paths = get_data_paths(season)
     default_name = os.path.basename(paths.player_games_raw)
     specific_path = os.path.join(data_dir, default_name)

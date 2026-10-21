@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from scripts.season_utils import date_to_season
+from src.core.season_utils import date_to_season
 
 
 INITIAL_ELO = 1500.0
@@ -185,7 +185,7 @@ def build_continuous_elo_dataset(seasons: List[str]) -> Tuple[pd.DataFrame, Dict
     Loads raw team games across specified seasons, chronologically connects them,
     and returns DataFrame with continuous pre-game Elo ratings.
     """
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     from pathlib import Path
 
     dfs: List[pd.DataFrame] = []

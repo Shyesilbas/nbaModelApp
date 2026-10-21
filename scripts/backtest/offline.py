@@ -22,8 +22,8 @@ import pandas as pd
 
 from src.features.player_form import add_player_matchup_features
 from src.processing.cleaning import regulation_team_minutes
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import season_labels, season_to_file_token
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import season_labels, season_to_file_token
 from src.training.player_trainer import PlayerModelTrainer
 from src.training.score_trainer import ScoreModelTrainer
 from src.training.win_trainer import WinModelTrainer
@@ -109,7 +109,7 @@ def predict_score(seasons, test_season, model_dir: Path) -> pd.DataFrame:
     total = pace * (home_rtg + away_rtg) / 100.0
     margin = load("margin").predict(home[meta["margin_features"]])
 
-    from scripts.generate_report import get_indicator_df
+    from src.evaluation.generate_report import get_indicator_df
     ind = get_indicator_df(home)
     total = total - load("ridge_total").predict(ind)
     margin = margin - load("ridge_margin").predict(ind)

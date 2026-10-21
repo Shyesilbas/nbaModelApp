@@ -18,11 +18,11 @@ import pandas as pd
 import numpy as np
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import SEASON_START_MONTH, date_to_season
-from scripts.artifact_paths import resolve_artifact_path
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import SEASON_START_MONTH, date_to_season
+from src.core.artifact_paths import resolve_artifact_path
 from src.features.win_strength_features import build_matchup_strength_features, compute_current_elo_state
 from src.features.roster_absence import live_absence_delta
 

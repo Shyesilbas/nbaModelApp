@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
 
     try:
         # The first lineup request would otherwise spend ~6 s reading the season's player data.
-        from scripts.season_utils import get_default_season
+        from src.core.season_utils import get_default_season
         from .player_service import _load_player_dataset
         _load_player_dataset(get_default_season())
     except Exception as e:

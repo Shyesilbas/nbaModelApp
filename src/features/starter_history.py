@@ -117,7 +117,7 @@ def evaluate_role_model(starters: pd.DataFrame, player_games: pd.DataFrame, hold
 
 def load_role_inputs(seasons: Sequence[str]):
     """(starters, player_games) concatenated over the seasons that have files."""
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     from src.ingestion.starters_fetcher import starters_path
     st, pg = [], []
     for s in seasons:

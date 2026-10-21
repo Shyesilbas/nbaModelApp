@@ -9,8 +9,8 @@ from typing import Dict, Any, Optional
 import pandas as pd
 import joblib
 
-from scripts.artifact_paths import resolve_artifact_path
-from scripts.build_matchup_features import build_features
+from src.core.artifact_paths import resolve_artifact_path
+from src.features.build_matchup_features import build_features
 
 
 class ScorePredictor:

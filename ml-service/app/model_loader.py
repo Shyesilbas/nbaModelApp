@@ -14,7 +14,7 @@ warnings.filterwarnings(
 ROOT = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(ROOT))
-from scripts.artifact_paths import resolve_artifact_path
+from src.core.artifact_paths import resolve_artifact_path
 
 
 def _all_exist(paths):

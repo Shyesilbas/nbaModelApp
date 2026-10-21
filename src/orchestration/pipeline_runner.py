@@ -7,8 +7,8 @@ from typing import Any, Dict, Optional, Tuple
 import os
 import pandas as pd
 
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import get_default_season, normalize_season, season_to_file_token
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import get_default_season, normalize_season, season_to_file_token
 from src.features import build_opponent_features, build_team_features, validate_opponent_join
 from src.ingestion.boxscore_loader import run_boxscore_pipeline
 from src.ingestion.data_loader import load_player_games, load_team_games

@@ -1,4 +1,4 @@
-from scripts.artifact_paths import resolve_artifact_path
+from src.core.artifact_paths import resolve_artifact_path
 
 from .. import service as svc
 from ..schemas import (

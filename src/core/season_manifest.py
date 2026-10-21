@@ -5,9 +5,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
-from scripts.season_utils import normalize_season, season_to_file_token
+from src.core.season_utils import normalize_season, season_to_file_token
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def build_season_manifest(season: str, command: str, artifacts: Dict[str, Any]) -> Dict[str, Any]:

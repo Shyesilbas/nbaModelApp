@@ -35,7 +35,7 @@ def _predict_game(game):
     from app import service as svc
     from app.schemas import ScorePredictionRequest, WinProbRequest
     from app.services.score_prediction import predict_score
-    from scripts.build_matchup_features import build_features
+    from src.features.build_matchup_features import build_features
 
     gid, date, home, away, season = game
     row = {"GAME_ID": gid, "GAME_DATE": date, "HOME": home, "AWAY": away}
@@ -63,7 +63,7 @@ def _predict_game(game):
 
 
 def run(season: str, out: Path, workers: int = 4, limit: int | None = None):
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
 
     games = pd.read_csv(get_data_paths(season).game_results, dtype={"GAME_ID": str})
     games = games[~games["SEASON_TYPE"].astype(str).str.lower().str.contains("pre")]

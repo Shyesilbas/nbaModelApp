@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional
 import pandas as pd
 import joblib
 
-from scripts.artifact_paths import resolve_artifact_path
+from src.core.artifact_paths import resolve_artifact_path
 from src.features.player_form import add_player_matchup_features
 
 

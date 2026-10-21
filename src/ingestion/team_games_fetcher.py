@@ -11,7 +11,7 @@ from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from src.ingestion.nba_api_client import call_nba_api
-from scripts.season_utils import get_default_season
+from src.core.season_utils import get_default_season
 from src.ingestion.atomic_io import write_csv_atomic
 from src.validation.contracts import check_team_games
 
@@ -143,7 +143,7 @@ def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFr
         # We need schedule context to fill GAME_DATE, SEASON_TYPE, MATCHUP
         if schedule_df is None:
             # Try to load it
-            from scripts.data_paths import get_data_paths
+            from src.core.data_paths import get_data_paths
             paths = get_data_paths(season)
             schedule_csv = paths.schedule_combined
             if os.path.exists(schedule_csv):
@@ -169,7 +169,7 @@ def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFr
         
         # Determine season ID dynamically from the normalized season start year.
         # Regular: 22025, PlayIn: 52025, Playoffs/Finals: 42025
-        from scripts.season_utils import normalize_season
+        from src.core.season_utils import normalize_season
         norm_season = normalize_season(season or get_default_season())
         start_year = int(norm_season.split("-")[0])
         year_suffix = start_year % 100
@@ -299,7 +299,7 @@ def append_team_games_to_raw_dataset(new_rows: pd.DataFrame, season: Optional[st
     
     Returns the total count of rows after update.
     """
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     paths = get_data_paths(season)
     raw_team_csv = paths.team_games_raw
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-from scripts.build_matchup_features import _load_absence_logs, _parse_player_overrides
-from scripts.season_utils import date_to_season
+from src.features.build_matchup_features import _load_absence_logs, _parse_player_overrides
+from src.core.season_utils import date_to_season
 from src.features.roster_absence import assumed_out_players
 
 

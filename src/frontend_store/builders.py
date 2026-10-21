@@ -16,8 +16,8 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import discover_seasons, normalize_season
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import discover_seasons, normalize_season
 from src.frontend_store.player_history import build_player_season, nan_safe
 from src.frontend_store.season_status import CLOSED, finals_winner
 from src.frontend_store.store import (
@@ -299,7 +299,7 @@ def build_global_store() -> None:
         })
     profiles.sort(key=lambda p: p.get("PLAYER_NAME") or "")
 
-    from scripts.export_trades import build_trades
+    from src.frontend_store.export_trades import build_trades
 
     docs = {
         "seasons": seasons,

@@ -19,11 +19,11 @@ from src.processing.model_dataset_builder import (
     build_team_model_dataset_v3,
 )
 from src.validation.data_freshness_service import DataFreshnessService
-from scripts.data_paths import get_data_paths
+from src.core.data_paths import get_data_paths
 from src.frontend_store.builders import build_frontend_store
 from src.frontend_store.store import season_db_path
-from scripts.season_manifest import write_season_manifest
-from scripts.season_utils import get_default_season, normalize_season, season_to_file_token
+from src.core.season_manifest import write_season_manifest
+from src.core.season_utils import get_default_season, normalize_season, season_to_file_token
 from src.processing.player_dataset_builder import build_player_dataset_v4
 from src.training.player_trainer import PlayerModelTrainer
 from src.training.score_trainer import ScoreModelTrainer
@@ -127,8 +127,8 @@ def run_bootstrap_season_pipeline(args: Any) -> None:
     run_build_enhanced_v2(args)
     # Training-ready team dataset for this season (v3 + boxscore enrichment), so a new
     # season can join the training manifest without a separate rebuild.
-    from scripts.feature_engineering.enrich_v3_boxscore_features import enrich_all_seasons
-    from scripts.rebuild_training_data import rebuild_season
+    from src.features.enrich_v3_boxscore_features import enrich_all_seasons
+    from src.processing.rebuild_training_data import rebuild_season
 
     rebuild_season(season)
     enrich_all_seasons([season])
@@ -187,7 +187,7 @@ def run_build_player_dataset_pipeline(args: Any) -> None:
     if args.season:
         seasons = [args.season]
     else:
-        from scripts.season_utils import discover_seasons
+        from src.core.season_utils import discover_seasons
         seasons = list(discover_seasons().keys())
     build_player_dataset_v4(seasons=seasons)
 

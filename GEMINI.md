@@ -86,7 +86,7 @@ To fully ingest and bootstrap a new NBA season (e.g., `2020-21`), run the follow
 - Do not fetch historical NBA seasons or call external APIs unless the user explicitly approves.
 
 ## Season Handling
-- Any new data or feature script must accept `--season` and use `scripts.data_paths.get_data_paths`.
+- Any new data or feature script must accept `--season` and use `src.core.data_paths.get_data_paths`.
 
 ## Validation
 - After touching path/config/inference code, run `python3 scripts/audit/validate_project_structure.py` and `python3 scripts/audit/validate_season_path_refactor.py` if available.

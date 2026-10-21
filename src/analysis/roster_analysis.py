@@ -4,7 +4,7 @@ import numpy as np
 import unicodedata
 from typing import Tuple
 from src.processing.cleaning import clean_minutes_column
-from scripts.season_utils import get_default_season
+from src.core.season_utils import get_default_season
 
 def normalize_player_name(name: str) -> str:
     """
@@ -56,7 +56,7 @@ def run_roster_analysis(
     
     # Load player logs
     if player_games_path is None:
-        from scripts.data_paths import get_data_paths
+        from src.core.data_paths import get_data_paths
 
         player_games_path = get_data_paths(get_default_season()).player_games_raw
     if not os.path.exists(player_games_path):

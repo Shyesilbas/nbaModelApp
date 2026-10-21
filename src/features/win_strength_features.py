@@ -24,8 +24,8 @@ def _full_history_elo() -> pd.DataFrame:
     (season openings chained from earlier seasons, then this season's games).
     """
     from pathlib import Path
-    from scripts.season_utils import discover_seasons
-    from scripts.data_paths import get_data_paths
+    from src.core.season_utils import discover_seasons
+    from src.core.data_paths import get_data_paths
     from src.features.continuous_elo import build_continuous_elo_dataset
 
     seasons = sorted(discover_seasons())
@@ -65,8 +65,8 @@ def add_pre_game_elo(df: pd.DataFrame) -> pd.DataFrame:
     
     if "PTS" not in df_copy.columns and "GAME_ID" in df_copy.columns and "TEAM_ABBREVIATION" in df_copy.columns:
         try:
-            from scripts.season_utils import discover_seasons
-            from scripts.data_paths import get_data_paths
+            from src.core.season_utils import discover_seasons
+            from src.core.data_paths import get_data_paths
             
             pts_map = {}
             for s in discover_seasons():
@@ -107,8 +107,8 @@ def attach_actual_points(df: pd.DataFrame) -> pd.DataFrame:
     formula undercounts overtime games by ~13 points each.
     """
     from pathlib import Path
-    from scripts.season_utils import discover_seasons
-    from scripts.data_paths import get_data_paths
+    from src.core.season_utils import discover_seasons
+    from src.core.data_paths import get_data_paths
 
     frames = [
         pd.read_csv(p, usecols=["GAME_ID", "TEAM_ABBREVIATION", "PTS"])

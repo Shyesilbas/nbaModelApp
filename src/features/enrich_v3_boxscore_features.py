@@ -8,8 +8,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import season_to_file_token
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import season_to_file_token
 from src.features.boxscore_advanced_features import compute_team_boxscore_advanced_features
 
 SEASONS = ["2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"]

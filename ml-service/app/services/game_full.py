@@ -3,9 +3,9 @@ import logging
 from typing import Any, Dict, List, Tuple
 import pandas as pd
 
-from scripts.artifact_paths import production_release
-from scripts.build_matchup_features import build_features
-from scripts.inference.top_down_scaling import apply_top_down_scaling
+from src.core.artifact_paths import production_release
+from src.features.build_matchup_features import build_features
+from src.inference.top_down_scaling import apply_top_down_scaling
 
 logger = logging.getLogger(__name__)
 

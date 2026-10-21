@@ -1,8 +1,8 @@
 from pathlib import Path
 from dataclasses import dataclass
-from scripts.season_utils import get_default_season, normalize_season
+from src.core.season_utils import get_default_season, normalize_season
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 @dataclass
 class DataPaths:

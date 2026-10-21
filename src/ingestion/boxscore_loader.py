@@ -7,8 +7,8 @@ Builds the box score layer from the existing raw NBA game log CSVs.
 import os
 import pandas as pd
 from pathlib import Path
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import get_default_season, season_to_file_token
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import get_default_season, season_to_file_token
 from src.ingestion.atomic_io import write_csv_atomic
 
 ROOT = Path(__file__).resolve().parents[2]

@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from scripts.season_utils import SEASON_START_MONTH, date_to_season
+from src.core.season_utils import SEASON_START_MONTH, date_to_season
 
 # Raw per-game columns the form features are built from. The model-ready dataset
 # keeps them under GAME_* names so inference can roll the history forward.

@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 PRODUCTION_MANIFEST = ROOT / "config" / "production_artifacts.yaml"
 
 

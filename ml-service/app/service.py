@@ -2,7 +2,7 @@ from .model_loader import ModelLoader, ScoreModelLoader, PlayerModelLoader
 from .schemas import (
     WinProbRequest, WinProbResponse
 )
-from scripts.build_matchup_features import build_features
+from src.features.build_matchup_features import build_features
 from src.features.continuous_elo import HOME_COURT_ADVANTAGE
 from typing import Any, Dict, Optional
 import logging

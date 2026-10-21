@@ -14,7 +14,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request, Response
 
-from scripts.season_utils import get_default_season
+from src.core.season_utils import get_default_season
 from src.frontend_store.store import connect_ro, global_db_path, season_db_path, stored_seasons
 
 logger = logging.getLogger(__name__)

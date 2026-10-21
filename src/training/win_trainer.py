@@ -18,8 +18,8 @@ from src.training.training_manifest import manifest_release
 from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split, expanding_window_date_splits
 from src.training.provenance import build_training_provenance
 
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import get_default_season
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import get_default_season
 from src.features.win_strength_features import add_win_strength_features
 from src.training.feature_guards import check_feature_matrix, permutation_contribution
 
@@ -350,7 +350,7 @@ class WinModelTrainer:
             if future_mask.any():
                 margin_model = joblib.load(margin_model_path)
                 ridge_margin = joblib.load(ridge_path) if ridge_path and ridge_path.exists() else None
-                from scripts.generate_report import add_location_features, get_indicator_df
+                from src.evaluation.generate_report import add_location_features, get_indicator_df
                 enriched = add_location_features(df.copy())
                 enriched = add_win_strength_features(enriched)
                 enriched = enriched.loc[future_mask].copy()

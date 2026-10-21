@@ -25,7 +25,7 @@ class BoxscoreService:
 
     def _warm_game_summaries(self, results_df: pd.DataFrame) -> None:
         """Fetch summaries for finished games not cached yet (the store never calls the API)."""
-        from scripts.season_utils import get_default_season, normalize_season
+        from src.core.season_utils import get_default_season, normalize_season
         from src.frontend_store.season_status import CLOSED, season_status
         from src.ingestion.game_summary_fetcher import fetch_game_summary
 

@@ -26,8 +26,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # Local import of builder (ensure scripts folder's parent is on sys.path)
 sys.path.insert(0, str(ROOT))
-from scripts.artifact_paths import resolve_artifact_path
-from scripts.build_matchup_features import build_features  # type: ignore
+from src.core.artifact_paths import resolve_artifact_path
+from src.features.build_matchup_features import build_features  # type: ignore
 
 CONFIDENCE_BUCKETS = [
     (0.5, 0.55, "Toss-up"),

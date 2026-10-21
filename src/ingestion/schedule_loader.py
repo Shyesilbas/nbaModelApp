@@ -13,7 +13,7 @@ Public API
 import os
 from typing import Optional
 import pandas as pd
-from scripts.season_utils import get_default_season
+from src.core.season_utils import get_default_season
 from src.ingestion.atomic_io import write_csv_atomic
 
 # ─────────────────────────────────────────────
@@ -56,7 +56,7 @@ def load_full_schedule(season: Optional[str] = None) -> pd.DataFrame:
     -------
     pd.DataFrame with UNIFIED_COLUMNS schema.
     """
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     paths = get_data_paths(season or get_default_season())
     raw_schedule_path = paths.raw_schedule
 
@@ -116,7 +116,7 @@ def load_finals_upcoming_schedule(season: Optional[str] = None) -> pd.DataFrame:
     -------
     pd.DataFrame with UNIFIED_COLUMNS schema.
     """
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     paths = get_data_paths(season or get_default_season())
     raw_finals_path = paths.raw_finals_schedule
 
@@ -152,7 +152,7 @@ def load_combined_schedule(save: bool = True, season: Optional[str] = None) -> p
     -------
     pd.DataFrame with UNIFIED_COLUMNS schema sorted by GAME_DATE.
     """
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     paths = get_data_paths(season or get_default_season())
     combined_csv_path = paths.schedule_combined
 

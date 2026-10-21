@@ -6,7 +6,7 @@ from typing import Optional, Tuple
 import pandas as pd
 import numpy as np
 
-from scripts.season_utils import season_labels
+from src.core.season_utils import season_labels
 
 
 @dataclass(frozen=True)

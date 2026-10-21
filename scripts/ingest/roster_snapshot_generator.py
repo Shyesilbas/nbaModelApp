@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.season_utils import get_default_season, normalize_season, season_to_file_token
+from src.core.season_utils import get_default_season, normalize_season, season_to_file_token
 
 def build_player_team_affiliations_from_observed_events(events_df: pd.DataFrame) -> pd.DataFrame:
     """

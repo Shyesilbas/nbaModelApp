@@ -12,8 +12,8 @@ from typing import Optional
 
 import pandas as pd
 
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import get_default_season, normalize_season
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import get_default_season, normalize_season
 from src.analysis.roster_transactions import roster_as_of
 from src.processing.cleaning import clean_minutes_column
 

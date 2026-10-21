@@ -13,10 +13,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.artifact_paths import production_release
-from scripts.data_paths import get_data_paths
-from scripts.season_utils import normalize_season, get_default_season
-from scripts.build_matchup_features import build_features
+from src.core.artifact_paths import production_release
+from src.core.data_paths import get_data_paths
+from src.core.season_utils import normalize_season, get_default_season
+from src.features.build_matchup_features import build_features
 
 NBA_TEAMS_LOCATIONS = {
     "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},

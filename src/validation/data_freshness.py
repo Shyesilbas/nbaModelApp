@@ -56,7 +56,7 @@ def load_local_datasets(
         if refresh_schedule:
             df_schedule = load_combined_schedule(save=save_schedule, season=season)
         else:
-            from scripts.data_paths import get_data_paths
+            from src.core.data_paths import get_data_paths
             paths = get_data_paths(season)
             schedule_csv = paths.schedule_combined
             if os.path.exists(schedule_csv):

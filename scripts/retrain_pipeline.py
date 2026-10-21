@@ -21,9 +21,9 @@ from src.training.score_trainer import ScoreModelTrainer
 from src.training.win_trainer import WinModelTrainer
 from src.training.segment_evaluation import evaluate_segments, player_metrics, score_metrics, win_metrics
 from src.training.training_manifest import load_training_manifest
-from scripts.artifact_paths import PRODUCTION_MANIFEST, production_release
-from scripts.data_paths import get_data_paths
-from scripts.generate_report import add_location_features, get_indicator_df
+from src.core.artifact_paths import PRODUCTION_MANIFEST, production_release
+from src.core.data_paths import get_data_paths
+from src.evaluation.generate_report import add_location_features, get_indicator_df
 from src.features.win_strength_features import attach_actual_points
 from src.features.player_form import add_player_matchup_features
 

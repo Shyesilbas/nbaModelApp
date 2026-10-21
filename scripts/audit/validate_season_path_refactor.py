@@ -5,9 +5,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from scripts.season_utils import get_default_season, season_to_file_token
-from scripts.data_paths import get_data_paths
-from scripts.artifact_paths import load_production_manifest, resolve_artifact_path
+from src.core.season_utils import get_default_season, season_to_file_token
+from src.core.data_paths import get_data_paths
+from src.core.artifact_paths import load_production_manifest, resolve_artifact_path
 
 def test_get_data_paths_values():
     print("Testing get_data_paths resolving expected values...")

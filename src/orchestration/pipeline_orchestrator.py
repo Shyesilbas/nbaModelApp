@@ -1,5 +1,5 @@
 from typing import Any
-from scripts.season_utils import get_default_season
+from src.core.season_utils import get_default_season
 from src.orchestration import pipeline_workflows as workflows
 
 

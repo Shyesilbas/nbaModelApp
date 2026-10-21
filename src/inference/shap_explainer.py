@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 import shap
-from scripts.artifact_paths import resolve_artifact_path
+from src.core.artifact_paths import resolve_artifact_path
 
 
 def linear_contributions(model, X: pd.DataFrame):

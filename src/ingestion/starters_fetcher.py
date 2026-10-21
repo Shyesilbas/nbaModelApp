@@ -19,7 +19,7 @@ STARTER_COLUMNS = ["Game_ID", "Player_ID", "TEAM_ABBREVIATION", "IS_STARTER"]
 
 
 def starters_path(season: Optional[str] = None) -> Path:
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     return Path(get_data_paths(season).player_games_raw).with_name("player_starters.csv")
 
 
@@ -77,7 +77,7 @@ def missing_starter_game_ids(season: Optional[str] = None, limit: int = 100) -> 
 
     A transient API failure at ingest time leaves a game here; the next update completes it.
     ``limit`` keeps one update short when a whole past season was never backfilled."""
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     games_csv = Path(get_data_paths(season).player_games_raw)
     if not games_csv.exists():
         return []

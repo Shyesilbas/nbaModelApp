@@ -11,7 +11,7 @@ from datetime import datetime, date
 from typing import List, Dict, Any, Optional, Tuple
 
 from src.ingestion.nba_api_client import call_nba_api
-from scripts.season_utils import get_default_season
+from src.core.season_utils import get_default_season
 from src.ingestion.atomic_io import write_csv_atomic
 
 logger = logging.getLogger("ScheduleFetcher")
@@ -199,7 +199,7 @@ def update_schedule_files(season: str = None) -> Tuple[int, int]:
         
     Returns (num_schedule_rows, num_finals_rows).
     """
-    from scripts.data_paths import get_data_paths
+    from src.core.data_paths import get_data_paths
     season = season or get_default_season()
     paths = get_data_paths(season)
     raw_schedule_csv = paths.raw_schedule
