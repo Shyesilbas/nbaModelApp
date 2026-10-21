@@ -10,6 +10,7 @@ import pandas as pd
 import joblib
 
 from src.core.artifact_paths import resolve_artifact_path
+from src.inference.win_blend import blend_win_probability
 
 CONFIDENCE_BUCKETS = [
     (0.5, 0.55, "Toss-up"),
@@ -57,8 +58,8 @@ class WinPredictor:
         X = pd.DataFrame([row], columns=self.feature_cols)
 
         probs = self.model.predict_proba(X)[0]
-        p_win = float(probs[1])
-        p_lose = float(probs[0])
+        p_win = blend_win_probability(float(probs[1]), input_dict)
+        p_lose = 1.0 - p_win
 
         predicted_winner = "home" if p_win >= 0.5 else "away"
         confidence_bucket = self.get_confidence_bucket(max(p_win, p_lose))

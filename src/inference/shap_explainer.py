@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 
 import shap
 from src.core.artifact_paths import resolve_artifact_path
+from src.inference.win_blend import blend_win_probability
 
 
 def linear_contributions(model, X: pd.DataFrame):
@@ -113,6 +114,7 @@ class ShapExplainer:
         except Exception:
             final_prob = 0.5
 
+        blend_shift = blend_win_probability(final_prob, features_dict) - final_prob
         base_pred_logit = base_val + sum(f["impact"] for f in factors)
         base_pred_prob = 1.0 / (1.0 + np.exp(-np.clip(base_pred_logit, -20.0, 20.0)))
         calibration_shift = final_prob - base_pred_prob
@@ -124,9 +126,17 @@ class ShapExplainer:
             "type": "calibration_adjustment"
         })
 
+        if abs(blend_shift) > 1e-9:
+            factors.append({
+                "feature": "EARLY_SEASON_ELO_BLEND",
+                "impact": float(blend_shift),
+                "direction": "positive" if blend_shift > 0 else "negative",
+                "type": "early_season_blend"
+            })
+
         return {
             "base_value": float(1.0 / (1.0 + np.exp(-base_val))),
-            "final_prediction": float(final_prob),
+            "final_prediction": float(final_prob + blend_shift),
             "top_factors": factors[:10],
             "unit": "probability",
             "model_type": "win_probability"

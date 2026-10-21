@@ -88,7 +88,7 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 - **Algorithm**: `SimpleImputer -> StandardScaler -> LogisticRegression(C=1)`, uncalibrated. Logistic, L1 logistic and LightGBM are compared on expanding-window Brier; logistic wins and isotonic/sigmoid calibration does not improve it.
 - **Features (7)**: `ELO_DIFF`, `IS_HOME`, `CLEAN_NET_RTG_DIFF_LAST_10`, `WINRATE_DIFF_LAST_10`, `REST_DIFF`, `IS_B2B`, `OPP_IS_B2B`, chosen by forward selection on walk-forward folds. `WINRATE_DIFF_LAST_10` has a negative coefficient on purpose: at equal Elo and net rating a higher win rate reflects close-game luck that regresses.
 - **Elo**: pre-game Elo comes from the complete raw game log (the same chain live inference uses), not from the model-ready rows, which lack each team's first games of a season.
-- **Serving**: the first 12 games of a season blend in the pure Elo probability (weight 0.4 decaying to 0); features themselves are not shrunk.
+- **Serving**: the first 6 games of a season blend in the pure Elo probability (weight 0.4 decaying to 0); features themselves are not shrunk.
 
 ### 4.2 Score Prediction Model
 - **Artifacts**: `score_model_{pace,home_rtg,away_rtg,margin,ridge_total,ridge_margin}.pkl` and metadata; contract `config/features/score.yaml`.

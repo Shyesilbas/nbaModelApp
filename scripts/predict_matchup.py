@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.core.artifact_paths import resolve_artifact_path
 from src.features.build_matchup_features import build_features  # type: ignore
+from src.inference.win_blend import blend_win_probability
 
 CONFIDENCE_BUCKETS = [
     (0.5, 0.55, "Toss-up"),
@@ -90,8 +91,8 @@ def main():
         sys.exit(2)
 
     # probs assumed [P(class=0), P(class=1)] where class=1 means the team in row (home) wins
-    p_home_win = float(probs[1])
-    p_away_win = float(probs[0])
+    p_home_win = blend_win_probability(float(probs[1]), features)
+    p_away_win = 1.0 - p_home_win
 
     predicted_winner = args.home.upper() if p_home_win >= 0.5 else args.away.upper()
     confidence_bucket = bucket_confidence(max(p_home_win, p_away_win))

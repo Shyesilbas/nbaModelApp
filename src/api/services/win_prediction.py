@@ -4,7 +4,7 @@ from ..schemas import (
 )
 from src.features.build_matchup_features import build_features
 from src.core.data_paths import PLAYER_METADATA_CSV
-from src.features.continuous_elo import HOME_COURT_ADVANTAGE
+from src.inference.win_blend import blend_win_probability
 from typing import Any, Dict, Optional
 import logging
 import pandas as pd
@@ -71,13 +71,8 @@ def predict(request: WinProbRequest, features: Optional[Dict[str, Any]] = None) 
     p_home = float(probs[1])
     p_away = float(probs[0])
 
-    blend_weight = float(feats.get("EARLY_SEASON_ELO_BLEND_WEIGHT", 0.0))
-    if blend_weight > 0.0:
-        home_elo = float(feats.get("PRE_GAME_ELO", 1500.0))
-        away_elo = float(feats.get("OPP_PRE_GAME_ELO", 1500.0))
-        elo_prob_home = 1.0 / (1.0 + 10.0 ** (-((home_elo + HOME_COURT_ADVANTAGE) - away_elo) / 400.0))
-        p_home = (1.0 - blend_weight) * p_home + blend_weight * elo_prob_home
-        p_away = 1.0 - p_home
+    p_home = blend_win_probability(p_home, feats)
+    p_away = 1.0 - p_home
 
     model_version = loader.get_version()
 

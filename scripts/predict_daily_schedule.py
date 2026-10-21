@@ -17,6 +17,7 @@ from src.core.artifact_paths import production_release
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import normalize_season, get_default_season
 from src.features.build_matchup_features import build_features
+from src.inference.win_blend import blend_win_probability
 
 NBA_TEAMS_LOCATIONS = {
     "BOS": {"lat": 42.3662, "lon": -71.0621, "tz_offset": -5},
@@ -109,12 +110,7 @@ def predict_single_game(home, away, date):
         X = pd.DataFrame([row], columns=win_features)
         win_prob = float(win_model.predict_proba(X)[0][1])
 
-        blend_weight = float(features.get("EARLY_SEASON_ELO_BLEND_WEIGHT", 0.0))
-        if blend_weight > 0.0:
-            home_elo = float(features.get("PRE_GAME_ELO", 1500.0))
-            away_elo = float(features.get("OPP_PRE_GAME_ELO", 1500.0))
-            elo_prob_home = 1.0 / (1.0 + 10.0 ** (-((home_elo + 100.0) - away_elo) / 400.0))
-            win_prob = (1.0 - blend_weight) * win_prob + blend_weight * elo_prob_home
+        win_prob = blend_win_probability(win_prob, features)
         
     # 3. Predict Component Scores
     score_meta_path = ROOT / "models/production/score_metadata.json"

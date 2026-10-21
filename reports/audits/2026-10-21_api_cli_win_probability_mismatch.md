@@ -1,6 +1,6 @@
 # API ile CLI farklı WIN olasılığı veriyor
 
-**Durum:** Açık. Yapı düzenlemesi (2026-10-21) bitince ele alınacak.
+**Durum:** Kısmen çözüldü (2026-10-21, seçenek A). Kalan: backtest/README olasılık netleşmesi (son madde).
 **Bulunduğu yer:** 3. aşama doğrulaması. API çıktısı taşımadan önce ve sonra birebir aynıydı, yani fark yeniden düzenlemeden gelmiyor; önceden de vardı.
 
 ## Belirti
@@ -53,8 +53,10 @@ Her iki durumda da madde 3'teki doküman düzeltilmeli. Harmanlamanın kendisi t
 
 ## Takip
 
-- [ ] Seçenek kararı (A / B)
-- [ ] Tek harmanlama fonksiyonu, tüm WIN yolları ona bağlı
-- [ ] SHAP yanıtı harmanlamayı gösteriyor
-- [ ] Model raporundaki "12 maç" düzeltildi
+Ek bulgu: `predict_daily_schedule.py` Elo payında ev avantajını 100 alıyordu, API 50 (`HOME_COURT_ADVANTAGE`); ortak fonksiyonla düzeldi.
+
+- [x] Seçenek kararı (A / B)
+- [x] Tek harmanlama fonksiyonu (`src/inference/win_blend.py`), API, predict_matchup, predict_daily_schedule, WinPredictor ve SHAP ona bağlı
+- [x] SHAP yanıtı harmanlamayı gösteriyor
+- [x] Model raporundaki "12 maç" düzeltildi
 - [ ] Backtest'lerin ölçtüğü olasılık netleşti, README metrikleri etiketlendi

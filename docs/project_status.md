@@ -56,5 +56,5 @@ All three are trained on 2020-21..2025-26. Honest walk-forward (2021-22..2025-26
 1. Monitor live shadow predictions and feature drift in the API (`src/api`) for the 2026-27 season.
 2. Next accuracy gains need new information (injury/lineup data, market lines); feature pruning has reached the pregame-data ceiling.
 3. Phase 7 efficiency/strength feature work remains parked until explicitly resumed.
-4. **Open:** API and CLI give different WIN probabilities in the first games of a season (early-season Elo blend is applied only in the API and `predict_daily_schedule`). Tracked in `reports/audits/2026-10-21_api_cli_win_probability_mismatch.md`; pick up after the structure cleanup.
+4. **Mostly fixed:** API, CLI, daily schedule, WinPredictor and SHAP now share one early-season blend (`src/inference/win_blend.py`). Remaining: label which probability backtest/README metrics measure. Tracked in `reports/audits/2026-10-21_api_cli_win_probability_mismatch.md`; pick up after the structure cleanup.
 
