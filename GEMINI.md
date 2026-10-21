@@ -4,8 +4,8 @@ These rules apply to all future work in this workspace unless the user explicitl
 
 ## Agent Required References (Read FIRST before any action)
 Before modifying code, running models, or performing analysis, the AI assistant MUST review these documents in order:
-1. `ARTIFACT_REGISTRY.md` — Single source of truth for all data, model, and report paths. Never overwrite production paths listed here without explicit user approval.
-2. `PROJECT_STATUS.md` — Tracks the current active phases, production model configurations, and next steps.
+1. `docs/artifact_registry.md` — Single source of truth for all data, model, and report paths. Never overwrite production paths listed here without explicit user approval.
+2. `docs/project_status.md` — Tracks the current active phases, production model configurations, and next steps.
 3. `README.md` — Core architecture overview and quick-start pipeline commands.
 4. `reports/production/model_performance_and_architecture_report.md` — Production V10/V10.1 model architecture, calibration methods, and benchmark parameters.
 5. `docs/season_onboarding_guide.md` — Sequence of CLI commands to ingest and bootstrap new seasons.
@@ -16,14 +16,14 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 - Production artifacts under `models/production/`, `data/production/`, and `config/production_artifacts.yaml` must never be overwritten unless the user explicitly approves.
 
 ## Artifact Registry Authority
-- `ARTIFACT_REGISTRY.md` is the single source of truth for artifact status.
-- Before using, modifying, promoting, archiving, or replacing any dataset, report, model, or metadata file, consult `ARTIFACT_REGISTRY.md` first.
+- `docs/artifact_registry.md` is the single source of truth for artifact status.
+- Before using, modifying, promoting, archiving, or replacing any dataset, report, model, or metadata file, consult `docs/artifact_registry.md` first.
 
 ## Experimental Work
-- New experiments must write outputs under the current experimental artifact locations tracked in `ARTIFACT_REGISTRY.md`.
+- New experiments must write outputs under the current experimental artifact locations tracked in `docs/artifact_registry.md`.
 
 ## Reports
-- Audit and analysis reports must go under the active audit/report locations tracked in `ARTIFACT_REGISTRY.md`.
+- Audit and analysis reports must go under the active audit/report locations tracked in `docs/artifact_registry.md`.
 - Experiment reports must be registered before they are treated as active outputs.
 
 ## Current Production Decision

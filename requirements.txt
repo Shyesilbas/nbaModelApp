@@ -1,7 +1,15 @@
+fastapi
+uvicorn[standard]
+pydantic
+joblib
 pandas
 numpy
+scikit-learn==1.5.2
 pyarrow
+pyyaml
+xgboost
+lightgbm
 shap
 matplotlib
-duckdb
-pdfplumber
+nba_api
+requests

@@ -24,7 +24,7 @@ Planın uygulamasına başlandı. Kaynak kodda aşağıdaki değişiklikler yap�
 
 ### İlk aday koşusu sonucu
 
-İlk dry-run raporu `training_run_20261004_124239.md` (silindi) içindedir. Daha sonra temiz adaylar için yeniden eğitim yapıldı; son ölçüm ve üretime alınan release kaydı `training_run_20261004_130707.md` (silindi) ve [leakage_clean_release.json](models/production/leakage_clean_release.json) içindedir. Son ölçümde WIN Brier/AUC 0.2136/0.7186; SCORE total/margin MAE 15.5896/12.4897; PLAYER PTS/REB/AST MAE 4.5392/1.9507/1.3619.
+İlk dry-run raporu `training_run_20261004_124239.md` (silindi) içindedir. Daha sonra temiz adaylar için yeniden eğitim yapıldı; son ölçüm ve üretime alınan release kaydı `training_run_20261004_130707.md` (silindi) ve [leakage_clean_release.json](../models/production/leakage_clean_release.json) içindedir. Son ölçümde WIN Brier/AUC 0.2136/0.7186; SCORE total/margin MAE 15.5896/12.4897; PLAYER PTS/REB/AST MAE 4.5392/1.9507/1.3619.
 
 | Model | Ölçü | Üretim | Yeni aday | Değişim |
 |---|---:|---:|---:|---:|
@@ -61,49 +61,49 @@ Model mimarisi makul bir başlangıç sunuyor: tahmini kazanma olasılığı ile
 | Takım skoru | SCORE V10.1 | Tempo, iki takımın hücum rating’i ve sayı farkı için XGBoost; ardından Ridge düzeltmesi | Ev/deplasman skoru, toplam ve fark |
 | Oyuncu projeksiyonu | PLAYER V9 | PTS, REB, AST için ayrı LightGBM regresyonları ve Ridge düzeltmesi | Oyuncu istatistikleri ve takım kadro girdileri |
 
-Üretim dosyaları [config/production_artifacts.yaml](config/production_artifacts.yaml) içinden seçiliyor. Bu seçim, isimleri veya eski `src/inference` sarmalayıcılarını değil, canlı servisin hangi artefaktlara başvurduğunu anlamak için esas alınmalı.
+Üretim dosyaları [config/production_artifacts.yaml](../config/production_artifacts.yaml) içinden seçiliyor. Bu seçim, isimleri veya eski `src/inference` sarmalayıcılarını değil, canlı servisin hangi artefaktlara başvurduğunu anlamak için esas alınmalı.
 
 ## İncelemede görülen somut sorunlar
 
 ### P0 — SCORE türetilmiş skor değerlendirmesi holdout verisini kullanıyor
 
-`ScoreTrainer._train_eval_final` önce yalnızca eğitim kısmında bir değerlendirme modeli kurup holdout MAE’sini hesaplıyor; sonra aynı fonksiyonda bütün veriyle yeniden eğitilmiş modeli döndürüyor. Çağıran kod bu dönen modeli daha önce ayrılmış `*_test_idx` satırlarında ev/deplasman skoru ölçmek için kullanıyor. Bu nedenle `derived_home_score_mae` ve `derived_away_score_mae` değerleri bağımsız holdout ölçümü değil; test satırları modelin eğitiminde görülmüş oluyor. İlgili akış: [score_trainer.py](src/training/score_trainer.py#L198), [score_trainer.py](src/training/score_trainer.py#L267).
+`ScoreTrainer._train_eval_final` önce yalnızca eğitim kısmında bir değerlendirme modeli kurup holdout MAE’sini hesaplıyor; sonra aynı fonksiyonda bütün veriyle yeniden eğitilmiş modeli döndürüyor. Çağıran kod bu dönen modeli daha önce ayrılmış `*_test_idx` satırlarında ev/deplasman skoru ölçmek için kullanıyor. Bu nedenle `derived_home_score_mae` ve `derived_away_score_mae` değerleri bağımsız holdout ölçümü değil; test satırları modelin eğitiminde görülmüş oluyor. İlgili akış: [score_trainer.py](../src/training/score_trainer.py#L198), [score_trainer.py](../src/training/score_trainer.py#L267).
 
 **Çözüm:** Değerlendirme modeli ile üretim için sonradan tüm uygun geçmişte kurulacak modeli farklı nesne ve değişkenlerde tut. Holdout tahminlerini yalnızca holdout öncesi veriyle eğitilen modelden al. Türetilmiş ev/deplasman skorları, toplam ve fark metriklerinin tamamını bu tahminlerden hesapla. Nihai artefaktı holdout ölçümü tamamlandıktan sonra, yalnızca üretim eğitim kapsamı için ayrıca eğit.
 
 ### P0 — SCORE Ridge düzeltmesi zaman dışı değerlendirmeyi kirletebilir
 
-OOF temel model tahminleri `KFold(shuffle=True)` ile üretiliyor ve Ridge artıkları tüm satırlarda eğitiliyor. Böylece bir tarih için üretilmiş tarihsel tahmin, daha ileri tarihlerdeki oyunlardan öğrenilmiş ağaç/Ridge düzeltmelerini dolaylı olarak içerebilir. Bu çıktı WIN modelinin `SCORE_PRED_MARGIN` girdisini oluştururken de kullanılıyor. İlgili akış: [score_trainer.py](src/training/score_trainer.py#L294), [win.yaml](config/features/win.yaml).
+OOF temel model tahminleri `KFold(shuffle=True)` ile üretiliyor ve Ridge artıkları tüm satırlarda eğitiliyor. Böylece bir tarih için üretilmiş tarihsel tahmin, daha ileri tarihlerdeki oyunlardan öğrenilmiş ağaç/Ridge düzeltmelerini dolaylı olarak içerebilir. Bu çıktı WIN modelinin `SCORE_PRED_MARGIN` girdisini oluştururken de kullanılıyor. İlgili akış: [score_trainer.py](../src/training/score_trainer.py#L294), [win.yaml](../config/features/win.yaml).
 
 **Çözüm:** Kalibrasyon verisini ve OOF tahminlerini expanding-window / rolling-origin ile üret. Her doğrulama bloğunun modeli yalnızca o bloktan önceki maçları görebilsin. Ridge de sadece önceki tarihlerdeki OOF artıklarla eğitilsin. Gelecek tarihi kullanmayan OOF margin tablosu üret; aynı tablo sürümünü WIN veri setine bağla. Ek olarak `SCORE_PRED_MARGIN` özelliği olmadan WIN ablation çalıştır; fark bu özelliğin gerçek katkısını gösterecek.
 
 ### P0 — SCORE çekirdek oyuncu kullanılabilirliği eğitimde maç sonrası bilgiden geliyor
 
-Eğitim özellik üreticisi `TEAM_CORE_TOP3_AVAILABLE_RATE` değerini o maç kutu skorunda dakika almış oyuncu sayısından türetiyor: [core_player_availability_features.py](src/features/core_player_availability_features.py#L35), [core_player_availability_features.py](src/features/core_player_availability_features.py#L74). Canlı özellik üreticisi ise tahmin anındaki mevcut/öngörülen uygunluğu kullanıyor: [build_matchup_features.py](scripts/build_matchup_features.py#L678), [score.yaml](config/features/score.yaml#L20). Bu iki değişken aynı anlamı taşımıyor. Model maçtan sonra oynayıp oynamadığını öğrenirken canlıda bunu tahmin etmek zorunda kalıyor.
+Eğitim özellik üreticisi `TEAM_CORE_TOP3_AVAILABLE_RATE` değerini o maç kutu skorunda dakika almış oyuncu sayısından türetiyor: [core_player_availability_features.py](../src/features/core_player_availability_features.py#L35), [core_player_availability_features.py](../src/features/core_player_availability_features.py#L74). Canlı özellik üreticisi ise tahmin anındaki mevcut/öngörülen uygunluğu kullanıyor: [build_matchup_features.py](../scripts/build_matchup_features.py#L678), [score.yaml](../config/features/score.yaml#L20). Bu iki değişken aynı anlamı taşımıyor. Model maçtan sonra oynayıp oynamadığını öğrenirken canlıda bunu tahmin etmek zorunda kalıyor.
 
 **Çözüm:** Tarihsel anlık sakatlık/aktif listesi yoksa “oynadı” bilgisini maç öncesi uygunluk gibi kullanma. Ya bu değişkeni model sözleşmesinden çıkar ya da yalnızca tahmin zamanında mevcut olabilecek bir kaynaktan tarihli sakatlık/aktiflik snapshot’ları oluştur. Veri yoksa açık bir `availability_source` ve eksiklik bayrağı taşı; sessizce gerçek oynama bilgisiyle doldurma. Eski ve düzeltilmiş özellik setlerini aynı walk-forward dilimlerinde karşılaştır.
 
 ### P0 — Eğitim ve raporlama sözleşmeleri/sonuçları birbiriyle tam uyuşmuyor
 
-`config/training_manifest.yaml` sezon dışı ayırma ve `final_refit_scope: train_only` tanımlıyor: [training_manifest.yaml](config/training_manifest.yaml#L1). Üretim WIN metadata’sı ise 2025–26 sezonunu kapsayan 10.280 satırlık son refit’i, ayrıca önceki bağımsız sezon testini kaydediyor: [win_metadata.json](models/production/win_metadata.json#L233), [win_metadata.json](models/production/win_metadata.json#L246). Üretim performans raporunda 2025–26 için %70,94 doğruluk yazarken bağımsız sezon metriği metadata’da %66,59: [model_performance_and_architecture_report.md](reports/production/model_performance_and_architecture_report.md#L120). Bu değerler farklı ölçüm kapsamları olabilir; fakat rapor bunları açık biçimde ayırmıyor. Eski governance belgeleri de V9/62 özellik politikasını anlatırken aktif artefakt V10 olarak kayıtlı. Bu, yalnızca dokümantasyon kusuru değil: hangi modelin hangi ölçümle üretime alındığını belirsizleştiriyor.
+`config/training_manifest.yaml` sezon dışı ayırma ve `final_refit_scope: train_only` tanımlıyor: [training_manifest.yaml](../config/training_manifest.yaml#L1). Üretim WIN metadata’sı ise 2025–26 sezonunu kapsayan 10.280 satırlık son refit’i, ayrıca önceki bağımsız sezon testini kaydediyor: [win_metadata.json](../models/production/win_metadata.json#L233), [win_metadata.json](../models/production/win_metadata.json#L246). Üretim performans raporunda 2025–26 için %70,94 doğruluk yazarken bağımsız sezon metriği metadata’da %66,59: [model_performance_and_architecture_report.md](../reports/production/model_performance_and_architecture_report.md#L120). Bu değerler farklı ölçüm kapsamları olabilir; fakat rapor bunları açık biçimde ayırmıyor. Eski governance belgeleri de V9/62 özellik politikasını anlatırken aktif artefakt V10 olarak kayıtlı. Bu, yalnızca dokümantasyon kusuru değil: hangi modelin hangi ölçümle üretime alındığını belirsizleştiriyor.
 
 **Çözüm:** Her eğitim koşusu manifest hash’i, veri snapshot kimliği, feature contract hash’i, kod sürümü, bağımlılıklar, eğitim tarih aralığı, kalibrasyon aralığı, holdout aralığı ve artefakt checksum’larını kaydetsin. Raporlar metrik kapsamını `seen/train`, `inner validation`, `season holdout`, `final refit` diye açıkça sınıflasın. Üretim model kartı yalnızca bağımsız doğrulama sonuçlarını “genelleme performansı” olarak göstersin. Eski metrikleri yeni metriklerle aynı tabloda karşılaştırmadan önce kullanılan model checksum’ını ve split’i doğrula.
 
 ### P1 — Rastgele CV zaman serisi problemine uygun değil
 
-SCORE hiperparametre araması `RandomizedSearchCV(cv=3)`; Ridge OOF ise karıştırılmış KFold kullanıyor: [score_trainer.py](src/training/score_trainer.py#L177), [score_trainer.py](src/training/score_trainer.py#L294). Gelecek sezonun dağılımı ve sakatlık/rotasyon rejimleri geçmişten farklı olabileceği için rastgele katlar gerçek üretim senaryosunu temsil etmiyor.
+SCORE hiperparametre araması `RandomizedSearchCV(cv=3)`; Ridge OOF ise karıştırılmış KFold kullanıyor: [score_trainer.py](../src/training/score_trainer.py#L177), [score_trainer.py](../src/training/score_trainer.py#L294). Gelecek sezonun dağılımı ve sakatlık/rotasyon rejimleri geçmişten farklı olabileceği için rastgele katlar gerçek üretim senaryosunu temsil etmiyor.
 
 **Çözüm:** Sezon bazlı dış döngü ve tarih bazlı iç döngü kur. Örnek: 2022–23’e kadar eğitim → 2023–24 test; sonra 2023–24’e kadar eğitim → 2024–25 test; sonra 2024–25’e kadar eğitim → 2025–26 test. Kalibrasyon ve hiperparametre seçimi yalnızca her fold’un geçmiş bölümünde gerçekleşsin. En yeni tamamlanmış sezon, model/özellik seçimi bittikten sonra son kilitli doğrulama olarak kullanılsın.
 
 ### P1 — Eski başlangıç dönemi ve eksik girdilerde sıfır doldurma riskli
 
-WIN sözleşmesinde oyuncu projeksiyon girdileri `fill_default_when_unavailable` ile sıfıra düşebiliyor: [win.yaml](config/features/win.yaml). Sıfır, “ortalama/bilinmeyen” ile “hiç oyuncu katkısı yok” anlamlarını karıştırabilir. Yeni sezonda bir veya iki maç varken son sezonun verisi ve ELO kullanmak makul; ancak mevcut sezon örnek sayısı, shrinkage ağırlığı ve kaynaklar tahminde görünür ve ölçülür olmalı.
+WIN sözleşmesinde oyuncu projeksiyon girdileri `fill_default_when_unavailable` ile sıfıra düşebiliyor: [win.yaml](../config/features/win.yaml). Sıfır, “ortalama/bilinmeyen” ile “hiç oyuncu katkısı yok” anlamlarını karıştırabilir. Yeni sezonda bir veya iki maç varken son sezonun verisi ve ELO kullanmak makul; ancak mevcut sezon örnek sayısı, shrinkage ağırlığı ve kaynaklar tahminde görünür ve ölçülür olmalı.
 
 **Çözüm:** Her kritik özellik için eksiklik oranını sezon ve takım bazında kaydet. Sıfırın gerçek anlamlı değer olduğu değişkenlerde ayrı `*_MISSING` bayrağı kullan. Sayısal doldurma değerlerini eğitim katında fit edilen istatistiklerden veya açıkça tanımlı lig ortalaması öncülünden üret. Yeni sezon özelliklerinde örnek sayısına göre shrinkage uygula; ağırlığı sabit bir “5 maçtan sonra geçiş” kuralına bağlama, geçmiş sezon dışı performansta seç ve kalibre et.
 
 ### P1 — Tahmin aralıklarının kapsama ve belirsizliği kanıtlanmalı
 
-Canlı skor aralıkları metadata ofsetleriyle oluşturuluyor; metadata’da yoksa sabit ±8/±12/±10 sayı yedekleri var: [score_prediction.py](ml-service/app/services/score_prediction.py#L124). “%80 aralık” etiketi kullanılacaksa farklı sezonlarda yaklaşık %80 gerçek kapsama göstermeli; kapsam takım skoru, toplam ve fark için ayrı ölçülmeli.
+Canlı skor aralıkları metadata ofsetleriyle oluşturuluyor; metadata’da yoksa sabit ±8/±12/±10 sayı yedekleri var: [score_prediction.py](../ml-service/app/services/score_prediction.py#L124). “%80 aralık” etiketi kullanılacaksa farklı sezonlarda yaklaşık %80 gerçek kapsama göstermeli; kapsam takım skoru, toplam ve fark için ayrı ölçülmeli.
 
 **Çözüm:** Oyun bazlı dış örnek tahmin artıklarından, hedeflenen kapsama göre conformal veya quantile aralıklar hesapla. Kapsama ile aralık genişliğini birlikte raporla; her sezon, ev/deplasman ve maç önü tahmin zamanı için kalibre et. Veri yetersizse yüzde kapsama iddiası yerine açıkça “tarihsel tipik aralık” de.
 
@@ -275,18 +275,18 @@ Sabit eşikleri bir defa belirleyip sonsuza dek korumak yerine, mevcut şampiyon
 
 ## İlgili kaynaklar
 
-- Aktif artefakt seçimi: [config/production_artifacts.yaml](config/production_artifacts.yaml)
-- Eğitim sezon sözleşmesi: [config/training_manifest.yaml](config/training_manifest.yaml)
-- WIN özellik sözleşmesi: [config/features/win.yaml](config/features/win.yaml)
-- SCORE özellik sözleşmesi: [config/features/score.yaml](config/features/score.yaml)
-- WIN eğitim/değerlendirme: [src/training/win_trainer.py](src/training/win_trainer.py)
-- SCORE eğitim/değerlendirme: [src/training/score_trainer.py](src/training/score_trainer.py)
-- PLAYER eğitim/değerlendirme: [src/training/player_trainer.py](src/training/player_trainer.py)
-- Canlı SCORE uygulaması: [ml-service/app/services/score_prediction.py](ml-service/app/services/score_prediction.py)
-- Canlı tam tahmin bileşimi: [ml-service/app/services/game_full.py](ml-service/app/services/game_full.py)
-- Tarihsel core availability üretimi: [src/features/core_player_availability_features.py](src/features/core_player_availability_features.py)
-- Üretim WIN metadata’sı: [models/production/win_metadata.json](models/production/win_metadata.json)
-- Üretim SCORE metadata’sı: [models/production/score_metadata.json](models/production/score_metadata.json)
+- Aktif artefakt seçimi: [config/production_artifacts.yaml](../config/production_artifacts.yaml)
+- Eğitim sezon sözleşmesi: [config/training_manifest.yaml](../config/training_manifest.yaml)
+- WIN özellik sözleşmesi: [config/features/win.yaml](../config/features/win.yaml)
+- SCORE özellik sözleşmesi: [config/features/score.yaml](../config/features/score.yaml)
+- WIN eğitim/değerlendirme: [src/training/win_trainer.py](../src/training/win_trainer.py)
+- SCORE eğitim/değerlendirme: [src/training/score_trainer.py](../src/training/score_trainer.py)
+- PLAYER eğitim/değerlendirme: [src/training/player_trainer.py](../src/training/player_trainer.py)
+- Canlı SCORE uygulaması: [ml-service/app/services/score_prediction.py](../ml-service/app/services/score_prediction.py)
+- Canlı tam tahmin bileşimi: [ml-service/app/services/game_full.py](../ml-service/app/services/game_full.py)
+- Tarihsel core availability üretimi: [src/features/core_player_availability_features.py](../src/features/core_player_availability_features.py)
+- Üretim WIN metadata’sı: [models/production/win_metadata.json](../models/production/win_metadata.json)
+- Üretim SCORE metadata’sı: [models/production/score_metadata.json](../models/production/score_metadata.json)
 - Önceki kalite/leakage denetimi: `reports/audits/model_quality_leakage_and_governance_audit.md` (silindi)
 - Eğitim governance özeti: `reports/operations/training_governance_status.md` (silindi)
 # Uygulama durumu — 2026-10-04
@@ -295,9 +295,9 @@ Leakage azaltma ve üretim adayı değerlendirmesi `reports/evaluation/training_
 
 ## 1. Tam Üretim Yığını Çok Sezonlu Walk-Forward Backtest (WIN, SCORE, PLAYER)
 
-[scripts/walk_forward_benchmark.py](scripts/walk_forward_benchmark.py) ile 5 kesintisiz dış test sezonunda (2021–22'den 2025–26'ya kadar, toplam 4.407 görülmemiş takım maçı ve 137.540 oyuncu maçı) tam üretim yığınları test edildi:
+[scripts/walk_forward_benchmark.py](../scripts/walk_forward_benchmark.py) ile 5 kesintisiz dış test sezonunda (2021–22'den 2025–26'ya kadar, toplam 4.407 görülmemiş takım maçı ve 137.540 oyuncu maçı) tam üretim yığınları test edildi:
 
-* **Rapor:** [reports/evaluation/multi_season_walk_forward_backtest.md](reports/evaluation/multi_season_walk_forward_backtest.md) ve [multi_season_walk_forward_backtest.json](reports/evaluation/multi_season_walk_forward_backtest.json)
+* **Rapor:** [reports/evaluation/multi_season_walk_forward_backtest.md](../reports/evaluation/multi_season_walk_forward_backtest.md) ve [multi_season_walk_forward_backtest.json](../reports/evaluation/multi_season_walk_forward_backtest.json)
 * **WIN Modeli (LightGBM Kalibre):** 5 sezonun ağırlıklı ortalamasında **0.2259 Brier** ve **0.6702 AUC** elde ederek saf Elo (0.2258) ve lojistik kıyasa (0.2271) paralel yüksek kalibrasyon sağladı.
 * **SCORE Modeli (XGBoost):** Hareketli tempo × hücum verimliliği taban çizgisine kıyasla:
   * Toplam Skor MAE: **14.85 sayı** vs Baseline 16.18 sayı (**1.33 sayı daha az hata**)
@@ -310,7 +310,7 @@ Leakage azaltma ve üretim adayı değerlendirmesi `reports/evaluation/training_
 
 ## 2. Çok Sezonlu Özellik Ablasyon Çalışması (Aşama 3)
 
-[scripts/run_feature_ablations.py](scripts/run_feature_ablations.py) ile aday özellik aileleri 5 dış test sezonunda katı expanding window kuralıyla test edildi:
+[scripts/run_feature_ablations.py](../scripts/run_feature_ablations.py) ile aday özellik aileleri 5 dış test sezonunda katı expanding window kuralıyla test edildi:
 
 * **Rapor:** `reports/evaluation/feature_ablation_study.md` (silindi) ve `feature_ablation_study.json` (silindi)
 * **Temel Bulgular:** 
@@ -320,8 +320,8 @@ Leakage azaltma ve üretim adayı değerlendirmesi `reports/evaluation/training_
 
 ## 3. Canlı Shadow Modu ve Drift İzleme Altyapısı (Aşama 4)
 
-* **Shadow Logger:** [ml-service/app/services/shadow_logger.py](ml-service/app/services/shadow_logger.py) ile canlı servise gelen her tam tahmin `prediction_id`, zaman damgası, model sürümü, conformal aralıklar ve girdi snapshot'ı ile `data/predictions/shadow_predictions_log.jsonl` dosyasına yazılacak şekilde entegre edildi ([ml-service/app/services/game_full.py](ml-service/app/services/game_full.py)).
-* **Drift & Kalibrasyon Monitörü:** [scripts/monitor_shadow_and_drift.py](scripts/monitor_shadow_and_drift.py) ile loglanan tahminlerin tamamlanmış maçlarla eşleştirilip Brier, MAE, Conformal kapsama ve Kolmogorov-Smirnov girdi kayma testlerini yürüten otomatik raporlama hattı kuruldu (`reports/operations/live_shadow_and_drift_report.md` (silindi)).
+* **Shadow Logger:** [ml-service/app/services/shadow_logger.py](../ml-service/app/services/shadow_logger.py) ile canlı servise gelen her tam tahmin `prediction_id`, zaman damgası, model sürümü, conformal aralıklar ve girdi snapshot'ı ile `data/predictions/shadow_predictions_log.jsonl` dosyasına yazılacak şekilde entegre edildi ([ml-service/app/services/game_full.py](../ml-service/app/services/game_full.py)).
+* **Drift & Kalibrasyon Monitörü:** [scripts/monitor_shadow_and_drift.py](../scripts/monitor_shadow_and_drift.py) ile loglanan tahminlerin tamamlanmış maçlarla eşleştirilip Brier, MAE, Conformal kapsama ve Kolmogorov-Smirnov girdi kayma testlerini yürüten otomatik raporlama hattı kuruldu (`reports/operations/live_shadow_and_drift_report.md` (silindi)).
 
 ## Kapsam ve Tasarım Kararları
 

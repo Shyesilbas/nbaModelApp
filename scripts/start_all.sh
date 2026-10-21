@@ -21,7 +21,7 @@ trap on_exit EXIT INT TERM
 # 1) Start FastAPI ML service
 if command -v python3 >/dev/null 2>&1; then
   echo "Starting ML service..."
-  if [ -f "ml-service/requirements.txt" ]; then
+  if [ -f "requirements.txt" ]; then
     cd ml-service
     # create venv if missing
     if [ ! -d ".venv" ]; then
@@ -29,7 +29,7 @@ if command -v python3 >/dev/null 2>&1; then
       python3 -m venv .venv
       . .venv/bin/activate
       pip install --upgrade pip >/dev/null
-      pip install -r requirements.txt >/dev/null
+      pip install -r "$REPO_ROOT/requirements.txt" >/dev/null
     else
       . .venv/bin/activate
     fi
@@ -44,7 +44,7 @@ if command -v python3 >/dev/null 2>&1; then
     echo "ML service started (PID $ML_PID) on port 8001"
     deactivate || true
   else
-    echo "ml-service/requirements.txt not found — skipping ML service start"
+    echo "requirements.txt not found — skipping ML service start"
   fi
 else
   echo "python3 not found — cannot start ML service"

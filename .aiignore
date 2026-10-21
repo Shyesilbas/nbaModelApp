@@ -15,8 +15,8 @@ models/**/*weights*
 !models/**/*.json
 !config/**/*.yaml
 !config/**/*.yml
-!ARTIFACT_REGISTRY.md
-!PROJECT_STATUS.md
+!docs/artifact_registry.md
+!docs/project_status.md
 
 # Runtime/cache
 logs/**
@@ -30,7 +30,7 @@ logs/**
 **/package-lock.json
 package-lock.json
 
-# Vektörel ve Medya Dosyaları (Örn: frontend/public/icons.svg on binlerce satır path içerebilir)
+# Vektörel ve Medya Dosyaları (on binlerce satır path içerebilir)
 **/*.svg
 **/*.ico
 **/*.png

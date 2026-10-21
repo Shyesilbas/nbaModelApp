@@ -77,7 +77,6 @@ Run the automated orchestrator to bootstrap both the Python ML backend and the V
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pip install -r ml-service/requirements.txt
 
 # Frontend
 cd frontend
@@ -110,7 +109,7 @@ PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date 2026-10-08 --seaso
 
 ## Documentation & Governance
 
-- [ARTIFACT_REGISTRY.md](ARTIFACT_REGISTRY.md) — Single source of truth for all active models, datasets, and paths.
-- [PROJECT_STATUS.md](PROJECT_STATUS.md) — Current development phase, active production configurations, and backlog.
+- [docs/artifact_registry.md](docs/artifact_registry.md) — Single source of truth for all active models, datasets, and paths.
+- [docs/project_status.md](docs/project_status.md) — Current development phase, active production configurations, and backlog.
 - [reports/production/model_performance_and_architecture_report.md](reports/production/model_performance_and_architecture_report.md) — Active model architecture, the 2026-10-20 review changes and walk-forward benchmarks.
 - [docs/season_onboarding_guide.md](docs/season_onboarding_guide.md) — Step-by-step workflow for ingesting new NBA seasons.
