@@ -264,6 +264,38 @@ def main():
     )
     args = parser.parse_args()
 
+    # Each run does one command; dispatch would otherwise run the first and
+    # silently drop the rest.
+    command_flags = {
+        "update_data": "--update-data",
+        "build_player_dataset_v4": "--build-player-dataset-v4",
+        "train_player_models": "--train-player-models",
+        "train_score_models": "--train-score-models",
+        "train_win_model": "--train-win-model",
+        "startup_check": "--startup-check",
+        "sync_pipeline": "--sync-pipeline",
+        "pre_model_readiness": "--pre-model-readiness",
+        "bootstrap_season": "--bootstrap-season",
+        "export_frontend_data": "--build-frontend-store",
+        "build_schedule_context": "--build-schedule-context",
+        "fetch_boxscores": "--fetch-boxscores",
+        "check_data_freshness": "--check-data-freshness",
+        "run_roster_analysis": "--run-roster-analysis",
+    }
+    pipeline_flags = {
+        "mock": "--mock",
+        "build_model_dataset": "--build-model-dataset",
+        "build_v3_dataset": "--build-v3-dataset",
+    }
+    chosen = [flag for dest, flag in command_flags.items() if getattr(args, dest)]
+    if len(chosen) > 1:
+        parser.error(f"run one command at a time, got: {' '.join(chosen)}")
+    pipeline_chosen = [flag for dest, flag in pipeline_flags.items() if getattr(args, dest)]
+    if chosen and pipeline_chosen:
+        parser.error(f"{' '.join(pipeline_chosen)} cannot be combined with {chosen[0]} (default feature pipeline only)")
+    if args.skip_post_update_rebuilds and not args.update_data:
+        parser.error("--skip-post-update-rebuilds only applies to --update-data")
+
     from scripts.data_paths import get_data_paths
     from scripts.season_utils import season_to_file_token, normalize_season
     
