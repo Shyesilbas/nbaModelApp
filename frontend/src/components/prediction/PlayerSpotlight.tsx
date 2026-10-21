@@ -139,7 +139,10 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
           { label: awayInfo.abbr, name: awayInfo.name, color: awayInfo.color, players: players.away_players, isHome: false },
           { label: homeInfo.abbr, name: homeInfo.name, color: homeInfo.color, players: players.home_players, isHome: true },
         ].map((side) => {
-          const activePlayers = side.players?.filter((p) => p.status !== "DNP" && (p.predicted_min ?? p.predicted_pts ?? 0) > 0) || [];
+          const activePlayers = side.players?.filter((p) => p.status !== "DNP" && p.status !== "OUT" && (p.predicted_min ?? p.predicted_pts ?? 0) > 0) || [];
+          // Players marked OUT stay in the table (after the rotation) so the override is visible
+          const outPlayers = side.players?.filter((p) => p.status === "OUT") || [];
+          const tablePlayers = [...activePlayers, ...outPlayers];
           const dnpPlayers = side.players?.filter((p) => p.status === "DNP" || ((p.predicted_min ?? 0) <= 0 && p.status !== "OUT")) || [];
           const isDnpOpen = !!expandedDnp[side.label];
 
@@ -160,6 +163,11 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                   <span className="text-xs font-medium text-text-secondary bg-background-secondary border border-border px-2 py-0.5 rounded-sm uppercase">
                     {activePlayers.length} Rotasyon Oyuncusu
                   </span>
+                  {outPlayers.length > 0 && (
+                    <span className="text-xs font-medium text-status-error bg-status-error/10 px-1.5 py-0.5 rounded-sm">
+                      {outPlayers.length} OUT
+                    </span>
+                  )}
                   {dnpPlayers.length > 0 && (
                     <span className="text-xs font-medium text-text-secondary bg-background-secondary px-1.5 py-0.5 rounded-sm">
                       +{dnpPlayers.length} DNP
@@ -183,26 +191,30 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
-                    {activePlayers.map((p: PlayerMatchupData) => {
+                    {tablePlayers.map((p: PlayerMatchupData) => {
                       const isOut = p.status === "OUT";
                       const isRestricted = p.status === "RESTRICTED";
+                      const stat = (value: number) => (isOut ? "–" : value.toFixed(1));
 
                       return (
                         <tr
                           key={p.player_id}
                           onClick={() => handleOpenPlayerModal(p, side.isHome)}
-                          className={`hover:bg-background-secondary/60 transition-colors cursor-pointer group ${
-                            isOut ? "opacity-60" : ""
+                          className={`transition-colors cursor-pointer group ${
+                            isOut ? "bg-background-secondary/60 hover:bg-background-secondary" : "hover:bg-background-secondary/60"
                           }`}
                         >
                           <td className="px-3 py-2 font-medium text-text-primary">
                             <div className="flex items-center gap-2">
                               <PlayerPhoto playerId={p.player_id} name={p.player_name} size={24} />
-                              <span className={`group-hover:text-primary transition-colors ${isOut ? "line-through text-text-muted" : ""}`}>
+                              <span className={`group-hover:text-primary transition-colors ${isOut ? "text-text-secondary" : ""}`}>
                                 {p.player_name}
                               </span>
                               {isOut && (
-                                <span className="text-xs font-semibold uppercase px-1.5 py-0.2 rounded-sm bg-status-error/10 text-status-error">
+                                <span
+                                  className="text-xs font-semibold uppercase px-1.5 py-0.5 rounded-sm bg-status-error/10 text-status-error"
+                                  title="Bu maçta oynamayacak olarak işaretlendi"
+                                >
                                   OUT
                                 </span>
                               )}
@@ -216,17 +228,17 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                           <td className="px-2 py-2 text-center text-xs uppercase text-text-secondary">
                             {p.position_group}
                           </td>
-                          <td className="px-2 py-2 text-right font-semibold tabular-nums text-text-primary">
-                            {p.predicted_pts.toFixed(1)}
+                          <td className={`px-2 py-2 text-right tabular-nums ${isOut ? "text-text-secondary" : "font-semibold text-text-primary"}`}>
+                            {stat(p.predicted_pts)}
                           </td>
                           <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
-                            {p.predicted_reb.toFixed(1)}
+                            {stat(p.predicted_reb)}
                           </td>
                           <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
-                            {p.predicted_ast.toFixed(1)}
+                            {stat(p.predicted_ast)}
                           </td>
-                          <td className="px-2 py-2 text-right font-semibold tabular-nums text-primary">
-                            {p.predicted_pra.toFixed(1)}
+                          <td className={`px-2 py-2 text-right tabular-nums ${isOut ? "text-text-secondary" : "font-semibold text-primary"}`}>
+                            {stat(p.predicted_pra)}
                           </td>
                           <td className="px-2.5 py-2 text-center">
                             <button
