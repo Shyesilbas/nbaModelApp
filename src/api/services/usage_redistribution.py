@@ -4,6 +4,7 @@ import pandas as pd
 
 
 from src.features.roster_absence import BENCH_MIN_CAP
+from src.inference.team_reconciliation import reconciliation_factors
 
 # Fixed role minutes, used only while there is too little recorded starter data to fit starter_history's model.
 STARTER_MIN_FLOOR = 26.0
@@ -209,8 +210,16 @@ def redistribute_usage_and_minutes(
                     cap_limit = 22.0 if is_preseason else 38.0
                     df.at[a_idx, "PROJ_MIN"] = min(cap_limit, cur_min + add_min)
 
-        # Scale active rotation minutes to exactly target_team_minutes (240.0) for display
+        # Fit the active rotation to target_team_minutes (240.0) for display. Excess minutes come off
+        # in proportion to (1 - P(plays)) x minutes, as the points do in team_reconciliation, so the
+        # regulars keep their usual minutes and the uncertain bench absorbs the cut.
         active_mins_sum = sum(df.at[idx, "PROJ_MIN"] for idx in active_indices)
+        if active_mins_sum > target_team_minutes and not is_preseason:
+            cur = pd.Series({idx: float(df.at[idx, "PROJ_MIN"]) for idx in active_indices})
+            cut = pd.Series(reconciliation_factors(cur, df.loc[active_indices, "BASE_MIN"], target_team_minutes), index=active_indices)
+            for idx in active_indices:
+                df.at[idx, "PROJ_MIN"] = cur[idx] * cut[idx]
+            active_mins_sum = sum(df.at[idx, "PROJ_MIN"] for idx in active_indices)
         if active_mins_sum > 0:
             scale_factor = target_team_minutes / active_mins_sum
             upper_min_bound = 22.0 if is_preseason else 38.0

@@ -1,6 +1,7 @@
 from datetime import date
 import logging
 from typing import Any, Dict, List, Tuple
+import numpy as np
 import pandas as pd
 
 from src.core.artifact_paths import production_release
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 from . import win_prediction as svc
 from .player_projection import get_player_predictions
 from .availability import assumed_out_ids, importance_score
+from src.inference.team_reconciliation import team_reconciliation
 from .explanation import explain_win_probability, explain_xgboost_model
 from .score_prediction import predict_score
 from ..schemas import (
@@ -59,7 +61,7 @@ def _score_values_from_response(score_resp: ScorePredictionResponse) -> Dict[str
     }
 
 
-def _build_game_full_player_list(df, scaled_pts, scaled_reb, scaled_ast, scale) -> List[GameFullPlayer]:
+def _build_game_full_player_list(df, scaled_pts, scaled_reb, scaled_ast, factors) -> List[GameFullPlayer]:
     players = []
     for i, (_, r) in enumerate(df.iterrows()):
         pid = None
@@ -98,7 +100,7 @@ def _build_game_full_player_list(df, scaled_pts, scaled_reb, scaled_ast, scale) 
             proj_ast=s_ast,
             proj_pra=s_pra,
             raw_pts=raw_p,
-            scale_factor=round(scale, 3),
+            scale_factor=round(float(factors[i]), 3),
             status=stat_status,
             proj_min=p_min,
             importance=importance_score(r),
@@ -136,15 +138,15 @@ def _predict_game_full_players(
     raw_away_reb = away_players_df["RAW_PROJ_REB"].tolist()
     raw_away_ast = away_players_df["RAW_PROJ_AST"].tolist()
 
-    # Projections are not rescaled to the team score: they are per player given that he plays, so
-    # a rotation's sum exceeds the team total and scaling it down biased every player low
-    # (2025-26 replay: PTS MAE 4.65 -> 4.91). scale_factor stays in the response at 1.0.
+    home_f, home_scale = team_reconciliation(home_players_df, home_score)
+    away_f, away_scale = team_reconciliation(away_players_df, away_score)
     return (
-        _build_game_full_player_list(home_players_df, raw_home_pts, raw_home_reb, raw_home_ast, 1.0),
-        _build_game_full_player_list(away_players_df, raw_away_pts, raw_away_reb, raw_away_ast, 1.0),
-        1.0,
-        1.0,
+        _build_game_full_player_list(home_players_df, *(np.multiply(x, home_f) for x in (raw_home_pts, raw_home_reb, raw_home_ast)), home_f),
+        _build_game_full_player_list(away_players_df, *(np.multiply(x, away_f) for x in (raw_away_pts, raw_away_reb, raw_away_ast)), away_f),
+        home_scale,
+        away_scale,
     )
+
 
 
 def _build_game_explanation(feats_home: Dict[str, Any], feats_away: Dict[str, Any]) -> GameExplanationSub:

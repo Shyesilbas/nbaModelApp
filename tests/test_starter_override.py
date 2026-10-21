@@ -112,3 +112,19 @@ def test_out_player_production_moves_once():
     without = redistribute_usage_and_minutes(df, {1: {"status": "OUT", "factor": 0.0}})["RAW_PROJ_PTS"].sum()
     # teammates recover 70% of his 17 points: the team projects lower, never higher
     assert abs((healthy - without) - 0.3 * 17.0) < 0.5
+
+
+def test_team_reconciliation_cuts_uncertain_players_first():
+    import numpy as np
+    import pandas as pd
+    from src.inference.team_reconciliation import reconciliation_factors, team_reconciliation
+
+    pts = pd.Series([28.0, 20.0, 12.0, 8.0, 6.0])
+    mins = pd.Series([35.0, 32.0, 24.0, 14.0, 9.0])
+    f = reconciliation_factors(pts, mins, 64.0)
+    assert abs((pts * f).sum() - 64.0) < 1e-6
+    assert f[0] > f[3] > f[4]  # the star keeps the most, the 9-minute player the least
+    assert (reconciliation_factors(pts, mins, 90.0) == 1.0).all()  # never scales up
+    df = pd.DataFrame({"RAW_PROJ_PTS": [28.0, 0.0], "MIN_EMA_10": [35.0, 20.0], "STATUS": ["ACTIVE", "OUT"]})
+    factors, scale = team_reconciliation(df, 20.0)
+    assert factors[1] == 1.0 and np.isclose(scale, 20.0 / 28.0)

@@ -158,7 +158,7 @@ Each season is predicted by models fitted only on earlier seasons (`python -m sc
 ## 7. Known Limitations
 
 1. **Near the pregame ceiling**: WIN beats Elo + home court by only ~0.002 Brier on average and SCORE totals match a last-10-points baseline; the margin model and player PTS carry the real gains. Further accuracy needs new information (injury/lineup data, market lines).
-2. **Player projections are conditional on playing**: they are not rescaled to the team score (that biased every player low by 2.2 PTS), so a team's projected points sum to ~15% above its predicted score; the live player rows and opponent allowance come from the raw box scores (`reports/audits/2026-10-22_player_pipeline_audit/`).
+2. **Player projections are conditional on playing**: the team-score excess (~20%) is cut from each player by his chance of sitting (`src/inference/team_reconciliation.py`), so regulars move little; the live player rows and opponent allowance come from the raw box scores (`reports/audits/2026-10-22_player_pipeline_audit/`).
 3. **Opening 2026-27 Elo** includes a roster-turnover adjustment that the training seasons never had; early-season WIN predictions rely on it.
 4. **The 2025-26 holdout has been used for many decisions**; the walk-forward averages above are the more reliable estimate.
 5. **Early season is served by inference-time transitions, not by the models**: training rows start at a team's ~4th game, so SCORE pace/rating inputs hand over from last season's team means over 6 games, player projections lean on last season's averages for 3 games, and season-start roster availability moves only with explicit overrides (`reports/backtests/2026-10-21_early_season/`).

@@ -1,5 +1,7 @@
 from . import win_prediction as svc
+from src.inference.team_reconciliation import team_reconciliation
 from .player_projection import get_player_predictions
+from .score_prediction import predict_score
 from ..schemas import PlayerPrediction, PlayerPredictionResponse, ScorePredictionRequest
 
 
@@ -25,12 +27,14 @@ def predict_players(request: ScorePredictionRequest) -> PlayerPredictionResponse
     home_players_df = players_df[players_df["IS_HOME"] == 1]
     away_players_df = players_df[players_df["IS_HOME"] == 0]
 
-    # Not rescaled to the team score (see game_full._predict_game_full_players)
-    home_scale = away_scale = 1.0
+    # Same reconciliation with the team score as /predict/game_full
+    score_resp = predict_score(request)
+    home_factors, _ = team_reconciliation(home_players_df, score_resp.predicted_home_score)
+    away_factors, _ = team_reconciliation(away_players_df, score_resp.predicted_away_score)
 
-    def parse_players(df, scale):
+    def parse_players(df, factors):
         players = []
-        for _, r in df.iterrows():
+        for (_, r), scale in zip(df.iterrows(), factors):
             s_pts = round(float(r["RAW_PROJ_PTS"]) * scale, 1)
             s_reb = round(float(r["RAW_PROJ_REB"]) * scale, 1)
             s_ast = round(float(r["RAW_PROJ_AST"]) * scale, 1)
@@ -45,8 +49,8 @@ def predict_players(request: ScorePredictionRequest) -> PlayerPredictionResponse
             ))
         return players
 
-    home_list = parse_players(home_players_df, home_scale)
-    away_list = parse_players(away_players_df, away_scale)
+    home_list = parse_players(home_players_df, home_factors)
+    away_list = parse_players(away_players_df, away_factors)
     home_list.sort(key=lambda x: x.predicted_pts, reverse=True)
     away_list.sort(key=lambda x: x.predicted_pts, reverse=True)
 
