@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.core.data_paths import get_data_paths
+from src.core.data_paths import PLAYER_TRAINING_CSV, get_data_paths
 from src.features.player_form import add_player_matchup_features
 from src.core.season_utils import normalize_season, get_default_season
 from src.features.win_strength_features import attach_actual_points
@@ -127,7 +127,7 @@ def check_season_freshness(season):
     # Check processed model-ready data
     processed_paths = {
         "V2 Team Model Ready": Path(dp.team_model_ready_v2),
-        "V3 Team Model Ready (V3)": ROOT / f"data/processed/team_model_ready_v3_{season.replace('-', '_')}.csv",
+        "V3 Team Model Ready (V3)": Path(dp.team_model_ready),
         "Score Dataset (V2 + Player Feats)": Path(dp.score_model_dataset)
     }
     
@@ -193,7 +193,7 @@ def evaluate_model_on_season(model_dir, season):
     # Retrieve paths
     dp = get_data_paths(season)
     
-    v3_path = ROOT / "data" / "processed" / f"team_model_ready_v3_{season.replace('-', '_')}.csv"
+    v3_path = Path(dp.team_model_ready)
     if not v3_path.exists():
         return {"error": f"V3 dataset does not exist for {season}. Please run build-v3-dataset first."}
         
@@ -218,9 +218,9 @@ def evaluate_model_on_season(model_dir, season):
         missing_win_features = [c for c in win_features if c not in df.columns]
         if missing_win_features:
             print(f"Dynamically generating player projections and ELO features for {season}...")
-            player_feat_path = ROOT / "data" / "experimental" / "player_model_ready_v4_usg.csv"
+            player_feat_path = PLAYER_TRAINING_CSV
             if not player_feat_path.exists():
-                print("player_model_ready_v4_usg.csv not found. Rebuilding player dataset...")
+                print(f"{player_feat_path} not found. Rebuilding player dataset...")
                 from src.processing.player_dataset_builder import build_player_dataset_v4
                 build_player_dataset_v4(seasons=["2024-25", "2025-26"])
                 

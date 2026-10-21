@@ -17,8 +17,6 @@ from src.validation.contracts import check_team_games
 
 logger = logging.getLogger("TeamGamesFetcher")
 
-RAW_TEAM_CSV = "data/raw/team_games/nba_team_games_regular_and_playoffs.csv"
-
 EXPECTED_COLUMNS = [
     'SEASON_ID', 'TEAM_ID', 'TEAM_ABBREVIATION', 'TEAM_NAME', 'GAME_ID', 
     'GAME_DATE', 'MATCHUP', 'WL', 'MIN', 'PTS', 'FGM', 'FGA', 'FG_PCT', 

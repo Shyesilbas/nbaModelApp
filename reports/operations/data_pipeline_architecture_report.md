@@ -45,7 +45,7 @@ Sistemde sezon bazlı parametreler ve dosya yolları dinamik olarak yönetilir:
 
 1. **Season Path Resolver**:
    - [src/core/data_paths.py](../../src/core/data_paths.py) içinde bulunan `get_data_paths(season)` fonksiyonu, sistemin tek dosya yolu yöneticisidir.
-   - [config/data_sources.yaml](../../config/data_sources.yaml) içindeki tanımlara göre `data/raw/`, `data/processed/` ve `data/features/` dizinlerinin yollarını belirler. Sezon ismini (örn: `2024-25`) dosya token'ına (örn: `2024_25`) dönüştürerek dinamik dosya yolları oluşturur.
+   - sezon klasörünün (`data/season=YYYY-YY/{raw,processed,features,analysis}`) ve sezonlar arası `data/training/`, `data/reference/` dosyalarının yollarını tek yerden belirler. Sezon ismini (örn: `2024-25`) dosya token'ına (örn: `2024_25`) dönüştürerek dinamik dosya yolları oluşturur.
    - [src/core/season_utils.py](../../src/core/season_utils.py) sezon formatlarını normalize eder (örn: `2024-2025` veya `2024_25` girdilerini `2024-25` standardına getirir). Ayrıca veri kümelerine yanlış sezon verilerinin karışmasını engellemek için tarih ve `GAME_ID` prefix doğrulamaları yapar.
 
 2. **Yeni Sezon Bootstrapping**:
@@ -60,7 +60,7 @@ Sistemde sezon bazlı parametreler ve dosya yolları dinamik olarak yönetilir:
      4. Veri tazeliğini (`DataFreshnessService`) denetler ve rapor üretir.
      5. Frontend export'larını sezon bazlı olarak yazılır (`export_data`).
      6. Başarılı bootstrap sonrasında [data/manifests/](../../data/manifests) dizinine o sezona ait tüm üretilen dosyaları ve durum bilgilerini içeren bir manifest JSON dosyası yazar.
-   - **v3 eğitim veri seti (2026-10-21)**: Bootstrap, v2'den sonra sezonun `team_model_ready_v3` dosyasını da üretir (`scripts/rebuild_training_data.py::rebuild_season` + `enrich_v3_boxscore_features.enrich_all_seasons([season])`). `--update-data` bunu her gün tekrarlar. Sezonlar arası `player_model_ready_v4_usg` ise `scripts/rebuild_training_data.py` ile üretilir.
+   - **v3 eğitim veri seti (2026-10-21)**: Bootstrap, v2'den sonra sezonun `team_model_ready_v3` dosyasını da üretir (`scripts/rebuild_training_data.py::rebuild_season` + `enrich_v3_boxscore_features.enrich_all_seasons([season])`). `--update-data` bunu her gün tekrarlar. Sezonlar arası `data/training/player_model_ready.csv` ise `scripts/rebuild_training_data.py` ile üretilir.
    - **Sezon içi görünüm yenileme**: [scripts/refresh_current_season_views.py](../../scripts/refresh_current_season_views.py) devam eden sezon için canlı roster'ı ([src/analysis/live_roster_refresh.py](../../src/analysis/live_roster_refresh.py) → `analysis/team_rosters_live.csv`), frontend JSON'ları, oyuncu profillerini ve opsiyonel olarak SQLite store'u yeniden üretir. `--update-data` sonunda otomatik çalışır. Canlı roster yalnızca frontend export'larında kullanılır; model girdisi olan bootstrap roster (`analysis/team_rosters.csv`) değiştirilmez.
 
 ---
@@ -78,7 +78,7 @@ Oyuncu sakatlıklarının veya kadro değişikliklerinin takım gücüne etkisin
    - Her takımın oyuncuları bu skora göre büyükten küçüğe sıralanır.
    - **Ranks 1 - 3**: `IS_TOP3_CORE` olarak etiketlenir (Takımın ana yıldızları).
    - **Ranks 4 - 5**: `IS_TOP5_CORE` (fakat top 3 dışı) olarak etiketlenir (İkincil rotasyon elemanları).
-   - Sonuçlar [data/production/core_players.csv](../../data/production/core_players.csv) dosyasına yazılır.
+   - Sonuçlar `data/season=YYYY-YY/analysis/core_players.csv` dosyasına yazılır.
 
 3. **Model Feature'ı Olarak Core Availability (2026-10-21'de yeniden yazıldı)**:
    - Yukarıdaki sezon sonu listesi yalnızca raporlar ve frontend için kullanılır. Model feature'ları ([src/features/core_player_availability_features.py](../../src/features/core_player_availability_features.py)) artık her maç için core listesini **yalnızca o maçtan önceki** bilgiyle seçer:
@@ -97,7 +97,7 @@ Oyuncuların sezon içinde takım değiştirmesi (Trade, Waiver, Release), stati
 Sistem bu sorunu şu şekilde çözer:
 
 1. **İşlem Günlüğü (Transactions Log) Durumu**:
-   - [src/ingestion/ingest_transactions.py](../../src/ingestion/ingest_transactions.py) resmi NBA Player Movement feed'ini `data/transactions/player_movement.csv` dosyasına indirir; [scripts/ingest/ingest_espn_transactions.py](../../scripts/ingest/ingest_espn_transactions.py) ESPN hareket listesini `espn_transactions.csv` olarak tamamlar.
+   - [src/ingestion/ingest_transactions.py](../../src/ingestion/ingest_transactions.py) resmi NBA Player Movement feed'ini `data/reference/player_movement.csv` dosyasına indirir; [scripts/ingest/ingest_espn_transactions.py](../../scripts/ingest/ingest_espn_transactions.py) ESPN hareket listesini `espn_transactions.csv` olarak tamamlar.
    - Feed `--update-data` akışında (Step 9a) her gün yenilenir.
    - [src/analysis/roster_transactions.py](../../src/analysis/roster_transactions.py) feed'deki Trade / Signing / AwardOnWaivers / Waive hareketlerini sezon roster'ına uygular. Canlı oyuncu tahmini (`src/api/services/player_projection.py`, maç tarihine kadarki hareketler) ve frontend canlı roster'ı (`live_roster_refresh.py`, oyuncunun son maçından sonraki hareketler) bu modülü kullanır. Öncesinde 6 Ekim'de dondurulmuş roster, 17 Ekim'de waive edilen 105 oyuncuyu hâlâ takımlarında gösteriyordu.
    - Trade export'u ve çok takımlı takas tarihlerinin zenginleştirilmesi de aynı feed'i kullanır.
@@ -139,7 +139,7 @@ Yapılan kod incelemeleri ve refaktör çalışmaları sonucunda veri hattında 
 - **Çözüm**: [build_observed_affiliation_events.py](../../scripts/ingest/build_observed_affiliation_events.py) ve [roster_snapshot_generator.py](../../scripts/ingest/roster_snapshot_generator.py) script'leri CLI parametresi olarak `--season` kabul edecek ve yolları doğrudan `src.core.data_paths.get_data_paths` üzerinden dinamik çözecek şekilde refaktör edilmiştir.
 
 ### 2. Core Player Listesinin Statik Üretim Yolu ve Manuel Senkronizasyon (ÇÖZÜLDÜ)
-- **Çözüm**: Roster analizi çalıştırıldığında (`main.py --run-roster-analysis`) üretilen `core_players.csv` dosyası manifest kurallarına göre `data/production/` ve `data/canonical/` dizinlerine otomatik olarak kopyalanmakta ve senkronize edilmektedir.
+- **Çözüm**: Roster analizi çalıştırıldığında (`main.py --run-roster-analysis`) üretilen `core_players.csv` yalnızca sezon klasörüne (`data/season=YYYY-YY/analysis/`) yazılır; eski `data/production/` ve `data/canonical/` kopyaları 2026-10-21'de kaldırıldı.
 
 ### 3. Takas (Transactions) Verisinin Canlı Roster'a Bağlanması (ÇÖZÜLDÜ)
 - **Çözüm**: `src/analysis/roster_transactions.py` resmi hareket feed'ini canlı oyuncu tahminine ve frontend roster'ına uygular; feed günlük güncellenir. Testler: `tests/test_roster_transactions.py`.

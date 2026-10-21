@@ -139,7 +139,7 @@ def build_player_dataset_v4(seasons=None, output_path=None, custom_metadata_df=N
     if custom_metadata_df is not None:
         df_meta = custom_metadata_df
     else:
-        meta_path = root_dir / "data/canonical/player_metadata.csv"
+        meta_path = root_dir / "data/reference/player_metadata.csv"
         if not meta_path.exists():
             raise FileNotFoundError(f"Player metadata not found at {meta_path}")
         df_meta = pd.read_csv(meta_path)
@@ -229,7 +229,7 @@ def build_player_dataset_v4(seasons=None, output_path=None, custom_metadata_df=N
     df_ready = df_ready.sort_values([player_col, "GAME_DATE"]).reset_index(drop=True)
     
     if output_path is None:
-        output_path = root_dir / "data/experimental/player_model_ready_v4_usg.csv"
+        output_path = root_dir / "data/training/player_model_ready.csv"
         
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df_ready.to_csv(output_path, index=False)

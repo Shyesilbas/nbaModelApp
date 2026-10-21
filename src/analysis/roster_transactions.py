@@ -2,8 +2,8 @@
 
 The season roster (``analysis/team_rosters.csv``) is a snapshot taken when the season
 was bootstrapped, and game logs only reveal a move once the player plays for his new
-team. The NBA player movement feed (``data/transactions/player_movement.csv``, written by
-``scripts/ingest/ingest_transactions.py``) closes that gap:
+team. The NBA player movement feed (``data/reference/player_movement.csv``, written by
+``src/ingestion/ingest_transactions.py``) closes that gap:
 
 * Trade / Signing / AwardOnWaivers: the player moves to (or joins) ``TEAM_ID``;
 * Waive: the player leaves ``TEAM_ID`` if he is still listed there;
@@ -20,8 +20,10 @@ from typing import Mapping, Optional
 
 import pandas as pd
 
+from src.core.data_paths import PLAYER_MOVEMENTS_CSV
+
 ROOT = Path(__file__).resolve().parents[2]
-MOVEMENTS_PATH = ROOT / "data" / "transactions" / "player_movement.csv"
+MOVEMENTS_PATH = PLAYER_MOVEMENTS_CSV
 JOIN_TYPES = {"Trade", "Signing", "AwardOnWaivers"}
 LEAVE_TYPES = {"Waive"}
 

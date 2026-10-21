@@ -164,7 +164,7 @@ def build_situational_dataset(data_dir: str = "data") -> pd.DataFrame:
     return df
 
 
-def load_situational_lookup(csv_path: str = "data/processed/pbp_situational_features.csv") -> Dict[tuple[str, str], Dict[str, float]]:
+def load_situational_lookup(csv_path: str = "data/training/pbp_situational_features.csv") -> Dict[tuple[str, str], Dict[str, float]]:
     lookup: Dict[tuple[str, str], Dict[str, float]] = {}
     p = Path(csv_path)
     if not p.exists():

@@ -22,7 +22,7 @@ import pandas as pd
 
 from src.features.player_form import add_player_matchup_features
 from src.processing.cleaning import regulation_team_minutes
-from src.core.data_paths import get_data_paths
+from src.core.data_paths import PLAYER_TRAINING_CSV, get_data_paths, team_training_csv
 from src.core.season_utils import season_labels, season_to_file_token
 from src.training.player_trainer import PlayerModelTrainer
 from src.training.score_trainer import ScoreModelTrainer
@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore")
 
 ROOT = Path(__file__).resolve().parents[2]
 FIRST_TRAIN_SEASON = "2020-21"
-PLAYER_DATA = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
+PLAYER_DATA = PLAYER_TRAINING_CSV
 
 
 def season_of(dates: pd.Series) -> pd.Series:
@@ -40,7 +40,7 @@ def season_of(dates: pd.Series) -> pd.Series:
 
 
 def team_files(seasons):
-    files = [ROOT / "data/processed" / f"team_model_ready_v3_{season_to_file_token(s)}.csv" for s in seasons]
+    files = [team_training_csv(s) for s in seasons]
     missing = [str(f) for f in files if not f.exists()]
     if missing:
         raise FileNotFoundError(f"Missing team model-ready files: {missing}")

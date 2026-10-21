@@ -22,7 +22,7 @@ from src.frontend_store.player_history import build_player_season, nan_safe
 from src.frontend_store.season_status import CLOSED, finals_winner
 from src.frontend_store.store import (
     GLOBAL_SCHEMA, ROOT, SEASON_SCHEMA, STORE_VERSION, build_db, connect_ro, dumps,
-    global_db_path, read_doc, read_meta, season_db_path, season_token, stored_seasons,
+    global_db_path, read_doc, read_meta, season_db_path, stored_seasons,
 )
 
 
@@ -89,8 +89,7 @@ def build_games_feed(season: str) -> pd.DataFrame:
 
 
 def _boxscores(season: str, kind: str) -> pd.DataFrame:
-    token = season_token(season)
-    path = ROOT / "data" / "raw" / "boxscores" / kind / f"nba_{kind}_boxscores_{token}.csv"
+    path = ROOT / "data" / f"season={season}" / "raw" / "boxscores" / f"{kind}_boxscores.csv"
     df = _read_csv(path, dtype={"GAME_ID": str, "TEAM_ID": str})
     if not df.empty:
         df["GAME_ID"] = df["GAME_ID"].map(_norm_gid)
@@ -248,7 +247,7 @@ def build_season_store(season: str, force: bool = False) -> bool:
 
 
 def _player_metadata() -> dict[int, dict]:
-    path = ROOT / "data" / "canonical" / "player_metadata.csv"
+    path = ROOT / "data" / "reference" / "player_metadata.csv"
     df = _read_csv(path)
     fields = ["HEIGHT", "WEIGHT", "COLLEGE", "COUNTRY", "OFFICIAL_POSITION", "POSITION_GROUP",
               "DRAFT_YEAR", "DRAFT_ROUND", "DRAFT_NUMBER", "FROM_YEAR", "TO_YEAR", "ROSTER_STATUS"]

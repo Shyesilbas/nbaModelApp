@@ -191,12 +191,6 @@ def run_roster_analysis(
     # Core Players
     core_players_df.to_csv(os.path.join(data_dir, "core_players.csv"), index=False)
     
-    # Automatically copy to production and canonical directories
-    for extra_dir in ["data/production", "data/canonical"]:
-        os.makedirs(extra_dir, exist_ok=True)
-        core_players_df.to_csv(os.path.join(extra_dir, "core_players.csv"), index=False)
-        print(f"Automatically synchronized core players to: {extra_dir}/")
-    
     # Star Candidates
     star_candidates_df.to_csv(os.path.join(data_dir, "star_candidates.csv"), index=False)
     

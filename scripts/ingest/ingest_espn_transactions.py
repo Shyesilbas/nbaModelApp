@@ -1,5 +1,5 @@
 """Fetch ESPN NBA transactions (calendar years 2025-2026 = seasons 2025-26 and 2026-27) and turn them into
-per-player events in the same shape as the NBA player-movement feed (see enrich_multi_team_trade_dates.py)."""
+per-player events in the same shape as the NBA player-movement feed (``data/reference/player_movement.csv``)."""
 import re
 import unicodedata
 from pathlib import Path
@@ -7,9 +7,11 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+from src.core.data_paths import ESPN_TRANSACTIONS_CSV
+
 ROOT = Path(__file__).resolve().parents[2]
 URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/transactions"
-RAW_PATH = ROOT / "data" / "transactions" / "espn_transactions.csv"
+RAW_PATH = ESPN_TRANSACTIONS_CSV
 YEARS = (2025, 2026)
 ESPN_ABBR = {"NY": "NYK", "SA": "SAS", "GS": "GSW", "NO": "NOP", "UTAH": "UTA", "WSH": "WAS"}
 VERBS = "Waived|Signed|Re-signed|Acquired|Claimed|Converted|Assigned|Recalled|Received|Exercised|Hired|Fired"

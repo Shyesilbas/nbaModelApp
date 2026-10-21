@@ -113,6 +113,9 @@ def _run_train_win_model(args):
 
 def main():
     scripts_epilog = """standalone scripts (run with PYTHONPATH=. python3 <script> --help for details):
+  scripts/update_all_game_data.py [--season YYYY-YY] [--pbp-limit N]
+      One-shot daily refresh: --update-data, box scores, play-by-play, then rebuild the
+      PBP situational table (data/training/) and the frontend store.
   scripts/refresh_current_season_views.py --season YYYY-YY
       Refresh the live roster (team_rosters_live.csv) and the season's frontend store
       with current regular-season games. Also runs automatically in --update-data (Step 9b).
@@ -431,14 +434,12 @@ def main():
         mock_dir = os.path.join("data", "experimental", "mock")
         team_csv_path = os.path.join(mock_dir, "team_features.csv")
         player_csv_path = os.path.join(mock_dir, "player_features.csv")
-        processed_dir = mock_dir
         model_v2_csv_path = os.path.join(mock_dir, f"team_model_ready_v2_{token}.csv")
         report_path = os.path.join(mock_dir, "opponent_feature_report.md")
         v3_report_path = os.path.join(mock_dir, "team_model_ready_v3_report.md")
     else:
         team_csv_path = paths.team_features
         player_csv_path = paths.player_features
-        processed_dir = "data/processed"
         model_v2_csv_path = paths.team_model_ready_v2
         report_path = "reports/audits/opponent_feature_report.md"
         v3_report_path = "reports/operations/team_model_ready_v3_report.md"
@@ -495,18 +496,8 @@ def main():
     # 6. BUILD MODEL-READY DATASETS
     if args.build_model_dataset or args.build_v3_dataset:
         print("\n--- STEP 6: BUILDING MODEL-READY TEAM DATASETS ---")
-        from src.processing import build_team_model_dataset, build_team_model_dataset_v2, build_team_model_dataset_v3
-        
-        # Build V1 Dataset
-        df_team_model, dropped_count_v1 = build_team_model_dataset(df_team_features)
+        from src.processing import build_team_model_dataset_v2, build_team_model_dataset_v3
 
-        os.makedirs(processed_dir, exist_ok=True)
-        
-        model_csv_path = os.path.join(processed_dir, f"team_model_ready_{token}.csv")
-        
-        print(f"Saving model-ready team features (V1) to CSV: {model_csv_path}")
-        df_team_model.to_csv(model_csv_path, index=False)
-        
         # Build V2 Dataset (Opponent-Aware)
         print("\nEngineering opponent features...")
         df_team_features_with_opp = build_opponent_features(df_team_features)
@@ -607,7 +598,10 @@ def main():
             except KeyError as e:  # mock player logs lack box-score columns
                 print(f"Skipping roster absence features: missing column {e}")
             
-            model_v3_csv_path = os.path.join(processed_dir, f"team_model_ready_v3_{token}.csv")
+            model_v3_csv_path = (
+                os.path.join(mock_dir, f"team_model_ready_v3_{token}.csv") if args.mock else paths.team_model_ready
+            )
+            os.makedirs(os.path.dirname(model_v3_csv_path), exist_ok=True)
             
             print(f"Saving model-ready team features (V3) to CSV: {model_v3_csv_path}")
             df_team_model_v3.to_csv(model_v3_csv_path, index=False)
@@ -667,9 +661,9 @@ def main():
     print("\n============================================================")
     print("🎉 PIPELINE RUN COMPLETED SUCCESSFULLY! 🎉")
     if args.build_v3_dataset:
-        print(f"All features and model-ready datasets (V1, V2, V3) saved successfully.")
+        print(f"All features and model-ready datasets (V2, V3) saved successfully.")
     elif args.build_model_dataset:
-        print(f"All preprocessed features saved to '{os.path.dirname(team_csv_path)}/' and model-ready datasets (V1, V2) saved to '{processed_dir}/'")
+        print(f"All preprocessed features saved to '{os.path.dirname(team_csv_path)}/' and the V2 model-ready dataset saved to '{os.path.dirname(model_v2_csv_path)}/'")
     else:
         print(f"All preprocessed features saved to '{os.path.dirname(team_csv_path)}/'")
     print("============================================================")

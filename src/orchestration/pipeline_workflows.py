@@ -96,15 +96,13 @@ def run_build_enhanced_v2(args: Any) -> None:
     df_team_model_v2, _ = runner.build_model_ready_v2()
     season = normalize_season(args.season or get_default_season())
     token = season_to_file_token(season)
-    out_root = "data/experimental" if args.output_scope == "experimental" else "data/processed"
-    os.makedirs(out_root, exist_ok=True)
-    v2_csv = os.path.join(out_root, f"team_model_ready_v2_{token}.csv")
+    # Production writes the season file; experimental runs stay out of it.
+    if args.output_scope == "experimental":
+        v2_csv = os.path.join("data/experimental", f"team_model_ready_v2_{token}.csv")
+    else:
+        v2_csv = runner.paths.team_model_ready_v2
+    os.makedirs(os.path.dirname(v2_csv), exist_ok=True)
     df_team_model_v2.to_csv(v2_csv, index=False)
-
-    season_v2_path = runner.paths.team_model_ready_v2
-    if os.path.normpath(v2_csv) != os.path.normpath(season_v2_path):
-        os.makedirs(os.path.dirname(season_v2_path), exist_ok=True)
-        df_team_model_v2.to_csv(season_v2_path, index=False)
 
 
 def run_pre_model_readiness_pipeline(args: Any) -> None:
@@ -144,7 +142,7 @@ def run_bootstrap_season_pipeline(args: Any) -> None:
         "schedule_combined": get_data_paths(season).schedule_combined,
         "upcoming_games_context": get_data_paths(season).upcoming_context,
         "team_model_ready_v2": get_data_paths(season).team_model_ready_v2,
-        "team_model_ready_v3": f"data/processed/team_model_ready_v3_{token}.csv",
+        "team_model_ready_v3": get_data_paths(season).team_model_ready,
         "frontend_store": str(season_db_path(season)),
         "sync_passed": sync_result,
     }

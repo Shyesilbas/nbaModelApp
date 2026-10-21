@@ -23,7 +23,7 @@ class PlayerModelTrainer:
     def __init__(self, data_path=None, output_dir=None, release=None, manifest_metadata=None, holdout_config=None, feature_contract_path=None):
         root = Path(__file__).resolve().parents[2]
         self.release = release or manifest_release(root=root)
-        self.data_path = Path(data_path or root / "data/experimental/player_model_ready_v4_usg.csv")
+        self.data_path = Path(data_path or root / "data/training/player_model_ready.csv")
         self.output_dir = Path(output_dir or root / "models/experimental")
         self.manifest_metadata = manifest_metadata or {}
         self.holdout_config = holdout_config or {}

@@ -22,7 +22,7 @@ def enrich_all_seasons(seasons=SEASONS):
         dp = get_data_paths(season)
         
         raw_path = Path(dp.team_games_raw)
-        v3_csv = ROOT / "data" / "processed" / f"team_model_ready_v3_{token}.csv"
+        v3_csv = Path(dp.team_model_ready)
         features_csv = Path(dp.team_features)
         
         if not raw_path.exists() or not v3_csv.exists():

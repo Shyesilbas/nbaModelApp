@@ -107,10 +107,10 @@ class WinModelTrainer:
     ):
         root = Path(__file__).resolve().parents[2]
         self.release = release or manifest_release(root=root)
-        self.data_pattern = data_path or str(root / "data/processed/team_model_ready_v3_*.csv")
+        self.data_pattern = data_path or str(root / "data/training/team_model_ready_*.csv")
         self.data_files = [Path(p) for p in data_files] if data_files else None
         self.output_dir = Path(output_dir or root / "models/experimental")
-        self.player_data_path = Path(player_data_path or root / "data/experimental/player_model_ready_v4_usg.csv")
+        self.player_data_path = Path(player_data_path or root / "data/training/player_model_ready.csv")
         self.player_models_dir = Path(player_models_dir or root / "models/experimental")
         self.score_models_dir = Path(score_models_dir or self.output_dir)
         self.manifest_metadata = manifest_metadata or {}

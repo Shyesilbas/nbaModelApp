@@ -26,6 +26,7 @@ from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, mean_abs
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from src.core.data_paths import PLAYER_TRAINING_CSV, team_training_csv
 from src.features.win_strength_features import add_win_strength_features, attach_actual_points
 from src.features.continuous_elo import HOME_COURT_ADVANTAGE
 from src.training.score_trainer import get_location_features
@@ -93,7 +94,7 @@ def _evaluate_player(actual: pd.Series, pred: np.ndarray, baseline: pd.Series) -
 def load_dataset() -> pd.DataFrame:
     frames = []
     for s in SEASONS:
-        p = ROOT / f"data/processed/team_model_ready_v3_{s.replace('-', '_')}.csv"
+        p = team_training_csv(s)
         if not p.exists():
             continue
         df = pd.read_csv(p)
@@ -109,7 +110,7 @@ def load_dataset() -> pd.DataFrame:
 
 
 def load_player_dataset(player_features: list[str]) -> pd.DataFrame:
-    csv_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
+    csv_path = PLAYER_TRAINING_CSV
     if not csv_path.exists():
         return pd.DataFrame()
     wanted = set(["SEASON_ID", "GAME_DATE", "TARGET_PTS", "TARGET_REB", "TARGET_AST", "PLAYER_POSITION_GROUP",

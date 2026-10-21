@@ -29,18 +29,10 @@ def main():
         curr_roster_df=r26_df,
     )
 
-    out_dir = ROOT / "data/production"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"team_elo_initial_{target_season.replace('-', '_')}.json"
-
+    out_file = ROOT / f"data/season={target_season}/analysis/team_elo_initial.json"
+    out_file.parent.mkdir(parents=True, exist_ok=True)
     with open(out_file, "w") as f:
         json.dump(opening_ratings, f, indent=2)
-
-    # Also save in target season analysis directory if exists
-    season_analysis_dir = ROOT / f"data/season={target_season}/analysis"
-    if season_analysis_dir.exists():
-        with open(season_analysis_dir / "team_elo_initial.json", "w") as f:
-            json.dump(opening_ratings, f, indent=2)
 
     print(f"Saved initial Elo ratings ({len(opening_ratings)} teams) to {out_file}")
     

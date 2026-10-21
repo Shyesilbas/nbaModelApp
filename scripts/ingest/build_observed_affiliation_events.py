@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.core.data_paths import get_data_paths
-from src.core.season_utils import get_default_season, normalize_season, season_to_file_token
+from src.core.season_utils import get_default_season, normalize_season
 
 def main() -> None:
     """
@@ -22,12 +22,11 @@ def main() -> None:
     args = parser.parse_args()
 
     season = normalize_season(args.season or get_default_season())
-    token = season_to_file_token(season)
 
     paths = get_data_paths(season)
     player_games_path = paths.player_games_raw
     team_games_path = paths.team_games_raw
-    output_path = f"data/experimental/observed_affiliation_events_{token}.csv"
+    output_path = paths.observed_affiliation_events
 
     if not os.path.exists(player_games_path):
         raise FileNotFoundError(f"Missing raw player games at {player_games_path}")

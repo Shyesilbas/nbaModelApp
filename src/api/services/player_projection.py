@@ -6,6 +6,7 @@ from functools import lru_cache
 
 ROOT = Path(__file__).resolve().parents[3]
 
+from src.core.data_paths import PLAYER_METADATA_CSV, PLAYER_TRAINING_CSV, get_data_paths
 from src.core.season_utils import date_to_season
 from src.analysis.roster_transactions import MOVEMENTS_PATH, roster_as_of
 from src.features.player_form import add_player_matchup_features, pregame_player_rows
@@ -196,13 +197,13 @@ def _normalize_player_dataset(df: pd.DataFrame) -> pd.DataFrame:
 def _load_player_dataset(season: str = None):
     global _player_df_cache
 
-    v4_path = ROOT / "data/experimental/player_model_ready_v4_usg.csv"
+    v4_path = PLAYER_TRAINING_CSV
     season_path = None
     if season:
         season_path = ROOT / f"data/season={season}/features/player_features.csv"
 
     # Keyed by file versions so a data refresh is picked up without restarting the service.
-    meta_path = ROOT / "data/canonical/player_metadata.csv"
+    meta_path = PLAYER_METADATA_CSV
     sources = [p for p in (v4_path, season_path, meta_path) if p is not None and p.exists()]
     cache_key = tuple((str(p), p.stat().st_mtime_ns) for p in sources)
     if cache_key in _player_df_cache:
@@ -238,9 +239,7 @@ def _season_roster(roster_path: str, season: str, as_of: str, _mtimes: tuple) ->
 
 
 def _active_roster_ids(team: str, season: str, as_of=None):
-    roster_path = ROOT / f"data/season={season}/analysis/team_rosters.csv"
-    if not roster_path.exists():
-        roster_path = ROOT / "data/canonical/team_rosters.csv"
+    roster_path = Path(get_data_paths(season).team_rosters)
     if not roster_path.exists():
         return None, None
 

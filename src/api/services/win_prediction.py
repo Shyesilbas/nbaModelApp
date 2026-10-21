@@ -3,6 +3,7 @@ from ..schemas import (
     WinProbRequest, WinProbResponse
 )
 from src.features.build_matchup_features import build_features
+from src.core.data_paths import PLAYER_METADATA_CSV
 from src.features.continuous_elo import HOME_COURT_ADVANTAGE
 from typing import Any, Dict, Optional
 import logging
@@ -28,7 +29,7 @@ def init_model():
         logger.warning("Player models could not be loaded: %s", e)
         
     try:
-        canonical_path = ROOT / "data" / "canonical" / "player_metadata.csv"
+        canonical_path = PLAYER_METADATA_CSV
         if canonical_path.exists():
             df_can = pd.read_csv(canonical_path)
             for _, r in df_can.iterrows():

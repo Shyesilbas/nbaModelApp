@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Mapping
 import pandas as pd
 import yaml
 
+from src.core.data_paths import team_training_csv
+
 
 class TrainingManifestError(ValueError):
     pass
@@ -147,7 +149,7 @@ def load_training_manifest(path: str | Path | None = None, *, root: Path | None 
     if calibration_season and calibration_season not in modeling_seasons:
         modeling_seasons.append(calibration_season)
     for season in modeling_seasons:
-        file_path = project_root / "data" / "processed" / f"team_model_ready_v3_{season.replace('-', '_')}.csv"
+        file_path = team_training_csv(season, root=project_root)
         df = _assert_non_empty_csv(file_path)
         if "GAME_DATE" not in df.columns:
             raise TrainingManifestError(f"Team dataset lacks GAME_DATE: {file_path}")
@@ -156,7 +158,7 @@ def load_training_manifest(path: str | Path | None = None, *, root: Path | None 
     player_required_seasons = models.get("player", {}).get("required_seasons") or modeling_seasons + [validation_season]
     if not isinstance(player_required_seasons, list) or not all(isinstance(s, str) for s in player_required_seasons):
         raise TrainingManifestError("`models.player.required_seasons` must be a list of season strings when provided.")
-    player_path = project_root / "data" / "experimental" / "player_model_ready_v4_usg.csv"
+    player_path = project_root / "data" / "training" / "player_model_ready.csv"
     if validate_player_coverage:
         player_df = _assert_non_empty_csv(player_path)
         if "SEASON_ID" not in player_df.columns:

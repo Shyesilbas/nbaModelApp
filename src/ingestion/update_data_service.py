@@ -185,15 +185,13 @@ class UpdateDataService:
             # Step 8: Rebuild enhanced V2 dataset
             print("\nStep 8: Rebuilding enhanced V2 dataset...")
             v2_df, _ = runner.build_model_ready_v2()
-            out_root = "data/experimental" if runner.output_scope == "experimental" else "data/processed"
-            os.makedirs(out_root, exist_ok=True)
-            v2_path = os.path.join(out_root, f"team_model_ready_v2_{runner.token}.csv")
+            # Production writes the season file; experimental runs stay out of it.
+            if runner.output_scope == "experimental":
+                v2_path = os.path.join("data/experimental", f"team_model_ready_v2_{runner.token}.csv")
+            else:
+                v2_path = runner.paths.team_model_ready_v2
+            os.makedirs(os.path.dirname(v2_path), exist_ok=True)
             write_csv_atomic(v2_df, v2_path)
-
-            season_v2_path = runner.paths.team_model_ready_v2
-            if os.path.normpath(v2_path) != os.path.normpath(season_v2_path):
-                os.makedirs(os.path.dirname(season_v2_path), exist_ok=True)
-                write_csv_atomic(v2_df, season_v2_path)
 
             print("\nStep 8b: Rebuilding training-ready V3 dataset for the season...")
             try:

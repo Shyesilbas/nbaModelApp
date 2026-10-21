@@ -234,8 +234,7 @@ def season_opening_ratings(season: str) -> dict[str, float]:
     if season in _opening_cache:
         return _opening_cache[season]
     root = Path(__file__).resolve().parents[2]
-    token = season.replace("-", "_")
-    for init_path in [root / f"data/production/team_elo_initial_{token}.json", root / f"data/season={season}/analysis/team_elo_initial.json"]:
+    for init_path in [root / f"data/season={season}/analysis/team_elo_initial.json"]:
         if init_path.exists():
             try:
                 _opening_cache[season] = json.loads(init_path.read_text())

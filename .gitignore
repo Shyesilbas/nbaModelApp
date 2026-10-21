@@ -46,12 +46,9 @@ Thumbs.db
 # player bio metadata and the season-start bootstrap (roster snapshot, core players,
 # initial Elo), which depend on the date they were built.
 data/*
-!data/canonical
-data/canonical/*
-!data/canonical/player_metadata.csv
-!data/production
-data/production/*
-!data/production/team_elo_initial_2026_27.json
+!data/reference
+data/reference/*
+!data/reference/player_metadata.csv
 !data/season=2026-27
 data/season=2026-27/*
 !data/season=2026-27/analysis

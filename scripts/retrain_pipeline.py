@@ -22,7 +22,7 @@ from src.training.win_trainer import WinModelTrainer
 from src.training.segment_evaluation import evaluate_segments, player_metrics, score_metrics, win_metrics
 from src.training.training_manifest import load_training_manifest
 from src.core.artifact_paths import PRODUCTION_MANIFEST, production_release
-from src.core.data_paths import get_data_paths
+from src.core.data_paths import PLAYER_TRAINING_CSV, get_data_paths, team_training_csv
 from src.evaluation.generate_report import add_location_features, get_indicator_df
 from src.features.win_strength_features import attach_actual_points
 from src.features.player_form import add_player_matchup_features
@@ -51,7 +51,7 @@ def evaluate_model_files(model_dir, season, segments=None):
     model_dir = Path(model_dir)
     dp = get_data_paths(season)
     
-    v3_path = ROOT / "data" / "processed" / f"team_model_ready_v3_{season.replace('-', '_')}.csv"
+    v3_path = team_training_csv(season)
     if not v3_path.exists():
         return {"error": f"V3 dataset does not exist for {season}."}
         
@@ -186,7 +186,7 @@ def evaluate_model_files(model_dir, season, segments=None):
                 for name, probabilities in baseline_probabilities.items()
             }
     player_results = {}
-    player_data_path = ROOT / "data" / "experimental" / "player_model_ready_v4_usg.csv"
+    player_data_path = PLAYER_TRAINING_CSV
     player_features_path = model_dir / "player_features.pkl"
     if player_data_path.exists() and player_features_path.exists():
         player_df = pd.read_csv(player_data_path)
@@ -385,7 +385,7 @@ def main():
                 feature_contract_path=manifest.feature_contracts.get("player"),
             ).train_and_export()
 
-        validation_file = ROOT / "data" / "processed" / f"team_model_ready_v3_{validation_season.replace('-', '_')}.csv"
+        validation_file = team_training_csv(validation_season)
         if is_model_enabled("score"):
             print("-> Training Score Models (Ridge + Ridge Calibration)...")
             # Holdout copies (train_only) must not see the validation season; release models must.
@@ -405,7 +405,7 @@ def main():
 
         if is_model_enabled("win"):
             print("-> Training Win Probability Model...")
-            win_validation_file = ROOT / "data" / "processed" / f"team_model_ready_v3_{validation_season.replace('-', '_')}.csv"
+            win_validation_file = team_training_csv(validation_season)
             win_data_files = list(manifest.team_dataset_files)
             if win_validation_file.exists() and win_validation_file not in win_data_files:
                 win_data_files.append(win_validation_file)

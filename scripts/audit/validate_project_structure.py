@@ -7,6 +7,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from src.core.artifact_paths import load_production_manifest
+from src.core.data_paths import get_data_paths
 
 
 def _check(path: Path, errors: list[str]) -> None:
@@ -48,7 +49,7 @@ def main() -> int:
         ROOT / "models/production/player_model_ast.pkl",
         ROOT / "models/production/player_features.pkl",
         ROOT / "models/production/player_metadata.json",
-        ROOT / "data/production/core_players.csv",
+        Path(get_data_paths().core_players),
     ]
     for path in required:
         _check(path, errors)

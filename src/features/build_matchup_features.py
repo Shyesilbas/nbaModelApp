@@ -833,11 +833,7 @@ def compute_player_features_for_inference(
             how="inner"
         )
     else:
-        core_path = ROOT / f"data/season={season}/analysis/core_players.csv"
-        if not core_path.exists():
-            core_path = ROOT / "data/production/core_players.csv"
-        if not core_path.exists():
-            core_path = ROOT / "data/canonical/core_players.csv"
+        core_path = Path(paths.core_players)
         if not core_path.exists():
             return {f: 0.0 for f in player_features_list}
         df_core = pd.read_csv(core_path)

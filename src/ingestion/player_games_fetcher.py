@@ -16,8 +16,6 @@ from src.validation.contracts import check_player_games
 
 logger = logging.getLogger("PlayerGamesFetcher")
 
-RAW_PLAYER_CSV = "data/raw/player_games/nba_player_games_regular_and_playoffs.csv"
-
 EXPECTED_COLUMNS = [
     'SEASON_ID', 'Player_ID', 'Game_ID', 'GAME_DATE', 'MATCHUP', 'WL', 'MIN', 
     'FGM', 'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM', 'FTA', 'FT_PCT', 

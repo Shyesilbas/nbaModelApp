@@ -11,7 +11,7 @@ This document describes the end-to-end data flow, feature engineering, model dat
 - **Player Game Logs**: Fetched via `LeagueGameLog` into `player_games.csv` and `player_boxscores.csv`.
 - **Schedule**: Stored in `schedule.csv` and combined with upcoming fixtures into `schedule_combined.csv`.
 - **Starter Flags**: `LeagueGameLog` has no starter column; `src/ingestion/starters_fetcher.py` reads per-game starters from `BoxScoreTraditionalV3` (append-only, next to `player_games.csv`). Historical seasons: `scripts/backfill_starters.py`.
-- **Transactions**: `src/ingestion/ingest_transactions.py` (official NBA player movement feed, refreshed by `--update-data`) and `scripts/ingest/ingest_espn_transactions.py` write to `data/transactions/`. `src/analysis/roster_transactions.py` applies trades, signings and waivers to the season roster for live player predictions and the frontend live roster.
+- **Transactions**: `src/ingestion/ingest_transactions.py` (official NBA player movement feed, refreshed by `--update-data`) and `scripts/ingest/ingest_espn_transactions.py` write to `data/reference/`. `src/analysis/roster_transactions.py` applies trades, signings and waivers to the season roster for live player predictions and the frontend live roster.
 - **Write safety and contracts**: ingestion writes go through `src/ingestion/atomic_io.py` (temp file + `os.replace`). Raw team/player logs and team model-ready datasets are checked by `src/validation/contracts.py` before they are written; a violation stops the run and keeps the previous file.
 - **Dynamic Updates**: Daily updates run via `python3 main.py --update-data`, detecting missing completed games with randomized jitter and exponential backoff to handle API limits. The update also records starters and then runs `scripts/refresh_current_season_views.py` (live roster, frontend JSON, player profiles, SQLite store).
 
@@ -29,7 +29,7 @@ This document describes the end-to-end data flow, feature engineering, model dat
 ## 3. Data Layer (CSV & Frontend Store)
 
 1. **CSV pipeline data**: one CSV per table in every layer (raw, features, processed, analysis, training). Parquet copies were removed on 2026-10-21: 14 of 119 had gone stale and readers needed "newer of the two" logic; reads are fast enough as CSV (e.g. `team_model_ready_v3_2025_26` 95 ms).
-   - `player_model_ready_v4_usg.csv`: 165,988 player-game records.
+   - `player_model_ready.csv`: 165,988 player-game records.
 2. **Frontend Store (`data/frontend_store/`)**, the frontend's only data source:
    - One SQLite file per season (`season_YYYY_YY.db`: games feed, box scores, game details, player game logs and averages, PBP moments, rosters, movers) plus `global.db` (seasons, player profiles, season averages, trades). Built by `scripts/build_frontend_store.py` (`src/frontend_store/`) straight from `data/`; each file is built in a temp file and swapped in atomically.
    - A season is **closed** once a team has won four Finals games. A closed season's file is built once and then skipped (unless `STORE_VERSION` changes or `--force`), so past seasons cost nothing on daily updates. Measured: closed season ~20-30 s once, active season ~3 s, global ~2 s.
@@ -59,8 +59,8 @@ This document describes the end-to-end data flow, feature engineering, model dat
 
 ## 5. Dataset Assembly Layers
 
-- **Team Model-Ready V3**: `data/processed/team_model_ready_v3_{YYYY_YY}.csv`. Built by `scripts/rebuild_training_data.py` for all seasons, by `--bootstrap-season` for a new season, and refreshed daily for the in-progress season by `--update-data`.
-- **Player Model-Ready V4**: `data/experimental/player_model_ready_v4_usg.csv`.
+- **Team Model-Ready V3**: `data/training/team_model_ready_{YYYY_YY}.csv`. Built by `scripts/rebuild_training_data.py` for all seasons, by `--bootstrap-season` for a new season, and refreshed daily for the in-progress season by `--update-data`.
+- **Player Model-Ready V4**: `data/training/player_model_ready.csv`.
 - **Score Model Dataset**: Joint features combining pace, ratings, travel, and rest indicators.
 
 ---

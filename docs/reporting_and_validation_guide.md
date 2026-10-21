@@ -14,7 +14,7 @@ PYTHONPATH=. python3 scripts/generate_report.py --season YYYY-YY
 ### Checks Performed:
 - Existence and size of `team_games.csv`, `player_games.csv`, and `schedule.csv`.
 - Unique game ID counts, null checks, and date range validity.
-- Row counts and feature completeness for `team_model_ready_v3_{YYYY_YY}.csv` and `player_model_ready_v4_usg.csv`.
+- Row counts and feature completeness for `team_model_ready_{YYYY_YY}.csv` and `player_model_ready.csv`.
 
 ---
 

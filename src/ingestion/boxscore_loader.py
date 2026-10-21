@@ -75,11 +75,8 @@ def load_team_boxscores(save: bool = True, season: str = None, output_scope: str
     print(f"  ✅ Team box scores: {len(df):,} rows, {df['GAME_ID'].nunique():,} unique games")
 
     if save:
-        token = season_to_file_token(season or get_default_season())
-        out_team_dir = str(ROOT / "data/raw/boxscores/team")
-        team_bs_csv = str(ROOT / f"data/raw/boxscores/team/nba_team_boxscores_{token}.csv")
-        
-        os.makedirs(out_team_dir, exist_ok=True)
+        team_bs_csv = get_data_paths(season).raw_team_boxscores
+        os.makedirs(os.path.dirname(team_bs_csv), exist_ok=True)
         write_csv_atomic(df, team_bs_csv)
         print(f"  💾 Saved: {team_bs_csv}")
 
@@ -153,11 +150,8 @@ def load_player_boxscores(save: bool = True, season: str = None, output_scope: s
     print(f"  ✅ Player box scores: {len(df):,} rows, {df['PLAYER_ID'].nunique():,} unique players")
 
     if save:
-        token = season_to_file_token(season or get_default_season())
-        out_player_dir = str(ROOT / "data/raw/boxscores/player")
-        player_bs_csv = str(ROOT / f"data/raw/boxscores/player/nba_player_boxscores_{token}.csv")
-        
-        os.makedirs(out_player_dir, exist_ok=True)
+        player_bs_csv = get_data_paths(season).raw_player_boxscores
+        os.makedirs(os.path.dirname(player_bs_csv), exist_ok=True)
         write_csv_atomic(df, player_bs_csv)
         print(f"  💾 Saved: {player_bs_csv}")
 
@@ -265,8 +259,8 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
             os.makedirs(str(ROOT / "data/experimental"), exist_ok=True)
             results_csv = str(ROOT / f"data/experimental/game_results_{token}.csv")
         else:
-            os.makedirs(str(ROOT / "data/processed"), exist_ok=True)
             results_csv = dp.game_results
+            os.makedirs(os.path.dirname(results_csv), exist_ok=True)
             
         write_csv_atomic(results, results_csv)
         print(f"  💾 Saved results summary: {results_csv}")

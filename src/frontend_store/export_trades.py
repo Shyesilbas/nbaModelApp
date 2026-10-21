@@ -43,7 +43,7 @@ def _moves(impact: dict) -> list:
 
 
 def build_trades() -> list:
-    df = pd.read_csv(ROOT / "data" / "transactions" / "player_movement.csv")
+    df = pd.read_csv(ROOT / "data" / "reference" / "player_movement.csv")
     df = df[df.Transaction_Type == "Trade"]
     impact = _impact_by_player()
     trades = []

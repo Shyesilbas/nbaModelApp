@@ -34,7 +34,7 @@ Identifies franchise stars (`IS_TOP3_CORE`) and primary rotation players (`IS_TO
 ```bash
 PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis
 ```
-- **What it does**: Generates roster tables, calculates player Importance Scores, and updates `data/production/core_players.csv`.
+- **What it does**: Generates roster tables, calculates player Importance Scores, and writes `data/season=YYYY-YY/analysis/core_players.csv`.
 - **Output Report**: Emits a markdown audit under `reports/operations/season=YYYY-YY/roster_analysis.md`.
 
 ---
@@ -44,7 +44,7 @@ Reconstructs player-team affiliation timelines to eliminate trade leakage:
 ```bash
 PYTHONPATH=. python3 scripts/ingest/build_observed_affiliation_events.py --season YYYY-YY
 ```
-- **What it does**: Outputs transaction stint timelines to `data/experimental/observed_affiliation_events_YYYY_YY.csv`.
+- **What it does**: Outputs transaction stint timelines to `data/season=YYYY-YY/analysis/observed_affiliation_events.csv`.
 
 ---
 
@@ -55,7 +55,7 @@ PYTHONPATH=. python3 main.py --season YYYY-YY --bootstrap-season
 ```
 - **What it does**: 
   1. Generates 5/10/20-game rolling team and player features.
-  2. Assembles `team_model_ready_v3_{YYYY_YY}.csv` with Dean Oliver Four Factors and Continuous Elo ratings.
+  2. Assembles `team_model_ready_{YYYY_YY}.csv` with Dean Oliver Four Factors and Continuous Elo ratings.
   3. Writes season manifests to `data/manifests/`.
 
 ---

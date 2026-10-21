@@ -1,4 +1,4 @@
-"""Download the official NBA player movement feed (trades, signings, waivers) to data/transactions/player_movement.csv."""
+"""Download the official NBA player movement feed (trades, signings, waivers) to data/reference/player_movement.csv."""
 from pathlib import Path
 
 import pandas as pd
@@ -6,7 +6,7 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[2]
 FEED_URL = "https://stats.nba.com/js/data/playermovement/NBA_Player_Movement.json"
-OUT_PATH = ROOT / "data" / "transactions" / "player_movement.csv"
+OUT_PATH = ROOT / "data" / "reference" / "player_movement.csv"
 
 
 def ingest_transactions(output_path: Path = OUT_PATH) -> pd.DataFrame:

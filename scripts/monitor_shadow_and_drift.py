@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, mean_absolute_error, roc_auc_score
 
+from src.core.data_paths import team_training_csv
+
 try:
     from scipy.stats import ks_2samp
     HAS_SCIPY = True
@@ -36,7 +38,7 @@ def load_actual_results() -> pd.DataFrame:
     if not frames:
         # Fallback to team_model_ready files
         for season in ["2024_25", "2025_26"]:
-            path = ROOT / f"data/processed/team_model_ready_v3_{season}.csv"
+            path = team_training_csv(season)
             if path.exists():
                 df = pd.read_csv(path)
                 from src.features.win_strength_features import attach_actual_points
@@ -55,7 +57,7 @@ def load_actual_results() -> pd.DataFrame:
 def generate_bootstrap_shadow_predictions(count: int = 50) -> list[dict]:
     from src.core.artifact_paths import production_release
     """Generates synthetic shadow log rows from recent 2025-26 unseen games if log is fresh."""
-    p = ROOT / "data/processed/team_model_ready_v3_2025_26.csv"
+    p = team_training_csv("2025-26")
     if not p.exists():
         return []
     df = pd.read_csv(p)
@@ -163,7 +165,7 @@ def run_shadow_and_drift_monitor():
 
     # 3. Drift Analysis (KS Test vs Reference 2024-25 / 2025-26)
     drift_results = {}
-    ref_file = ROOT / "data/processed/team_model_ready_v3_2024_25.csv"
+    ref_file = team_training_csv("2024-25")
     if ref_file.exists() and HAS_SCIPY:
         ref_df = pd.read_csv(ref_file)
         live_feats = []

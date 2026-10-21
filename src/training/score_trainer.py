@@ -84,10 +84,10 @@ class ScoreModelTrainer:
     def __init__(self, data_pattern=None, output_dir=None, release=None, data_files=None, manifest_metadata=None, holdout_config=None, feature_contract_path=None, player_data_path=None, player_models_dir=None):
         root = Path(__file__).resolve().parents[2]
         self.release = release or manifest_release(root=root)
-        self.data_pattern = data_pattern or str(root / "data/processed/team_model_ready_v3_*.csv")
+        self.data_pattern = data_pattern or str(root / "data/training/team_model_ready_*.csv")
         self.data_files = [Path(p) for p in data_files] if data_files else None
         self.output_dir = Path(output_dir or root / "models/experimental")
-        self.player_data_path = Path(player_data_path or root / "data/experimental/player_model_ready_v4_usg.csv")
+        self.player_data_path = Path(player_data_path or root / "data/training/player_model_ready.csv")
         self.player_models_dir = Path(player_models_dir or root / "models/production")
         self.manifest_metadata = manifest_metadata or {}
         self.holdout_config = holdout_config or {}

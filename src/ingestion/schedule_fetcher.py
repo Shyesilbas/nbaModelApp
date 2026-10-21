@@ -16,9 +16,6 @@ from src.ingestion.atomic_io import write_csv_atomic
 
 logger = logging.getLogger("ScheduleFetcher")
 
-RAW_SCHEDULE_CSV = "data/raw/schedule/nba_schedule.csv"
-RAW_FINALS_CSV = "data/raw/schedule/nba_finals_upcoming.csv"
-
 SCHEDULE_COLUMNS = [
     'GAME_ID', 'GAME_DATE', 'GAME_START_UTC', 'HOME_TEAM_ABBREVIATION', 'AWAY_TEAM_ABBREVIATION',
     'SEASON_TYPE', 'IS_PLAYOFF', 'GAME_STATUS', 'PLAYOFF_ROUND', 'SERIES_GAME_NUMBER', 

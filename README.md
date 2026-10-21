@@ -43,11 +43,13 @@ Against simple pregame baselines over five walk-forward seasons (`reports/evalua
 ## System Architecture
 
 ```text
-├── data/
-│   ├── processed/         # Team model-ready datasets (V3, 2020-21 to 2025-26) as CSV
-│   ├── experimental/      # Player model-ready datasets (V4 USG, 165K rows)
+├── data/                  # Local only (gitignored) except the files noted in .gitignore
+│   ├── reference/         # Cross-season inputs: player metadata, player movement feed
+│   ├── season=YYYY-YY/    # One season: raw/ (game logs, box scores, PBP), processed/, features/, analysis/
+│   ├── training/          # Model-ready datasets: team_model_ready_YYYY_YY.csv, player_model_ready.csv
 │   ├── frontend_store/    # Per-season SQLite store served by the API to the frontend
-│   └── season=YYYY-YY/    # Season-scoped raw box scores, schedules, and rolling features
+│   ├── predictions/       # Shadow prediction log
+│   └── experimental/      # Outputs of --output-scope experimental and --mock runs only
 ├── frontend/
 │   ├── src/components/    # React prediction, player, and roster explorer views
 │   └── src/lib/           # Centralized constants, API clients, and query caching

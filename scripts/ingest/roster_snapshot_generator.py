@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.core.data_paths import get_data_paths
 from src.core.season_utils import get_default_season, normalize_season, season_to_file_token
 
 def build_player_team_affiliations_from_observed_events(events_df: pd.DataFrame) -> pd.DataFrame:
@@ -56,11 +57,9 @@ def build_player_team_affiliations(transactions_df: pd.DataFrame, season: Option
     Falls back to observed affiliation events if transactions are empty/stubbed.
     """
     if transactions_df.empty:
-        # Resolve season token dynamically
         actual_season = normalize_season(season or get_default_season())
-        token = season_to_file_token(actual_season)
-        # Fallback to experimental observed events if available
-        obs_path = f"data/experimental/observed_affiliation_events_{token}.csv"
+        # Fallback to the season's observed affiliation events if available
+        obs_path = get_data_paths(actual_season).observed_affiliation_events
         if os.path.exists(obs_path):
             obs_df = pd.read_csv(obs_path)
             return build_player_team_affiliations_from_observed_events(obs_df)
@@ -144,7 +143,7 @@ def build_roster_snapshots_from_affiliations(
 
     # Load player registry or core players for role & minutes mapping if available
     metadata_map = {}
-    for path in [f"data/experimental/player_registry_{token}.csv", "data/production/core_players.csv"]:
+    for path in [f"data/experimental/player_registry_{token}.csv", get_data_paths(actual_season).core_players]:
         if os.path.exists(path):
             meta_df = pd.read_csv(path)
             # Find columns

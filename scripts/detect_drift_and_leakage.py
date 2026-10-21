@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.core.data_paths import team_training_csv  # noqa: E402
+
 try:
     from scipy.stats import ks_2samp
     HAS_SCIPY = True
@@ -43,8 +45,8 @@ def main():
     print(f"Leakage Limit:    {args.threshold}")
     print("--------------------------------------------------")
     
-    ref_file = ROOT / "data" / "processed" / f"team_model_ready_v3_{args.reference_season.replace('-', '_')}.csv"
-    tgt_file = ROOT / "data" / "processed" / f"team_model_ready_v3_{args.target_season.replace('-', '_')}.csv"
+    ref_file = team_training_csv(args.reference_season)
+    tgt_file = team_training_csv(args.target_season)
     
     if not ref_file.exists():
         print(f"Error: Reference season file {ref_file} not found.")

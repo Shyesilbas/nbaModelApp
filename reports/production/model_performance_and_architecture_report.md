@@ -105,7 +105,7 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 - **Artifacts**: `player_model_{pts,reb,ast}.pkl`, `player_features.pkl`; contract `config/features/player.yaml` (explicit feature list).
 - **Structure**: one LightGBM regressor per target (L1 objective for PTS, which is right-skewed and scored on MAE).
 - **Features (21)**: last-5 and EMA-10 per stat, per-minute production, minutes (last 3, EMA-10, trend), usage EMA-10, rest, home, playoff, position flags (`IS_GUARD`, `IS_BIG`) and the opponent's last-10 allowance to the player's position group (`OPP_POS_{PTS,REB,AST}_ALLOWED_LAST_10`, built by `add_player_matchup_features` for training and inference alike).
-- **Positions** come from `data/canonical/player_metadata.csv`; the primary (first listed) official position decides (F-G -> WING).
+- **Positions** come from `data/reference/player_metadata.csv`; the primary (first listed) official position decides (F-G -> WING).
 - **No residual correction**: the former Ridge layer raised PTS MAE in every walk-forward season and was retired.
 
 ---

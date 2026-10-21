@@ -13,7 +13,7 @@ Before modifying code, running models, or performing analysis, the AI assistant 
 7. `config/production_artifacts.yaml` — Production configurations, paths, and metadata.
 
 ## Production Safety
-- Production artifacts under `models/production/`, `data/production/`, and `config/production_artifacts.yaml` must never be overwritten unless the user explicitly approves.
+- Production artifacts under `models/production/`, `config/production_artifacts.yaml` and the tracked season bootstrap files under `data/season=YYYY-YY/analysis/` must never be overwritten unless the user explicitly approves.
 
 ## Artifact Registry Authority
 - `docs/artifact_registry.md` is the single source of truth for artifact status.

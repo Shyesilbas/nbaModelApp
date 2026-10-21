@@ -22,9 +22,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
 
-from src.core.data_paths import get_data_paths
+from src.core.data_paths import PLAYER_TRAINING_CSV, get_data_paths
 from src.features.enrich_v3_boxscore_features import enrich_all_seasons
-from src.core.season_utils import season_to_file_token
 from src.training.training_manifest import load_training_manifest
 from src.features import build_opponent_features, build_player_features, build_team_features
 from src.features.core_player_availability_features import build_core_player_availability_features
@@ -50,9 +49,9 @@ def rebuild_season(season: str) -> None:
     with_core = build_core_player_availability_features(build_opponent_features(team_features), player_features)
     v3, _ = build_team_model_dataset_v3(with_core)
     v3 = add_absence_columns(v3, player)
-    os.makedirs("data/processed", exist_ok=True)
+    os.makedirs(os.path.dirname(dp.team_model_ready), exist_ok=True)
     check_team_model_ready(v3, f"team_model_ready_v3 {season}")
-    v3.to_csv(f"data/processed/team_model_ready_v3_{season_to_file_token(season)}.csv", index=False)
+    v3.to_csv(dp.team_model_ready, index=False)
     print(f"{season}: {len(team_features)} team rows, {len(player_features)} player rows, {len(v3)} model rows", flush=True)
 
 
@@ -72,7 +71,7 @@ def main() -> int:
     player_seasons = list(manifest.modeling_seasons)
     if manifest.validation_season not in player_seasons:
         player_seasons.append(manifest.validation_season)
-    build_player_dataset_v4(seasons=player_seasons, output_path=ROOT / "data/experimental/player_model_ready_v4_usg.csv")
+    build_player_dataset_v4(seasons=player_seasons, output_path=PLAYER_TRAINING_CSV)
     return 0
 
 

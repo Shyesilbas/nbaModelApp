@@ -241,7 +241,9 @@ def _refresh_locked(game_id: str, season: str, home_team: str | None, away_team:
 
                 pbp_rec = parse_pbp_file(str(pbp_dir / f"{game_id}.json"))
                 if pbp_rec:
-                    sit_path = REPO_ROOT / "data" / "processed" / "pbp_situational_features.csv"
+                    from src.core.data_paths import PBP_SITUATIONAL_CSV
+
+                    sit_path = PBP_SITUATIONAL_CSV
                     if sit_path.exists():
                         sit_df = pd.read_csv(sit_path)
                         sit_df = sit_df[sit_df["GAME_ID"].astype(str).str.zfill(10) != game_id]
