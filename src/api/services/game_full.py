@@ -5,7 +5,6 @@ import pandas as pd
 
 from src.core.artifact_paths import production_release
 from src.features.build_matchup_features import build_features
-from src.inference.top_down_scaling import apply_top_down_scaling
 
 logger = logging.getLogger(__name__)
 
@@ -137,19 +136,14 @@ def _predict_game_full_players(
     raw_away_reb = away_players_df["RAW_PROJ_REB"].tolist()
     raw_away_ast = away_players_df["RAW_PROJ_AST"].tolist()
 
-    scaled_home_pts, home_scale = apply_top_down_scaling(home_score, raw_home_pts)
-    scaled_away_pts, away_scale = apply_top_down_scaling(away_score, raw_away_pts)
-
-    scaled_home_reb = [max(0.0, r * home_scale) for r in raw_home_reb]
-    scaled_home_ast = [max(0.0, a * home_scale) for a in raw_home_ast]
-    scaled_away_reb = [max(0.0, r * away_scale) for r in raw_away_reb]
-    scaled_away_ast = [max(0.0, a * away_scale) for a in raw_away_ast]
-
+    # Projections are not rescaled to the team score: they are per player given that he plays, so
+    # a rotation's sum exceeds the team total and scaling it down biased every player low
+    # (2025-26 replay: PTS MAE 4.65 -> 4.91). scale_factor stays in the response at 1.0.
     return (
-        _build_game_full_player_list(home_players_df, scaled_home_pts, scaled_home_reb, scaled_home_ast, home_scale),
-        _build_game_full_player_list(away_players_df, scaled_away_pts, scaled_away_reb, scaled_away_ast, away_scale),
-        home_scale,
-        away_scale,
+        _build_game_full_player_list(home_players_df, raw_home_pts, raw_home_reb, raw_home_ast, 1.0),
+        _build_game_full_player_list(away_players_df, raw_away_pts, raw_away_reb, raw_away_ast, 1.0),
+        1.0,
+        1.0,
     )
 
 

@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.features.build_matchup_features import _load_absence_logs, _parse_player_overrides
 from src.core.season_utils import date_to_season
-from src.features.roster_absence import assumed_out_players
+from src.features.roster_absence import assumed_out_players, current_roster_ids
 
 
 def importance_score(row) -> float:
@@ -18,4 +18,4 @@ def importance_score(row) -> float:
 
 def assumed_out_ids(team: str, pred_date: str, overrides=None, preseason: bool = False) -> set:
     logs = _load_absence_logs(date_to_season(pd.to_datetime(pred_date)))
-    return assumed_out_players(logs, team, pred_date, _parse_player_overrides(overrides), preseason)
+    return assumed_out_players(logs, team, pred_date, _parse_player_overrides(overrides), preseason, current_roster_ids(team, pred_date))

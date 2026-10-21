@@ -19,6 +19,8 @@ mentioned, assumes whoever played the team's previous game plays again.
 """
 from __future__ import annotations
 
+import os
+from functools import lru_cache
 from typing import Mapping, Optional
 
 import numpy as np
@@ -111,6 +113,9 @@ def _live_rotation(player_games: pd.DataFrame, team: str, pred_date, preseason: 
     if d.empty:
         return None
     order = d.groupby("GAME_ID")["GAME_DATE"].first().sort_values(kind="stable")
+    # Only the offseason gap is treated as stale. Zeroing the default for a team's games 2-5 as
+    # well (training rows carry 0 there) was worse: WIN Brier 0.2256 -> 0.2306 over 324 games of
+    # 2021-22..2025-26, because who skipped the previous game is still informative.
     stale = (pd.to_datetime(pred_date) - order.iloc[-1]).days > STALE_DAYS
     hist_ids = list(order.index if stale else order.index[-WINDOW:])
     n = len(hist_ids)
@@ -145,12 +150,43 @@ def _override_for(overrides, pid, name):
     return hit if hit is not None else overrides.get(str(name).strip().lower())
 
 
+def _on_roster(rot: pd.DataFrame, roster_ids: Optional[set]) -> pd.DataFrame:
+    """Drop players no longer on the team (released, traded or signed elsewhere but not yet seen
+    in a box score): their absence is a roster change, not tonight's availability."""
+    if not roster_ids:
+        return rot
+    return rot[rot.index.isin(roster_ids)]
+
+
+def current_roster_ids(team: str, pred_date) -> Optional[set]:
+    """Player ids on ``team``'s roster as of ``pred_date`` (bootstrap roster plus movements), or None."""
+    from src.analysis.roster_transactions import roster_as_of
+    from src.core.data_paths import get_data_paths
+    from src.core.season_utils import date_to_season
+
+    try:
+        dt = pd.to_datetime(pred_date)
+        season = date_to_season(dt)
+        path = get_data_paths(season).team_rosters
+        roster = roster_as_of(_read_roster(path, os.path.getmtime(path)), season, dt.strftime("%Y-%m-%d"))
+        ids = set(roster.loc[roster["TEAM_ABBREVIATION"] == team, "PLAYER_ID"].astype(int))
+        return ids or None
+    except Exception:
+        return None
+
+
+@lru_cache(maxsize=4)
+def _read_roster(path: str, _mtime: float) -> pd.DataFrame:
+    return pd.read_csv(path)
+
+
 def live_absence_delta(
     player_games: pd.DataFrame,
     team: str,
     pred_date,
     overrides: Optional[Mapping] = None,
     preseason: bool = False,
+    roster_ids: Optional[set] = None,
 ) -> float:
     """ABS_DELTA for ``team`` before ``pred_date``.
 
@@ -161,6 +197,7 @@ def live_absence_delta(
     if live is None:
         return 0.0
     rot, last_game, stale = live
+    rot = _on_roster(rot, roster_ids)
     total = 0.0
     for pid, row in rot.iterrows():
         hit = _override_for(overrides, pid, row["name"])
@@ -177,6 +214,7 @@ def assumed_out_players(
     pred_date,
     overrides: Optional[Mapping] = None,
     preseason: bool = False,
+    roster_ids: Optional[set] = None,
 ) -> set:
     """Rotation player ids the team models treat as absent only by default (they skipped the
     previous game and nobody said otherwise), so the UI can show that assumption."""
@@ -184,4 +222,5 @@ def assumed_out_players(
     if live is None:
         return set()
     rot, last_game, _ = live
+    rot = _on_roster(rot, roster_ids)
     return {int(pid) for pid, row in rot.iterrows() if pid not in last_game and _override_for(overrides, pid, row["name"]) is None}

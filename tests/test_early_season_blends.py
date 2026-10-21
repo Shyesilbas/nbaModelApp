@@ -48,7 +48,7 @@ def test_player_without_box_scores_scales_league_rookie_rate_with_minutes():
     out = redistribute_usage_and_minutes(X, {99: {"status": "ACTIVE", "factor": 1.0, "is_starter": None}})
     rookie = out[out["PLAYER_ID"] == 99].iloc[0]
     assert rookie["PROJ_MIN"] > 0
-    assert abs(rookie["RAW_PROJ_PTS"] - 0.399 * rookie["PROJ_MIN"]) < 0.1  # both are rounded to 0.1
+    assert abs(rookie["RAW_PROJ_PTS"] - 0.399 * rookie["OWN_MIN"]) < 0.1
 
 
 def test_store_season_averages_skip_preseason_games():

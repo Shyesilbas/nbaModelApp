@@ -77,3 +77,38 @@ def test_role_model_fit_and_fallback_on_small_data():
     starters = pd.DataFrame({"Game_ID": gids, "Player_ID": [7] * 4, "IS_STARTER": [1] * 4})
     games = pd.DataFrame({"Game_ID": gids, "Player_ID": [7] * 4, "GAME_DATE": "2026-10-20", "MIN": [32.0] * 4})
     assert fit_role_model(starters, games).coef is None  # too little data: the fixed rule stays
+
+
+def test_default_rotation_keeps_model_projections_and_regular_bench_minutes():
+    import pandas as pd
+    from src.api.services.usage_redistribution import redistribute_usage_and_minutes
+
+    mins = [34, 33, 32, 30, 28, 26, 24, 22, 20, 18, 14, 9, 4]
+    df = pd.DataFrame({
+        "PLAYER_ID": range(1, len(mins) + 1), "PLAYER_NAME": [f"P{i}" for i in range(1, len(mins) + 1)],
+        "TEAM_ABBREVIATION": "AAA", "PLAYER_POSITION_GROUP": "WING", "MIN_EMA_10": mins,
+        "USG_PCT_LAST_10": 20.0, "RAW_PROJ_PTS": [m * 0.5 for m in mins], "RAW_PROJ_REB": 4.0, "RAW_PROJ_AST": 2.0,
+    })
+    out = redistribute_usage_and_minutes(df, {}).set_index("PLAYER_ID")
+    assert out.loc[11, "STATUS"] == "ACTIVE"  # 14 minutes a game: in the rotation beyond the top 10
+    assert out.loc[12, "STATUS"] == "DNP" and out.loc[13, "STATUS"] == "DNP"
+    active = out[out["STATUS"] == "ACTIVE"]
+    # no overrides: the model's projections pass through unchanged
+    assert (active["RAW_PROJ_PTS"] - (active["MIN_EMA_10"] * 0.5).round(1)).abs().max() < 1e-9
+    assert abs(active["PROJ_MIN"].sum() - 240.0) < 0.5  # displayed minutes still fill the game
+
+
+def test_out_player_production_moves_once():
+    import pandas as pd
+    from src.api.services.usage_redistribution import redistribute_usage_and_minutes
+
+    mins = [34, 33, 32, 30, 28, 26, 24, 22, 20, 18]
+    df = pd.DataFrame({
+        "PLAYER_ID": range(1, 11), "PLAYER_NAME": [f"P{i}" for i in range(1, 11)], "TEAM_ABBREVIATION": "AAA",
+        "PLAYER_POSITION_GROUP": "WING", "MIN_EMA_10": mins, "USG_PCT_LAST_10": 20.0,
+        "RAW_PROJ_PTS": [m * 0.5 for m in mins], "RAW_PROJ_REB": 4.0, "RAW_PROJ_AST": 2.0,
+    })
+    healthy = redistribute_usage_and_minutes(df, {})["RAW_PROJ_PTS"].sum()
+    without = redistribute_usage_and_minutes(df, {1: {"status": "OUT", "factor": 0.0}})["RAW_PROJ_PTS"].sum()
+    # teammates recover 70% of his 17 points: the team projects lower, never higher
+    assert abs((healthy - without) - 0.3 * 17.0) < 0.5

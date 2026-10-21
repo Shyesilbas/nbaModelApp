@@ -24,7 +24,7 @@ from src.core.data_paths import get_data_paths
 from src.core.season_utils import SEASON_START_MONTH, date_to_season
 from src.core.artifact_paths import resolve_artifact_path
 from src.features.win_strength_features import build_matchup_strength_features, compute_current_elo_state
-from src.features.roster_absence import live_absence_delta
+from src.features.roster_absence import current_roster_ids, live_absence_delta
 
 from functools import lru_cache
 import math
@@ -732,8 +732,8 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     player_logs = _load_player_games(season)
     player_logs = _load_absence_logs(season)
     pre = bool(res.get("IS_PRESEASON"))
-    res["ABS_DELTA"] = live_absence_delta(player_logs, home_team, pred_dt, overrides, pre)
-    res["OPP_ABS_DELTA"] = live_absence_delta(player_logs, away_team, pred_dt, overrides, pre)
+    res["ABS_DELTA"] = live_absence_delta(player_logs, home_team, pred_dt, overrides, pre, current_roster_ids(home_team, pred_dt))
+    res["OPP_ABS_DELTA"] = live_absence_delta(player_logs, away_team, pred_dt, overrides, pre, current_roster_ids(away_team, pred_dt))
     res["ABS_DIFF"] = res["ABS_DELTA"] - res["OPP_ABS_DELTA"]
 
     # Validation: ensure all values derived from rows have GAME_DATE < prediction_date

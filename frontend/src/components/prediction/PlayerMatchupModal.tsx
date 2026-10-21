@@ -198,7 +198,7 @@ export function PlayerMatchupModal({
     );
 
     // 3. Top-down scaling context if present
-    if (player.scale_factor && player.raw_pts) {
+    if (player.scale_factor && player.raw_pts && Math.abs(player.scale_factor - 1) >= 0.005) {
       const scalePercent = ((player.scale_factor - 1) * 100).toFixed(1);
       const isPositive = player.scale_factor >= 1.0;
       parts.push(

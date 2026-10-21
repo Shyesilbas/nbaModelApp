@@ -8,6 +8,14 @@ from src.features.roster_absence import BENCH_MIN_CAP
 # Fixed role minutes, used only while there is too little recorded starter data to fit starter_history's model.
 STARTER_MIN_FLOOR = 26.0
 
+# Default rotation: the ROTATION_CORE players with the most minutes, plus anyone averaging at least
+# ROTATION_EXTRA_MIN_FLOOR minutes, up to ROTATION_MAX. Regular seasons 2023-24..2025-26: a team
+# uses 10.7 players a game (12+ in a quarter of games) and a player averaging 12+ minutes plays
+# in over half of them; a hard cap of 10 zeroed a third of the players who played.
+ROTATION_CORE = 10
+ROTATION_EXTRA_MIN_FLOOR = 12.0
+ROTATION_MAX = 13
+
 POSITION_AFFINITY: Dict[str, Dict[str, float]] = {
     "GUARD": {"GUARD": 1.0, "WING": 0.5, "BIG": 0.1},
     "WING": {"GUARD": 0.5, "WING": 1.0, "BIG": 0.5},
@@ -86,10 +94,11 @@ def redistribute_usage_and_minutes(
             df.at[idx, "STARTER_OVERRIDE"] = entry.get("is_starter")
 
     teams = df["TEAM_ABBREVIATION"].unique() if "TEAM_ABBREVIATION" in df.columns else [None]
-    max_active_rotation = 12 if is_preseason else 10
+    max_active_rotation = 12 if is_preseason else ROTATION_CORE
     preseason_starters_cap = 22.0
 
     df["PROJ_MIN"] = 0.0
+    df["OWN_MIN"] = 0.0
 
     for team in teams:
         team_mask = (df["TEAM_ABBREVIATION"] == team) if team is not None else pd.Series(True, index=df.index)
@@ -115,7 +124,11 @@ def redistribute_usage_and_minutes(
 
         eligible_sorted = sorted(eligible_indices, key=rotation_priority, reverse=True)
         active_indices = eligible_sorted[:max_active_rotation]
-        dnp_indices = eligible_sorted[max_active_rotation:]
+        if not is_preseason:
+            # Beyond the core, anyone averaging ROTATION_EXTRA_MIN_FLOOR minutes usually plays (over half the time)
+            extra = [idx for idx in eligible_sorted[max_active_rotation:] if float(df.at[idx, "BASE_MIN"]) >= ROTATION_EXTRA_MIN_FLOOR]
+            active_indices += extra[: ROTATION_MAX - max_active_rotation]
+        dnp_indices = [idx for idx in eligible_sorted if idx not in active_indices]
 
         for idx in dnp_indices:
             if not df.at[idx, "HAS_USER_OVERRIDE"]:
@@ -152,6 +165,11 @@ def redistribute_usage_and_minutes(
                 df.at[idx, "PROJ_MIN"] = scaled * factor
             else:
                 df.at[idx, "PROJ_MIN"] = b_min * factor
+
+        # Minutes after each player's own overrides (restriction, starter/bench), before teammates'
+        # lost minutes arrive: stats scale with these, the lost production moves in the usage pool below
+        for idx in team_indices:
+            df.at[idx, "OWN_MIN"] = df.at[idx, "PROJ_MIN"]
 
         # Redistribute minutes from players who have explicit OUT or RESTRICTED user overrides
         out_players = [
@@ -191,7 +209,7 @@ def redistribute_usage_and_minutes(
                     cap_limit = 22.0 if is_preseason else 38.0
                     df.at[a_idx, "PROJ_MIN"] = min(cap_limit, cur_min + add_min)
 
-        # Scale active rotation minutes to exactly target_team_minutes (240.0)
+        # Scale active rotation minutes to exactly target_team_minutes (240.0) for display
         active_mins_sum = sum(df.at[idx, "PROJ_MIN"] for idx in active_indices)
         if active_mins_sum > 0:
             scale_factor = target_team_minutes / active_mins_sum
@@ -213,12 +231,18 @@ def redistribute_usage_and_minutes(
     base_raw_reb = df["RAW_PROJ_REB"].copy() if "RAW_PROJ_REB" in df.columns else pd.Series(0.0, index=df.index)
     base_raw_ast = df["RAW_PROJ_AST"].copy() if "RAW_PROJ_AST" in df.columns else pd.Series(0.0, index=df.index)
 
-    min_ratio = (df["PROJ_MIN"] / df["BASE_MIN"].clip(lower=4.0)).fillna(1.0)
+    # The model already projects a player's usual minutes, so stats move only with the minutes
+    # the player's own overrides add or remove (same 6-minute floor as the baseline above).
+    # Fitting the rotation to 240 minutes is for display: scaling stats by it cut every
+    # projection (2025-26 replay, PTS bias -2.8). Minutes inherited from an OUT teammate are not
+    # scaled in as well: the usage pool below already hands over his production, and doing both
+    # made a team score more without a player than with him (GSW 160.3 -> 171.5 PTS).
+    min_ratio = (df["OWN_MIN"] / df["BASE_MIN"].clip(lower=6.0)).fillna(1.0)
     stat_elasticity = np.power(min_ratio.clip(lower=0.0, upper=3.0), minute_elasticity)
     # Players without any box score carry per-minute rates (player_projection.apply_no_history_rates)
     if "NO_HISTORY" in df.columns:
         no_history = df["NO_HISTORY"].fillna(False).astype(bool)
-        stat_elasticity = stat_elasticity.where(~no_history, df["PROJ_MIN"])
+        stat_elasticity = stat_elasticity.where(~no_history, df["OWN_MIN"])
 
     scaled_pts = base_raw_pts * stat_elasticity
     scaled_reb = base_raw_reb * stat_elasticity

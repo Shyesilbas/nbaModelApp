@@ -61,6 +61,7 @@ Only these files are kept under `models/` (cleaned 2026-10-21). Retired generati
 ## Reference Reports & Audits
 
 ### Audits & Quality Control
+- `reports/audits/2026-10-22_player_pipeline_audit/` — **ACTIVE** PLAYER chain audit (README + `code/`, outputs in untracked `data/experimental/player_audit/`): live rows from raw box scores, opponent allowance, rotation default, assumed-out players, OUT double count, team-score scaling removed, window lengths
 
 ### Operations & Pipeline
 - `reports/operations/data_pipeline_architecture_report.md` — Core data pipeline ingestion, trade stints, season bootstrapping runbook, and roster discovery reference.

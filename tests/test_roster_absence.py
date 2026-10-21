@@ -76,3 +76,13 @@ def test_offseason_only_overrides_move_the_feature_and_use_the_whole_history():
     assert live_absence_delta(history, "AAA", opener, None) == 0.0
     assert assumed_out_players(history, "AAA", opener) == set()
     assert live_absence_delta(history, "AAA", opener, {1: {"factor": 0.0}}) < 0
+
+
+def test_departed_player_is_not_an_absence():
+    history = _logs(n_games=8, star_plays_last=False)
+    date = history["GAME_DATE"].max() + pd.Timedelta(days=1)
+    assert assumed_out_players(history, "AAA", date) == {1}
+    # player 1 left the roster: neither assumed out nor a negative delta
+    assert assumed_out_players(history, "AAA", date, roster_ids={2, 3, 4, 5}) == set()
+    assert live_absence_delta(history, "AAA", date, roster_ids={2, 3, 4, 5}) == 0.0
+

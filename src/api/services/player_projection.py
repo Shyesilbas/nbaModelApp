@@ -666,6 +666,24 @@ def _role_model():
     return _role_model_cache[key]
 
 
+def _with_assumed_out(override_lookup: dict, home_team: str, away_team: str, prediction_date, raw_overrides, is_preseason) -> dict:
+    """Rotation players who skipped their team's previous game and nobody mentioned count as OUT,
+    as in the WIN/SCORE availability feature. Such a player plays the next game 27% of the time
+    (rotation players, 20+ minutes, regular seasons 2022-23..2025-26) against 92% for one who played."""
+    from .availability import assumed_out_ids
+
+    lookup = dict(override_lookup)
+    for team in (home_team, away_team):
+        try:
+            ids = assumed_out_ids(team, str(prediction_date)[:10], raw_overrides, preseason=bool(is_preseason))
+        except Exception as exc:
+            logger.warning("Assumed-out players unavailable for %s: %s", team, exc)
+            continue
+        for pid in ids:
+            lookup.setdefault(int(pid), {"status": "OUT", "factor": 0.0, "minute_limit": None, "is_starter": None, "assumed": True})
+    return lookup
+
+
 def get_player_predictions(
     home_team: str,
     away_team: str,
@@ -709,6 +727,7 @@ def get_player_predictions(
     # Process overrides and usage redistribution via dedicated engine
     from .usage_redistribution import redistribute_usage_and_minutes
     override_lookup = _parse_player_overrides(player_status_overrides)
+    override_lookup = _with_assumed_out(override_lookup, home_team, away_team, prediction_date, player_status_overrides, is_preseason)
     full_X = redistribute_usage_and_minutes(
         full_X,
         override_lookup,

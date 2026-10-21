@@ -1,6 +1,5 @@
 from . import win_prediction as svc
 from .player_projection import get_player_predictions
-from .score_prediction import predict_score
 from ..schemas import PlayerPrediction, PlayerPredictionResponse, ScorePredictionRequest
 
 
@@ -22,16 +21,12 @@ def predict_players(request: ScorePredictionRequest) -> PlayerPredictionResponse
         svc.score_loader,
         player_status_overrides=request.player_status_overrides,
     )
-    score_resp = predict_score(request)
 
     home_players_df = players_df[players_df["IS_HOME"] == 1]
     away_players_df = players_df[players_df["IS_HOME"] == 0]
 
-    raw_home_pts = home_players_df["RAW_PROJ_PTS"].sum()
-    raw_away_pts = away_players_df["RAW_PROJ_PTS"].sum()
-
-    home_scale = max(0.80, min(1.20, score_resp.predicted_home_score / raw_home_pts)) if raw_home_pts > 0 else 1.0
-    away_scale = max(0.80, min(1.20, score_resp.predicted_away_score / raw_away_pts)) if raw_away_pts > 0 else 1.0
+    # Not rescaled to the team score (see game_full._predict_game_full_players)
+    home_scale = away_scale = 1.0
 
     def parse_players(df, scale):
         players = []
