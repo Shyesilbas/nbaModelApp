@@ -118,8 +118,8 @@ def main():
       with current regular-season games. Also runs automatically in --update-data (Step 9b).
   scripts/build_frontend_store.py [--season YYYY-YY] [--force]
       Build the SQLite store the API serves frontend data from. Closed seasons are built once.
-  scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY
-      Predict all matchups for a given date.
+  scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY [--model {v9,v10}]
+      Predict all matchups for a given date (default model: v10).
   scripts/retrain_pipeline.py [--dry-run | --promote] [--models {win,score,player} ...]
       Retrain, compare against the production champion, and promote if eligible (asks
       first unless --promote). Seasons come from config/training_manifest.yaml.
@@ -129,7 +129,11 @@ def main():
       Data drift and feature leakage detector.
 """
     parser = argparse.ArgumentParser(
-        description="NBA ML Project Preprocessing & Feature Engineering Pipeline",
+        description=(
+            "NBA ML project CLI: data updates, feature pipeline, model training and the\n"
+            "frontend store. Pass one command flag; with none, it runs the feature\n"
+            "pipeline for --season (default: current season)."
+        ),
         epilog=scripts_epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
