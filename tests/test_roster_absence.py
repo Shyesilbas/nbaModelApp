@@ -66,3 +66,13 @@ def test_assumed_out_flags_only_unmentioned_rotation_players_who_skipped_last_ga
     assert assumed_out_players(history, "AAA", date, {1: {"factor": 1.0}}) == set()  # explicit ACTIVE
     # ... and an explicit ACTIVE brings the team back to its healthy value
     assert live_absence_delta(history, "AAA", date, {1: {"factor": 1.0}}) > live_absence_delta(history, "AAA", date)
+
+
+def test_offseason_only_overrides_move_the_feature_and_use_the_whole_history():
+    # 20 games; the star misses the last 16, so a 15-game window would not see him at all
+    history = _logs(n_games=20)
+    history = history[~((history["Player_ID"] == 1) & (history["Game_ID"] >= "0022400004"))]
+    opener = history["GAME_DATE"].max() + pd.Timedelta(days=120)
+    assert live_absence_delta(history, "AAA", opener, None) == 0.0
+    assert assumed_out_players(history, "AAA", opener) == set()
+    assert live_absence_delta(history, "AAA", opener, {1: {"factor": 0.0}}) < 0

@@ -15,6 +15,49 @@ logger = logging.getLogger(__name__)
 
 _player_df_cache = {}
 
+# Early season: projections lean on last season's per-game averages, fading out over
+# PLAYER_PRIOR_GAMES games of the new season. 2025-26 holdout: first-game MAE PTS 4.48 -> 4.32,
+# REB 1.97 -> 1.94, AST 1.34 -> 1.32; unchanged from the third game on.
+PLAYER_PRIOR_GAMES = 3
+PLAYER_PRIOR_MAX_WEIGHT = 0.4
+
+
+@lru_cache(maxsize=8)
+def _played_logs(path_str: str, _mtime_ns: int) -> pd.DataFrame:
+    d = pd.read_csv(path_str, usecols=["Player_ID", "Game_ID", "GAME_DATE", "MIN", "PTS", "REB", "AST", "SEASON_TYPE"], dtype={"Game_ID": str})
+    d = d[~d["Game_ID"].str.zfill(10).str.startswith("001")]
+    d = d[pd.to_numeric(d["MIN"], errors="coerce").fillna(0.0) > 0].copy()
+    d["GAME_DATE"] = pd.to_datetime(d["GAME_DATE"])
+    return d
+
+
+def _season_logs(season: str) -> pd.DataFrame:
+    path = Path(get_data_paths(season).player_games_raw)
+    if not path.exists():
+        return pd.DataFrame(columns=["Player_ID", "GAME_DATE", "PTS", "REB", "AST", "SEASON_TYPE"])
+    return _played_logs(str(path), path.stat().st_mtime_ns)
+
+
+def blend_early_season_projection(full_X: pd.DataFrame, pred_dt) -> pd.DataFrame:
+    """Blend RAW_PROJ_* with last regular season's per-game averages for a player's first games."""
+    from src.features.build_matchup_features import previous_season
+
+    season = date_to_season(pred_dt)
+    current = _season_logs(season)
+    games = current[current["GAME_DATE"] < pred_dt].groupby("Player_ID").size()
+    prev = _season_logs(previous_season(season))
+    prior = prev[prev["SEASON_TYPE"] == "Regular Season"].groupby("Player_ID")[["PTS", "REB", "AST"]].mean()
+
+    pid = full_X["PLAYER_ID"].astype(int)
+    n = pid.map(games).fillna(0).to_numpy(dtype=float)
+    weight = np.where(n < PLAYER_PRIOR_GAMES, PLAYER_PRIOR_MAX_WEIGHT * (1.0 - n / PLAYER_PRIOR_GAMES), 0.0)
+    for stat in ("PTS", "REB", "AST"):
+        col = f"RAW_PROJ_{stat}"
+        base = pid.map(prior[stat]).to_numpy(dtype=float)
+        w = np.where(np.isnan(base), 0.0, weight)
+        full_X[col] = (1.0 - w) * full_X[col].to_numpy(dtype=float) + w * np.nan_to_num(base)
+    return full_X
+
 
 
 def is_playoff_date(dt) -> int:
@@ -522,7 +565,9 @@ def get_player_predictions(
     full_X["RAW_PROJ_PTS"] = np.maximum(0.0, raw_pts)
     full_X["RAW_PROJ_REB"] = np.maximum(0.0, raw_reb)
     full_X["RAW_PROJ_AST"] = np.maximum(0.0, raw_ast)
-    
+    if not is_preseason:
+        full_X = blend_early_season_projection(full_X, pd.to_datetime(prediction_date))
+
     # Process overrides and usage redistribution via dedicated engine
     from .usage_redistribution import redistribute_usage_and_minutes
     override_lookup = _parse_player_overrides(player_status_overrides)

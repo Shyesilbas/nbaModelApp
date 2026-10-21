@@ -94,10 +94,12 @@ STALE_DAYS = 21  # a previous game older than this says nothing about who is hur
 
 
 def _live_rotation(player_games: pd.DataFrame, team: str, pred_date, preseason: bool = False):
-    """(rotation table, ids assumed to play) from the team's last WINDOW games, or None.
+    """(rotation table, ids assumed to play, stale) from the team's last WINDOW games, or None.
 
     Preseason games (rested starters) are ignored unless ``preseason``. When the previous
-    game is stale (offseason), nobody is assumed absent: only overrides move the feature."""
+    game is stale (offseason), the rotation spans the team's whole history in the logs, so a
+    player hurt for the end of last season can still be marked out, and only overrides move
+    the feature (opening games 2021-22..2025-26: WIN Brier 0.2294 -> 0.2227)."""
     if player_games is None or player_games.empty:
         return None
     d = _prepare(player_games)
@@ -109,7 +111,8 @@ def _live_rotation(player_games: pd.DataFrame, team: str, pred_date, preseason: 
     if d.empty:
         return None
     order = d.groupby("GAME_ID")["GAME_DATE"].first().sort_values(kind="stable")
-    hist_ids = list(order.index[-WINDOW:])
+    stale = (pd.to_datetime(pred_date) - order.iloc[-1]).days > STALE_DAYS
+    hist_ids = list(order.index if stale else order.index[-WINDOW:])
     n = len(hist_ids)
     if n < MIN_HISTORY_GAMES:
         return None
@@ -117,10 +120,10 @@ def _live_rotation(player_games: pd.DataFrame, team: str, pred_date, preseason: 
     st = h.groupby("Player_ID").agg(gp=("MIN", "size"), msum=("MIN", "sum"), gs=("GS", "mean"), name=("PLAYER_NAME", "last"))
     st["presence"] = st["gp"] / n
     rot = st[st["msum"] / st["gp"] >= MIN_ROTATION_MINUTES]
+    if stale:
+        return rot, set(rot.index), True
     last = d[d["GAME_ID"] == hist_ids[-1]]
-    if (pd.to_datetime(pred_date) - last["GAME_DATE"].iloc[0]).days > STALE_DAYS:
-        return rot, set(rot.index)
-    return rot, set(last["Player_ID"])
+    return rot, set(last["Player_ID"]), False
 
 
 # Minutes a benched (is_starter=False) player is capped at; shared with the player minutes engine.
@@ -157,10 +160,12 @@ def live_absence_delta(
     live = _live_rotation(player_games, team, pred_date, preseason)
     if live is None:
         return 0.0
-    rot, last_game = live
+    rot, last_game, stale = live
     total = 0.0
     for pid, row in rot.iterrows():
         hit = _override_for(overrides, pid, row["name"])
+        if hit is None and stale:
+            continue
         avail = _override_availability(hit, row["msum"] / row["gp"]) if hit is not None else (1.0 if pid in last_game else 0.0)
         total += (avail - row["presence"]) * row["gs"]
     return float(total)
@@ -178,5 +183,5 @@ def assumed_out_players(
     live = _live_rotation(player_games, team, pred_date, preseason)
     if live is None:
         return set()
-    rot, last_game = live
+    rot, last_game, _ = live
     return {int(pid) for pid, row in rot.iterrows() if pid not in last_game and _override_for(overrides, pid, row["name"]) is None}

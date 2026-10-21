@@ -68,6 +68,7 @@ Only these files are kept under `models/` (cleaned 2026-10-21). Retired generati
 
 ### Evaluation & Benchmarks
 - `reports/evaluation/multi_season_walk_forward_backtest.md` (and `.json`) — **ACTIVE MULTI-SEASON WALK-FORWARD BACKTEST** (5 unseen seasons 2021-22..2025-26; production WIN/SCORE/PLAYER configurations against Elo + home court, last-10 real points and EMA-10 baselines; regenerate with `python -m scripts.walk_forward_benchmark`)
+- `reports/backtests/2026-10-21_early_season/` — **ACTIVE** early-season transition backtest (`README.md`, reproducible scripts in `code/`, outputs in untracked `data/experimental/early_season/`): SCORE prior-to-form hand-over, window lengths, margin vs Elo, PLAYER prior blend, season-start roster availability
 - `reports/backtests/2026-10-20_review/` — offline walk-forward (`metrics.json`, per-season prediction parquets for 2023-24..2025-26) and the 2025-26 live replay through the API code with holdout models (`live_2025_26.parquet`: AUC 0.735, Brier 0.206, total MAE 15.46, margin MAE 11.42, 0 failures)
 - `data/predictions/shadow_predictions_log.jsonl` — **APPEND-ONLY SHADOW PREDICTION STORE** (Structured log with prediction_id, model version, timestamp, conformal ranges, and feature snapshots).
 

@@ -161,3 +161,4 @@ Each season is predicted by models fitted only on earlier seasons (`python -m sc
 2. **Player opponent context is one game stale at serving time**: `_defense_context` takes the opponent's allowance from its last stored row, which excludes that opponent's most recent game.
 3. **Opening 2026-27 Elo** includes a roster-turnover adjustment that the training seasons never had; early-season WIN predictions rely on it.
 4. **The 2025-26 holdout has been used for many decisions**; the walk-forward averages above are the more reliable estimate.
+5. **Early season is served by inference-time transitions, not by the models**: training rows start at a team's ~4th game, so SCORE pace/rating inputs hand over from last season's team means over 6 games, player projections lean on last season's averages for 3 games, and season-start roster availability moves only with explicit overrides (`reports/backtests/2026-10-21_early_season/`).
