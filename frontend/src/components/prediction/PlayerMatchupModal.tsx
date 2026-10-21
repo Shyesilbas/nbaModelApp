@@ -43,6 +43,7 @@ interface GameRow {
   FG3M?: number;
   PLUS_MINUS?: number;
   DID_NOT_PLAY?: boolean;
+  SEASON_TYPE?: string;
 }
 
 interface SeasonAverages {
@@ -101,7 +102,10 @@ export function PlayerMatchupModal({
         const latestSeason = availableSeasons.length > 0 ? availableSeasons[availableSeasons.length - 1] : "";
         const targetSeason = gamesBySeason[season]?.length ? season : latestSeason;
 
-        const allPlayedGames = Object.values(gamesBySeason).flat().filter((g) => !g.DID_NOT_PLAY);
+        // Preseason games stay out of recent form, as they do in the model inputs
+        const allPlayedGames = Object.values(gamesBySeason)
+          .flat()
+          .filter((g) => !g.DID_NOT_PLAY && g.SEASON_TYPE !== "Pre Season");
         allPlayedGames.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
 
         const seasonAvg = payload.averages?.[targetSeason] || payload.averages?.[latestSeason] || null;

@@ -215,6 +215,10 @@ def redistribute_usage_and_minutes(
 
     min_ratio = (df["PROJ_MIN"] / df["BASE_MIN"].clip(lower=4.0)).fillna(1.0)
     stat_elasticity = np.power(min_ratio.clip(lower=0.0, upper=3.0), minute_elasticity)
+    # Players without any box score carry per-minute rates (player_projection.apply_no_history_rates)
+    if "NO_HISTORY" in df.columns:
+        no_history = df["NO_HISTORY"].fillna(False).astype(bool)
+        stat_elasticity = stat_elasticity.where(~no_history, df["PROJ_MIN"])
 
     scaled_pts = base_raw_pts * stat_elasticity
     scaled_reb = base_raw_reb * stat_elasticity

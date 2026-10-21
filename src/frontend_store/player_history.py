@@ -52,8 +52,10 @@ def load_game_results(season_key: str, season_path: str) -> pd.DataFrame:
 
 
 def compute_averages(games: list) -> dict:
-    played = [g for g in games if not g["DID_NOT_PLAY"]]
-    result = {"games_played": len(played), "games_total": len(games)}
+    """Season averages over regular-season and postseason games; preseason games stay in the log only."""
+    counted = [g for g in games if g.get("SEASON_TYPE") != "Pre Season"]
+    played = [g for g in counted if not g["DID_NOT_PLAY"]]
+    result = {"games_played": len(played), "games_total": len(counted)}
     for col in STAT_COLS:
         vals = [g[col] for g in played if g.get(col) is not None]
         result[col] = round(sum(vals) / len(vals), 2) if vals else None

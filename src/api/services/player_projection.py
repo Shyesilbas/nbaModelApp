@@ -1,4 +1,5 @@
 import logging
+import re
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -9,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[3]
 from src.core.data_paths import PLAYER_METADATA_CSV, PLAYER_TRAINING_CSV, get_data_paths
 from src.core.season_utils import date_to_season
 from src.analysis.roster_transactions import MOVEMENTS_PATH, roster_as_of
-from src.features.player_form import add_player_matchup_features, pregame_player_rows
+from src.features.player_form import RAW_GAME_COLUMNS, add_player_matchup_features, pregame_player_rows
 
 logger = logging.getLogger(__name__)
 
@@ -296,15 +297,54 @@ def _active_roster_ids(team: str, season: str, as_of=None):
         return None, None
 
 
+# Per-minute production of players in their first 60 NBA days (regular season 2021-22..2025-26,
+# 555 players). Players with no NBA box score yet are projected as rate x projected minutes:
+# the model has no form to read for them.
+NO_HISTORY_PER_MIN = {
+    "GUARD": {"PTS": 0.384, "REB": 0.139, "AST": 0.104},
+    "WING": {"PTS": 0.377, "REB": 0.185, "AST": 0.064},
+    "BIG": {"PTS": 0.399, "REB": 0.283, "AST": 0.066},
+}
+
+
+def _is_player_form_column(col: str) -> bool:
+    if col in RAW_GAME_COLUMNS.values() or col in RAW_GAME_COLUMNS:
+        return True
+    return bool(re.search(r"_(LAST|EMA)_\d+$|_PER_MIN_LAST_10$|_TREND$|_STD_LAST_10$", col))
+
+
+@lru_cache(maxsize=1)
+def _metadata_positions() -> dict:
+    if not PLAYER_METADATA_CSV.exists():
+        return {}
+    meta = pd.read_csv(PLAYER_METADATA_CSV, usecols=["PLAYER_ID", "POSITION_GROUP"]).dropna()
+    return {int(p): str(g) for p, g in zip(meta["PLAYER_ID"], meta["POSITION_GROUP"])}
+
+
+def apply_no_history_rates(full_X: pd.DataFrame) -> pd.DataFrame:
+    """RAW_PROJ_* of players without any box score become per-minute rates (scaled by minutes later)."""
+    if "NO_HISTORY" not in full_X.columns:
+        return full_X
+    mask = full_X["NO_HISTORY"].fillna(False).astype(bool)
+    pos = full_X.loc[mask, "PLAYER_POSITION_GROUP"].fillna("WING").astype(str).str.upper()
+    for stat in ("PTS", "REB", "AST"):
+        full_X.loc[mask, f"RAW_PROJ_{stat}"] = pos.map(lambda p: NO_HISTORY_PER_MIN.get(p, NO_HISTORY_PER_MIN["WING"])[stat])
+    return full_X
+
+
 def _roster_candidates(last_games, team: str, active_ids, team_roster_df=None):
     if active_ids:
         candidates = last_games[last_games["PLAYER_ID"].isin(active_ids)].copy()
         candidates["TEAM_ABBREVIATION"] = team
 
-        # Synthesize baseline candidate row for any official roster player not yet observed in last_games
+        # Synthesize baseline candidate row for any official roster player not yet observed in last_games.
+        # The template only supplies the game context columns: another player's form must not leak in.
         missing_ids = set(active_ids) - set(candidates["PLAYER_ID"])
         if missing_ids and team_roster_df is not None and not last_games.empty:
-            template_row = last_games.iloc[0].to_dict()
+            template_row = {
+                c: (np.nan if _is_player_form_column(c) else v) for c, v in last_games.iloc[0].to_dict().items()
+            }
+            positions = _metadata_positions()
             missing_rows = team_roster_df[team_roster_df["PLAYER_ID"].isin(missing_ids)]
             new_rows = []
             for _, r in missing_rows.iterrows():
@@ -336,8 +376,9 @@ def _roster_candidates(last_games, team: str, active_ids, team_roster_df=None):
                     "USG_PCT_LAST_3": 12.0,
                     "USG_PCT_EMA_10": 12.0,
                     "USG_PCT_EMA_5": 12.0,
-                    "POSITION_GROUP": "WING",
-                    "PLAYER_POSITION_GROUP": "WING",
+                    "POSITION_GROUP": positions.get(int(pid), "WING"),
+                    "PLAYER_POSITION_GROUP": positions.get(int(pid), "WING"),
+                    "NO_HISTORY": True,
                 })
                 new_rows.append(row_copy)
             if new_rows:
@@ -565,6 +606,7 @@ def get_player_predictions(
     full_X["RAW_PROJ_PTS"] = np.maximum(0.0, raw_pts)
     full_X["RAW_PROJ_REB"] = np.maximum(0.0, raw_reb)
     full_X["RAW_PROJ_AST"] = np.maximum(0.0, raw_ast)
+    full_X = apply_no_history_rates(full_X)
     if not is_preseason:
         full_X = blend_early_season_projection(full_X, pd.to_datetime(prediction_date))
 
