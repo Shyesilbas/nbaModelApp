@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  Sparkles,
   Clock,
   RefreshCw,
   MapPin,
@@ -18,7 +17,6 @@ import {
   fmtInt,
   fmtTipoffTR,
   teamFull,
-  teamCity,
   parseOfficials,
   sortPlayersByMinutes,
 } from "./utils";
@@ -28,7 +26,8 @@ import { TeamComparisonBars } from "./TeamComparisonBars";
 import { ShootingSummary } from "./ShootingSummary";
 import { TopPerformers } from "./TopPerformers";
 import { PlayerBoxTable } from "./PlayerBoxTable";
-import { Button, Badge, Card } from "../common";
+import { Button, Badge, Card, Skeleton } from "../common";
+import { loadPrivateApi, loadPrivateApiFresh } from "../../lib/dataCache";
 
 export interface GameCardDetailProps {
   game: GameFeedRow;
@@ -67,17 +66,17 @@ export function GameCardDetail({
   season,
   onBack,
 }: GameCardDetailProps) {
-  const [activeTab, setActiveTab] = useState<"game" | "home" | "away" | "highlights">(
-    initialTab === "home" || initialTab === "away" || initialTab === "highlights" || initialTab === "pbp"
-      ? (initialTab === "pbp" ? "highlights" : (initialTab as any))
-      : "game"
-  );
-
   const isCompleted =
     game.GAME_STATUS === "Final" ||
     game.GAME_STATUS === "FINAL" ||
     Boolean(game.WINNER_TEAM_ABBREVIATION) ||
     ((Number(game.HOME_SCORE) || 0) > 0 && (Number(game.AWAY_SCORE) || 0) > 0);
+
+  const [activeTab, setActiveTab] = useState<"game" | "home" | "away" | "highlights">(() => {
+    if (initialTab === "home" || initialTab === "away") return initialTab;
+    if (initialTab === "highlights" || initialTab === "pbp") return "highlights";
+    return isCompleted ? "game" : "away";
+  });
 
   const homeScore = game.HOME_SCORE ?? gameDetail?.home_team?.score ?? null;
   const awayScore = game.AWAY_SCORE ?? gameDetail?.away_team?.score ?? null;
@@ -129,6 +128,81 @@ export function GameCardDetail({
       ((a.PTS ?? (a as { pts?: number | null }).pts) ?? 0)
   );
 
+  // For unplayed games or games without player stats, fetch team rosters & injury report
+  const [teamRosters, setTeamRosters] = useState<any[]>([]);
+  const [loadingRosters, setLoadingRosters] = useState(false);
+  const [injuries, setInjuries] = useState<Record<string, { status: string; reason?: string }>>({});
+  // null when the report is known; otherwise why statuses cannot be shown (never display everyone as active)
+  const [injuryUnavailable, setInjuryUnavailable] = useState<string | null>(null);
+  const [notFiled, setNotFiled] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!isCompleted || (topHome.length === 0 && topAway.length === 0)) {
+      setLoadingRosters(true);
+      const activeSeason = season ?? game.SEASON ?? "2026-27";
+      const gameDate = game.GAME_DATE ?? "";
+
+      Promise.all([
+        loadPrivateApi<any[]>(`/frontend-data-api/team-rosters?season=${encodeURIComponent(activeSeason)}`),
+        loadPrivateApiFresh<{
+          entries: Array<{ player_name: string; team: string; status: string; reason?: string }>;
+          not_submitted?: string[][];
+          error?: string | null;
+        }>(
+          `/frontend-data-api/injury-report?season=${encodeURIComponent(activeSeason)}&date=${encodeURIComponent(gameDate)}`
+        ).catch((e: Error) => ({ entries: [], not_submitted: [], error: e.message })),
+      ])
+        .then(([rosterData, injuryData]) => {
+          setTeamRosters(rosterData || []);
+          const map: Record<string, { status: string; reason?: string }> = {};
+          (injuryData?.entries ?? []).forEach((e) => {
+            const key = `${e.team}_${e.player_name.toLowerCase().trim()}`;
+            map[key] = { status: e.status, reason: e.reason };
+            // Also store by name only as fallback
+            map[e.player_name.toLowerCase().trim()] = { status: e.status, reason: e.reason };
+          });
+          setInjuries(map);
+          setInjuryUnavailable(injuryData?.error ?? null);
+          setNotFiled(new Set((injuryData?.not_submitted ?? []).map((x) => x[1])));
+        })
+        .catch(() => {
+          setTeamRosters([]);
+          setInjuries({});
+          setInjuryUnavailable("Roster data could not be loaded");
+        })
+        .finally(() => setLoadingRosters(false));
+    }
+  }, [isCompleted, topHome.length, topAway.length, season, game.SEASON, game.GAME_DATE]);
+
+  const getPlayerInjury = (team: string, playerName: string) => {
+    const key = `${team}_${playerName.toLowerCase().trim()}`;
+    const item = injuries[key] || injuries[playerName.toLowerCase().trim()];
+    if (injuryUnavailable) {
+      return { status: "Unknown", label: "Unknown", variant: "neutral" as const, reason: injuryUnavailable };
+    }
+    if (!item) {
+      if (notFiled.has(team)) {
+        return { status: "Unknown", label: "Not filed", variant: "neutral" as const, reason: "Team has not filed its report yet" };
+      }
+      return { status: "Active", label: "Active", variant: "success" as const };
+    }
+    const s = item.status.toLowerCase();
+    if (s.includes("out")) {
+      return { status: "Out", label: "Out", variant: "error" as const, reason: item.reason };
+    }
+    if (s.includes("questionable") || s.includes("doubtful")) {
+      return { status: "Questionable", label: "Questionable", variant: "warning" as const, reason: item.reason };
+    }
+    return { status: "Active", label: "Active", variant: "success" as const, reason: item.reason };
+  };
+
+  const homeRoster = teamRosters.filter(
+    (p) => p.TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION
+  );
+  const awayRoster = teamRosters.filter(
+    (p) => p.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION
+  );
+
   const officials = parseOfficials(game.OFFICIALS);
   const arenaName =
     gameDetail?.arena?.name || (game as { ARENA?: string })?.ARENA;
@@ -165,80 +239,32 @@ export function GameCardDetail({
   const awayQS = gameDetail?.away_team?.quarter_scores;
 
   const tabs = [
+    ...(isCompleted
+      ? [
+          {
+            id: "game" as const,
+            label: "Recap & Stats",
+            icon: <LayoutGrid size={14} />,
+          },
+        ]
+      : []),
     {
-      id: "game",
-      label: isCompleted ? "Recap & Stats" : "Matchup Preview",
-      icon: <LayoutGrid size={14} />,
-    },
-    {
-      id: "away",
+      id: "away" as const,
       label: `${game.AWAY_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Roster"}`,
       icon: <Users size={14} />,
     },
     {
-      id: "home",
+      id: "home" as const,
       label: `${game.HOME_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Roster"}`,
       icon: <Users size={14} />,
     },
     ...(isCompleted
-      ? [{ id: "highlights", label: "Highlights", icon: <Flame size={14} /> }]
+      ? [{ id: "highlights" as const, label: "Highlights", icon: <Flame size={14} /> }]
       : []),
-  ] as const;
+  ];
 
   return (
     <div className="space-y-4">
-      {/* ── TOP ACTION BAR & NAVIGATION ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {onBack && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onBack}
-              leftIcon={<ArrowLeft size={14} />}
-            >
-              Back
-            </Button>
-          )}
-          <Badge variant="neutral">{seasonLabel}</Badge>
-          {game.SERIES_GAME_NUMBER != null && (
-            <Badge variant="neutral">Game {game.SERIES_GAME_NUMBER}</Badge>
-          )}
-          {game.IS_ELIMINATION_GAME && (
-            <Badge variant="error">Elimination Match</Badge>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {canRefresh && (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={refreshState === "running" || refreshDone}
-              onClick={onRefresh}
-              isLoading={refreshState === "running"}
-              leftIcon={!refreshState || refreshState !== "running" ? <RefreshCw size={13} /> : undefined}
-            >
-              {refreshDone
-                ? "Data Loaded"
-                : refreshState === "failed"
-                ? "Retry Data"
-                : "Fetch Box Score"}
-            </Button>
-          )}
-          {!isCompleted && onPredict && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onPredict}
-              leftIcon={<Sparkles size={13} />}
-            >
-              Model Prediction
-            </Button>
-          )}
-        </div>
-      </div>
-
       {refreshError && (
         <div
           role="alert"
@@ -253,10 +279,29 @@ export function GameCardDetail({
         {/* Meta Bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light bg-background-tertiary px-4 py-2 text-xs text-text-secondary">
           <div className="flex items-center gap-2">
+            {onBack && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onBack}
+                leftIcon={<ArrowLeft size={13} />}
+                className="mr-1 h-7 px-2 text-xs"
+              >
+                Geri
+              </Button>
+            )}
             <Calendar size={13} className="text-text-muted" />
             <span className="font-medium text-text-primary">
               {fmtDate(game.GAME_DATE)}
             </span>
+            <span className="text-text-muted">•</span>
+            <Badge variant="neutral">{seasonLabel}</Badge>
+            {game.SERIES_GAME_NUMBER != null && (
+              <Badge variant="neutral">Game {game.SERIES_GAME_NUMBER}</Badge>
+            )}
+            {game.IS_ELIMINATION_GAME && (
+              <Badge variant="error">Elimination Match</Badge>
+            )}
             <span className="text-text-muted">•</span>
             {isCompleted ? (
               <Badge variant="success" size="sm" dot>
@@ -270,14 +315,43 @@ export function GameCardDetail({
             )}
           </div>
 
-          {arenaName && (
-            <div className="hidden sm:flex items-center gap-1.5 text-text-muted">
-              <MapPin size={12} />
-              <span className="truncate max-w-sm">
-                {[arenaName, arenaCity].filter(Boolean).join(" · ")}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {arenaName && (
+              <div className="hidden sm:flex items-center gap-1.5 text-text-muted mr-1">
+                <MapPin size={12} />
+                <span className="truncate max-w-sm">
+                  {[arenaName, arenaCity].filter(Boolean).join(" · ")}
+                </span>
+              </div>
+            )}
+            {canRefresh && (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={refreshState === "running" || refreshDone}
+                onClick={onRefresh}
+                isLoading={refreshState === "running"}
+                leftIcon={!refreshState || refreshState !== "running" ? <RefreshCw size={13} /> : undefined}
+                className="h-7 px-2.5 text-xs"
+              >
+                {refreshDone
+                  ? "Veri Alındı"
+                  : refreshState === "failed"
+                  ? "Yeniden Dene"
+                  : "Kutu Puanı Çek"}
+              </Button>
+            )}
+            {!isCompleted && onPredict && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={onPredict}
+                className="h-7 px-2.5 text-xs"
+              >
+                Model Prediction
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Primary Matchup Board */}
@@ -486,76 +560,7 @@ export function GameCardDetail({
                 />
               </div>
             </>
-          ) : (
-            <div className="space-y-4">
-              <Card>
-                <div className="mb-3">
-                  <h3 className="text-sm font-semibold text-text-primary">
-                    {game.AWAY_TEAM_NAME || game.AWAY_TEAM_ABBREVIATION} at{" "}
-                    {game.HOME_TEAM_NAME || game.HOME_TEAM_ABBREVIATION}
-                  </h3>
-                  <p className="mt-0.5 text-xs text-text-secondary">
-                    Matchup details and venue context
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                  <div className="rounded border border-border bg-background-tertiary p-3">
-                    <p className="text-xs font-medium text-text-muted">
-                      Date & Season
-                    </p>
-                    <p className="mt-1 text-xs font-semibold text-text-primary">
-                      {fmtDate(game.GAME_DATE)}
-                    </p>
-                    <p className="text-xs text-text-secondary">{seasonLabel}</p>
-                  </div>
-                  <div className="rounded border border-border bg-background-tertiary p-3">
-                    <p className="text-xs font-medium text-text-muted">Venue</p>
-                    <p className="mt-1 text-xs font-semibold text-text-primary">
-                      {arenaName || "NBA Arena"}
-                    </p>
-                    <p className="text-xs text-text-secondary">
-                      {arenaCity || teamCity(game.HOME_TEAM_ABBREVIATION)}
-                    </p>
-                  </div>
-                  <div className="rounded border border-border bg-background-tertiary p-3">
-                    <p className="text-xs font-medium text-text-muted">
-                      Tip-Off Time
-                    </p>
-                    <p className="mt-1 text-xs font-semibold text-text-primary">
-                      {fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Scheduled")}
-                    </p>
-                    <p className="text-xs text-text-secondary">
-                      Official box scores recorded post-game
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              {onPredict && (
-                <Card className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="max-w-xl">
-                    <h4 className="text-sm font-semibold text-text-primary">
-                      Predict This Matchup with NBA Machine Learning Models
-                    </h4>
-                    <p className="mt-1 text-xs text-text-secondary leading-relaxed">
-                      Evaluate multi-stage ML projections including win
-                      probabilities, pace, offensive ratings, expected margins,
-                      and individual player stat forecasts.
-                    </p>
-                  </div>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={onPredict}
-                    leftIcon={<Sparkles size={14} />}
-                    className="shrink-0"
-                  >
-                    Simulate Matchup
-                  </Button>
-                </Card>
-              )}
-            </div>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -603,15 +608,36 @@ export function GameCardDetail({
                 </div>
               )}
             </div>
-            {isCompleted ? (
+            {isCompleted && topHome.length > 0 ? (
               <PlayerBoxTable players={topHome} />
+            ) : loadingRosters ? (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 py-2">
+                {[...Array(8)].map((_, i) => (
+                  <Skeleton key={i} className="h-9 w-full rounded" />
+                ))}
+              </div>
+            ) : homeRoster.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                {homeRoster.map((p) => {
+                  const injury = getPlayerInjury(game.HOME_TEAM_ABBREVIATION ?? "", p.PLAYER_NAME);
+                  return (
+                    <div
+                      key={p.PLAYER_ID}
+                      className="flex items-center justify-between gap-2 rounded border border-border bg-background-tertiary px-3 py-2 text-xs font-medium text-text-primary"
+                      title={injury.reason ? `${p.PLAYER_NAME}: ${injury.label} (${injury.reason})` : `${p.PLAYER_NAME}: ${injury.label}`}
+                    >
+                      <span className="truncate">{p.PLAYER_NAME}</span>
+                      <Badge variant={injury.variant} size="sm">
+                        {injury.label}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <div className="rounded border border-border bg-background-tertiary p-6 text-center">
-                <p className="text-xs font-medium text-text-primary">
-                  Player statistics are not available yet.
-                </p>
-                <p className="mt-1 text-xs text-text-secondary">
-                  Official box scores will be loaded once the game concludes.
+                <p className="text-xs font-medium text-text-secondary">
+                  Kadro bilgisi bulunamadı.
                 </p>
               </div>
             )}
@@ -663,15 +689,36 @@ export function GameCardDetail({
                 </div>
               )}
             </div>
-            {isCompleted ? (
+            {isCompleted && topAway.length > 0 ? (
               <PlayerBoxTable players={topAway} />
+            ) : loadingRosters ? (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 py-2">
+                {[...Array(8)].map((_, i) => (
+                  <Skeleton key={i} className="h-9 w-full rounded" />
+                ))}
+              </div>
+            ) : awayRoster.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                {awayRoster.map((p) => {
+                  const injury = getPlayerInjury(game.AWAY_TEAM_ABBREVIATION ?? "", p.PLAYER_NAME);
+                  return (
+                    <div
+                      key={p.PLAYER_ID}
+                      className="flex items-center justify-between gap-2 rounded border border-border bg-background-tertiary px-3 py-2 text-xs font-medium text-text-primary"
+                      title={injury.reason ? `${p.PLAYER_NAME}: ${injury.label} (${injury.reason})` : `${p.PLAYER_NAME}: ${injury.label}`}
+                    >
+                      <span className="truncate">{p.PLAYER_NAME}</span>
+                      <Badge variant={injury.variant} size="sm">
+                        {injury.label}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <div className="rounded border border-border bg-background-tertiary p-6 text-center">
-                <p className="text-xs font-medium text-text-primary">
-                  Player statistics are not available yet.
-                </p>
-                <p className="mt-1 text-xs text-text-secondary">
-                  Official box scores will be loaded once the game concludes.
+                <p className="text-xs font-medium text-text-secondary">
+                  Kadro bilgisi bulunamadı.
                 </p>
               </div>
             )}

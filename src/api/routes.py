@@ -251,26 +251,38 @@ def frontend_team_rosters(request: Request, season: str = None):
 
 @router.get("/frontend-data-api/injury-report")
 def frontend_injury_report(request: Request, season: str = None, date: str = None):
+    """Injury report entries for one game day: today and later from the latest live report,
+    earlier days from the stored history. `error` says why nothing could be read."""
     def _injury():
-        from .services.frontend_data import _check_token
-        from src.core.season_utils import get_default_season
-        from src.ingestion import nba_injury_report as inj
         from datetime import datetime
+        from .services.frontend_data import _check_token
+        from .services.auto_status import cached_report
+        from .services.injury_history import read_history
+        from src.core.season_utils import get_default_season, normalize_season
+
         _check_token(request)
-        s = season or get_default_season()
-        d = date or datetime.now(inj.ET).strftime("%Y-%m-%d")
-        try:
-            rep = inj.fetch_report(s, d)
-            if not rep:
-                return {"published_et": None, "date": d, "entries": []}
-            return {
-                "published_et": rep.published_et,
-                "date": d,
-                "entries": rep.entries,
-                "not_submitted": [list(x) for x in rep.not_submitted],
-            }
-        except Exception as exc:
-            return {"published_et": None, "date": d, "entries": [], "error": str(exc)}
+        s = normalize_season(season or get_default_season())
+        today = datetime.now(ET).strftime("%Y-%m-%d")
+        d = date or today
+        if d < today:
+            rows = read_history(s)
+            rows = rows[rows["game_date"] == d]
+            entries = [{"team": r.team, "player_name": r.player_name, "status": r.status, "reason": r.reason}
+                       for r in rows.itertuples()]
+            return {"published_et": rows["report_time_et"].iloc[0] if len(rows) else None, "date": d,
+                    "entries": entries, "not_submitted": [], "error": None if entries else "No stored report for this day"}
+        report = cached_report(s, today)
+        if report is None:
+            return {"published_et": None, "date": d, "entries": [], "not_submitted": [],
+                    "error": "Official injury report could not be read"}
+        mmddyyyy = datetime.strptime(d, "%Y-%m-%d").strftime("%m/%d/%Y")
+        return {
+            "published_et": report.published_et,
+            "date": d,
+            "entries": [e for e in report.entries if e["game_date"] == mmddyyyy],
+            "not_submitted": [list(x) for x in report.not_submitted],
+            "error": None,
+        }
 
     return _run_endpoint(_injury)
 

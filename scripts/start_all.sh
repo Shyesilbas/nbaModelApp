@@ -28,6 +28,9 @@ if command -v python3 >/dev/null 2>&1; then
       python3 -m venv .venv
       .venv/bin/pip install --upgrade pip >/dev/null
       .venv/bin/pip install -r requirements.txt >/dev/null
+    else
+      # pick up dependencies added since the venv was created (quick when nothing changed)
+      .venv/bin/pip install -q -r requirements.txt >/dev/null 2>&1 || echo "Warning: could not sync requirements.txt"
     fi
 
     # free port 8001 if already bound by an orphan process
