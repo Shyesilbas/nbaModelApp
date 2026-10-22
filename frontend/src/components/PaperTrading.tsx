@@ -107,17 +107,6 @@ export default function PaperTrading() {
 
   useEffect(load, [load]);
 
-  // New cloud snapshots appear without a reload; failures keep the current data on screen.
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      loadPrivateApiFresh<Report>(`/frontend-data-api/paper-trading?season=${CURRENT_SEASON}`)
-        .then(setReport)
-        .catch(() => undefined);
-    }, 60000);
-    return () => window.clearInterval(id);
-  }, []);
-
   const dates = useMemo(
     () => Array.from(new Set((report?.games ?? []).map((g) => g.game_date))).sort(),
     [report]

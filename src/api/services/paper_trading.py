@@ -9,9 +9,6 @@ from __future__ import annotations
 import json
 import logging
 import math
-import subprocess
-import threading
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -33,43 +30,17 @@ def ledger_path(season: str, ledger_dir: Path = LEDGER_DIR) -> Path:
     return ledger_dir / f"paper_ledger_{token}.jsonl"
 
 
-REMOTE_REF = "origin/main"
-FETCH_INTERVAL_SECONDS = 60
-_fetch_lock = threading.Lock()
-_last_fetch = 0.0
-
-
-def _remote_ledger_lines(season: str) -> Optional[List[str]]:
-    """The cloud-owned ledger as committed on origin/main, so the page shows fresh snapshots without a pull.
-
-    Fetches at most once a minute; returns None when git or the network is unavailable or the file
-    is not on the remote yet, and the caller falls back to the local copy.
-    """
-    global _last_fetch
-    rel = ledger_path(season).relative_to(ROOT).as_posix()
-    try:
-        with _fetch_lock:
-            if time.time() - _last_fetch > FETCH_INTERVAL_SECONDS:
-                subprocess.run(["git", "fetch", "--quiet", "origin", "main"], cwd=ROOT, check=True, timeout=20,
-                               capture_output=True)
-                _last_fetch = time.time()
-        shown = subprocess.run(["git", "show", f"{REMOTE_REF}:{rel}"], cwd=ROOT, check=True, timeout=10,
-                               capture_output=True, text=True)
-        return shown.stdout.splitlines()
-    except Exception as exc:
-        logger.info("Remote ledger unavailable, using the local file: %s", exc)
-        return None
-
-
-def read_ledger(season: str, ledger_dir: Path = LEDGER_DIR, prefer_remote: bool = False) -> List[Dict[str, Any]]:
-    lines = _remote_ledger_lines(season) if prefer_remote else None
-    if lines is None:
-        path = ledger_path(season, ledger_dir)
-        if not path.exists():
-            return []
-        with open(path, encoding="utf-8") as f:
-            lines = f.readlines()
-    return [json.loads(line) for line in (l.strip() for l in lines) if line]
+def read_ledger(season: str, ledger_dir: Path = LEDGER_DIR) -> List[Dict[str, Any]]:
+    path = ledger_path(season, ledger_dir)
+    if not path.exists():
+        return []
+    rows = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    return rows
 
 
 def append_records(season: str, records: Iterable[Dict[str, Any]], ledger_dir: Path = LEDGER_DIR) -> int:
@@ -227,6 +198,6 @@ def summarize(graded: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def paper_trading_report(season: str) -> Dict[str, Any]:
     season = normalize_season(season)
-    graded = grade(read_ledger(season, prefer_remote=True), load_results(season))
+    graded = grade(read_ledger(season), load_results(season))
     graded.sort(key=lambda g: (g["game_date"], g["start_utc"], g["game_id"]), reverse=True)
     return {"season": season, "summary": summarize(graded), "games": graded}
