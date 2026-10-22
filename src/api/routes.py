@@ -34,6 +34,7 @@ from .services.frontend_data import (
     get_team_rosters,
     get_trades,
 )
+from .services.paper_trading import paper_trading_report
 from .services.player_prediction import predict_players
 from .services.score_prediction import predict_score
 from .services.status import get_model_status
@@ -139,6 +140,16 @@ def predict_score_endpoint(req: ScorePredictionRequest):
 @router.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@router.get("/frontend-data-api/paper-trading")
+def frontend_paper_trading(request: Request, season: str = None):
+    def _report():
+        from .services.frontend_data import _check_token
+        from src.core.season_utils import get_default_season
+        _check_token(request)
+        return paper_trading_report(season or get_default_season())
+    return _run_endpoint(_report)
 
 
 @router.get("/frontend-data-api/seasons")
