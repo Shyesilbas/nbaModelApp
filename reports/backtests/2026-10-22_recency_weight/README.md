@@ -33,3 +33,13 @@ added to the production WIN inputs and to the SCORE margin and pace inputs (5 wa
 WIN Brier +0.0006 (0.0003) with all features, SCORE total MAE -0.0055 (0.0031), margin MAE +0.0179 (0.0085). No gain; WIN and
 margin get slightly worse. Rest and back-to-back already carry the schedule effect. `ABS_DELTA` is already Game Score weighted,
 so quality-weighted absence is in production.
+
+## Player rating comparison (`code/rating_compare.py`)
+Each rating replaces Game Score as the per-game value inside the ABS_DELTA rule (same rotation and presence logic).
+Split-half stability (odd vs even games, 20+ games each): IMP 0.976, FANTASY 0.966, GS 0.938, PM 0.672, ONOFF 0.260
+(PM = box-score plus-minus shrunk with 8 zero games; ONOFF = plus-minus minus minutes share of team margin).
+Walk-forward WIN Brier (5 folds): no absence feature 0.2141, production 0.2106, GS recomputed 0.2106 (matches production),
+FANTASY 0.2107, IMP 0.2109, PM 0.2140, ONOFF 0.2138, GS+ONOFF 0.2108, GS+FANTASY 0.2107.
+Reading: the absence feature is worth 0.0035 Brier, the largest single input; which production-style score weights it hardly
+matters. Plus-minus based ratings are too noisy per game to help. Stability of IMP/FANTASY is high mostly because they track
+minutes and role, not because they predict outcomes better.
