@@ -5,8 +5,9 @@ Run after `main.py --update-data` and before tip-off. Games already in the ledge
 are never rewritten and games that have started are skipped, so each record is a
 true pre-game call. Uses the production models; trains nothing.
 
-Best timing: run `--pre-tip 30` every 15 minutes. Each game is then frozen on the run
-just before tip-off, with the newest official injury report and market total line.
+Best timing: run `--pre-tip 15` every 5 minutes. Each game is frozen on the first run inside
+its window that has the official injury report. If the report cannot be fetched, the game is
+left for the next run and is frozen without it only on the last attempt before tip-off.
 """
 import argparse
 import sys
@@ -27,33 +28,9 @@ from src.core.data_paths import get_data_paths
 from src.core.season_utils import get_default_season, normalize_season
 from src.features.build_matchup_features import build_features
 from src.ingestion import nba_injury_report as inj
-from src.ingestion.sportsgameodds import TOTAL_OVER, fetch_events, get_api_key, to_float, total_ladder, total_window
 
 
-def fetch_total_lines(first_day: str, last_day: str) -> dict:
-    """Current market total line and rung window per (home, away) for upcoming games.
-
-    Needs SPORTSGAMEODDS_API_KEY; without it (or on an API error) the records are
-    written without totals, exactly as before.
-    """
-    api_key = get_api_key()
-    if not api_key:
-        print("SPORTSGAMEODDS_API_KEY not set (env or .env): total lines are not frozen")
-        return {}
-    start = f"{first_day}T00:00:00Z"
-    end = (pd.Timestamp(last_day) + pd.Timedelta(days=2)).strftime("%Y-%m-%dT00:00:00Z")
-    lines = {}
-    try:
-        for ev in fetch_events(api_key, startsAfter=start, startsBefore=end, finalized="false"):
-            main = to_float(ev.get("odds", {}).get(TOTAL_OVER, {}).get("bookOverUnder"))
-            if main is None:
-                continue
-            names = ev["teams"]
-            key = (names["home"]["names"]["short"], names["away"]["names"]["short"])
-            lines[key] = (main, total_window(main, total_ladder(ev)))
-    except Exception as exc:
-        print(f"total lines unavailable: {exc}")
-    return lines
+FINAL_ATTEMPT_MINUTES = 6  # inside this many minutes to tip-off a game is frozen even without a report
 
 
 def fetch_injuries(season: str):
@@ -94,8 +71,8 @@ def main() -> int:
                         help="Also predict games already played, as of their date (origin=backfill, labeled in the UI)")
     parser.add_argument("--pre-tip", type=int, default=None, metavar="MINUTES",
                         help="Only snapshot games that tip off within MINUTES from now (ignores --date). Run it every "
-                             "15 minutes: each game is frozen on the run just before tip-off, with the newest injury "
-                             "report and market line")
+                             "5 minutes: each game is frozen on the first run in its window that has the newest injury "
+                             "report")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     now = datetime.now(timezone.utc)
@@ -122,7 +99,6 @@ def main() -> int:
     if not pending:
         print(f"{season}: no unlogged games to snapshot")
         return 0
-    total_lines = {} if args.backfill else fetch_total_lines(args.date, args.through or args.date)
     report = None if args.backfill else fetch_injuries(season)
     for g in games.itertuples():
         gid = str(g.GAME_ID).zfill(10)
@@ -134,6 +110,10 @@ def main() -> int:
             continue
         home, away = g.HOME_TEAM_ABBREVIATION, g.AWAY_TEAM_ABBREVIATION
         day = g.GAME_DATE
+        minutes_to_tip = (pd.Timestamp(g.GAME_START_UTC) - pd.Timestamp(now)).total_seconds() / 60
+        if args.pre_tip is not None and report is None and minutes_to_tip > FINAL_ATTEMPT_MINUTES:
+            print(f"retry later {gid} {away}@{home}: no injury report, {minutes_to_tip:.0f} min to tip-off")
+            continue
         overrides, injuries = (None, None) if started else game_injuries(report, season, day, away, home)
         feats_home = build_features(home, away, day, player_status_overrides=overrides)
         feats_away = build_features(away, home, day, team_is_home=False, player_status_overrides=overrides)
@@ -150,8 +130,6 @@ def main() -> int:
             gid, g.GAME_DATE, g.GAME_START_UTC, home, away, win.model_version,
             win.home_win_probability, score.predicted_home_score, score.predicted_away_score, now=now,
             origin="backfill" if started else "live",
-            total_line=total_lines.get((home, away), (None, None))[0],
-            total_window_rungs=total_lines.get((home, away), (None, None))[1],
             injury_report=injuries,
         ))
         print(f"{gid} {away}@{home}: {win.predicted_winner} {max(win.home_win_probability, win.away_win_probability):.1%}")
