@@ -1,0 +1,178 @@
+PLAYER_ID,PLAYER_NAME,TEAMS_PLAYED_FOR,NUM_TEAMS,GP,AVG_MIN,AVG_PTS,AVG_REB,AVG_AST,IMPORTANCE_SCORE,TRADE_DATE,HOW_ACQUIRED,MOVE_TYPE
+1631113,Kennedy Chandler,"UTA, PHX",2,11,32.2,15.0,3.4,6.7,45.22,2026-10-17,Waived (PHX),Non-rostered
+1643016,Bez Mbeng,"UTA, MIA",2,15,32.9,8.1,3.8,4.1,35.33,2026-10-17,Waived (MIA),Non-rostered
+1628971,Bruce Brown,"DEN, NYK",2,88,24.0,7.8,3.8,2.1,27.49,2026-10-17,Waived (NYK),Non-rostered
+1641803,Tristen Newton,"HOU, SAC",2,1,12.0,12.0,3.0,0.0,21.6,2026-10-17,Waived (SAC),Non-rostered
+1643060,Hayden Gray,"UTA, BOS",2,1,25.0,6.0,0.0,1.0,20.0,2026-10-17,Waived (BOS),Non-rostered
+1631110,Jeremy Sochan,"NYK, SAS, POR",3,52,9.5,3.4,2.2,0.8,11.98,2026-10-17,Waived (POR),Non-rostered
+1631166,Drew Timme,"LAL, MIN",2,27,8.7,3.4,1.2,0.9,10.52,2026-10-17,Waived (MIN),Non-rostered
+1631120,JD Davison,"HOU, ORL",2,30,7.5,2.4,1.2,1.2,9.29,2026-10-17,Waived (ORL),Non-rostered
+1641809,Drew Peterson,"CHA, CHI",2,6,10.8,0.8,1.5,0.3,8.55,2026-10-17,Waived (CHI),Non-rostered
+1641801,Emanuel Miller,"CHI, DEN",2,5,6.6,3.0,0.6,0.8,8.22,2026-10-17,Waived (DEN),Non-rostered
+1641810,Antonio Reeves,"CHA, MIN",2,10,6.9,2.7,0.8,0.3,7.56,2026-10-17,Waived (MIN),Non-rostered
+1641753,Chris Livingston,"CLE, WAS",2,3,5.7,3.0,1.0,0.3,7.53,2026-10-17,Waived (WAS),Non-rostered
+1631115,Orlando Robinson,"ORL, CHI",2,4,6.2,1.8,1.0,0.8,7.2,2026-10-17,Waived (CHI),Non-rostered
+1641807,Norchad Omier,"LAC, MIN",2,6,3.8,2.8,1.2,0.3,6.65,2026-10-17,Waived (MIN),Non-rostered
+1641794,Dillon Jones,"NYK, PHI",2,7,5.6,1.3,1.0,0.6,6.13,2026-10-17,Waived (PHI),Non-rostered
+1631127,Harrison Ingram,"SAS, UTA",2,7,3.7,1.6,0.4,0.1,4.16,2026-10-17,Contract converted (UTA),Non-rostered
+1631211,Trevor Keels,"MIA, WAS",2,8,1.8,1.0,0.2,0.0,2.17,2026-10-17,Waived (WAS),Non-rostered
+1631216,Caleb Houstan,"ATL, NOP",2,18,4.2,2.3,0.6,0.2,5.48,2026-10-16,Waived (POR),Non-rostered
+1641778,Leaky Black,"WAS, SAC",2,15,28.8,7.1,5.0,1.5,29.67,2026-10-15,Contract converted (SAC),Non-rostered
+1629234,Drew Eubanks,"NYK, SAC",2,42,13.2,5.2,3.0,0.5,16.12,2026-10-15,Waived (NYK),Non-rostered
+1643007,Taelon Peter,"IND, SAS",2,38,12.9,4.5,1.6,1.1,14.42,2026-10-14,Waived (SAS),Non-rostered
+1641998,Trey Jemison III,"NYK, TOR",2,13,6.3,1.0,1.4,0.4,6.39,2026-10-14,Waived (TOR),Non-rostered
+1642530,Yuki Kawamura,"LAC, CHI",2,18,11.7,3.4,1.8,2.6,15.42,2026-10-12,Waived (LAC),Non-rostered
+1642939,Miles Kelly,"GSW, DAL",2,14,9.6,3.1,1.7,0.9,11.24,2026-10-11,Waived (GSW),Non-rostered
+1642955,Kadary Richmond,"CLE, WAS",2,3,22.0,8.3,3.3,2.7,27.33,2026-10-09,Waived (CLE),Non-rostered
+1631132,Christian Koloko,"LAL, MEM, NOP, ATL",4,27,13.3,2.7,3.0,0.7,13.93,2026-10-09,Waived (NOP),Non-rostered
+1642938,Curtis Jones,"DEN, CLE",2,10,8.7,2.9,1.1,1.0,10.07,2026-10-09,Waived (CLE),Non-rostered
+1641748,Andre Jackson Jr.,"MIL, TOR",2,48,8.5,2.4,1.5,0.9,9.73,2026-10-05,Waived (TOR),Non-rostered
+1642354,KJ Simpson,"CHA, DEN",2,20,12.8,4.5,1.9,2.1,16.42,2026-09-30,Waived (DEN),Non-rostered
+1642368,N'Faly Dante,"NYK, ATL",2,4,4.0,0.8,1.8,0.0,4.85,2026-09-30,Waived (NYK),Non-rostered
+1627741,Buddy Hield,"ATL, GSW, CHI",3,53,15.7,7.5,2.2,1.3,20.09,2026-09-27,Traded to CHI from CHA,Trade
+1642882,Julian Reese,"WAS, NOP",2,13,30.9,11.8,10.5,1.8,42.72,2026-09-24,Signed (NOP),Non-rostered
+1627827,Dorian Finney-Smith,"HOU, CHA, ATL",2,41,16.3,3.2,2.5,0.9,15.65,2026-09-22,Traded to ATL from CHA,Trade
+1641869,Malachi Smith,"BKN, TOR",2,15,23.9,8.3,3.4,3.3,29.21,2026-09-21,Contract converted (TOR),Non-rostered
+202695,Kawhi Leonard,"LAC, TOR",2,66,32.2,27.8,6.4,3.6,56.92,2026-09-14,Traded to TOR from LAC,Trade
+1627742,Brandon Ingram,"TOR, LAC",2,82,33.5,20.9,5.4,3.6,49.61,2026-09-14,Traded to LAC from TOR,Trade
+1641711,Gradey Dick,"TOR, LAC",2,79,13.6,5.8,1.9,0.6,15.75,2026-09-14,Traded to LAC from TOR,Trade
+201942,DeMar DeRozan,"SAC, DEN",2,77,31.3,18.4,2.9,4.1,43.76,2026-09-08,Signed (DEN),Non-rostered
+1642877,Micah Peavy,"NOP, MEM",2,61,15.0,4.3,1.9,1.0,15.58,2026-09-08,Traded to MEM from NOP,Trade
+1641722,Jordan Hawkins,"NOP, MEM, CHI",2,51,13.5,5.1,1.7,0.8,15.12,2026-09-08,Traded to MEM from NOP,Trade
+1642358,AJ Johnson,"WAS, DAL, NOP",3,48,9.5,3.3,1.1,1.0,10.92,2026-09-08,Traded to NOP from MEM,Trade
+1642262,Cody Williams,"UTA, MIN",2,67,24.3,8.8,3.0,2.0,27.55,2026-08-29,Traded to MIN from UTA,Trade
+1629723,John Konchar,"MEM, UTA, NYK, MIN",3,56,19.9,4.4,4.3,2.1,22.7,2026-08-29,Traded to MIN from UTA,Trade
+1630182,Josh Green,"CHA, MIN, UTA",2,60,15.4,4.2,1.8,0.8,15.11,2026-08-29,Traded to UTA from MIN,Trade
+1630314,Brandon Williams,"DAL, GSW",2,66,22.2,13.0,2.9,3.9,33.4,2026-08-26,Signed (GSW),Non-rostered
+202691,Klay Thompson,"DAL, MIA",2,69,21.7,11.7,2.1,1.4,27.14,2026-08-23,Signed (MIA),Non-rostered
+1631212,Peyton Watson,"DEN, CLE",2,54,29.6,14.6,4.9,2.1,38.34,2026-08-20,Traded to CLE from DEN,Trade
+1629622,Max Strus,"CLE, LAC",2,30,25.7,10.2,5.1,2.1,32.23,2026-08-20,Traded to LAC from CLE,Trade
+203471,Dennis Schröder,"CLE, SAC, CHA",3,87,22.6,9.8,2.5,4.4,30.6,2026-08-20,Traded to CHA from CLE,Trade
+1641715,Cam Whitmore,"CLE, WAS, DEN",2,21,16.9,9.2,2.8,0.7,22.0,2026-08-20,Traded to CLE from WAS,Trade
+1630544,Tre Mann,"CHA, WAS",2,54,12.6,5.4,1.7,1.6,16.16,2026-08-20,Traded to WAS from CHA,Trade
+1630570,Trendon Watford,"PHI, NOP",2,60,15.1,6.1,3.0,2.2,20.57,2026-08-17,Signed (NOP),Non-rostered
+1642951,Sean Pedulla,"LAC, HOU",2,7,4.4,1.9,0.4,0.7,5.66,2026-08-17,Signed (HOU),Non-rostered
+1629618,Jalen Pickett,"DEN, LAC",2,52,15.6,5.0,2.2,2.2,18.78,2026-08-12,Signed (LAC),Non-rostered
+203484,Kentavious Caldwell-Pope,"MEM, PHI",2,51,21.3,8.4,2.5,2.7,26.05,2026-08-05,Signed (PHI),Non-rostered
+1629021,Moritz Wagner,"ORL, BKN",2,39,11.4,6.5,3.1,0.7,16.94,2026-07-31,Signed (BKN),Non-rostered
+1629680,Matisse Thybulle,"POR, LAL",2,35,15.6,5.3,1.9,0.9,16.68,2026-07-27,Signed (LAL),Non-rostered
+2544,LeBron James,"LAL, PHI",2,70,33.9,21.3,6.2,7.2,56.4,2026-07-26,Signed (PHI),Non-rostered
+1642910,John Tonje,"BOS, POR",2,6,7.0,2.5,1.0,0.3,7.7,2026-07-24,Signed (POR),Non-rostered
+1630592,Jalen Wilson,"BKN, ATL",2,54,15.9,6.4,2.1,0.9,18.25,2026-07-22,Signed (ATL),Non-rostered
+1641724,Jett Howard,"ORL, DAL",2,57,12.4,5.3,1.5,0.8,14.58,2026-07-20,Signed (DAL),Non-rostered
+1629652,Luguentz Dort,"OKC, ATL",2,84,26.0,7.8,3.4,1.2,26.79,2026-07-19,Traded to ATL from OKC,Trade
+1642258,Zaccharie Risacher,"ATL, DAL",2,70,21.7,9.3,3.8,1.1,26.37,2026-07-19,Traded to DAL from ATL,Trade
+1630533,Ziaire Williams,"BKN, LAL",2,56,22.9,10.2,2.4,1.1,26.14,2026-07-19,Signed (LAL),Non-rostered
+1628970,Miles Bridges,"CHA, PHX",2,79,31.1,17.2,5.8,3.2,44.46,2026-07-13,Traded to PHX from CHA,Trade
+1628960,Grayson Allen,"PHX, CHA",2,53,28.4,16.2,3.0,3.8,39.68,2026-07-13,Traded to CHA from PHX,Trade
+1626220,Royce O'Neale,"PHX, CHA",2,84,28.1,9.7,4.8,2.6,33.5,2026-07-13,Traded to CHA from PHX,Trade
+1626172,Kevon Looney,"NOP, LAL",2,21,14.6,2.8,5.6,1.6,19.29,2026-07-12,Signed (LAL),Non-rostered
+203944,Julius Randle,"MIN, BKN",2,91,33.1,20.4,6.8,4.7,52.29,2026-07-10,Traded to BKN from MIN,Trade
+1630163,LaMelo Ball,"CHA, MIN",2,74,28.1,20.2,4.8,7.1,50.75,2026-07-10,Traded to MIN from CHA,Trade
+1629651,Nic Claxton,"BKN, CHI",2,69,27.8,11.7,6.9,3.7,39.47,2026-07-10,Traded to CHI from BKN,Trade
+1629675,Naz Reid,"MIN, CHA",2,89,26.2,13.4,6.3,2.2,37.47,2026-07-10,Traded to CHA from MIN,Trade
+203935,Marcus Smart,"LAL, HOU",2,72,29.4,9.8,2.9,3.3,32.88,2026-07-10,Signed (HOU),Non-rostered
+1630695,Micah Potter,"IND, POR",2,47,19.3,9.7,5.0,1.5,27.54,2026-07-10,Claimed on waivers (POR),Non-rostered
+1629637,Jaxson Hayes,"LAL, UTA",2,76,18.1,7.3,4.0,0.9,22.4,2026-07-10,Signed (UTA),Non-rostered
+1628964,Mo Bamba,"TOR, UTA",2,4,11.0,2.5,5.5,0.2,14.97,2026-07-10,Signed (UTA),Non-rostered
+1629006,Josh Okogie,"HOU, UTA",2,84,17.4,4.5,2.5,0.9,17.64,2026-07-09,Signed (UTA),Non-rostered
+1629646,Charles Bassey,"MEM, PHI, BOS, GSW",4,14,11.0,5.4,4.1,0.5,16.56,2026-07-09,Signed (GSW),Non-rostered
+1626204,Larry Nance Jr.,"CLE, IND",2,37,12.3,3.5,2.5,0.9,14.07,2026-07-09,Signed (IND),Non-rostered
+1631117,Walker Kessler,"UTA, LAL",2,5,31.0,14.4,10.8,3.0,47.36,2026-07-08,Traded to LAL from UTA,Trade
+1630583,Santi Aldama,"MEM, DAL",2,43,27.8,14.0,6.7,2.9,40.32,2026-07-08,Traded to DAL from MEM,Trade
+1628381,John Collins,"LAC, DET",2,70,27.0,13.5,5.4,1.0,34.96,2026-07-08,Traded to DET from LAC,Trade
+203114,Khris Middleton,"DAL, WAS",2,63,22.8,10.2,3.7,2.8,30.16,2026-07-08,Traded to WAS from DAL,Trade
+1627752,Taurean Prince,"MIL, DET",2,26,23.6,9.2,3.1,1.8,27.37,2026-07-08,Traded to DET from MIL,Trade
+1630191,Isaiah Stewart,"DET, MEM",2,72,20.5,8.8,4.5,1.0,25.96,2026-07-08,Traded to MEM from DET,Trade
+1641989,Elijah Harkless,"UTA, DET",2,26,21.0,6.8,2.0,2.9,24.1,2026-07-08,Signed (DET),Non-rostered
+203992,Bogdan Bogdanović,"LAC, HOU",2,23,19.7,7.4,2.6,2.2,23.67,2026-07-08,Signed (HOU),Non-rostered
+1642366,Quinten Post,"GSW, MEM",2,67,17.3,7.7,4.0,1.4,23.24,2026-07-08,Signed (MEM),Non-rostered
+1627747,Caris LeVert,"DET, MIL",2,73,18.8,7.1,2.0,2.4,22.51,2026-07-08,Traded to MIL from DET,Trade
+1641712,Rayan Rupert,"POR, MEM, PHI",3,64,16.7,5.2,2.9,1.1,18.67,2026-07-08,Signed (PHI),Non-rostered
+1631204,Marcus Sasser,"DET, DAL",2,44,11.8,5.1,1.0,1.8,14.86,2026-07-08,Traded to DAL from DET,Trade
+1626162,Kelly Oubre Jr.,"PHI, IND",2,62,31.9,13.7,5.1,1.5,38.13,2026-07-07,Signed (IND),Non-rostered
+1629028,Deandre Ayton,"LAL, WAS",2,82,27.4,12.2,8.2,0.8,36.93,2026-07-07,Traded to WAS from LAL,Trade
+1629656,Quentin Grimes,"PHI, LAL",2,87,28.5,12.5,3.5,3.1,35.6,2026-07-07,Signed (LAL),Non-rostered
+1630572,Sandro Mamukelashvili,"TOR, LAL",2,87,21.3,10.7,4.9,1.8,29.98,2026-07-07,Signed (LAL),Non-rostered
+1630702,Jaden Hardy,"DAL, WAS, LAL",3,57,15.8,9.2,1.5,1.0,20.41,2026-07-07,Traded to LAL from WAS,Trade
+1641725,Trey Alexander,"NOP, UTA",2,9,12.3,5.2,1.2,1.0,14.36,2026-07-07,Signed (UTA),Non-rostered
+203507,Giannis Antetokounmpo,"MIL, MIA",2,36,28.9,27.6,9.8,5.4,61.91,2026-07-06,Traded to MIA from MIL,Trade
+1627759,Jaylen Brown,"BOS, PHI",2,78,34.5,28.4,6.8,5.0,61.31,2026-07-06,Traded to PHI from BOS,Trade
+1629639,Tyler Herro,"MIA, MIL",2,34,31.3,20.6,4.7,4.2,48.17,2026-07-06,Traded to MIL from MIA,Trade
+202331,Paul George,"PHI, BOS",2,49,31.9,17.1,5.0,3.5,44.23,2026-07-06,Traded to BOS from PHI,Trade
+1631170,Jaime Jaquez Jr.,"MIA, MIL",2,76,28.5,15.3,5.0,4.7,42.69,2026-07-06,Traded to MIL from MIA,Trade
+202699,Tobias Harris,"DET, SAS",2,77,29.0,14.1,5.5,2.3,38.76,2026-07-06,Signed (SAS),Non-rostered
+1626171,Bobby Portis Jr.,"MIL, MIA",2,67,24.1,13.7,6.4,1.6,35.74,2026-07-06,Traded to MIA from MIL,Trade
+1642276,Kel'el Ware,"MIA, MIL",2,78,22.4,11.1,9.1,0.8,34.41,2026-07-06,Traded to MIL from MIA,Trade
+1629060,Rui Hachimura,"LAL, LAC",2,78,29.7,12.2,3.4,0.9,32.61,2026-07-06,Signed (LAC),Non-rostered
+203501,Tim Hardaway Jr.,"DEN, MIA",2,86,26.4,13.3,2.6,1.3,31.62,2026-07-06,Signed (MIA),Non-rostered
+203083,Andre Drummond,"PHI, NYK",2,75,18.8,6.1,7.9,1.2,26.72,2026-07-06,Signed (NYK),Non-rostered
+1629011,Mitchell Robinson,"NYK, BOS",2,78,18.3,5.5,8.0,0.8,25.36,2026-07-06,Signed (BOS),Non-rostered
+1630198,Isaiah Joe,"OKC, DET",2,84,19.6,10.1,2.4,1.3,24.68,2026-07-06,Traded to DET from OKC,Trade
+1629731,Dean Wade,"CLE, PHI",2,77,22.4,5.5,4.1,1.3,23.62,2026-07-06,Signed (PHI),Non-rostered
+1630598,Aaron Wiggins,"OKC, ATL",2,78,19.1,8.1,2.6,1.5,22.97,2026-07-06,Traded to ATL from OKC,Trade
+1642857,Kasparas Jakučionis,"MIA, MIL",2,53,17.9,6.2,2.6,2.6,22.14,2026-07-06,Traded to MIL from MIA,Trade
+1630574,Ariel Hukporti,"NYK, PHI",2,64,9.0,2.1,3.0,0.5,10.93,2026-07-06,Signed (PHI),Non-rostered
+1631126,Caleb Love,"POR, PHI",2,49,20.7,10.4,2.3,2.5,27.3,2026-07-05,Signed (PHI),Non-rostered
+1630311,Pat Spencer,"GSW, PHX",2,67,18.3,7.1,2.4,3.5,24.31,2026-07-04,Signed (PHX),Non-rostered
+1642367,Jonathan Mogbo,"TOR, SAC",2,43,5.9,1.5,1.6,0.6,7.23,2026-07-02,Signed (SAC),Non-rostered
+1628975,Jevon Carter,"CHI, ORL",2,57,15.5,6.0,1.6,1.6,18.01,2026-07-01,Signed (ORL),Non-rostered
+1642382,Branden Carlson,"OKC, POR",2,42,11.7,5.8,3.0,0.7,16.19,2026-07-01,Signed (POR),Non-rostered
+1642269,Devin Carter,"SAC, ATL, BOS",2,38,18.4,8.9,3.3,2.7,26.08,2026-06-30,Traded to ATL from SAC,Trade
+1629630,Ja Morant,"MEM, POR",2,20,28.4,19.4,3.2,8.1,49.62,2026-06-29,Traded to POR from MEM,Trade
+203924,Jerami Grant,"POR, MEM",2,63,29.0,17.9,3.3,2.0,39.35,2026-06-29,Traded to MEM from POR,Trade
+1631200,Kris Murray,"POR, MEM",2,63,21.8,5.3,3.4,1.3,22.28,2026-06-29,Traded to MEM from POR,Trade
+1642880,Kam Jones,"IND, CHI, MIL",2,37,16.6,4.4,1.6,3.2,19.47,2026-06-24,Traded to CHI from IND,Trade
+1642933,Keshon Gilbert,"WAS, ATL",2,4,18.5,4.2,1.2,3.0,19.5,2026-03-04,Signed (ATL),Non-rostered
+1642959,Chris Youngblood,"OKC, POR",2,34,5.5,2.1,0.8,0.4,6.36,2026-03-03,Signed (POR),Non-rostered
+1642434,Riley Minix,"SAS, CLE",2,9,6.6,3.9,0.7,0.6,8.8,2026-02-13,Signed (CLE),Non-rostered
+1642403,Isaac Jones,"SAC, DET",2,7,5.1,1.3,0.7,0.1,4.93,2026-02-09,Signed (DET),Non-rostered
+203076,Anthony Davis,"DAL, WAS",2,20,31.2,20.4,11.1,2.8,53.44,2026-02-05,Traded to WAS from DAL,Trade
+1627826,Ivica Zubac,"LAC, IND",2,48,30.2,14.1,10.6,2.2,45.21,2026-02-05,Traded to IND from LAC,Trade
+1631097,Bennedict Mathurin,"IND, LAC, NOP",3,55,30.0,17.7,5.4,2.4,42.69,2026-02-05,Traded to LAC from IND,Trade
+202696,Nikola Vučević,"CHI, BOS, ORL",3,70,27.6,14.3,8.0,3.2,42.64,2026-02-05,Traded to BOS from CHI,Trade
+204001,Kristaps Porziņģis,"ATL, GSW",2,34,23.9,16.6,5.1,2.5,38.44,2026-02-05,Traded to GSW from ATL,Trade
+1630245,Ayo Dosunmu,"CHI, MIN",2,79,27.5,14.9,3.5,3.7,38.32,2026-02-05,Traded to MIN from CHI,Trade
+1630228,Jonathan Kuminga,"GSW, ATL, MIN",3,42,23.5,12.4,5.3,2.1,33.64,2026-02-05,Traded to ATL from GSW,Trade
+1629014,Anfernee Simons,"BOS, CHI, PHI",3,55,24.9,14.3,2.5,2.4,33.34,2026-02-05,Traded to CHI from BOS,Trade
+1629111,Jock Landale,"MEM, ATL",2,68,22.2,10.6,5.7,1.7,31.02,2026-02-05,Traded to ATL from UTA,Trade
+1628963,Marvin Bagley III,"WAS, DAL, DEN",3,60,20.0,10.4,6.1,1.4,29.91,2026-02-05,Traded to DAL from WAS,Trade
+1628379,Luke Kennard,"ATL, LAL, PHX",3,88,22.8,8.7,2.5,2.2,26.44,2026-02-05,Traded to LAL from ATL,Trade
+1631172,Ousmane Dieng,"OKC, MIL",2,57,19.4,7.6,3.2,2.4,24.61,2026-02-05,Traded to MIL from CHI,Trade
+1630543,Isaiah Jackson,"IND, LAC",2,55,16.5,6.7,5.3,0.9,22.73,2026-02-05,Traded to LAC from IND,Trade
+1630631,Jose Alvarado,"NOP, NYK",2,87,17.7,6.7,2.3,2.9,22.69,2026-02-05,Traded to NYK from NOP,Trade
+1631159,Leonard Miller,"MIN, CHI",2,46,15.7,7.8,3.9,0.9,21.71,2026-02-05,Traded to CHI from MIN,Trade
+1631169,Josh Minott,"BOS, BKN",2,49,17.0,7.4,3.2,0.9,21.2,2026-02-05,Traded to BKN from BOS,Trade
+1630208,Nick Richards,"PHX, CHI, MIA",3,48,14.6,5.8,5.1,0.3,19.65,2026-02-05,Traded to CHI from PHX,Trade
+1641738,Kobe Brown,"LAC, IND",2,61,15.8,5.8,3.0,1.3,19.28,2026-02-05,Traded to IND from LAC,Trade
+1630534,Ochai Agbaji,"TOR, NYK, BKN",3,62,15.7,5.1,2.3,0.8,16.8,2026-02-05,Traded to BKN from TOR,Trade
+1626145,Tyus Jones,"ORL, DAL, DEN",3,70,14.4,3.0,1.1,2.3,15.01,2026-02-05,Traded to DAL from CHA,Trade
+1631207,Dalen Terry,"CHI, GSW, NOP, PHI",3,55,10.7,3.4,1.6,1.3,12.75,2026-02-05,Traded to NOP from NYK,Trade
+1631103,Malaki Branham,"WAS, ORL, CHA",2,28,9.8,4.6,1.6,0.8,12.6,2026-02-05,Traded to CHA from WAS,Trade
+1631218,Trayce Jackson-Davis,"GSW, TOR",2,56,9.0,3.3,2.6,0.7,11.92,2026-02-05,Traded to TOR from GSW,Trade
+1641763,Julian Phillips,"CHI, HOU, MIN",3,53,8.6,2.8,0.9,0.2,8.51,2026-02-05,Traded to MIN from CHI,Trade
+201935,James Harden,"LAC, CLE",2,88,35.4,22.7,4.9,7.5,57.41,2026-02-04,Traded to CLE from LAC,Trade
+1629636,Darius Garland,"CLE, LAC",2,46,29.8,18.8,2.4,6.7,46.75,2026-02-04,Traded to LAC from CLE,Trade
+1629632,Coby White,"CHI, CHA",2,52,24.8,17.1,3.4,3.9,39.45,2026-02-04,Traded to CHA from CHI,Trade
+1629012,Collin Sexton,"CHA, CHI, LAL",3,68,23.7,15.4,2.3,3.3,34.96,2026-02-04,Traded to CHI from CHA,Trade
+1642272,Jared McCain,"PHI, OKC",2,82,17.3,8.6,2.0,1.3,21.63,2026-02-04,Traded to OKC from PHI,Trade
+201144,Mike Conley,"MIN, CHA, BOS",2,66,17.6,4.5,1.6,2.9,19.58,2026-02-04,Traded to CHA from CHI,Trade
+1628991,Jaren Jackson Jr.,"MEM, UTA",2,48,30.3,19.4,5.7,2.0,44.29,2026-02-03,Traded to UTA from MEM,Trade
+1628989,Kevin Huerter,"CHI, DET",2,74,21.6,9.4,3.3,2.5,27.95,2026-02-03,Traded to DET,Trade
+1642383,Walter Clayton Jr.,"UTA, MEM",2,69,20.4,7.8,2.0,4.0,26.5,2026-02-03,Traded to MEM from UTA,Trade
+1641707,Taylor Hendricks,"UTA, MEM",2,59,19.0,7.4,3.7,0.9,22.83,2026-02-03,Traded to MEM from UTA,Trade
+203937,Kyle Anderson,"MIN, UTA, MEM, TOR",4,51,17.9,5.5,3.1,2.8,22.32,2026-02-03,Traded to MEM from UTA,Trade
+1629631,De'Andre Hunter,"CLE, SAC",2,45,26.2,13.7,4.1,2.0,34.68,2026-02-01,Traded to SAC from CLE,Trade
+1630249,Vít Krejčí,"ATL, POR",2,69,20.4,8.0,2.2,1.5,23.0,2026-02-01,Traded to POR from ATL,Trade
+1631165,Keon Ellis,"SAC, CLE, BKN",3,84,18.6,5.9,1.8,0.9,18.72,2026-02-01,Traded to CLE from SAC,Trade
+1641871,Duop Reath,"POR, PHX, ATL",2,32,8.0,2.9,1.2,0.3,8.83,2026-02-01,Traded to ATL from POR,Trade
+1629027,Trae Young,"ATL, WAS",2,15,25.5,17.9,2.0,8.0,45.07,2026-01-09,Traded to WAS from ATL,Trade
+203468,CJ McCollum,"WAS, ATL",2,82,29.9,18.8,3.3,3.7,43.26,2026-01-09,Traded to ATL from WAS,Trade
+1630557,Corey Kispert,"WAS, ATL",2,63,18.0,8.6,2.2,1.6,22.63,2026-01-09,Traded to ATL from WAS,Trade
+1642484,RayJ Dennis,"IND, LAC, ATL",3,17,12.1,4.4,1.5,1.9,15.16,2025-12-31,Signed (ATL),Non-rostered
+1641790,PJ Hall,"MEM, CHA",2,19,11.3,4.5,3.9,0.5,15.68,2025-12-24,Signed (CHA),Non-rostered
+1630164,James Wiseman,"NYK, IND",2,4,14.8,3.2,2.0,0.8,14.15,2025-12-20,Signed (IND),Non-rostered
+1641723,Kobe Bufkin,"NOP, BKN, LAL",2,16,7.4,2.9,0.8,0.6,8.51,2025-09-16,Traded to BKN from ATL,Trade
+1631131,Oscar Tshiebwe,"HOU, UTA",2,27,16.6,7.8,6.6,1.2,25.83,2025-08-18,Signed (UTA),Non-rostered
+1631104,Blake Wesley,"LAC, WAS, POR",2,35,10.5,4.3,1.1,1.8,13.51,2025-07-09,Traded to WAS from SAS,Trade
+1626181,Norman Powell,"MIA, CHI",2,59,29.5,21.6,3.5,2.4,44.12,2025-07-07,Traded to MIA from LAC,Trade

@@ -1,0 +1,1172 @@
+GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABBREVIATION,AWAY_TEAM_NAME,AWAY_SCORE,WINNER_TEAM_ABBREVIATION,LOSER_TEAM_ABBREVIATION,SEASON_TYPE,IS_PLAYOFF,GAME_STATUS,WEEK,PLAYOFF_ROUND,SERIES_GAME_NUMBER,HOME_SERIES_WINS,AWAY_SERIES_WINS,IS_ELIMINATION_GAME,CAN_CLINCH_SERIES
+0022000001,2020-12-22,BKN,Brooklyn Nets,125,GSW,Golden State Warriors,99,BKN,GSW,Regular Season,False,Final,9.0,,,1.0,0.0,False,False
+0022000002,2020-12-22,LAL,Los Angeles Lakers,109,LAC,LA Clippers,116,LAC,LAL,Regular Season,False,Final,9.0,,,0.0,1.0,False,False
+0022000003,2020-12-23,BOS,Boston Celtics,122,MIL,Milwaukee Bucks,121,BOS,MIL,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000004,2020-12-23,PHX,Phoenix Suns,106,DAL,Dallas Mavericks,102,PHX,DAL,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000010,2020-12-23,CLE,Cleveland Cavaliers,121,CHA,Charlotte Hornets,114,CLE,CHA,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000011,2020-12-23,IND,Indiana Pacers,121,NYK,New York Knicks,107,IND,NYK,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000012,2020-12-23,ORL,Orlando Magic,113,MIA,Miami Heat,107,ORL,MIA,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000013,2020-12-23,PHI,Philadelphia 76ers,113,WAS,Washington Wizards,107,PHI,WAS,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000014,2020-12-23,TOR,Toronto Raptors,99,NOP,New Orleans Pelicans,113,NOP,TOR,Regular Season,False,Final,10.0,,,0.0,1.0,False,False
+0022000015,2020-12-23,CHI,Chicago Bulls,104,ATL,Atlanta Hawks,124,ATL,CHI,Regular Season,False,Final,10.0,,,0.0,1.0,False,False
+0022000017,2020-12-23,MEM,Memphis Grizzlies,119,SAS,San Antonio Spurs,131,SAS,MEM,Regular Season,False,Final,10.0,,,0.0,1.0,False,False
+0022000018,2020-12-23,MIN,Minnesota Timberwolves,111,DET,Detroit Pistons,101,MIN,DET,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000019,2020-12-23,DEN,Denver Nuggets,122,SAC,Sacramento Kings,124,SAC,DEN,Regular Season,False,Final,10.0,,,0.0,1.0,False,False
+0022000020,2020-12-23,POR,Portland Trail Blazers,100,UTA,Utah Jazz,120,UTA,POR,Regular Season,False,Final,10.0,,,0.0,1.0,False,False
+0022000005,2020-12-25,MIA,Miami Heat,111,NOP,New Orleans Pelicans,98,MIA,NOP,Regular Season,False,Final,10.0,,,1.0,1.0,False,False
+0022000006,2020-12-25,MIL,Milwaukee Bucks,138,GSW,Golden State Warriors,99,MIL,GSW,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000007,2020-12-25,BOS,Boston Celtics,95,BKN,Brooklyn Nets,123,BKN,BOS,Regular Season,False,Final,10.0,,,1.0,2.0,False,False
+0022000008,2020-12-25,LAL,Los Angeles Lakers,138,DAL,Dallas Mavericks,115,LAL,DAL,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000009,2020-12-25,DEN,Denver Nuggets,108,LAC,LA Clippers,121,LAC,DEN,Regular Season,False,Final,10.0,,,0.0,2.0,False,False
+0022000021,2020-12-26,MEM,Memphis Grizzlies,112,ATL,Atlanta Hawks,122,ATL,MEM,Regular Season,False,Final,10.0,,,0.0,2.0,False,False
+0022000022,2020-12-26,CHA,Charlotte Hornets,107,OKC,Oklahoma City Thunder,109,OKC,CHA,Regular Season,False,Final,10.0,,,0.0,1.0,False,False
+0022000023,2020-12-26,DET,Detroit Pistons,119,CLE,Cleveland Cavaliers,128,CLE,DET,Regular Season,False,Final,10.0,,,0.0,2.0,False,False
+0022000024,2020-12-26,WAS,Washington Wizards,120,ORL,Orlando Magic,130,ORL,WAS,Regular Season,False,Final,10.0,,,0.0,2.0,False,False
+0022000025,2020-12-26,NYK,New York Knicks,89,PHI,Philadelphia 76ers,109,PHI,NYK,Regular Season,False,Final,10.0,,,0.0,2.0,False,False
+0022000026,2020-12-26,CHI,Chicago Bulls,106,IND,Indiana Pacers,125,IND,CHI,Regular Season,False,Final,10.0,,,0.0,2.0,False,False
+0022000027,2020-12-26,SAS,San Antonio Spurs,119,TOR,Toronto Raptors,114,SAS,TOR,Regular Season,False,Final,10.0,,,2.0,0.0,False,False
+0022000028,2020-12-26,UTA,Utah Jazz,111,MIN,Minnesota Timberwolves,116,MIN,UTA,Regular Season,False,Final,10.0,,,1.0,2.0,False,False
+0022000029,2020-12-26,POR,Portland Trail Blazers,128,HOU,Houston Rockets,126,POR,HOU,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000030,2020-12-26,SAC,Sacramento Kings,106,PHX,Phoenix Suns,103,SAC,PHX,Regular Season,False,Final,10.0,,,2.0,1.0,False,False
+0022000031,2020-12-27,LAC,LA Clippers,73,DAL,Dallas Mavericks,124,DAL,LAC,Regular Season,False,Final,10.0,,,2.0,1.0,False,False
+0022000032,2020-12-27,CHA,Charlotte Hornets,106,BKN,Brooklyn Nets,104,CHA,BKN,Regular Season,False,Final,10.0,,,1.0,2.0,False,False
+0022000033,2020-12-27,WAS,Washington Wizards,113,ORL,Orlando Magic,120,ORL,WAS,Regular Season,False,Final,10.0,,,0.0,3.0,False,False
+0022000034,2020-12-27,NOP,New Orleans Pelicans,98,SAS,San Antonio Spurs,95,NOP,SAS,Regular Season,False,Final,10.0,,,2.0,2.0,False,False
+0022000035,2020-12-27,CLE,Cleveland Cavaliers,118,PHI,Philadelphia 76ers,94,CLE,PHI,Regular Season,False,Final,10.0,,,3.0,2.0,False,False
+0022000036,2020-12-27,NYK,New York Knicks,130,MIL,Milwaukee Bucks,110,NYK,MIL,Regular Season,False,Final,10.0,,,1.0,1.0,False,False
+0022000037,2020-12-27,IND,Indiana Pacers,108,BOS,Boston Celtics,107,IND,BOS,Regular Season,False,Final,10.0,,,3.0,1.0,False,False
+0022000038,2020-12-27,CHI,Chicago Bulls,128,GSW,Golden State Warriors,129,GSW,CHI,Regular Season,False,Final,10.0,,,0.0,1.0,False,False
+0022000039,2020-12-27,SAC,Sacramento Kings,100,PHX,Phoenix Suns,116,PHX,SAC,Regular Season,False,Final,10.0,,,2.0,2.0,False,False
+0022000040,2020-12-27,LAL,Los Angeles Lakers,127,MIN,Minnesota Timberwolves,91,LAL,MIN,Regular Season,False,Final,10.0,,,2.0,2.0,False,False
+0022000041,2020-12-28,ATL,Atlanta Hawks,128,DET,Detroit Pistons,120,ATL,DET,Regular Season,False,Final,10.0,,,3.0,0.0,False,False
+0022000042,2020-12-28,BKN,Brooklyn Nets,111,MEM,Memphis Grizzlies,116,MEM,BKN,Regular Season,False,Final,10.0,,,2.0,1.0,False,False
+0022000043,2020-12-28,OKC,Oklahoma City Thunder,109,UTA,Utah Jazz,110,UTA,OKC,Regular Season,False,Final,10.0,,,1.0,2.0,False,False
+0022000044,2020-12-28,DEN,Denver Nuggets,124,HOU,Houston Rockets,111,DEN,HOU,Regular Season,False,Final,10.0,,,1.0,0.0,False,False
+0022000045,2020-12-28,LAL,Los Angeles Lakers,107,POR,Portland Trail Blazers,115,POR,LAL,Regular Season,False,Final,10.0,,,2.0,2.0,False,False
+0022000046,2020-12-29,CLE,Cleveland Cavaliers,86,NYK,New York Knicks,95,NYK,CLE,Regular Season,False,Final,10.0,,,3.0,2.0,False,False
+0022000047,2020-12-29,DET,Detroit Pistons,106,GSW,Golden State Warriors,116,GSW,DET,Regular Season,False,Final,10.0,,,0.0,2.0,False,False
+0022000048,2020-12-29,IND,Indiana Pacers,111,BOS,Boston Celtics,116,BOS,IND,Regular Season,False,Final,10.0,,,3.0,2.0,False,False
+0022000049,2020-12-29,PHI,Philadelphia 76ers,100,TOR,Toronto Raptors,93,PHI,TOR,Regular Season,False,Final,10.0,,,3.0,0.0,False,False
+0022000050,2020-12-29,WAS,Washington Wizards,107,CHI,Chicago Bulls,115,CHI,WAS,Regular Season,False,Final,10.0,,,0.0,1.0,False,False
+0022000051,2020-12-29,MIA,Miami Heat,97,MIL,Milwaukee Bucks,144,MIL,MIA,Regular Season,False,Final,10.0,,,1.0,2.0,False,False
+0022000052,2020-12-29,OKC,Oklahoma City Thunder,107,ORL,Orlando Magic,118,ORL,OKC,Regular Season,False,Final,10.0,,,1.0,4.0,False,False
+0022000053,2020-12-29,PHX,Phoenix Suns,111,NOP,New Orleans Pelicans,86,PHX,NOP,Regular Season,False,Final,10.0,,,3.0,2.0,False,False
+0022000054,2020-12-29,LAC,LA Clippers,124,MIN,Minnesota Timberwolves,101,LAC,MIN,Regular Season,False,Final,10.0,,,3.0,2.0,False,False
+0022000055,2020-12-29,SAC,Sacramento Kings,125,DEN,Denver Nuggets,115,SAC,DEN,Regular Season,False,Final,10.0,,,3.0,1.0,False,False
+0022000056,2020-12-30,BOS,Boston Celtics,126,MEM,Memphis Grizzlies,107,BOS,MEM,Regular Season,False,Final,11.0,,,3.0,1.0,False,False
+0022000057,2020-12-30,BKN,Brooklyn Nets,145,ATL,Atlanta Hawks,141,BKN,ATL,Regular Season,False,Final,11.0,,,3.0,3.0,False,False
+0022000058,2020-12-30,MIA,Miami Heat,119,MIL,Milwaukee Bucks,108,MIA,MIL,Regular Season,False,Final,11.0,,,2.0,2.0,False,False
+0022000059,2020-12-30,DAL,Dallas Mavericks,99,CHA,Charlotte Hornets,118,CHA,DAL,Regular Season,False,Final,11.0,,,1.0,2.0,False,False
+0022000060,2020-12-30,SAS,San Antonio Spurs,107,LAL,Los Angeles Lakers,121,LAL,SAS,Regular Season,False,Final,11.0,,,2.0,3.0,False,False
+0022000061,2020-12-30,LAC,LA Clippers,128,POR,Portland Trail Blazers,105,LAC,POR,Regular Season,False,Final,11.0,,,4.0,2.0,False,False
+0022000062,2020-12-31,IND,Indiana Pacers,119,CLE,Cleveland Cavaliers,99,IND,CLE,Regular Season,False,Final,11.0,,,4.0,3.0,False,False
+0022000063,2020-12-31,WAS,Washington Wizards,130,CHI,Chicago Bulls,133,CHI,WAS,Regular Season,False,Final,11.0,,,0.0,2.0,False,False
+0022000064,2020-12-31,ORL,Orlando Magic,92,PHI,Philadelphia 76ers,116,PHI,ORL,Regular Season,False,Final,11.0,,,4.0,4.0,False,False
+0022000065,2020-12-31,HOU,Houston Rockets,122,SAC,Sacramento Kings,119,HOU,SAC,Regular Season,False,Final,11.0,,,1.0,3.0,False,False
+0022000066,2020-12-31,TOR,Toronto Raptors,100,NYK,New York Knicks,83,TOR,NYK,Regular Season,False,Final,11.0,,,1.0,2.0,False,False
+0022000067,2020-12-31,OKC,Oklahoma City Thunder,80,NOP,New Orleans Pelicans,113,NOP,OKC,Regular Season,False,Final,11.0,,,1.0,3.0,False,False
+0022000068,2020-12-31,UTA,Utah Jazz,95,PHX,Phoenix Suns,106,PHX,UTA,Regular Season,False,Final,11.0,,,2.0,4.0,False,False
+0022000069,2021-01-01,CHA,Charlotte Hornets,93,MEM,Memphis Grizzlies,108,MEM,CHA,Regular Season,False,Final,11.0,,,2.0,2.0,False,False
+0022000070,2021-01-01,DET,Detroit Pistons,96,BOS,Boston Celtics,93,DET,BOS,Regular Season,False,Final,11.0,,,1.0,3.0,False,False
+0022000071,2021-01-01,DAL,Dallas Mavericks,93,MIA,Miami Heat,83,DAL,MIA,Regular Season,False,Final,11.0,,,2.0,2.0,False,False
+0022000072,2021-01-01,BKN,Brooklyn Nets,96,ATL,Atlanta Hawks,114,ATL,BKN,Regular Season,False,Final,11.0,,,3.0,4.0,False,False
+0022000073,2021-01-01,MIL,Milwaukee Bucks,126,CHI,Chicago Bulls,96,MIL,CHI,Regular Season,False,Final,11.0,,,3.0,2.0,False,False
+0022000074,2021-01-01,MIN,Minnesota Timberwolves,109,WAS,Washington Wizards,130,WAS,MIN,Regular Season,False,Final,11.0,,,2.0,1.0,False,False
+0022000075,2021-01-01,SAS,San Antonio Spurs,103,LAL,Los Angeles Lakers,109,LAL,SAS,Regular Season,False,Final,11.0,,,2.0,4.0,False,False
+0022000076,2021-01-01,DEN,Denver Nuggets,103,PHX,Phoenix Suns,106,PHX,DEN,Regular Season,False,Final,11.0,,,1.0,5.0,False,False
+0022000077,2021-01-01,UTA,Utah Jazz,106,LAC,LA Clippers,100,UTA,LAC,Regular Season,False,Final,11.0,,,3.0,4.0,False,False
+0022000078,2021-01-01,GSW,Golden State Warriors,98,POR,Portland Trail Blazers,123,POR,GSW,Regular Season,False,Final,11.0,,,2.0,3.0,False,False
+0022000079,2021-01-02,HOU,Houston Rockets,102,SAC,Sacramento Kings,94,HOU,SAC,Regular Season,False,Final,11.0,,,2.0,3.0,False,False
+0022000080,2021-01-02,IND,Indiana Pacers,102,NYK,New York Knicks,106,NYK,IND,Regular Season,False,Final,11.0,,,4.0,3.0,False,False
+0022000081,2021-01-02,ORL,Orlando Magic,99,OKC,Oklahoma City Thunder,108,OKC,ORL,Regular Season,False,Final,11.0,,,4.0,2.0,False,False
+0022000082,2021-01-02,PHI,Philadelphia 76ers,127,CHA,Charlotte Hornets,112,PHI,CHA,Regular Season,False,Final,11.0,,,5.0,2.0,False,False
+0022000083,2021-01-02,ATL,Atlanta Hawks,91,CLE,Cleveland Cavaliers,96,CLE,ATL,Regular Season,False,Final,11.0,,,4.0,4.0,False,False
+0022000084,2021-01-02,NOP,New Orleans Pelicans,120,TOR,Toronto Raptors,116,NOP,TOR,Regular Season,False,Final,11.0,,,4.0,1.0,False,False
+0022000085,2021-01-03,DET,Detroit Pistons,120,BOS,Boston Celtics,122,BOS,DET,Regular Season,False,Final,11.0,,,1.0,4.0,False,False
+0022000086,2021-01-03,BKN,Brooklyn Nets,122,WAS,Washington Wizards,123,WAS,BKN,Regular Season,False,Final,11.0,,,3.0,2.0,False,False
+0022000087,2021-01-03,MEM,Memphis Grizzlies,94,LAL,Los Angeles Lakers,108,LAL,MEM,Regular Season,False,Final,11.0,,,2.0,5.0,False,False
+0022000088,2021-01-03,MIN,Minnesota Timberwolves,109,DEN,Denver Nuggets,124,DEN,MIN,Regular Season,False,Final,11.0,,,2.0,2.0,False,False
+0022000089,2021-01-03,SAS,San Antonio Spurs,109,UTA,Utah Jazz,130,UTA,SAS,Regular Season,False,Final,11.0,,,2.0,4.0,False,False
+0022000090,2021-01-03,CHI,Chicago Bulls,118,DAL,Dallas Mavericks,108,CHI,DAL,Regular Season,False,Final,11.0,,,3.0,2.0,False,False
+0022000091,2021-01-03,PHX,Phoenix Suns,107,LAC,LA Clippers,112,LAC,PHX,Regular Season,False,Final,11.0,,,5.0,5.0,False,False
+0022000092,2021-01-03,GSW,Golden State Warriors,137,POR,Portland Trail Blazers,122,GSW,POR,Regular Season,False,Final,11.0,,,3.0,3.0,False,False
+0022000093,2021-01-04,ORL,Orlando Magic,103,CLE,Cleveland Cavaliers,83,ORL,CLE,Regular Season,False,Final,11.0,,,5.0,4.0,False,False
+0022000094,2021-01-04,PHI,Philadelphia 76ers,118,CHA,Charlotte Hornets,101,PHI,CHA,Regular Season,False,Final,11.0,,,6.0,2.0,False,False
+0022000095,2021-01-04,ATL,Atlanta Hawks,108,NYK,New York Knicks,113,NYK,ATL,Regular Season,False,Final,11.0,,,4.0,4.0,False,False
+0022000096,2021-01-04,MIA,Miami Heat,118,OKC,Oklahoma City Thunder,90,MIA,OKC,Regular Season,False,Final,11.0,,,3.0,2.0,False,False
+0022000097,2021-01-04,TOR,Toronto Raptors,114,BOS,Boston Celtics,126,BOS,TOR,Regular Season,False,Final,11.0,,,1.0,5.0,False,False
+0022000098,2021-01-04,HOU,Houston Rockets,100,DAL,Dallas Mavericks,113,DAL,HOU,Regular Season,False,Final,11.0,,,2.0,3.0,False,False
+0022000099,2021-01-04,MIL,Milwaukee Bucks,125,DET,Detroit Pistons,115,MIL,DET,Regular Season,False,Final,11.0,,,4.0,1.0,False,False
+0022000100,2021-01-04,NOP,New Orleans Pelicans,116,IND,Indiana Pacers,118,IND,NOP,Regular Season,False,Final,11.0,,,4.0,5.0,False,False
+0022000101,2021-01-04,GSW,Golden State Warriors,137,SAC,Sacramento Kings,106,GSW,SAC,Regular Season,False,Final,11.0,,,4.0,3.0,False,False
+0022000102,2021-01-05,BKN,Brooklyn Nets,130,UTA,Utah Jazz,96,BKN,UTA,Regular Season,False,Final,11.0,,,4.0,4.0,False,False
+0022000103,2021-01-05,MEM,Memphis Grizzlies,92,LAL,Los Angeles Lakers,94,LAL,MEM,Regular Season,False,Final,11.0,,,2.0,6.0,False,False
+0022000104,2021-01-05,DEN,Denver Nuggets,123,MIN,Minnesota Timberwolves,116,DEN,MIN,Regular Season,False,Final,11.0,,,3.0,2.0,False,False
+0022000105,2021-01-05,LAC,LA Clippers,113,SAS,San Antonio Spurs,116,SAS,LAC,Regular Season,False,Final,11.0,,,5.0,3.0,False,False
+0022000106,2021-01-05,POR,Portland Trail Blazers,108,CHI,Chicago Bulls,111,CHI,POR,Regular Season,False,Final,11.0,,,3.0,4.0,False,False
+0022000107,2021-01-06,IND,Indiana Pacers,114,HOU,Houston Rockets,107,IND,HOU,Regular Season,False,Final,12.0,,,6.0,2.0,False,False
+0022000108,2021-01-06,ORL,Orlando Magic,105,CLE,Cleveland Cavaliers,94,ORL,CLE,Regular Season,False,Final,12.0,,,6.0,4.0,False,False
+0022000109,2021-01-06,PHI,Philadelphia 76ers,141,WAS,Washington Wizards,136,PHI,WAS,Regular Season,False,Final,12.0,,,7.0,2.0,False,False
+0022000110,2021-01-06,ATL,Atlanta Hawks,94,CHA,Charlotte Hornets,102,CHA,ATL,Regular Season,False,Final,12.0,,,4.0,3.0,False,False
+0022000111,2021-01-06,MIA,Miami Heat,105,BOS,Boston Celtics,107,BOS,MIA,Regular Season,False,Final,12.0,,,3.0,6.0,False,False
+0022000112,2021-01-06,NYK,New York Knicks,112,UTA,Utah Jazz,100,NYK,UTA,Regular Season,False,Final,12.0,,,5.0,4.0,False,False
+0022000113,2021-01-06,MIL,Milwaukee Bucks,130,DET,Detroit Pistons,115,MIL,DET,Regular Season,False,Final,12.0,,,5.0,1.0,False,False
+0022000114,2021-01-06,NOP,New Orleans Pelicans,110,OKC,Oklahoma City Thunder,111,OKC,NOP,Regular Season,False,Final,12.0,,,4.0,3.0,False,False
+0022000115,2021-01-06,PHX,Phoenix Suns,123,TOR,Toronto Raptors,115,PHX,TOR,Regular Season,False,Final,12.0,,,6.0,1.0,False,False
+0022000116,2021-01-06,GSW,Golden State Warriors,101,LAC,LA Clippers,108,LAC,GSW,Regular Season,False,Final,12.0,,,4.0,6.0,False,False
+0022000117,2021-01-06,SAC,Sacramento Kings,128,CHI,Chicago Bulls,124,SAC,CHI,Regular Season,False,Final,12.0,,,4.0,4.0,False,False
+0022000118,2021-01-07,BKN,Brooklyn Nets,122,PHI,Philadelphia 76ers,109,BKN,PHI,Regular Season,False,Final,12.0,,,5.0,7.0,False,False
+0022000119,2021-01-07,MEM,Memphis Grizzlies,90,CLE,Cleveland Cavaliers,94,CLE,MEM,Regular Season,False,Final,12.0,,,2.0,5.0,False,False
+0022000120,2021-01-07,DEN,Denver Nuggets,117,DAL,Dallas Mavericks,124,DAL,DEN,Regular Season,False,Final,12.0,,,3.0,4.0,False,False
+0022000121,2021-01-07,LAL,Los Angeles Lakers,109,SAS,San Antonio Spurs,118,SAS,LAL,Regular Season,False,Final,12.0,,,6.0,4.0,False,False
+0022000122,2021-01-07,POR,Portland Trail Blazers,135,MIN,Minnesota Timberwolves,117,POR,MIN,Regular Season,False,Final,12.0,,,4.0,2.0,False,False
+0022000123,2021-01-08,DET,Detroit Pistons,110,PHX,Phoenix Suns,105,DET,PHX,Regular Season,False,Final,12.0,,,2.0,6.0,False,False
+0022000124,2021-01-08,BOS,Boston Celtics,116,WAS,Washington Wizards,107,BOS,WAS,Regular Season,False,Final,12.0,,,7.0,2.0,False,False
+0022000125,2021-01-08,NYK,New York Knicks,89,OKC,Oklahoma City Thunder,101,OKC,NYK,Regular Season,False,Final,12.0,,,5.0,4.0,False,False
+0022000126,2021-01-08,NOP,New Orleans Pelicans,110,CHA,Charlotte Hornets,118,CHA,NOP,Regular Season,False,Final,12.0,,,4.0,4.0,False,False
+0022000127,2021-01-08,HOU,Houston Rockets,132,ORL,Orlando Magic,90,HOU,ORL,Regular Season,False,Final,12.0,,,3.0,6.0,False,False
+0022000128,2021-01-08,MEM,Memphis Grizzlies,115,BKN,Brooklyn Nets,110,MEM,BKN,Regular Season,False,Final,12.0,,,3.0,5.0,False,False
+0022000129,2021-01-08,MIL,Milwaukee Bucks,118,UTA,Utah Jazz,131,UTA,MIL,Regular Season,False,Final,12.0,,,5.0,5.0,False,False
+0022000130,2021-01-08,GSW,Golden State Warriors,115,LAC,LA Clippers,105,GSW,LAC,Regular Season,False,Final,12.0,,,5.0,6.0,False,False
+0022000131,2021-01-08,LAL,Los Angeles Lakers,117,CHI,Chicago Bulls,115,LAL,CHI,Regular Season,False,Final,12.0,,,7.0,4.0,False,False
+0022000132,2021-01-08,SAC,Sacramento Kings,123,TOR,Toronto Raptors,144,TOR,SAC,Regular Season,False,Final,12.0,,,4.0,2.0,False,False
+0022000133,2021-01-09,PHI,Philadelphia 76ers,103,DEN,Denver Nuggets,115,DEN,PHI,Regular Season,False,Final,12.0,,,7.0,4.0,False,False
+0022000134,2021-01-09,CHA,Charlotte Hornets,113,ATL,Atlanta Hawks,105,CHA,ATL,Regular Season,False,Final,12.0,,,5.0,4.0,False,False
+0022000135,2021-01-09,IND,Indiana Pacers,117,PHX,Phoenix Suns,125,PHX,IND,Regular Season,False,Final,12.0,,,6.0,7.0,False,False
+0022000136,2021-01-09,WAS,Washington Wizards,124,MIA,Miami Heat,128,MIA,WAS,Regular Season,False,Final,12.0,,,2.0,4.0,False,False
+0022000137,2021-01-09,MIL,Milwaukee Bucks,100,CLE,Cleveland Cavaliers,90,MIL,CLE,Regular Season,False,Final,12.0,,,6.0,5.0,False,False
+0022000138,2021-01-09,MIN,Minnesota Timberwolves,122,SAS,San Antonio Spurs,125,SAS,MIN,Regular Season,False,Final,12.0,,,2.0,5.0,False,False
+0022000139,2021-01-09,DAL,Dallas Mavericks,112,ORL,Orlando Magic,98,DAL,ORL,Regular Season,False,Final,12.0,,,5.0,6.0,False,False
+0022000140,2021-01-09,SAC,Sacramento Kings,99,POR,Portland Trail Blazers,125,POR,SAC,Regular Season,False,Final,12.0,,,4.0,5.0,False,False
+0022000141,2021-01-10,DET,Detroit Pistons,86,UTA,Utah Jazz,96,UTA,DET,Regular Season,False,Final,12.0,,,2.0,6.0,False,False
+0022000142,2021-01-10,LAC,LA Clippers,130,CHI,Chicago Bulls,127,LAC,CHI,Regular Season,False,Final,12.0,,,7.0,4.0,False,False
+0022000143,2021-01-10,BKN,Brooklyn Nets,116,OKC,Oklahoma City Thunder,129,OKC,BKN,Regular Season,False,Final,12.0,,,5.0,5.0,False,False
+0022000144,2021-01-10,NYK,New York Knicks,89,DEN,Denver Nuggets,114,DEN,NYK,Regular Season,False,Final,12.0,,,5.0,5.0,False,False
+0022000146,2021-01-10,HOU,Houston Rockets,102,LAL,Los Angeles Lakers,120,LAL,HOU,Regular Season,False,Final,12.0,,,3.0,8.0,False,False
+0022000147,2021-01-10,MIN,Minnesota Timberwolves,96,SAS,San Antonio Spurs,88,MIN,SAS,Regular Season,False,Final,12.0,,,3.0,5.0,False,False
+0022000148,2021-01-10,GSW,Golden State Warriors,106,TOR,Toronto Raptors,105,GSW,TOR,Regular Season,False,Final,12.0,,,6.0,2.0,False,False
+0022000149,2021-01-11,CHA,Charlotte Hornets,109,NYK,New York Knicks,88,CHA,NYK,Regular Season,False,Final,12.0,,,6.0,5.0,False,False
+0022000150,2021-01-11,CLE,Cleveland Cavaliers,91,MEM,Memphis Grizzlies,101,MEM,CLE,Regular Season,False,Final,12.0,,,5.0,4.0,False,False
+0022000151,2021-01-11,ORL,Orlando Magic,99,MIL,Milwaukee Bucks,121,MIL,ORL,Regular Season,False,Final,12.0,,,6.0,7.0,False,False
+0022000152,2021-01-11,WAS,Washington Wizards,128,PHX,Phoenix Suns,107,WAS,PHX,Regular Season,False,Final,12.0,,,3.0,7.0,False,False
+0022000153,2021-01-11,ATL,Atlanta Hawks,112,PHI,Philadelphia 76ers,94,ATL,PHI,Regular Season,False,Final,12.0,,,5.0,7.0,False,False
+0022000155,2021-01-11,POR,Portland Trail Blazers,112,TOR,Toronto Raptors,111,POR,TOR,Regular Season,False,Final,12.0,,,6.0,2.0,False,False
+0022000156,2021-01-11,SAC,Sacramento Kings,127,IND,Indiana Pacers,122,SAC,IND,Regular Season,False,Final,12.0,,,5.0,6.0,False,False
+0022000157,2021-01-12,PHI,Philadelphia 76ers,137,MIA,Miami Heat,134,PHI,MIA,Regular Season,False,Final,12.0,,,8.0,4.0,False,False
+0022000158,2021-01-12,BKN,Brooklyn Nets,122,DEN,Denver Nuggets,116,BKN,DEN,Regular Season,False,Final,12.0,,,6.0,5.0,False,False
+0022000159,2021-01-12,CLE,Cleveland Cavaliers,87,UTA,Utah Jazz,117,UTA,CLE,Regular Season,False,Final,12.0,,,5.0,7.0,False,False
+0022000161,2021-01-12,HOU,Houston Rockets,100,LAL,Los Angeles Lakers,117,LAL,HOU,Regular Season,False,Final,12.0,,,3.0,9.0,False,False
+0022000162,2021-01-12,OKC,Oklahoma City Thunder,102,SAS,San Antonio Spurs,112,SAS,OKC,Regular Season,False,Final,12.0,,,5.0,6.0,False,False
+0022000163,2021-01-12,GSW,Golden State Warriors,95,IND,Indiana Pacers,104,IND,GSW,Regular Season,False,Final,12.0,,,6.0,7.0,False,False
+0022000164,2021-01-13,CHA,Charlotte Hornets,93,DAL,Dallas Mavericks,104,DAL,CHA,Regular Season,False,Final,13.0,,,6.0,6.0,False,False
+0022000165,2021-01-13,DET,Detroit Pistons,101,MIL,Milwaukee Bucks,110,MIL,DET,Regular Season,False,Final,13.0,,,2.0,8.0,False,False
+0022000168,2021-01-13,NYK,New York Knicks,109,BKN,Brooklyn Nets,116,BKN,NYK,Regular Season,False,Final,13.0,,,5.0,7.0,False,False
+0022000169,2021-01-13,MIN,Minnesota Timberwolves,107,MEM,Memphis Grizzlies,118,MEM,MIN,Regular Season,False,Final,13.0,,,3.0,5.0,False,False
+0022000170,2021-01-13,OKC,Oklahoma City Thunder,99,LAL,Los Angeles Lakers,128,LAL,OKC,Regular Season,False,Final,13.0,,,5.0,10.0,False,False
+0022000172,2021-01-13,LAC,LA Clippers,111,NOP,New Orleans Pelicans,106,LAC,NOP,Regular Season,False,Final,13.0,,,8.0,4.0,False,False
+0022000173,2021-01-13,SAC,Sacramento Kings,126,POR,Portland Trail Blazers,132,POR,SAC,Regular Season,False,Final,13.0,,,5.0,7.0,False,False
+0022000174,2021-01-14,PHI,Philadelphia 76ers,125,MIA,Miami Heat,108,PHI,MIA,Regular Season,False,Final,13.0,,,9.0,4.0,False,False
+0022000175,2021-01-14,TOR,Toronto Raptors,111,CHA,Charlotte Hornets,108,TOR,CHA,Regular Season,False,Final,13.0,,,3.0,6.0,False,False
+0022000176,2021-01-14,SAS,San Antonio Spurs,105,HOU,Houston Rockets,109,HOU,SAS,Regular Season,False,Final,13.0,,,6.0,4.0,False,False
+0022000177,2021-01-14,DEN,Denver Nuggets,114,GSW,Golden State Warriors,104,DEN,GSW,Regular Season,False,Final,13.0,,,6.0,6.0,False,False
+0022000178,2021-01-14,POR,Portland Trail Blazers,87,IND,Indiana Pacers,111,IND,POR,Regular Season,False,Final,13.0,,,7.0,8.0,False,False
+0022000180,2021-01-15,BOS,Boston Celtics,124,ORL,Orlando Magic,97,BOS,ORL,Regular Season,False,Final,13.0,,,8.0,6.0,False,False
+0022000181,2021-01-15,CLE,Cleveland Cavaliers,106,NYK,New York Knicks,103,CLE,NYK,Regular Season,False,Final,13.0,,,6.0,5.0,False,False
+0022000182,2021-01-15,MIL,Milwaukee Bucks,112,DAL,Dallas Mavericks,109,MIL,DAL,Regular Season,False,Final,13.0,,,9.0,6.0,False,False
+0022000184,2021-01-15,OKC,Oklahoma City Thunder,127,CHI,Chicago Bulls,125,OKC,CHI,Regular Season,False,Final,13.0,,,6.0,4.0,False,False
+0022000186,2021-01-15,UTA,Utah Jazz,116,ATL,Atlanta Hawks,92,UTA,ATL,Regular Season,False,Final,13.0,,,8.0,5.0,False,False
+0022000187,2021-01-15,LAL,Los Angeles Lakers,112,NOP,New Orleans Pelicans,95,LAL,NOP,Regular Season,False,Final,13.0,,,11.0,4.0,False,False
+0022000188,2021-01-15,SAC,Sacramento Kings,100,LAC,LA Clippers,138,LAC,SAC,Regular Season,False,Final,13.0,,,5.0,9.0,False,False
+0022000189,2021-01-16,SAS,San Antonio Spurs,103,HOU,Houston Rockets,91,SAS,HOU,Regular Season,False,Final,13.0,,,7.0,4.0,False,False
+0022000190,2021-01-16,BKN,Brooklyn Nets,122,ORL,Orlando Magic,115,BKN,ORL,Regular Season,False,Final,13.0,,,8.0,6.0,False,False
+0022000191,2021-01-16,TOR,Toronto Raptors,116,CHA,Charlotte Hornets,113,TOR,CHA,Regular Season,False,Final,13.0,,,4.0,6.0,False,False
+0022000192,2021-01-16,MIA,Miami Heat,100,DET,Detroit Pistons,120,DET,MIA,Regular Season,False,Final,13.0,,,4.0,3.0,False,False
+0022000193,2021-01-16,MEM,Memphis Grizzlies,106,PHI,Philadelphia 76ers,104,MEM,PHI,Regular Season,False,Final,13.0,,,6.0,9.0,False,False
+0022000195,2021-01-16,POR,Portland Trail Blazers,112,ATL,Atlanta Hawks,106,POR,ATL,Regular Season,False,Final,13.0,,,8.0,5.0,False,False
+0022000196,2021-01-17,BOS,Boston Celtics,75,NYK,New York Knicks,105,NYK,BOS,Regular Season,False,Final,13.0,,,8.0,6.0,False,False
+0022000198,2021-01-17,DAL,Dallas Mavericks,101,CHI,Chicago Bulls,117,CHI,DAL,Regular Season,False,Final,13.0,,,6.0,5.0,False,False
+0022000200,2021-01-17,DEN,Denver Nuggets,105,UTA,Utah Jazz,109,UTA,DEN,Regular Season,False,Final,13.0,,,6.0,9.0,False,False
+0022000201,2021-01-17,SAC,Sacramento Kings,123,NOP,New Orleans Pelicans,128,NOP,SAC,Regular Season,False,Final,13.0,,,5.0,5.0,False,False
+0022000202,2021-01-17,LAC,LA Clippers,129,IND,Indiana Pacers,96,LAC,IND,Regular Season,False,Final,13.0,,,10.0,8.0,False,False
+0022000203,2021-01-18,NYK,New York Knicks,91,ORL,Orlando Magic,84,NYK,ORL,Regular Season,False,Final,13.0,,,7.0,6.0,False,False
+0022000205,2021-01-18,ATL,Atlanta Hawks,108,MIN,Minnesota Timberwolves,97,ATL,MIN,Regular Season,False,Final,13.0,,,6.0,3.0,False,False
+0022000206,2021-01-18,MIA,Miami Heat,113,DET,Detroit Pistons,107,MIA,DET,Regular Season,False,Final,13.0,,,5.0,3.0,False,False
+0022000207,2021-01-18,POR,Portland Trail Blazers,104,SAS,San Antonio Spurs,125,SAS,POR,Regular Season,False,Final,13.0,,,8.0,8.0,False,False
+0022000208,2021-01-18,MEM,Memphis Grizzlies,108,PHX,Phoenix Suns,104,MEM,PHX,Regular Season,False,Final,13.0,,,7.0,7.0,False,False
+0022000209,2021-01-18,BKN,Brooklyn Nets,125,MIL,Milwaukee Bucks,123,BKN,MIL,Regular Season,False,Final,13.0,,,9.0,9.0,False,False
+0022000210,2021-01-18,TOR,Toronto Raptors,116,DAL,Dallas Mavericks,93,TOR,DAL,Regular Season,False,Final,13.0,,,5.0,6.0,False,False
+0022000211,2021-01-18,CHI,Chicago Bulls,125,HOU,Houston Rockets,120,CHI,HOU,Regular Season,False,Final,13.0,,,6.0,4.0,False,False
+0022000212,2021-01-18,LAL,Los Angeles Lakers,113,GSW,Golden State Warriors,115,GSW,LAL,Regular Season,False,Final,13.0,,,11.0,7.0,False,False
+0022000213,2021-01-19,DEN,Denver Nuggets,119,OKC,Oklahoma City Thunder,101,DEN,OKC,Regular Season,False,Final,13.0,,,7.0,6.0,False,False
+0022000214,2021-01-19,UTA,Utah Jazz,118,NOP,New Orleans Pelicans,102,UTA,NOP,Regular Season,False,Final,13.0,,,10.0,5.0,False,False
+0022000216,2021-01-20,CLE,Cleveland Cavaliers,147,BKN,Brooklyn Nets,135,CLE,BKN,Regular Season,False,Final,14.0,,,7.0,9.0,False,False
+0022000217,2021-01-20,IND,Indiana Pacers,112,DAL,Dallas Mavericks,124,DAL,IND,Regular Season,False,Final,14.0,,,8.0,7.0,False,False
+0022000218,2021-01-20,PHI,Philadelphia 76ers,117,BOS,Boston Celtics,109,PHI,BOS,Regular Season,False,Final,14.0,,,10.0,8.0,False,False
+0022000219,2021-01-20,ATL,Atlanta Hawks,123,DET,Detroit Pistons,115,ATL,DET,Regular Season,False,Final,14.0,,,7.0,3.0,False,False
+0022000220,2021-01-20,TOR,Toronto Raptors,102,MIA,Miami Heat,111,MIA,TOR,Regular Season,False,Final,14.0,,,5.0,6.0,False,False
+0022000221,2021-01-20,MIN,Minnesota Timberwolves,96,ORL,Orlando Magic,97,ORL,MIN,Regular Season,False,Final,14.0,,,3.0,7.0,False,False
+0022000222,2021-01-20,HOU,Houston Rockets,103,PHX,Phoenix Suns,109,PHX,HOU,Regular Season,False,Final,14.0,,,4.0,8.0,False,False
+0022000223,2021-01-20,GSW,Golden State Warriors,121,SAS,San Antonio Spurs,99,GSW,SAS,Regular Season,False,Final,14.0,,,8.0,8.0,False,False
+0022000224,2021-01-20,LAC,LA Clippers,115,SAC,Sacramento Kings,96,LAC,SAC,Regular Season,False,Final,14.0,,,11.0,5.0,False,False
+0022000226,2021-01-21,MIL,Milwaukee Bucks,106,LAL,Los Angeles Lakers,113,LAL,MIL,Regular Season,False,Final,14.0,,,9.0,12.0,False,False
+0022000227,2021-01-21,UTA,Utah Jazz,129,NOP,New Orleans Pelicans,118,UTA,NOP,Regular Season,False,Final,14.0,,,11.0,5.0,False,False
+0022000228,2021-01-21,GSW,Golden State Warriors,104,NYK,New York Knicks,119,NYK,GSW,Regular Season,False,Final,14.0,,,8.0,8.0,False,False
+0022000229,2021-01-22,CHA,Charlotte Hornets,110,CHI,Chicago Bulls,123,CHI,CHA,Regular Season,False,Final,14.0,,,6.0,7.0,False,False
+0022000230,2021-01-22,DET,Detroit Pistons,102,HOU,Houston Rockets,103,HOU,DET,Regular Season,False,Final,14.0,,,3.0,5.0,False,False
+0022000231,2021-01-22,IND,Indiana Pacers,120,ORL,Orlando Magic,118,IND,ORL,Regular Season,False,Final,14.0,,,9.0,7.0,False,False
+0022000232,2021-01-22,CLE,Cleveland Cavaliers,125,BKN,Brooklyn Nets,113,CLE,BKN,Regular Season,False,Final,14.0,,,8.0,9.0,False,False
+0022000233,2021-01-22,PHI,Philadelphia 76ers,122,BOS,Boston Celtics,110,PHI,BOS,Regular Season,False,Final,14.0,,,11.0,8.0,False,False
+0022000234,2021-01-22,TOR,Toronto Raptors,101,MIA,Miami Heat,81,TOR,MIA,Regular Season,False,Final,14.0,,,6.0,6.0,False,False
+0022000236,2021-01-22,MIN,Minnesota Timberwolves,98,ATL,Atlanta Hawks,116,ATL,MIN,Regular Season,False,Final,14.0,,,3.0,8.0,False,False
+0022000237,2021-01-22,SAS,San Antonio Spurs,117,DAL,Dallas Mavericks,122,DAL,SAS,Regular Season,False,Final,14.0,,,8.0,8.0,False,False
+0022000238,2021-01-22,PHX,Phoenix Suns,126,DEN,Denver Nuggets,130,DEN,PHX,Regular Season,False,Final,14.0,,,8.0,8.0,False,False
+0022000239,2021-01-22,LAC,LA Clippers,120,OKC,Oklahoma City Thunder,106,LAC,OKC,Regular Season,False,Final,14.0,,,12.0,6.0,False,False
+0022000241,2021-01-22,SAC,Sacramento Kings,103,NYK,New York Knicks,94,SAC,NYK,Regular Season,False,Final,14.0,,,6.0,8.0,False,False
+0022000242,2021-01-23,UTA,Utah Jazz,127,GSW,Golden State Warriors,108,UTA,GSW,Regular Season,False,Final,14.0,,,12.0,8.0,False,False
+0022000243,2021-01-23,DET,Detroit Pistons,110,PHI,Philadelphia 76ers,114,PHI,DET,Regular Season,False,Final,14.0,,,3.0,12.0,False,False
+0022000244,2021-01-23,BKN,Brooklyn Nets,128,MIA,Miami Heat,124,BKN,MIA,Regular Season,False,Final,14.0,,,10.0,6.0,False,False
+0022000245,2021-01-23,CHI,Chicago Bulls,90,LAL,Los Angeles Lakers,101,LAL,CHI,Regular Season,False,Final,14.0,,,7.0,13.0,False,False
+0022000246,2021-01-23,MIN,Minnesota Timberwolves,120,NOP,New Orleans Pelicans,110,MIN,NOP,Regular Season,False,Final,14.0,,,4.0,5.0,False,False
+0022000247,2021-01-23,DAL,Dallas Mavericks,108,HOU,Houston Rockets,133,HOU,DAL,Regular Season,False,Final,14.0,,,8.0,6.0,False,False
+0022000248,2021-01-23,PHX,Phoenix Suns,112,DEN,Denver Nuggets,120,DEN,PHX,Regular Season,False,Final,14.0,,,8.0,9.0,False,False
+0022000249,2021-01-24,IND,Indiana Pacers,102,TOR,Toronto Raptors,107,TOR,IND,Regular Season,False,Final,14.0,,,9.0,7.0,False,False
+0022000250,2021-01-24,BOS,Boston Celtics,141,CLE,Cleveland Cavaliers,103,BOS,CLE,Regular Season,False,Final,14.0,,,9.0,8.0,False,False
+0022000251,2021-01-24,LAC,LA Clippers,108,OKC,Oklahoma City Thunder,100,LAC,OKC,Regular Season,False,Final,14.0,,,13.0,6.0,False,False
+0022000252,2021-01-24,ORL,Orlando Magic,104,CHA,Charlotte Hornets,107,CHA,ORL,Regular Season,False,Final,14.0,,,7.0,7.0,False,False
+0022000253,2021-01-24,SAS,San Antonio Spurs,121,WAS,Washington Wizards,101,SAS,WAS,Regular Season,False,Final,14.0,,,9.0,3.0,False,False
+0022000254,2021-01-24,MIL,Milwaukee Bucks,129,ATL,Atlanta Hawks,115,MIL,ATL,Regular Season,False,Final,14.0,,,10.0,8.0,False,False
+0022000256,2021-01-24,POR,Portland Trail Blazers,116,NYK,New York Knicks,113,POR,NYK,Regular Season,False,Final,14.0,,,9.0,8.0,False,False
+0022000257,2021-01-25,DET,Detroit Pistons,119,PHI,Philadelphia 76ers,104,DET,PHI,Regular Season,False,Final,14.0,,,4.0,12.0,False,False
+0022000258,2021-01-25,IND,Indiana Pacers,129,TOR,Toronto Raptors,114,IND,TOR,Regular Season,False,Final,14.0,,,10.0,7.0,False,False
+0022000259,2021-01-25,ORL,Orlando Magic,117,CHA,Charlotte Hornets,108,ORL,CHA,Regular Season,False,Final,14.0,,,8.0,7.0,False,False
+0022000260,2021-01-25,BKN,Brooklyn Nets,98,MIA,Miami Heat,85,BKN,MIA,Regular Season,False,Final,14.0,,,11.0,6.0,False,False
+0022000261,2021-01-25,CLE,Cleveland Cavaliers,108,LAL,Los Angeles Lakers,115,LAL,CLE,Regular Season,False,Final,14.0,,,8.0,14.0,False,False
+0022000262,2021-01-25,CHI,Chicago Bulls,103,BOS,Boston Celtics,119,BOS,CHI,Regular Season,False,Final,14.0,,,7.0,10.0,False,False
+0022000265,2021-01-25,DAL,Dallas Mavericks,113,DEN,Denver Nuggets,117,DEN,DAL,Regular Season,False,Final,14.0,,,8.0,10.0,False,False
+0022000266,2021-01-25,GSW,Golden State Warriors,130,MIN,Minnesota Timberwolves,108,GSW,MIN,Regular Season,False,Final,14.0,,,9.0,4.0,False,False
+0022000267,2021-01-25,POR,Portland Trail Blazers,122,OKC,Oklahoma City Thunder,125,OKC,POR,Regular Season,False,Final,14.0,,,9.0,7.0,False,False
+0022000268,2021-01-26,ATL,Atlanta Hawks,108,LAC,LA Clippers,99,ATL,LAC,Regular Season,False,Final,14.0,,,9.0,13.0,False,False
+0022000269,2021-01-26,HOU,Houston Rockets,107,WAS,Washington Wizards,88,HOU,WAS,Regular Season,False,Final,14.0,,,7.0,3.0,False,False
+0022000270,2021-01-26,UTA,Utah Jazz,108,NYK,New York Knicks,94,UTA,NYK,Regular Season,False,Final,14.0,,,13.0,8.0,False,False
+0022000271,2021-01-27,CHA,Charlotte Hornets,106,IND,Indiana Pacers,116,IND,CHA,Regular Season,False,Final,15.0,,,7.0,11.0,False,False
+0022000272,2021-01-27,CLE,Cleveland Cavaliers,122,DET,Detroit Pistons,107,CLE,DET,Regular Season,False,Final,15.0,,,9.0,4.0,False,False
+0022000273,2021-01-27,ORL,Orlando Magic,107,SAC,Sacramento Kings,121,SAC,ORL,Regular Season,False,Final,15.0,,,8.0,7.0,False,False
+0022000274,2021-01-27,ATL,Atlanta Hawks,128,BKN,Brooklyn Nets,132,BKN,ATL,Regular Season,False,Final,15.0,,,9.0,12.0,False,False
+0022000275,2021-01-27,MIA,Miami Heat,82,DEN,Denver Nuggets,109,DEN,MIA,Regular Season,False,Final,15.0,,,6.0,11.0,False,False
+0022000276,2021-01-27,PHI,Philadelphia 76ers,107,LAL,Los Angeles Lakers,106,PHI,LAL,Regular Season,False,Final,15.0,,,13.0,14.0,False,False
+0022000277,2021-01-27,TOR,Toronto Raptors,108,MIL,Milwaukee Bucks,115,MIL,TOR,Regular Season,False,Final,15.0,,,7.0,11.0,False,False
+0022000279,2021-01-27,NOP,New Orleans Pelicans,124,WAS,Washington Wizards,106,NOP,WAS,Regular Season,False,Final,15.0,,,6.0,3.0,False,False
+0022000280,2021-01-27,SAS,San Antonio Spurs,110,BOS,Boston Celtics,106,SAS,BOS,Regular Season,False,Final,15.0,,,10.0,10.0,False,False
+0022000281,2021-01-27,PHX,Phoenix Suns,97,OKC,Oklahoma City Thunder,102,OKC,PHX,Regular Season,False,Final,15.0,,,8.0,8.0,False,False
+0022000282,2021-01-27,UTA,Utah Jazz,116,DAL,Dallas Mavericks,104,UTA,DAL,Regular Season,False,Final,15.0,,,14.0,8.0,False,False
+0022000283,2021-01-27,GSW,Golden State Warriors,123,MIN,Minnesota Timberwolves,111,GSW,MIN,Regular Season,False,Final,15.0,,,10.0,4.0,False,False
+0022000284,2021-01-28,DET,Detroit Pistons,107,LAL,Los Angeles Lakers,92,DET,LAL,Regular Season,False,Final,15.0,,,5.0,14.0,False,False
+0022000285,2021-01-28,MIA,Miami Heat,105,LAC,LA Clippers,109,LAC,MIA,Regular Season,False,Final,15.0,,,6.0,14.0,False,False
+0022000286,2021-01-28,PHX,Phoenix Suns,114,GSW,Golden State Warriors,93,PHX,GSW,Regular Season,False,Final,15.0,,,9.0,10.0,False,False
+0022000287,2021-01-28,HOU,Houston Rockets,104,POR,Portland Trail Blazers,101,HOU,POR,Regular Season,False,Final,15.0,,,8.0,9.0,False,False
+0022000288,2021-01-29,CHA,Charlotte Hornets,108,IND,Indiana Pacers,105,CHA,IND,Regular Season,False,Final,15.0,,,8.0,11.0,False,False
+0022000289,2021-01-29,ORL,Orlando Magic,90,LAC,LA Clippers,116,LAC,ORL,Regular Season,False,Final,15.0,,,8.0,15.0,False,False
+0022000290,2021-01-29,WAS,Washington Wizards,100,ATL,Atlanta Hawks,116,ATL,WAS,Regular Season,False,Final,15.0,,,3.0,10.0,False,False
+0022000291,2021-01-29,NYK,New York Knicks,102,CLE,Cleveland Cavaliers,81,NYK,CLE,Regular Season,False,Final,15.0,,,9.0,9.0,False,False
+0022000292,2021-01-29,TOR,Toronto Raptors,124,SAC,Sacramento Kings,126,SAC,TOR,Regular Season,False,Final,15.0,,,7.0,8.0,False,False
+0022000293,2021-01-29,NOP,New Orleans Pelicans,131,MIL,Milwaukee Bucks,126,NOP,MIL,Regular Season,False,Final,15.0,,,7.0,11.0,False,False
+0022000294,2021-01-29,MIN,Minnesota Timberwolves,94,PHI,Philadelphia 76ers,118,PHI,MIN,Regular Season,False,Final,15.0,,,4.0,14.0,False,False
+0022000295,2021-01-29,OKC,Oklahoma City Thunder,125,BKN,Brooklyn Nets,147,BKN,OKC,Regular Season,False,Final,15.0,,,8.0,13.0,False,False
+0022000296,2021-01-29,SAS,San Antonio Spurs,119,DEN,Denver Nuggets,109,SAS,DEN,Regular Season,False,Final,15.0,,,11.0,11.0,False,False
+0022000297,2021-01-29,UTA,Utah Jazz,120,DAL,Dallas Mavericks,101,UTA,DAL,Regular Season,False,Final,15.0,,,15.0,8.0,False,False
+0022000298,2021-01-30,CHI,Chicago Bulls,122,POR,Portland Trail Blazers,123,POR,CHI,Regular Season,False,Final,15.0,,,7.0,10.0,False,False
+0022000299,2021-01-30,CHA,Charlotte Hornets,126,MIL,Milwaukee Bucks,114,CHA,MIL,Regular Season,False,Final,15.0,,,9.0,11.0,False,False
+0022000300,2021-01-30,NOP,New Orleans Pelicans,112,HOU,Houston Rockets,126,HOU,NOP,Regular Season,False,Final,15.0,,,7.0,9.0,False,False
+0022000301,2021-01-30,MIA,Miami Heat,105,SAC,Sacramento Kings,104,MIA,SAC,Regular Season,False,Final,15.0,,,7.0,8.0,False,False
+0022000302,2021-01-30,BOS,Boston Celtics,95,LAL,Los Angeles Lakers,96,LAL,BOS,Regular Season,False,Final,15.0,,,10.0,15.0,False,False
+0022000303,2021-01-30,DAL,Dallas Mavericks,105,PHX,Phoenix Suns,111,PHX,DAL,Regular Season,False,Final,15.0,,,8.0,10.0,False,False
+0022000304,2021-01-30,SAS,San Antonio Spurs,112,MEM,Memphis Grizzlies,129,MEM,SAS,Regular Season,False,Final,15.0,,,11.0,8.0,False,False
+0022000305,2021-01-30,GSW,Golden State Warriors,118,DET,Detroit Pistons,91,GSW,DET,Regular Season,False,Final,15.0,,,11.0,5.0,False,False
+0022000306,2021-01-31,DEN,Denver Nuggets,128,UTA,Utah Jazz,117,DEN,UTA,Regular Season,False,Final,15.0,,,12.0,15.0,False,False
+0022000307,2021-01-31,IND,Indiana Pacers,110,PHI,Philadelphia 76ers,119,PHI,IND,Regular Season,False,Final,15.0,,,11.0,15.0,False,False
+0022000308,2021-01-31,NYK,New York Knicks,115,LAC,LA Clippers,129,LAC,NYK,Regular Season,False,Final,15.0,,,9.0,16.0,False,False
+0022000309,2021-01-31,TOR,Toronto Raptors,115,ORL,Orlando Magic,102,TOR,ORL,Regular Season,False,Final,15.0,,,8.0,8.0,False,False
+0022000310,2021-01-31,WAS,Washington Wizards,149,BKN,Brooklyn Nets,146,WAS,BKN,Regular Season,False,Final,15.0,,,4.0,13.0,False,False
+0022000311,2021-01-31,MIN,Minnesota Timberwolves,109,CLE,Cleveland Cavaliers,104,MIN,CLE,Regular Season,False,Final,15.0,,,5.0,9.0,False,False
+0022000312,2021-02-01,CLE,Cleveland Cavaliers,100,MIN,Minnesota Timberwolves,98,CLE,MIN,Regular Season,False,Final,15.0,,,10.0,5.0,False,False
+0022000313,2021-02-01,ATL,Atlanta Hawks,99,LAL,Los Angeles Lakers,107,LAL,ATL,Regular Season,False,Final,15.0,,,10.0,16.0,False,False
+0022000314,2021-02-01,MIA,Miami Heat,121,CHA,Charlotte Hornets,129,CHA,MIA,Regular Season,False,Final,15.0,,,7.0,10.0,False,False
+0022000315,2021-02-01,CHI,Chicago Bulls,110,NYK,New York Knicks,102,CHI,NYK,Regular Season,False,Final,15.0,,,8.0,9.0,False,False
+0022000316,2021-02-01,MIL,Milwaukee Bucks,134,POR,Portland Trail Blazers,106,MIL,POR,Regular Season,False,Final,15.0,,,12.0,10.0,False,False
+0022000317,2021-02-01,NOP,New Orleans Pelicans,109,SAC,Sacramento Kings,118,SAC,NOP,Regular Season,False,Final,15.0,,,7.0,9.0,False,False
+0022000318,2021-02-01,OKC,Oklahoma City Thunder,106,HOU,Houston Rockets,136,HOU,OKC,Regular Season,False,Final,15.0,,,8.0,10.0,False,False
+0022000319,2021-02-01,DAL,Dallas Mavericks,108,PHX,Phoenix Suns,109,PHX,DAL,Regular Season,False,Final,15.0,,,8.0,11.0,False,False
+0022000320,2021-02-01,SAS,San Antonio Spurs,102,MEM,Memphis Grizzlies,133,MEM,SAS,Regular Season,False,Final,15.0,,,11.0,9.0,False,False
+0022000322,2021-02-02,IND,Indiana Pacers,134,MEM,Memphis Grizzlies,116,IND,MEM,Regular Season,False,Final,15.0,,,12.0,9.0,False,False
+0022000323,2021-02-02,ORL,Orlando Magic,108,TOR,Toronto Raptors,123,TOR,ORL,Regular Season,False,Final,15.0,,,8.0,9.0,False,False
+0022000324,2021-02-02,BKN,Brooklyn Nets,124,LAC,LA Clippers,120,BKN,LAC,Regular Season,False,Final,15.0,,,14.0,16.0,False,False
+0022000325,2021-02-02,UTA,Utah Jazz,117,DET,Detroit Pistons,105,UTA,DET,Regular Season,False,Final,15.0,,,16.0,5.0,False,False
+0022000326,2021-02-02,GSW,Golden State Warriors,107,BOS,Boston Celtics,111,BOS,GSW,Regular Season,False,Final,15.0,,,11.0,11.0,False,False
+0022000559,2021-02-02,WAS,Washington Wizards,121,POR,Portland Trail Blazers,132,POR,WAS,Regular Season,False,Final,15.0,,,4.0,11.0,False,False
+0022000327,2021-02-03,CHA,Charlotte Hornets,111,PHI,Philadelphia 76ers,118,PHI,CHA,Regular Season,False,Final,16.0,,,10.0,16.0,False,False
+0022000328,2021-02-03,CLE,Cleveland Cavaliers,99,LAC,LA Clippers,121,LAC,CLE,Regular Season,False,Final,16.0,,,10.0,17.0,False,False
+0022000329,2021-02-03,MIL,Milwaukee Bucks,130,IND,Indiana Pacers,110,MIL,IND,Regular Season,False,Final,16.0,,,13.0,12.0,False,False
+0022000330,2021-02-03,ATL,Atlanta Hawks,116,DAL,Dallas Mavericks,122,DAL,ATL,Regular Season,False,Final,16.0,,,10.0,9.0,False,False
+0022000331,2021-02-03,MIA,Miami Heat,100,WAS,Washington Wizards,103,WAS,MIA,Regular Season,False,Final,16.0,,,7.0,5.0,False,False
+0022000332,2021-02-03,CHI,Chicago Bulls,103,NYK,New York Knicks,107,NYK,CHI,Regular Season,False,Final,16.0,,,8.0,10.0,False,False
+0022000333,2021-02-03,OKC,Oklahoma City Thunder,104,HOU,Houston Rockets,87,OKC,HOU,Regular Season,False,Final,16.0,,,9.0,10.0,False,False
+0022000334,2021-02-03,SAS,San Antonio Spurs,111,MIN,Minnesota Timberwolves,108,SAS,MIN,Regular Season,False,Final,16.0,,,12.0,5.0,False,False
+0022000335,2021-02-03,NOP,New Orleans Pelicans,123,PHX,Phoenix Suns,101,NOP,PHX,Regular Season,False,Final,16.0,,,8.0,11.0,False,False
+0022000336,2021-02-03,SAC,Sacramento Kings,116,BOS,Boston Celtics,111,SAC,BOS,Regular Season,False,Final,16.0,,,10.0,11.0,False,False
+0022000337,2021-02-04,PHI,Philadelphia 76ers,105,POR,Portland Trail Blazers,121,POR,PHI,Regular Season,False,Final,16.0,,,16.0,12.0,False,False
+0022000338,2021-02-04,ATL,Atlanta Hawks,91,UTA,Utah Jazz,112,UTA,ATL,Regular Season,False,Final,16.0,,,10.0,17.0,False,False
+0022000339,2021-02-04,DAL,Dallas Mavericks,116,GSW,Golden State Warriors,147,GSW,DAL,Regular Season,False,Final,16.0,,,9.0,12.0,False,False
+0022000340,2021-02-04,MEM,Memphis Grizzlies,103,HOU,Houston Rockets,115,HOU,MEM,Regular Season,False,Final,16.0,,,9.0,11.0,False,False
+0022000341,2021-02-04,LAL,Los Angeles Lakers,114,DEN,Denver Nuggets,93,LAL,DEN,Regular Season,False,Final,16.0,,,17.0,12.0,False,False
+0022000342,2021-02-05,CHA,Charlotte Hornets,121,UTA,Utah Jazz,138,UTA,CHA,Regular Season,False,Final,16.0,,,10.0,18.0,False,False
+0022000343,2021-02-05,IND,Indiana Pacers,113,NOP,New Orleans Pelicans,114,NOP,IND,Regular Season,False,Final,16.0,,,12.0,9.0,False,False
+0022000344,2021-02-05,ORL,Orlando Magic,123,CHI,Chicago Bulls,119,ORL,CHI,Regular Season,False,Final,16.0,,,9.0,8.0,False,False
+0022000345,2021-02-05,BKN,Brooklyn Nets,117,TOR,Toronto Raptors,123,TOR,BKN,Regular Season,False,Final,16.0,,,14.0,10.0,False,False
+0022000346,2021-02-05,CLE,Cleveland Cavaliers,105,MIL,Milwaukee Bucks,123,MIL,CLE,Regular Season,False,Final,16.0,,,10.0,14.0,False,False
+0022000347,2021-02-05,MIA,Miami Heat,122,WAS,Washington Wizards,95,MIA,WAS,Regular Season,False,Final,16.0,,,8.0,5.0,False,False
+0022000348,2021-02-05,OKC,Oklahoma City Thunder,103,MIN,Minnesota Timberwolves,106,MIN,OKC,Regular Season,False,Final,16.0,,,9.0,6.0,False,False
+0022000349,2021-02-05,PHX,Phoenix Suns,109,DET,Detroit Pistons,92,PHX,DET,Regular Season,False,Final,16.0,,,12.0,5.0,False,False
+0022000350,2021-02-05,LAC,LA Clippers,115,BOS,Boston Celtics,119,BOS,LAC,Regular Season,False,Final,16.0,,,17.0,12.0,False,False
+0022000351,2021-02-06,NYK,New York Knicks,110,POR,Portland Trail Blazers,99,NYK,POR,Regular Season,False,Final,16.0,,,11.0,12.0,False,False
+0022000352,2021-02-06,SAC,Sacramento Kings,119,DEN,Denver Nuggets,114,SAC,DEN,Regular Season,False,Final,16.0,,,11.0,12.0,False,False
+0022000353,2021-02-06,ORL,Orlando Magic,92,CHI,Chicago Bulls,118,CHI,ORL,Regular Season,False,Final,16.0,,,9.0,9.0,False,False
+0022000354,2021-02-06,PHI,Philadelphia 76ers,124,BKN,Brooklyn Nets,108,PHI,BKN,Regular Season,False,Final,16.0,,,17.0,14.0,False,False
+0022000355,2021-02-06,NOP,New Orleans Pelicans,118,MEM,Memphis Grizzlies,109,NOP,MEM,Regular Season,False,Final,16.0,,,10.0,9.0,False,False
+0022000356,2021-02-06,ATL,Atlanta Hawks,132,TOR,Toronto Raptors,121,ATL,TOR,Regular Season,False,Final,16.0,,,11.0,10.0,False,False
+0022000357,2021-02-06,CLE,Cleveland Cavaliers,99,MIL,Milwaukee Bucks,124,MIL,CLE,Regular Season,False,Final,16.0,,,10.0,15.0,False,False
+0022000358,2021-02-06,HOU,Houston Rockets,106,SAS,San Antonio Spurs,111,SAS,HOU,Regular Season,False,Final,16.0,,,11.0,13.0,False,False
+0022000359,2021-02-06,OKC,Oklahoma City Thunder,120,MIN,Minnesota Timberwolves,118,OKC,MIN,Regular Season,False,Final,16.0,,,10.0,6.0,False,False
+0022000360,2021-02-06,DAL,Dallas Mavericks,134,GSW,Golden State Warriors,132,DAL,GSW,Regular Season,False,Final,16.0,,,10.0,12.0,False,False
+0022000361,2021-02-06,LAL,Los Angeles Lakers,135,DET,Detroit Pistons,129,LAL,DET,Regular Season,False,Final,16.0,,,18.0,5.0,False,False
+0022000215,2021-02-07,CHA,Charlotte Hornets,119,WAS,Washington Wizards,97,CHA,WAS,Regular Season,False,Final,16.0,,,11.0,5.0,False,False
+0022000363,2021-02-07,IND,Indiana Pacers,95,UTA,Utah Jazz,103,UTA,IND,Regular Season,False,Final,16.0,,,12.0,19.0,False,False
+0022000364,2021-02-07,NYK,New York Knicks,103,MIA,Miami Heat,109,MIA,NYK,Regular Season,False,Final,16.0,,,11.0,9.0,False,False
+0022000365,2021-02-07,PHX,Phoenix Suns,100,BOS,Boston Celtics,91,PHX,BOS,Regular Season,False,Final,16.0,,,13.0,12.0,False,False
+0022000366,2021-02-07,LAC,LA Clippers,110,SAC,Sacramento Kings,113,SAC,LAC,Regular Season,False,Final,16.0,,,17.0,12.0,False,False
+0022000367,2021-02-08,CHA,Charlotte Hornets,119,HOU,Houston Rockets,94,CHA,HOU,Regular Season,False,Final,16.0,,,12.0,11.0,False,False
+0022000368,2021-02-08,CHI,Chicago Bulls,101,WAS,Washington Wizards,105,WAS,CHI,Regular Season,False,Final,16.0,,,9.0,6.0,False,False
+0022000369,2021-02-08,MEM,Memphis Grizzlies,113,TOR,Toronto Raptors,128,TOR,MEM,Regular Season,False,Final,16.0,,,9.0,11.0,False,False
+0022000370,2021-02-08,DAL,Dallas Mavericks,127,MIN,Minnesota Timberwolves,122,DAL,MIN,Regular Season,False,Final,16.0,,,11.0,6.0,False,False
+0022000371,2021-02-08,SAS,San Antonio Spurs,105,GSW,Golden State Warriors,100,SAS,GSW,Regular Season,False,Final,16.0,,,14.0,12.0,False,False
+0022000372,2021-02-08,PHX,Phoenix Suns,119,CLE,Cleveland Cavaliers,113,PHX,CLE,Regular Season,False,Final,16.0,,,14.0,10.0,False,False
+0022000373,2021-02-08,DEN,Denver Nuggets,112,MIL,Milwaukee Bucks,125,MIL,DEN,Regular Season,False,Final,16.0,,,12.0,16.0,False,False
+0022000374,2021-02-08,LAL,Los Angeles Lakers,119,OKC,Oklahoma City Thunder,112,LAL,OKC,Regular Season,False,Final,16.0,,,19.0,10.0,False,False
+0022000375,2021-02-09,DET,Detroit Pistons,122,BKN,Brooklyn Nets,111,DET,BKN,Regular Season,False,Final,16.0,,,6.0,14.0,False,False
+0022000376,2021-02-09,MIA,Miami Heat,98,NYK,New York Knicks,96,MIA,NYK,Regular Season,False,Final,16.0,,,10.0,11.0,False,False
+0022000377,2021-02-09,NOP,New Orleans Pelicans,130,HOU,Houston Rockets,101,NOP,HOU,Regular Season,False,Final,16.0,,,11.0,11.0,False,False
+0022000378,2021-02-09,SAS,San Antonio Spurs,91,GSW,Golden State Warriors,114,GSW,SAS,Regular Season,False,Final,16.0,,,14.0,13.0,False,False
+0022000379,2021-02-09,UTA,Utah Jazz,122,BOS,Boston Celtics,108,UTA,BOS,Regular Season,False,Final,16.0,,,20.0,12.0,False,False
+0022000380,2021-02-09,POR,Portland Trail Blazers,106,ORL,Orlando Magic,97,POR,ORL,Regular Season,False,Final,16.0,,,13.0,9.0,False,False
+0022000381,2021-02-09,SAC,Sacramento Kings,111,PHI,Philadelphia 76ers,119,PHI,SAC,Regular Season,False,Final,16.0,,,12.0,18.0,False,False
+0022000382,2021-02-10,WAS,Washington Wizards,115,TOR,Toronto Raptors,137,TOR,WAS,Regular Season,False,Final,17.0,,,6.0,12.0,False,False
+0022000383,2021-02-10,BKN,Brooklyn Nets,104,IND,Indiana Pacers,94,BKN,IND,Regular Season,False,Final,17.0,,,15.0,12.0,False,False
+0022000384,2021-02-10,DAL,Dallas Mavericks,118,ATL,Atlanta Hawks,117,DAL,ATL,Regular Season,False,Final,17.0,,,12.0,11.0,False,False
+0022000385,2021-02-10,CHI,Chicago Bulls,129,NOP,New Orleans Pelicans,116,CHI,NOP,Regular Season,False,Final,17.0,,,10.0,11.0,False,False
+0022000386,2021-02-10,MEM,Memphis Grizzlies,130,CHA,Charlotte Hornets,114,MEM,CHA,Regular Season,False,Final,17.0,,,10.0,12.0,False,False
+0022000387,2021-02-10,MIN,Minnesota Timberwolves,112,LAC,LA Clippers,119,LAC,MIN,Regular Season,False,Final,17.0,,,6.0,18.0,False,False
+0022000388,2021-02-10,DEN,Denver Nuggets,133,CLE,Cleveland Cavaliers,95,DEN,CLE,Regular Season,False,Final,17.0,,,13.0,10.0,False,False
+0022000389,2021-02-10,PHX,Phoenix Suns,125,MIL,Milwaukee Bucks,124,PHX,MIL,Regular Season,False,Final,17.0,,,15.0,16.0,False,False
+0022000390,2021-02-10,LAL,Los Angeles Lakers,114,OKC,Oklahoma City Thunder,113,LAL,OKC,Regular Season,False,Final,17.0,,,20.0,10.0,False,False
+0022000391,2021-02-11,DET,Detroit Pistons,95,IND,Indiana Pacers,111,IND,DET,Regular Season,False,Final,17.0,,,6.0,13.0,False,False
+0022000392,2021-02-11,HOU,Houston Rockets,94,MIA,Miami Heat,101,MIA,HOU,Regular Season,False,Final,17.0,,,11.0,11.0,False,False
+0022000393,2021-02-11,GSW,Golden State Warriors,111,ORL,Orlando Magic,105,GSW,ORL,Regular Season,False,Final,17.0,,,14.0,9.0,False,False
+0022000394,2021-02-11,POR,Portland Trail Blazers,118,PHI,Philadelphia 76ers,114,POR,PHI,Regular Season,False,Final,17.0,,,14.0,18.0,False,False
+0022000398,2021-02-11,BOS,Boston Celtics,120,TOR,Toronto Raptors,106,BOS,TOR,Regular Season,False,Final,17.0,,,13.0,12.0,False,False
+0022000395,2021-02-12,CHA,Charlotte Hornets,120,MIN,Minnesota Timberwolves,114,CHA,MIN,Regular Season,False,Final,17.0,,,13.0,6.0,False,False
+0022000396,2021-02-12,WAS,Washington Wizards,91,NYK,New York Knicks,109,NYK,WAS,Regular Season,False,Final,17.0,,,6.0,12.0,False,False
+0022000397,2021-02-12,ATL,Atlanta Hawks,114,SAS,San Antonio Spurs,125,SAS,ATL,Regular Season,False,Final,17.0,,,11.0,15.0,False,False
+0022000399,2021-02-12,DAL,Dallas Mavericks,143,NOP,New Orleans Pelicans,130,DAL,NOP,Regular Season,False,Final,17.0,,,13.0,11.0,False,False
+0022000400,2021-02-12,CHI,Chicago Bulls,106,LAC,LA Clippers,125,LAC,CHI,Regular Season,False,Final,17.0,,,10.0,19.0,False,False
+0022000401,2021-02-12,DEN,Denver Nuggets,97,OKC,Oklahoma City Thunder,95,DEN,OKC,Regular Season,False,Final,17.0,,,14.0,10.0,False,False
+0022000402,2021-02-12,UTA,Utah Jazz,129,MIL,Milwaukee Bucks,115,UTA,MIL,Regular Season,False,Final,17.0,,,21.0,16.0,False,False
+0022000403,2021-02-12,LAL,Los Angeles Lakers,115,MEM,Memphis Grizzlies,105,LAL,MEM,Regular Season,False,Final,17.0,,,21.0,10.0,False,False
+0022000404,2021-02-12,POR,Portland Trail Blazers,129,CLE,Cleveland Cavaliers,110,POR,CLE,Regular Season,False,Final,17.0,,,15.0,10.0,False,False
+0022000405,2021-02-12,SAC,Sacramento Kings,112,ORL,Orlando Magic,123,ORL,SAC,Regular Season,False,Final,17.0,,,12.0,10.0,False,False
+0022000412,2021-02-12,BOS,Boston Celtics,102,DET,Detroit Pistons,108,DET,BOS,Regular Season,False,Final,17.0,,,13.0,7.0,False,False
+0022000406,2021-02-13,PHX,Phoenix Suns,120,PHI,Philadelphia 76ers,111,PHX,PHI,Regular Season,False,Final,17.0,,,16.0,18.0,False,False
+0022000407,2021-02-13,ATL,Atlanta Hawks,113,IND,Indiana Pacers,125,IND,ATL,Regular Season,False,Final,17.0,,,11.0,14.0,False,False
+0022000408,2021-02-13,NYK,New York Knicks,121,HOU,Houston Rockets,99,NYK,HOU,Regular Season,False,Final,17.0,,,13.0,11.0,False,False
+0022000409,2021-02-13,GSW,Golden State Warriors,117,BKN,Brooklyn Nets,134,BKN,GSW,Regular Season,False,Final,17.0,,,14.0,16.0,False,False
+0022000410,2021-02-13,UTA,Utah Jazz,112,MIA,Miami Heat,94,UTA,MIA,Regular Season,False,Final,17.0,,,22.0,11.0,False,False
+0022000411,2021-02-14,DAL,Dallas Mavericks,118,POR,Portland Trail Blazers,121,POR,DAL,Regular Season,False,Final,17.0,,,13.0,16.0,False,False
+0022000413,2021-02-14,TOR,Toronto Raptors,112,MIN,Minnesota Timberwolves,116,MIN,TOR,Regular Season,False,Final,17.0,,,12.0,7.0,False,False
+0022000414,2021-02-14,CHA,Charlotte Hornets,110,SAS,San Antonio Spurs,122,SAS,CHA,Regular Season,False,Final,17.0,,,13.0,16.0,False,False
+0022000415,2021-02-14,OKC,Oklahoma City Thunder,114,MIL,Milwaukee Bucks,109,OKC,MIL,Regular Season,False,Final,17.0,,,11.0,16.0,False,False
+0022000416,2021-02-14,DEN,Denver Nuggets,122,LAL,Los Angeles Lakers,105,DEN,LAL,Regular Season,False,Final,17.0,,,15.0,21.0,False,False
+0022000417,2021-02-14,PHX,Phoenix Suns,109,ORL,Orlando Magic,90,PHX,ORL,Regular Season,False,Final,17.0,,,17.0,10.0,False,False
+0022000418,2021-02-14,SAC,Sacramento Kings,110,MEM,Memphis Grizzlies,124,MEM,SAC,Regular Season,False,Final,17.0,,,12.0,11.0,False,False
+0022000419,2021-02-14,LAC,LA Clippers,128,CLE,Cleveland Cavaliers,111,LAC,CLE,Regular Season,False,Final,17.0,,,20.0,10.0,False,False
+0022000560,2021-02-14,WAS,Washington Wizards,104,BOS,Boston Celtics,91,WAS,BOS,Regular Season,False,Final,17.0,,,7.0,13.0,False,False
+0022000561,2021-02-14,DET,Detroit Pistons,123,NOP,New Orleans Pelicans,112,DET,NOP,Regular Season,False,Final,17.0,,,8.0,11.0,False,False
+0022000420,2021-02-15,IND,Indiana Pacers,112,CHI,Chicago Bulls,120,CHI,IND,Regular Season,False,Final,17.0,,,14.0,11.0,False,False
+0022000421,2021-02-15,WAS,Washington Wizards,131,HOU,Houston Rockets,119,WAS,HOU,Regular Season,False,Final,17.0,,,8.0,11.0,False,False
+0022000422,2021-02-15,NYK,New York Knicks,123,ATL,Atlanta Hawks,112,NYK,ATL,Regular Season,False,Final,17.0,,,14.0,11.0,False,False
+0022000423,2021-02-15,UTA,Utah Jazz,134,PHI,Philadelphia 76ers,123,UTA,PHI,Regular Season,False,Final,17.0,,,23.0,18.0,False,False
+0022000424,2021-02-15,GSW,Golden State Warriors,129,CLE,Cleveland Cavaliers,98,GSW,CLE,Regular Season,False,Final,17.0,,,15.0,10.0,False,False
+0022000425,2021-02-15,LAC,LA Clippers,125,MIA,Miami Heat,118,LAC,MIA,Regular Season,False,Final,17.0,,,21.0,11.0,False,False
+0022000426,2021-02-15,SAC,Sacramento Kings,125,BKN,Brooklyn Nets,136,BKN,SAC,Regular Season,False,Final,17.0,,,12.0,17.0,False,False
+0022000427,2021-02-16,BOS,Boston Celtics,112,DEN,Denver Nuggets,99,BOS,DEN,Regular Season,False,Final,17.0,,,14.0,15.0,False,False
+0022000429,2021-02-16,MEM,Memphis Grizzlies,113,NOP,New Orleans Pelicans,144,NOP,MEM,Regular Season,False,Final,17.0,,,11.0,12.0,False,False
+0022000430,2021-02-16,MIL,Milwaukee Bucks,113,TOR,Toronto Raptors,124,TOR,MIL,Regular Season,False,Final,17.0,,,16.0,13.0,False,False
+0022000431,2021-02-16,MIN,Minnesota Timberwolves,104,LAL,Los Angeles Lakers,112,LAL,MIN,Regular Season,False,Final,17.0,,,7.0,22.0,False,False
+0022000432,2021-02-16,OKC,Oklahoma City Thunder,104,POR,Portland Trail Blazers,115,POR,OKC,Regular Season,False,Final,17.0,,,11.0,17.0,False,False
+0022000433,2021-02-16,PHX,Phoenix Suns,124,BKN,Brooklyn Nets,128,BKN,PHX,Regular Season,False,Final,17.0,,,17.0,18.0,False,False
+0022000436,2021-02-17,ORL,Orlando Magic,107,NYK,New York Knicks,89,ORL,NYK,Regular Season,False,Final,18.0,,,11.0,14.0,False,False
+0022000437,2021-02-17,WAS,Washington Wizards,130,DEN,Denver Nuggets,128,WAS,DEN,Regular Season,False,Final,18.0,,,9.0,15.0,False,False
+0022000438,2021-02-17,BOS,Boston Celtics,114,ATL,Atlanta Hawks,122,ATL,BOS,Regular Season,False,Final,18.0,,,14.0,12.0,False,False
+0022000439,2021-02-17,PHI,Philadelphia 76ers,118,HOU,Houston Rockets,113,PHI,HOU,Regular Season,False,Final,18.0,,,19.0,11.0,False,False
+0022000440,2021-02-17,MIN,Minnesota Timberwolves,128,IND,Indiana Pacers,134,IND,MIN,Regular Season,False,Final,18.0,,,7.0,15.0,False,False
+0022000441,2021-02-17,NOP,New Orleans Pelicans,124,POR,Portland Trail Blazers,126,POR,NOP,Regular Season,False,Final,18.0,,,12.0,18.0,False,False
+0022000443,2021-02-17,GSW,Golden State Warriors,120,MIA,Miami Heat,112,GSW,MIA,Regular Season,False,Final,18.0,,,16.0,11.0,False,False
+0022000444,2021-02-17,LAC,LA Clippers,96,UTA,Utah Jazz,114,UTA,LAC,Regular Season,False,Final,18.0,,,21.0,24.0,False,False
+0022000562,2021-02-17,MEM,Memphis Grizzlies,122,OKC,Oklahoma City Thunder,113,MEM,OKC,Regular Season,False,Final,18.0,,,12.0,11.0,False,False
+0022000564,2021-02-17,CHI,Chicago Bulls,105,DET,Detroit Pistons,102,CHI,DET,Regular Season,False,Final,18.0,,,12.0,8.0,False,False
+0022000445,2021-02-18,MIL,Milwaukee Bucks,96,TOR,Toronto Raptors,110,TOR,MIL,Regular Season,False,Final,18.0,,,16.0,14.0,False,False
+0022000446,2021-02-18,LAL,Los Angeles Lakers,98,BKN,Brooklyn Nets,109,BKN,LAL,Regular Season,False,Final,18.0,,,22.0,19.0,False,False
+0022000447,2021-02-18,SAC,Sacramento Kings,110,MIA,Miami Heat,118,MIA,SAC,Regular Season,False,Final,18.0,,,12.0,12.0,False,False
+0022000449,2021-02-19,ORL,Orlando Magic,124,GSW,Golden State Warriors,120,ORL,GSW,Regular Season,False,Final,18.0,,,12.0,16.0,False,False
+0022000450,2021-02-19,PHI,Philadelphia 76ers,112,CHI,Chicago Bulls,105,PHI,CHI,Regular Season,False,Final,18.0,,,20.0,12.0,False,False
+0022000451,2021-02-19,BOS,Boston Celtics,121,ATL,Atlanta Hawks,109,BOS,ATL,Regular Season,False,Final,18.0,,,15.0,12.0,False,False
+0022000452,2021-02-19,MEM,Memphis Grizzlies,109,DET,Detroit Pistons,95,MEM,DET,Regular Season,False,Final,18.0,,,13.0,8.0,False,False
+0022000453,2021-02-19,MIL,Milwaukee Bucks,98,OKC,Oklahoma City Thunder,85,MIL,OKC,Regular Season,False,Final,18.0,,,17.0,11.0,False,False
+0022000454,2021-02-19,MIN,Minnesota Timberwolves,81,TOR,Toronto Raptors,86,TOR,MIN,Regular Season,False,Final,18.0,,,7.0,15.0,False,False
+0022000455,2021-02-19,NOP,New Orleans Pelicans,114,PHX,Phoenix Suns,132,PHX,NOP,Regular Season,False,Final,18.0,,,12.0,18.0,False,False
+0022000457,2021-02-19,LAC,LA Clippers,116,UTA,Utah Jazz,112,LAC,UTA,Regular Season,False,Final,18.0,,,22.0,24.0,False,False
+0022000563,2021-02-19,CLE,Cleveland Cavaliers,103,DEN,Denver Nuggets,120,DEN,CLE,Regular Season,False,Final,18.0,,,10.0,16.0,False,False
+0022000459,2021-02-20,CHA,Charlotte Hornets,102,GSW,Golden State Warriors,100,CHA,GSW,Regular Season,False,Final,18.0,,,14.0,16.0,False,False
+0022000460,2021-02-20,CHI,Chicago Bulls,122,SAC,Sacramento Kings,114,CHI,SAC,Regular Season,False,Final,18.0,,,13.0,12.0,False,False
+0022000462,2021-02-20,MEM,Memphis Grizzlies,97,PHX,Phoenix Suns,128,PHX,MEM,Regular Season,False,Final,18.0,,,13.0,19.0,False,False
+0022000463,2021-02-20,LAL,Los Angeles Lakers,94,MIA,Miami Heat,96,MIA,LAL,Regular Season,False,Final,18.0,,,22.0,13.0,False,False
+0022000464,2021-02-20,POR,Portland Trail Blazers,111,WAS,Washington Wizards,118,WAS,POR,Regular Season,False,Final,18.0,,,18.0,10.0,False,False
+0022000465,2021-02-21,NOP,New Orleans Pelicans,120,BOS,Boston Celtics,115,NOP,BOS,Regular Season,False,Final,18.0,,,13.0,15.0,False,False
+0022000466,2021-02-21,CLE,Cleveland Cavaliers,101,OKC,Oklahoma City Thunder,117,OKC,CLE,Regular Season,False,Final,18.0,,,10.0,12.0,False,False
+0022000467,2021-02-21,ORL,Orlando Magic,105,DET,Detroit Pistons,96,ORL,DET,Regular Season,False,Final,18.0,,,13.0,8.0,False,False
+0022000468,2021-02-21,TOR,Toronto Raptors,110,PHI,Philadelphia 76ers,103,TOR,PHI,Regular Season,False,Final,18.0,,,16.0,20.0,False,False
+0022000469,2021-02-21,NYK,New York Knicks,103,MIN,Minnesota Timberwolves,99,NYK,MIN,Regular Season,False,Final,18.0,,,15.0,7.0,False,False
+0022000470,2021-02-21,ATL,Atlanta Hawks,123,DEN,Denver Nuggets,115,ATL,DEN,Regular Season,False,Final,18.0,,,13.0,16.0,False,False
+0022000471,2021-02-21,MIL,Milwaukee Bucks,128,SAC,Sacramento Kings,115,MIL,SAC,Regular Season,False,Final,18.0,,,18.0,12.0,False,False
+0022000472,2021-02-21,LAC,LA Clippers,108,BKN,Brooklyn Nets,112,BKN,LAC,Regular Season,False,Final,18.0,,,22.0,20.0,False,False
+0022000474,2021-02-22,HOU,Houston Rockets,100,CHI,Chicago Bulls,120,CHI,HOU,Regular Season,False,Final,18.0,,,11.0,14.0,False,False
+0022000475,2021-02-22,OKC,Oklahoma City Thunder,94,MIA,Miami Heat,108,MIA,OKC,Regular Season,False,Final,18.0,,,12.0,14.0,False,False
+0022000476,2021-02-22,DAL,Dallas Mavericks,102,MEM,Memphis Grizzlies,92,DAL,MEM,Regular Season,False,Final,18.0,,,14.0,13.0,False,False
+0022000477,2021-02-22,PHX,Phoenix Suns,132,POR,Portland Trail Blazers,100,PHX,POR,Regular Season,False,Final,18.0,,,20.0,18.0,False,False
+0022000478,2021-02-22,UTA,Utah Jazz,132,CHA,Charlotte Hornets,110,UTA,CHA,Regular Season,False,Final,18.0,,,25.0,14.0,False,False
+0022000479,2021-02-22,LAL,Los Angeles Lakers,124,WAS,Washington Wizards,127,WAS,LAL,Regular Season,False,Final,18.0,,,22.0,11.0,False,False
+0022000480,2021-02-23,CLE,Cleveland Cavaliers,112,ATL,Atlanta Hawks,111,CLE,ATL,Regular Season,False,Final,18.0,,,11.0,13.0,False,False
+0022000481,2021-02-23,ORL,Orlando Magic,93,DET,Detroit Pistons,105,DET,ORL,Regular Season,False,Final,18.0,,,13.0,9.0,False,False
+0022000482,2021-02-23,BKN,Brooklyn Nets,127,SAC,Sacramento Kings,118,BKN,SAC,Regular Season,False,Final,18.0,,,21.0,12.0,False,False
+0022000483,2021-02-23,NYK,New York Knicks,106,GSW,Golden State Warriors,114,GSW,NYK,Regular Season,False,Final,18.0,,,15.0,17.0,False,False
+0022000484,2021-02-23,TOR,Toronto Raptors,102,PHI,Philadelphia 76ers,109,PHI,TOR,Regular Season,False,Final,18.0,,,16.0,21.0,False,False
+0022000485,2021-02-23,DAL,Dallas Mavericks,110,BOS,Boston Celtics,107,DAL,BOS,Regular Season,False,Final,18.0,,,15.0,15.0,False,False
+0022000486,2021-02-23,MIL,Milwaukee Bucks,139,MIN,Minnesota Timberwolves,112,MIL,MIN,Regular Season,False,Final,18.0,,,19.0,7.0,False,False
+0022000487,2021-02-23,DEN,Denver Nuggets,111,POR,Portland Trail Blazers,106,DEN,POR,Regular Season,False,Final,18.0,,,17.0,18.0,False,False
+0022000488,2021-02-23,LAC,LA Clippers,135,WAS,Washington Wizards,116,LAC,WAS,Regular Season,False,Final,18.0,,,23.0,11.0,False,False
+0022000489,2021-02-24,IND,Indiana Pacers,107,GSW,Golden State Warriors,111,GSW,IND,Regular Season,False,Final,19.0,,,15.0,18.0,False,False
+0022000490,2021-02-24,ATL,Atlanta Hawks,127,BOS,Boston Celtics,112,ATL,BOS,Regular Season,False,Final,19.0,,,14.0,15.0,False,False
+0022000491,2021-02-24,CLE,Cleveland Cavaliers,112,HOU,Houston Rockets,96,CLE,HOU,Regular Season,False,Final,19.0,,,12.0,11.0,False,False
+0022000492,2021-02-24,MIA,Miami Heat,116,TOR,Toronto Raptors,108,MIA,TOR,Regular Season,False,Final,19.0,,,15.0,16.0,False,False
+0022000493,2021-02-24,CHI,Chicago Bulls,133,MIN,Minnesota Timberwolves,126,CHI,MIN,Regular Season,False,Final,19.0,,,15.0,7.0,False,False
+0022000494,2021-02-24,NOP,New Orleans Pelicans,128,DET,Detroit Pistons,118,NOP,DET,Regular Season,False,Final,19.0,,,14.0,9.0,False,False
+0022000495,2021-02-24,OKC,Oklahoma City Thunder,102,SAS,San Antonio Spurs,99,OKC,SAS,Regular Season,False,Final,19.0,,,13.0,16.0,False,False
+0022000496,2021-02-24,PHX,Phoenix Suns,121,CHA,Charlotte Hornets,124,CHA,PHX,Regular Season,False,Final,19.0,,,20.0,15.0,False,False
+0022000497,2021-02-24,UTA,Utah Jazz,114,LAL,Los Angeles Lakers,89,UTA,LAL,Regular Season,False,Final,19.0,,,26.0,22.0,False,False
+0022000498,2021-02-25,PHI,Philadelphia 76ers,111,DAL,Dallas Mavericks,97,PHI,DAL,Regular Season,False,Final,19.0,,,22.0,15.0,False,False
+0022000499,2021-02-25,BKN,Brooklyn Nets,129,ORL,Orlando Magic,92,BKN,ORL,Regular Season,False,Final,19.0,,,22.0,13.0,False,False
+0022000500,2021-02-25,NYK,New York Knicks,140,SAC,Sacramento Kings,121,NYK,SAC,Regular Season,False,Final,19.0,,,16.0,12.0,False,False
+0022000501,2021-02-25,MEM,Memphis Grizzlies,122,LAC,LA Clippers,94,MEM,LAC,Regular Season,False,Final,19.0,,,14.0,23.0,False,False
+0022000502,2021-02-25,DEN,Denver Nuggets,110,WAS,Washington Wizards,112,WAS,DEN,Regular Season,False,Final,19.0,,,17.0,12.0,False,False
+0022000503,2021-02-25,MIL,Milwaukee Bucks,129,NOP,New Orleans Pelicans,125,MIL,NOP,Regular Season,False,Final,19.0,,,20.0,14.0,False,False
+0022000504,2021-02-26,DET,Detroit Pistons,107,SAC,Sacramento Kings,110,SAC,DET,Regular Season,False,Final,19.0,,,9.0,13.0,False,False
+0022000505,2021-02-26,BOS,Boston Celtics,118,IND,Indiana Pacers,112,BOS,IND,Regular Season,False,Final,19.0,,,16.0,15.0,False,False
+0022000506,2021-02-26,TOR,Toronto Raptors,122,HOU,Houston Rockets,111,TOR,HOU,Regular Season,False,Final,19.0,,,17.0,11.0,False,False
+0022000507,2021-02-26,MIA,Miami Heat,124,UTA,Utah Jazz,116,MIA,UTA,Regular Season,False,Final,19.0,,,16.0,26.0,False,False
+0022000508,2021-02-26,CHI,Chicago Bulls,97,PHX,Phoenix Suns,106,PHX,CHI,Regular Season,False,Final,19.0,,,15.0,21.0,False,False
+0022000509,2021-02-26,MEM,Memphis Grizzlies,99,LAC,LA Clippers,119,LAC,MEM,Regular Season,False,Final,19.0,,,14.0,24.0,False,False
+0022000510,2021-02-26,OKC,Oklahoma City Thunder,118,ATL,Atlanta Hawks,109,OKC,ATL,Regular Season,False,Final,19.0,,,14.0,14.0,False,False
+0022000511,2021-02-26,GSW,Golden State Warriors,130,CHA,Charlotte Hornets,121,GSW,CHA,Regular Season,False,Final,19.0,,,19.0,15.0,False,False
+0022000512,2021-02-26,LAL,Los Angeles Lakers,102,POR,Portland Trail Blazers,93,LAL,POR,Regular Season,False,Final,19.0,,,23.0,18.0,False,False
+0022000513,2021-02-27,PHI,Philadelphia 76ers,109,CLE,Cleveland Cavaliers,112,CLE,PHI,Regular Season,False,Final,19.0,,,22.0,13.0,False,False
+0022000514,2021-02-27,SAS,San Antonio Spurs,117,NOP,New Orleans Pelicans,114,SAS,NOP,Regular Season,False,Final,19.0,,,17.0,14.0,False,False
+0022000515,2021-02-27,NYK,New York Knicks,110,IND,Indiana Pacers,107,NYK,IND,Regular Season,False,Final,19.0,,,17.0,15.0,False,False
+0022000516,2021-02-27,ORL,Orlando Magic,109,UTA,Utah Jazz,124,UTA,ORL,Regular Season,False,Final,19.0,,,13.0,27.0,False,False
+0022000517,2021-02-27,WAS,Washington Wizards,128,MIN,Minnesota Timberwolves,112,WAS,MIN,Regular Season,False,Final,19.0,,,13.0,7.0,False,False
+0022000518,2021-02-27,OKC,Oklahoma City Thunder,96,DEN,Denver Nuggets,126,DEN,OKC,Regular Season,False,Final,19.0,,,14.0,18.0,False,False
+0022000519,2021-02-27,BKN,Brooklyn Nets,98,DAL,Dallas Mavericks,115,DAL,BKN,Regular Season,False,Final,19.0,,,22.0,16.0,False,False
+0022000520,2021-02-28,MIL,Milwaukee Bucks,105,LAC,LA Clippers,100,MIL,LAC,Regular Season,False,Final,19.0,,,21.0,24.0,False,False
+0022000521,2021-02-28,DET,Detroit Pistons,90,NYK,New York Knicks,109,NYK,DET,Regular Season,False,Final,19.0,,,9.0,18.0,False,False
+0022000522,2021-02-28,MIA,Miami Heat,109,ATL,Atlanta Hawks,99,MIA,ATL,Regular Season,False,Final,19.0,,,17.0,14.0,False,False
+0022000524,2021-02-28,BOS,Boston Celtics,111,WAS,Washington Wizards,110,BOS,WAS,Regular Season,False,Final,19.0,,,17.0,13.0,False,False
+0022000525,2021-02-28,HOU,Houston Rockets,84,MEM,Memphis Grizzlies,133,MEM,HOU,Regular Season,False,Final,19.0,,,11.0,15.0,False,False
+0022000526,2021-02-28,MIN,Minnesota Timberwolves,99,PHX,Phoenix Suns,118,PHX,MIN,Regular Season,False,Final,19.0,,,7.0,22.0,False,False
+0022000527,2021-02-28,LAL,Los Angeles Lakers,117,GSW,Golden State Warriors,91,LAL,GSW,Regular Season,False,Final,19.0,,,24.0,19.0,False,False
+0022000528,2021-02-28,SAC,Sacramento Kings,126,CHA,Charlotte Hornets,127,CHA,SAC,Regular Season,False,Final,19.0,,,13.0,16.0,False,False
+0022000529,2021-03-01,ORL,Orlando Magic,124,DAL,Dallas Mavericks,130,DAL,ORL,Regular Season,False,Final,19.0,,,13.0,17.0,False,False
+0022000530,2021-03-01,PHI,Philadelphia 76ers,130,IND,Indiana Pacers,114,PHI,IND,Regular Season,False,Final,19.0,,,23.0,15.0,False,False
+0022000531,2021-03-01,CHI,Chicago Bulls,112,DEN,Denver Nuggets,118,DEN,CHI,Regular Season,False,Final,19.0,,,15.0,19.0,False,False
+0022000532,2021-03-01,HOU,Houston Rockets,90,CLE,Cleveland Cavaliers,101,CLE,HOU,Regular Season,False,Final,19.0,,,11.0,14.0,False,False
+0022000533,2021-03-01,NOP,New Orleans Pelicans,129,UTA,Utah Jazz,124,NOP,UTA,Regular Season,False,Final,19.0,,,15.0,27.0,False,False
+0022000534,2021-03-01,SAS,San Antonio Spurs,113,BKN,Brooklyn Nets,124,BKN,SAS,Regular Season,False,Final,19.0,,,17.0,23.0,False,False
+0022000535,2021-03-01,POR,Portland Trail Blazers,123,CHA,Charlotte Hornets,111,POR,CHA,Regular Season,False,Final,19.0,,,19.0,16.0,False,False
+0022000536,2021-03-02,WAS,Washington Wizards,111,MEM,Memphis Grizzlies,125,MEM,WAS,Regular Season,False,Final,19.0,,,13.0,16.0,False,False
+0022000537,2021-03-02,BOS,Boston Celtics,117,LAC,LA Clippers,112,BOS,LAC,Regular Season,False,Final,19.0,,,18.0,24.0,False,False
+0022000538,2021-03-02,MIA,Miami Heat,80,ATL,Atlanta Hawks,94,ATL,MIA,Regular Season,False,Final,19.0,,,17.0,15.0,False,False
+0022000540,2021-03-02,MIL,Milwaukee Bucks,97,DEN,Denver Nuggets,128,DEN,MIL,Regular Season,False,Final,19.0,,,21.0,20.0,False,False
+0022000541,2021-03-02,SAS,San Antonio Spurs,119,NYK,New York Knicks,93,SAS,NYK,Regular Season,False,Final,19.0,,,18.0,18.0,False,False
+0022000542,2021-03-02,LAL,Los Angeles Lakers,104,PHX,Phoenix Suns,114,PHX,LAL,Regular Season,False,Final,19.0,,,24.0,23.0,False,False
+0022000539,2021-03-03,TOR,Toronto Raptors,105,DET,Detroit Pistons,129,DET,TOR,Regular Season,False,Final,20.0,,,17.0,10.0,False,False
+0022000543,2021-03-03,CLE,Cleveland Cavaliers,111,IND,Indiana Pacers,114,IND,CLE,Regular Season,False,Final,20.0,,,14.0,16.0,False,False
+0022000544,2021-03-03,ORL,Orlando Magic,112,ATL,Atlanta Hawks,115,ATL,ORL,Regular Season,False,Final,20.0,,,13.0,16.0,False,False
+0022000545,2021-03-03,PHI,Philadelphia 76ers,131,UTA,Utah Jazz,123,PHI,UTA,Regular Season,False,Final,20.0,,,24.0,27.0,False,False
+0022000546,2021-03-03,HOU,Houston Rockets,114,BKN,Brooklyn Nets,132,BKN,HOU,Regular Season,False,Final,20.0,,,11.0,24.0,False,False
+0022000547,2021-03-03,MIN,Minnesota Timberwolves,102,CHA,Charlotte Hornets,135,CHA,MIN,Regular Season,False,Final,20.0,,,7.0,17.0,False,False
+0022000548,2021-03-03,NOP,New Orleans Pelicans,124,CHI,Chicago Bulls,128,CHI,NOP,Regular Season,False,Final,20.0,,,15.0,16.0,False,False
+0022000549,2021-03-03,DAL,Dallas Mavericks,87,OKC,Oklahoma City Thunder,78,DAL,OKC,Regular Season,False,Final,20.0,,,18.0,14.0,False,False
+0022000550,2021-03-03,POR,Portland Trail Blazers,108,GSW,Golden State Warriors,106,POR,GSW,Regular Season,False,Final,20.0,,,20.0,19.0,False,False
+0022000551,2021-03-03,SAC,Sacramento Kings,123,LAL,Los Angeles Lakers,120,SAC,LAL,Regular Season,False,Final,20.0,,,14.0,24.0,False,False
+0022000185,2021-03-04,PHX,Phoenix Suns,120,GSW,Golden State Warriors,98,PHX,GSW,Regular Season,False,Final,20.0,,,24.0,19.0,False,False
+0022000552,2021-03-04,BOS,Boston Celtics,132,TOR,Toronto Raptors,125,BOS,TOR,Regular Season,False,Final,20.0,,,19.0,17.0,False,False
+0022000553,2021-03-04,IND,Indiana Pacers,103,DEN,Denver Nuggets,113,DEN,IND,Regular Season,False,Final,20.0,,,16.0,21.0,False,False
+0022000554,2021-03-04,WAS,Washington Wizards,119,LAC,LA Clippers,117,WAS,LAC,Regular Season,False,Final,20.0,,,14.0,24.0,False,False
+0022000555,2021-03-04,MEM,Memphis Grizzlies,111,MIL,Milwaukee Bucks,112,MIL,MEM,Regular Season,False,Final,20.0,,,16.0,22.0,False,False
+0022000556,2021-03-04,SAS,San Antonio Spurs,102,OKC,Oklahoma City Thunder,107,OKC,SAS,Regular Season,False,Final,20.0,,,18.0,15.0,False,False
+0022000557,2021-03-04,NOP,New Orleans Pelicans,93,MIA,Miami Heat,103,MIA,NOP,Regular Season,False,Final,20.0,,,15.0,18.0,False,False
+0022000558,2021-03-04,POR,Portland Trail Blazers,123,SAC,Sacramento Kings,119,POR,SAC,Regular Season,False,Final,20.0,,,21.0,14.0,False,False
+0022000565,2021-03-04,NYK,New York Knicks,114,DET,Detroit Pistons,104,NYK,DET,Regular Season,False,Final,20.0,,,19.0,10.0,False,False
+0022000566,2021-03-10,MEM,Memphis Grizzlies,127,WAS,Washington Wizards,112,MEM,WAS,Regular Season,False,Final,21.0,,,17.0,14.0,False,False
+0022000567,2021-03-10,DAL,Dallas Mavericks,115,SAS,San Antonio Spurs,104,DAL,SAS,Regular Season,False,Final,21.0,,,19.0,18.0,False,False
+0022000568,2021-03-11,CHA,Charlotte Hornets,105,DET,Detroit Pistons,102,CHA,DET,Regular Season,False,Final,21.0,,,18.0,10.0,False,False
+0022000569,2021-03-11,BKN,Brooklyn Nets,121,BOS,Boston Celtics,109,BKN,BOS,Regular Season,False,Final,21.0,,,25.0,19.0,False,False
+0022000570,2021-03-11,TOR,Toronto Raptors,120,ATL,Atlanta Hawks,121,ATL,TOR,Regular Season,False,Final,21.0,,,17.0,17.0,False,False
+0022000571,2021-03-11,MIA,Miami Heat,111,ORL,Orlando Magic,103,MIA,ORL,Regular Season,False,Final,21.0,,,19.0,13.0,False,False
+0022000572,2021-03-11,CHI,Chicago Bulls,105,PHI,Philadelphia 76ers,127,PHI,CHI,Regular Season,False,Final,21.0,,,16.0,25.0,False,False
+0022000573,2021-03-11,MIL,Milwaukee Bucks,134,NYK,New York Knicks,101,MIL,NYK,Regular Season,False,Final,21.0,,,23.0,19.0,False,False
+0022000574,2021-03-11,NOP,New Orleans Pelicans,105,MIN,Minnesota Timberwolves,135,MIN,NOP,Regular Season,False,Final,21.0,,,15.0,8.0,False,False
+0022000575,2021-03-11,OKC,Oklahoma City Thunder,116,DAL,Dallas Mavericks,108,OKC,DAL,Regular Season,False,Final,21.0,,,16.0,19.0,False,False
+0022000576,2021-03-11,LAC,LA Clippers,130,GSW,Golden State Warriors,104,LAC,GSW,Regular Season,False,Final,21.0,,,25.0,19.0,False,False
+0022000577,2021-03-11,POR,Portland Trail Blazers,121,PHX,Phoenix Suns,127,PHX,POR,Regular Season,False,Final,21.0,,,21.0,25.0,False,False
+0022000578,2021-03-11,SAC,Sacramento Kings,125,HOU,Houston Rockets,105,SAC,HOU,Regular Season,False,Final,21.0,,,15.0,11.0,False,False
+0022000579,2021-03-12,WAS,Washington Wizards,101,PHI,Philadelphia 76ers,127,PHI,WAS,Regular Season,False,Final,21.0,,,14.0,26.0,False,False
+0022000580,2021-03-12,MEM,Memphis Grizzlies,102,DEN,Denver Nuggets,103,DEN,MEM,Regular Season,False,Final,21.0,,,17.0,22.0,False,False
+0022000581,2021-03-12,NOP,New Orleans Pelicans,116,CLE,Cleveland Cavaliers,82,NOP,CLE,Regular Season,False,Final,21.0,,,16.0,14.0,False,False
+0022000582,2021-03-12,CHI,Chicago Bulls,90,MIA,Miami Heat,101,MIA,CHI,Regular Season,False,Final,21.0,,,16.0,20.0,False,False
+0022000583,2021-03-12,SAS,San Antonio Spurs,104,ORL,Orlando Magic,77,SAS,ORL,Regular Season,False,Final,21.0,,,19.0,13.0,False,False
+0022000584,2021-03-12,UTA,Utah Jazz,114,HOU,Houston Rockets,99,UTA,HOU,Regular Season,False,Final,21.0,,,28.0,11.0,False,False
+0022000585,2021-03-12,LAL,Los Angeles Lakers,105,IND,Indiana Pacers,100,LAL,IND,Regular Season,False,Final,21.0,,,25.0,16.0,False,False
+0022000194,2021-03-13,PHX,Phoenix Suns,111,IND,Indiana Pacers,122,IND,PHX,Regular Season,False,Final,21.0,,,25.0,17.0,False,False
+0022000586,2021-03-13,OKC,Oklahoma City Thunder,97,NYK,New York Knicks,119,NYK,OKC,Regular Season,False,Final,21.0,,,16.0,20.0,False,False
+0022000587,2021-03-13,BKN,Brooklyn Nets,100,DET,Detroit Pistons,95,BKN,DET,Regular Season,False,Final,21.0,,,26.0,10.0,False,False
+0022000588,2021-03-13,CHA,Charlotte Hornets,114,TOR,Toronto Raptors,104,CHA,TOR,Regular Season,False,Final,21.0,,,19.0,17.0,False,False
+0022000589,2021-03-13,WAS,Washington Wizards,119,MIL,Milwaukee Bucks,125,MIL,WAS,Regular Season,False,Final,21.0,,,14.0,24.0,False,False
+0022000590,2021-03-13,ATL,Atlanta Hawks,121,SAC,Sacramento Kings,106,ATL,SAC,Regular Season,False,Final,21.0,,,18.0,15.0,False,False
+0022000591,2021-03-13,MIN,Minnesota Timberwolves,121,POR,Portland Trail Blazers,125,POR,MIN,Regular Season,False,Final,21.0,,,8.0,22.0,False,False
+0022000592,2021-03-13,DEN,Denver Nuggets,103,DAL,Dallas Mavericks,116,DAL,DEN,Regular Season,False,Final,21.0,,,22.0,20.0,False,False
+0022000593,2021-03-14,OKC,Oklahoma City Thunder,128,MEM,Memphis Grizzlies,122,OKC,MEM,Regular Season,False,Final,21.0,,,17.0,17.0,False,False
+0022000594,2021-03-14,GSW,Golden State Warriors,131,UTA,Utah Jazz,119,GSW,UTA,Regular Season,False,Final,21.0,,,20.0,28.0,False,False
+0022000595,2021-03-14,PHI,Philadelphia 76ers,134,SAS,San Antonio Spurs,99,PHI,SAS,Regular Season,False,Final,21.0,,,27.0,19.0,False,False
+0022000596,2021-03-14,ORL,Orlando Magic,97,MIA,Miami Heat,102,MIA,ORL,Regular Season,False,Final,21.0,,,13.0,21.0,False,False
+0022000597,2021-03-14,ATL,Atlanta Hawks,100,CLE,Cleveland Cavaliers,82,ATL,CLE,Regular Season,False,Final,21.0,,,19.0,14.0,False,False
+0022000598,2021-03-14,HOU,Houston Rockets,107,BOS,Boston Celtics,134,BOS,HOU,Regular Season,False,Final,21.0,,,11.0,20.0,False,False
+0022000599,2021-03-14,MIN,Minnesota Timberwolves,114,POR,Portland Trail Blazers,112,MIN,POR,Regular Season,False,Final,21.0,,,9.0,22.0,False,False
+0022000600,2021-03-14,CHI,Chicago Bulls,118,TOR,Toronto Raptors,95,CHI,TOR,Regular Season,False,Final,21.0,,,17.0,17.0,False,False
+0022000601,2021-03-14,NOP,New Orleans Pelicans,135,LAC,LA Clippers,115,NOP,LAC,Regular Season,False,Final,21.0,,,17.0,25.0,False,False
+0022000428,2021-03-15,DET,Detroit Pistons,99,SAS,San Antonio Spurs,109,SAS,DET,Regular Season,False,Final,21.0,,,10.0,20.0,False,False
+0022000602,2021-03-15,CHA,Charlotte Hornets,122,SAC,Sacramento Kings,116,CHA,SAC,Regular Season,False,Final,21.0,,,20.0,15.0,False,False
+0022000603,2021-03-15,WAS,Washington Wizards,122,MIL,Milwaukee Bucks,133,MIL,WAS,Regular Season,False,Final,21.0,,,14.0,25.0,False,False
+0022000604,2021-03-15,BKN,Brooklyn Nets,117,NYK,New York Knicks,112,BKN,NYK,Regular Season,False,Final,21.0,,,27.0,20.0,False,False
+0022000605,2021-03-15,DAL,Dallas Mavericks,99,LAC,LA Clippers,109,LAC,DAL,Regular Season,False,Final,21.0,,,20.0,26.0,False,False
+0022000606,2021-03-15,DEN,Denver Nuggets,121,IND,Indiana Pacers,106,DEN,IND,Regular Season,False,Final,21.0,,,23.0,17.0,False,False
+0022000607,2021-03-15,PHX,Phoenix Suns,122,MEM,Memphis Grizzlies,99,PHX,MEM,Regular Season,False,Final,21.0,,,26.0,17.0,False,False
+0022000608,2021-03-15,GSW,Golden State Warriors,97,LAL,Los Angeles Lakers,128,LAL,GSW,Regular Season,False,Final,21.0,,,20.0,26.0,False,False
+0022000609,2021-03-16,BOS,Boston Celtics,109,UTA,Utah Jazz,117,UTA,BOS,Regular Season,False,Final,21.0,,,20.0,29.0,False,False
+0022000610,2021-03-16,MIA,Miami Heat,113,CLE,Cleveland Cavaliers,98,MIA,CLE,Regular Season,False,Final,21.0,,,22.0,14.0,False,False
+0022000611,2021-03-16,PHI,Philadelphia 76ers,99,NYK,New York Knicks,96,PHI,NYK,Regular Season,False,Final,21.0,,,28.0,20.0,False,False
+0022000612,2021-03-16,CHI,Chicago Bulls,123,OKC,Oklahoma City Thunder,102,CHI,OKC,Regular Season,False,Final,21.0,,,18.0,17.0,False,False
+0022000613,2021-03-16,HOU,Houston Rockets,107,ATL,Atlanta Hawks,119,ATL,HOU,Regular Season,False,Final,21.0,,,11.0,20.0,False,False
+0022000614,2021-03-16,POR,Portland Trail Blazers,125,NOP,New Orleans Pelicans,124,POR,NOP,Regular Season,False,Final,21.0,,,23.0,17.0,False,False
+0022000615,2021-03-16,LAL,Los Angeles Lakers,137,MIN,Minnesota Timberwolves,121,LAL,MIN,Regular Season,False,Final,21.0,,,27.0,9.0,False,False
+0022000616,2021-03-17,DET,Detroit Pistons,116,TOR,Toronto Raptors,112,DET,TOR,Regular Season,False,Final,22.0,,,11.0,17.0,False,False
+0022000617,2021-03-17,IND,Indiana Pacers,115,BKN,Brooklyn Nets,124,BKN,IND,Regular Season,False,Final,22.0,,,17.0,28.0,False,False
+0022000618,2021-03-17,PHI,Philadelphia 76ers,105,MIL,Milwaukee Bucks,109,MIL,PHI,Regular Season,False,Final,22.0,,,28.0,26.0,False,False
+0022000619,2021-03-17,WAS,Washington Wizards,119,SAC,Sacramento Kings,121,SAC,WAS,Regular Season,False,Final,22.0,,,14.0,16.0,False,False
+0022000620,2021-03-17,CLE,Cleveland Cavaliers,117,BOS,Boston Celtics,110,CLE,BOS,Regular Season,False,Final,22.0,,,15.0,20.0,False,False
+0022000621,2021-03-17,CHI,Chicago Bulls,99,SAS,San Antonio Spurs,106,SAS,CHI,Regular Season,False,Final,22.0,,,18.0,21.0,False,False
+0022000622,2021-03-17,HOU,Houston Rockets,94,GSW,Golden State Warriors,108,GSW,HOU,Regular Season,False,Final,22.0,,,11.0,21.0,False,False
+0022000623,2021-03-17,MEM,Memphis Grizzlies,89,MIA,Miami Heat,85,MEM,MIA,Regular Season,False,Final,22.0,,,18.0,22.0,False,False
+0022000624,2021-03-17,DEN,Denver Nuggets,129,CHA,Charlotte Hornets,104,DEN,CHA,Regular Season,False,Final,22.0,,,24.0,20.0,False,False
+0022000625,2021-03-17,DAL,Dallas Mavericks,105,LAC,LA Clippers,89,DAL,LAC,Regular Season,False,Final,22.0,,,21.0,26.0,False,False
+0022000166,2021-03-18,WAS,Washington Wizards,131,UTA,Utah Jazz,122,WAS,UTA,Regular Season,False,Final,22.0,,,15.0,29.0,False,False
+0022000626,2021-03-18,ATL,Atlanta Hawks,116,OKC,Oklahoma City Thunder,93,ATL,OKC,Regular Season,False,Final,22.0,,,21.0,17.0,False,False
+0022000627,2021-03-18,NYK,New York Knicks,94,ORL,Orlando Magic,93,NYK,ORL,Regular Season,False,Final,22.0,,,21.0,13.0,False,False
+0022000628,2021-03-18,PHX,Phoenix Suns,119,MIN,Minnesota Timberwolves,123,MIN,PHX,Regular Season,False,Final,22.0,,,26.0,10.0,False,False
+0022000629,2021-03-18,POR,Portland Trail Blazers,101,NOP,New Orleans Pelicans,93,POR,NOP,Regular Season,False,Final,22.0,,,24.0,17.0,False,False
+0022000630,2021-03-18,LAL,Los Angeles Lakers,116,CHA,Charlotte Hornets,105,LAL,CHA,Regular Season,False,Final,22.0,,,28.0,20.0,False,False
+0022000435,2021-03-19,CLE,Cleveland Cavaliers,110,SAS,San Antonio Spurs,116,SAS,CLE,Regular Season,False,Final,22.0,,,15.0,22.0,False,False
+0022000631,2021-03-19,BOS,Boston Celtics,96,SAC,Sacramento Kings,107,SAC,BOS,Regular Season,False,Final,22.0,,,20.0,17.0,False,False
+0022000632,2021-03-19,MIA,Miami Heat,110,IND,Indiana Pacers,137,IND,MIA,Regular Season,False,Final,22.0,,,22.0,18.0,False,False
+0022000633,2021-03-19,ORL,Orlando Magic,121,BKN,Brooklyn Nets,113,ORL,BKN,Regular Season,False,Final,22.0,,,14.0,28.0,False,False
+0022000634,2021-03-19,TOR,Toronto Raptors,112,UTA,Utah Jazz,115,UTA,TOR,Regular Season,False,Final,22.0,,,17.0,30.0,False,False
+0022000635,2021-03-19,HOU,Houston Rockets,100,DET,Detroit Pistons,113,DET,HOU,Regular Season,False,Final,22.0,,,11.0,12.0,False,False
+0022000636,2021-03-19,MEM,Memphis Grizzlies,103,GSW,Golden State Warriors,116,GSW,MEM,Regular Season,False,Final,22.0,,,18.0,22.0,False,False
+0022000637,2021-03-19,DEN,Denver Nuggets,131,CHI,Chicago Bulls,127,DEN,CHI,Regular Season,False,Final,22.0,,,25.0,18.0,False,False
+0022000638,2021-03-19,PHX,Phoenix Suns,113,MIN,Minnesota Timberwolves,101,PHX,MIN,Regular Season,False,Final,22.0,,,27.0,10.0,False,False
+0022000639,2021-03-19,POR,Portland Trail Blazers,125,DAL,Dallas Mavericks,119,POR,DAL,Regular Season,False,Final,22.0,,,25.0,21.0,False,False
+0022000640,2021-03-20,LAL,Los Angeles Lakers,94,ATL,Atlanta Hawks,99,ATL,LAL,Regular Season,False,Final,22.0,,,28.0,22.0,False,False
+0022000641,2021-03-20,PHI,Philadelphia 76ers,129,SAC,Sacramento Kings,105,PHI,SAC,Regular Season,False,Final,22.0,,,29.0,17.0,False,False
+0022000642,2021-03-20,MEM,Memphis Grizzlies,111,GSW,Golden State Warriors,103,MEM,GSW,Regular Season,False,Final,22.0,,,19.0,22.0,False,False
+0022000643,2021-03-20,MIL,Milwaukee Bucks,120,SAS,San Antonio Spurs,113,MIL,SAS,Regular Season,False,Final,22.0,,,27.0,22.0,False,False
+0022000644,2021-03-20,LAC,LA Clippers,125,CHA,Charlotte Hornets,98,LAC,CHA,Regular Season,False,Final,22.0,,,27.0,20.0,False,False
+0022000016,2021-03-21,HOU,Houston Rockets,112,OKC,Oklahoma City Thunder,114,OKC,HOU,Regular Season,False,Final,22.0,,,11.0,18.0,False,False
+0022000167,2021-03-21,BOS,Boston Celtics,112,ORL,Orlando Magic,96,BOS,ORL,Regular Season,False,Final,22.0,,,21.0,14.0,False,False
+0022000645,2021-03-21,MIA,Miami Heat,106,IND,Indiana Pacers,109,IND,MIA,Regular Season,False,Final,22.0,,,22.0,19.0,False,False
+0022000646,2021-03-21,DEN,Denver Nuggets,108,NOP,New Orleans Pelicans,113,NOP,DEN,Regular Season,False,Final,22.0,,,25.0,18.0,False,False
+0022000647,2021-03-21,BKN,Brooklyn Nets,113,WAS,Washington Wizards,106,BKN,WAS,Regular Season,False,Final,22.0,,,29.0,15.0,False,False
+0022000648,2021-03-21,CLE,Cleveland Cavaliers,116,TOR,Toronto Raptors,105,CLE,TOR,Regular Season,False,Final,22.0,,,16.0,17.0,False,False
+0022000649,2021-03-21,DET,Detroit Pistons,86,CHI,Chicago Bulls,100,CHI,DET,Regular Season,False,Final,22.0,,,12.0,19.0,False,False
+0022000650,2021-03-21,NYK,New York Knicks,100,PHI,Philadelphia 76ers,101,PHI,NYK,Regular Season,False,Final,22.0,,,21.0,30.0,False,False
+0022000651,2021-03-21,PHX,Phoenix Suns,111,LAL,Los Angeles Lakers,94,PHX,LAL,Regular Season,False,Final,22.0,,,28.0,28.0,False,False
+0022000652,2021-03-21,POR,Portland Trail Blazers,92,DAL,Dallas Mavericks,132,DAL,POR,Regular Season,False,Final,22.0,,,25.0,22.0,False,False
+0022000653,2021-03-22,CLE,Cleveland Cavaliers,105,SAC,Sacramento Kings,119,SAC,CLE,Regular Season,False,Final,22.0,,,16.0,18.0,False,False
+0022000654,2021-03-22,MIN,Minnesota Timberwolves,103,OKC,Oklahoma City Thunder,112,OKC,MIN,Regular Season,False,Final,22.0,,,10.0,19.0,False,False
+0022000655,2021-03-22,SAS,San Antonio Spurs,97,CHA,Charlotte Hornets,100,CHA,SAS,Regular Season,False,Final,22.0,,,22.0,21.0,False,False
+0022000656,2021-03-22,CHI,Chicago Bulls,95,UTA,Utah Jazz,120,UTA,CHI,Regular Season,False,Final,22.0,,,19.0,31.0,False,False
+0022000657,2021-03-22,HOU,Houston Rockets,117,TOR,Toronto Raptors,99,HOU,TOR,Regular Season,False,Final,22.0,,,12.0,17.0,False,False
+0022000658,2021-03-22,MEM,Memphis Grizzlies,132,BOS,Boston Celtics,126,MEM,BOS,Regular Season,False,Final,22.0,,,20.0,21.0,False,False
+0022000659,2021-03-22,MIL,Milwaukee Bucks,140,IND,Indiana Pacers,113,MIL,IND,Regular Season,False,Final,22.0,,,28.0,19.0,False,False
+0022000660,2021-03-22,LAC,LA Clippers,119,ATL,Atlanta Hawks,110,LAC,ATL,Regular Season,False,Final,22.0,,,28.0,22.0,False,False
+0022000661,2021-03-23,ORL,Orlando Magic,99,DEN,Denver Nuggets,110,DEN,ORL,Regular Season,False,Final,22.0,,,14.0,26.0,False,False
+0022000662,2021-03-23,NYK,New York Knicks,131,WAS,Washington Wizards,113,NYK,WAS,Regular Season,False,Final,22.0,,,22.0,15.0,False,False
+0022000663,2021-03-23,NOP,New Orleans Pelicans,128,LAL,Los Angeles Lakers,111,NOP,LAL,Regular Season,False,Final,22.0,,,19.0,28.0,False,False
+0022000664,2021-03-23,MIA,Miami Heat,100,PHX,Phoenix Suns,110,PHX,MIA,Regular Season,False,Final,22.0,,,22.0,29.0,False,False
+0022000665,2021-03-23,GSW,Golden State Warriors,98,PHI,Philadelphia 76ers,108,PHI,GSW,Regular Season,False,Final,22.0,,,22.0,31.0,False,False
+0022000666,2021-03-23,POR,Portland Trail Blazers,112,BKN,Brooklyn Nets,116,BKN,POR,Regular Season,False,Final,22.0,,,25.0,30.0,False,False
+0022000667,2021-03-24,IND,Indiana Pacers,116,DET,Detroit Pistons,111,IND,DET,Regular Season,False,Final,23.0,,,20.0,12.0,False,False
+0022000668,2021-03-24,TOR,Toronto Raptors,135,DEN,Denver Nuggets,111,TOR,DEN,Regular Season,False,Final,23.0,,,18.0,26.0,False,False
+0022000669,2021-03-24,MIL,Milwaukee Bucks,121,BOS,Boston Celtics,119,MIL,BOS,Regular Season,False,Final,23.0,,,29.0,21.0,False,False
+0022000670,2021-03-24,ORL,Orlando Magic,112,PHX,Phoenix Suns,111,ORL,PHX,Regular Season,False,Final,23.0,,,15.0,29.0,False,False
+0022000671,2021-03-24,CHI,Chicago Bulls,94,CLE,Cleveland Cavaliers,103,CLE,CHI,Regular Season,False,Final,23.0,,,19.0,17.0,False,False
+0022000672,2021-03-24,HOU,Houston Rockets,97,CHA,Charlotte Hornets,122,CHA,HOU,Regular Season,False,Final,23.0,,,12.0,22.0,False,False
+0022000673,2021-03-24,MIN,Minnesota Timberwolves,108,DAL,Dallas Mavericks,128,DAL,MIN,Regular Season,False,Final,23.0,,,10.0,23.0,False,False
+0022000674,2021-03-24,OKC,Oklahoma City Thunder,107,MEM,Memphis Grizzlies,116,MEM,OKC,Regular Season,False,Final,23.0,,,19.0,21.0,False,False
+0022000675,2021-03-24,SAS,San Antonio Spurs,101,LAC,LA Clippers,134,LAC,SAS,Regular Season,False,Final,23.0,,,22.0,29.0,False,False
+0022000676,2021-03-24,UTA,Utah Jazz,118,BKN,Brooklyn Nets,88,UTA,BKN,Regular Season,False,Final,23.0,,,32.0,30.0,False,False
+0022000677,2021-03-24,SAC,Sacramento Kings,110,ATL,Atlanta Hawks,108,SAC,ATL,Regular Season,False,Final,23.0,,,19.0,22.0,False,False
+0022000678,2021-03-25,MIA,Miami Heat,122,POR,Portland Trail Blazers,125,POR,MIA,Regular Season,False,Final,23.0,,,22.0,26.0,False,False
+0022000679,2021-03-25,NYK,New York Knicks,106,WAS,Washington Wizards,102,NYK,WAS,Regular Season,False,Final,23.0,,,23.0,15.0,False,False
+0022000680,2021-03-25,SAS,San Antonio Spurs,85,LAC,LA Clippers,98,LAC,SAS,Regular Season,False,Final,23.0,,,22.0,30.0,False,False
+0022000681,2021-03-25,LAL,Los Angeles Lakers,101,PHI,Philadelphia 76ers,109,PHI,LAL,Regular Season,False,Final,23.0,,,28.0,32.0,False,False
+0022000682,2021-03-25,SAC,Sacramento Kings,141,GSW,Golden State Warriors,119,SAC,GSW,Regular Season,False,Final,23.0,,,20.0,22.0,False,False
+0022000683,2021-03-26,DET,Detroit Pistons,111,BKN,Brooklyn Nets,113,BKN,DET,Regular Season,False,Final,23.0,,,12.0,31.0,False,False
+0022000684,2021-03-26,TOR,Toronto Raptors,100,PHX,Phoenix Suns,104,PHX,TOR,Regular Season,False,Final,23.0,,,18.0,30.0,False,False
+0022000685,2021-03-26,MIL,Milwaukee Bucks,114,BOS,Boston Celtics,122,BOS,MIL,Regular Season,False,Final,23.0,,,29.0,22.0,False,False
+0022000686,2021-03-26,CHA,Charlotte Hornets,110,MIA,Miami Heat,105,CHA,MIA,Regular Season,False,Final,23.0,,,23.0,22.0,False,False
+0022000687,2021-03-26,ORL,Orlando Magic,105,POR,Portland Trail Blazers,112,POR,ORL,Regular Season,False,Final,23.0,,,15.0,27.0,False,False
+0022000688,2021-03-26,MIN,Minnesota Timberwolves,107,HOU,Houston Rockets,101,MIN,HOU,Regular Season,False,Final,23.0,,,11.0,12.0,False,False
+0022000689,2021-03-26,NOP,New Orleans Pelicans,108,DEN,Denver Nuggets,113,DEN,NOP,Regular Season,False,Final,23.0,,,19.0,27.0,False,False
+0022000690,2021-03-26,DAL,Dallas Mavericks,94,IND,Indiana Pacers,109,IND,DAL,Regular Season,False,Final,23.0,,,23.0,21.0,False,False
+0022000691,2021-03-26,UTA,Utah Jazz,117,MEM,Memphis Grizzlies,114,UTA,MEM,Regular Season,False,Final,23.0,,,33.0,21.0,False,False
+0022000692,2021-03-26,GSW,Golden State Warriors,108,ATL,Atlanta Hawks,124,ATL,GSW,Regular Season,False,Final,23.0,,,22.0,23.0,False,False
+0022000693,2021-03-26,LAL,Los Angeles Lakers,100,CLE,Cleveland Cavaliers,86,LAL,CLE,Regular Season,False,Final,23.0,,,29.0,17.0,False,False
+0022000694,2021-03-27,WAS,Washington Wizards,106,DET,Detroit Pistons,92,WAS,DET,Regular Season,False,Final,23.0,,,16.0,12.0,False,False
+0022000695,2021-03-27,MIL,Milwaukee Bucks,96,NYK,New York Knicks,102,NYK,MIL,Regular Season,False,Final,23.0,,,29.0,24.0,False,False
+0022000696,2021-03-27,MIN,Minnesota Timberwolves,107,HOU,Houston Rockets,129,HOU,MIN,Regular Season,False,Final,23.0,,,11.0,13.0,False,False
+0022000697,2021-03-27,SAS,San Antonio Spurs,120,CHI,Chicago Bulls,104,SAS,CHI,Regular Season,False,Final,23.0,,,23.0,19.0,False,False
+0022000698,2021-03-27,NOP,New Orleans Pelicans,112,DAL,Dallas Mavericks,103,NOP,DAL,Regular Season,False,Final,23.0,,,20.0,23.0,False,False
+0022000699,2021-03-27,OKC,Oklahoma City Thunder,94,BOS,Boston Celtics,111,BOS,OKC,Regular Season,False,Final,23.0,,,19.0,23.0,False,False
+0022000700,2021-03-27,UTA,Utah Jazz,126,MEM,Memphis Grizzlies,110,UTA,MEM,Regular Season,False,Final,23.0,,,34.0,21.0,False,False
+0022000701,2021-03-27,LAC,LA Clippers,122,PHI,Philadelphia 76ers,112,LAC,PHI,Regular Season,False,Final,23.0,,,31.0,32.0,False,False
+0022000702,2021-03-27,SAC,Sacramento Kings,100,CLE,Cleveland Cavaliers,98,SAC,CLE,Regular Season,False,Final,23.0,,,21.0,17.0,False,False
+0022000703,2021-03-28,CHA,Charlotte Hornets,97,PHX,Phoenix Suns,101,PHX,CHA,Regular Season,False,Final,23.0,,,23.0,31.0,False,False
+0022000704,2021-03-28,TOR,Toronto Raptors,117,POR,Portland Trail Blazers,122,POR,TOR,Regular Season,False,Final,23.0,,,18.0,28.0,False,False
+0022000705,2021-03-28,DEN,Denver Nuggets,126,ATL,Atlanta Hawks,102,DEN,ATL,Regular Season,False,Final,23.0,,,28.0,23.0,False,False
+0022000706,2021-03-28,LAL,Los Angeles Lakers,96,ORL,Orlando Magic,93,LAL,ORL,Regular Season,False,Final,23.0,,,30.0,15.0,False,False
+0022000707,2021-03-29,WAS,Washington Wizards,132,IND,Indiana Pacers,124,WAS,IND,Regular Season,False,Final,23.0,,,17.0,21.0,False,False
+0022000708,2021-03-29,BOS,Boston Celtics,109,NOP,New Orleans Pelicans,115,NOP,BOS,Regular Season,False,Final,23.0,,,23.0,21.0,False,False
+0022000709,2021-03-29,BKN,Brooklyn Nets,112,MIN,Minnesota Timberwolves,107,BKN,MIN,Regular Season,False,Final,23.0,,,32.0,11.0,False,False
+0022000710,2021-03-29,NYK,New York Knicks,88,MIA,Miami Heat,98,MIA,NYK,Regular Season,False,Final,23.0,,,24.0,23.0,False,False
+0022000711,2021-03-29,DET,Detroit Pistons,118,TOR,Toronto Raptors,104,DET,TOR,Regular Season,False,Final,23.0,,,13.0,18.0,False,False
+0022000712,2021-03-29,HOU,Houston Rockets,110,MEM,Memphis Grizzlies,120,MEM,HOU,Regular Season,False,Final,23.0,,,13.0,22.0,False,False
+0022000713,2021-03-29,OKC,Oklahoma City Thunder,106,DAL,Dallas Mavericks,127,DAL,OKC,Regular Season,False,Final,23.0,,,19.0,24.0,False,False
+0022000714,2021-03-29,SAS,San Antonio Spurs,115,SAC,Sacramento Kings,132,SAC,SAS,Regular Season,False,Final,23.0,,,23.0,22.0,False,False
+0022000715,2021-03-29,UTA,Utah Jazz,114,CLE,Cleveland Cavaliers,75,UTA,CLE,Regular Season,False,Final,23.0,,,35.0,17.0,False,False
+0022000716,2021-03-29,GSW,Golden State Warriors,116,CHI,Chicago Bulls,102,GSW,CHI,Regular Season,False,Final,23.0,,,23.0,19.0,False,False
+0022000717,2021-03-29,LAC,LA Clippers,129,MIL,Milwaukee Bucks,105,LAC,MIL,Regular Season,False,Final,23.0,,,32.0,29.0,False,False
+0022000171,2021-03-30,PHX,Phoenix Suns,117,ATL,Atlanta Hawks,110,PHX,ATL,Regular Season,False,Final,23.0,,,32.0,23.0,False,False
+0022000718,2021-03-30,WAS,Washington Wizards,104,CHA,Charlotte Hornets,114,CHA,WAS,Regular Season,False,Final,23.0,,,17.0,24.0,False,False
+0022000719,2021-03-30,DEN,Denver Nuggets,104,PHI,Philadelphia 76ers,95,DEN,PHI,Regular Season,False,Final,23.0,,,29.0,32.0,False,False
+0022000720,2021-03-30,LAC,LA Clippers,96,ORL,Orlando Magic,103,ORL,LAC,Regular Season,False,Final,23.0,,,32.0,16.0,False,False
+0022000721,2021-03-31,DET,Detroit Pistons,101,POR,Portland Trail Blazers,124,POR,DET,Regular Season,False,Final,24.0,,,13.0,29.0,False,False
+0022000722,2021-03-31,IND,Indiana Pacers,87,MIA,Miami Heat,92,MIA,IND,Regular Season,False,Final,24.0,,,21.0,24.0,False,False
+0022000723,2021-03-31,BOS,Boston Celtics,108,DAL,Dallas Mavericks,113,DAL,BOS,Regular Season,False,Final,24.0,,,23.0,25.0,False,False
+0022000724,2021-03-31,BKN,Brooklyn Nets,120,HOU,Houston Rockets,108,BKN,HOU,Regular Season,False,Final,24.0,,,33.0,13.0,False,False
+0022000725,2021-03-31,MEM,Memphis Grizzlies,107,UTA,Utah Jazz,111,UTA,MEM,Regular Season,False,Final,24.0,,,22.0,36.0,False,False
+0022000726,2021-03-31,MIN,Minnesota Timberwolves,102,NYK,New York Knicks,101,MIN,NYK,Regular Season,False,Final,24.0,,,12.0,24.0,False,False
+0022000727,2021-03-31,OKC,Oklahoma City Thunder,113,TOR,Toronto Raptors,103,OKC,TOR,Regular Season,False,Final,24.0,,,20.0,18.0,False,False
+0022000728,2021-03-31,SAS,San Antonio Spurs,120,SAC,Sacramento Kings,106,SAS,SAC,Regular Season,False,Final,24.0,,,24.0,22.0,False,False
+0022000729,2021-03-31,LAL,Los Angeles Lakers,97,MIL,Milwaukee Bucks,112,MIL,LAL,Regular Season,False,Final,24.0,,,30.0,30.0,False,False
+0022000730,2021-03-31,PHX,Phoenix Suns,121,CHI,Chicago Bulls,116,PHX,CHI,Regular Season,False,Final,24.0,,,33.0,19.0,False,False
+0022000179,2021-04-01,DET,Detroit Pistons,120,WAS,Washington Wizards,91,DET,WAS,Regular Season,False,Final,24.0,,,14.0,17.0,False,False
+0022000731,2021-04-01,CLE,Cleveland Cavaliers,94,PHI,Philadelphia 76ers,114,PHI,CLE,Regular Season,False,Final,24.0,,,17.0,33.0,False,False
+0022000732,2021-04-01,BKN,Brooklyn Nets,111,CHA,Charlotte Hornets,89,BKN,CHA,Regular Season,False,Final,24.0,,,34.0,24.0,False,False
+0022000733,2021-04-01,MIA,Miami Heat,116,GSW,Golden State Warriors,109,MIA,GSW,Regular Season,False,Final,24.0,,,25.0,23.0,False,False
+0022000734,2021-04-01,NOP,New Orleans Pelicans,110,ORL,Orlando Magic,115,ORL,NOP,Regular Season,False,Final,24.0,,,21.0,17.0,False,False
+0022000735,2021-04-01,SAS,San Antonio Spurs,129,ATL,Atlanta Hawks,134,ATL,SAS,Regular Season,False,Final,24.0,,,24.0,24.0,False,False
+0022000736,2021-04-01,LAC,LA Clippers,94,DEN,Denver Nuggets,101,DEN,LAC,Regular Season,False,Final,24.0,,,32.0,30.0,False,False
+0022000737,2021-04-02,TOR,Toronto Raptors,130,GSW,Golden State Warriors,77,TOR,GSW,Regular Season,False,Final,24.0,,,19.0,23.0,False,False
+0022000738,2021-04-02,BOS,Boston Celtics,118,HOU,Houston Rockets,102,BOS,HOU,Regular Season,False,Final,24.0,,,24.0,13.0,False,False
+0022000739,2021-04-02,NYK,New York Knicks,86,DAL,Dallas Mavericks,99,DAL,NYK,Regular Season,False,Final,24.0,,,24.0,26.0,False,False
+0022000740,2021-04-02,IND,Indiana Pacers,97,CHA,Charlotte Hornets,114,CHA,IND,Regular Season,False,Final,24.0,,,21.0,25.0,False,False
+0022000741,2021-04-02,MEM,Memphis Grizzlies,120,MIN,Minnesota Timberwolves,108,MEM,MIN,Regular Season,False,Final,24.0,,,23.0,12.0,False,False
+0022000742,2021-04-02,NOP,New Orleans Pelicans,103,ATL,Atlanta Hawks,126,ATL,NOP,Regular Season,False,Final,24.0,,,21.0,25.0,False,False
+0022000743,2021-04-02,UTA,Utah Jazz,113,CHI,Chicago Bulls,106,UTA,CHI,Regular Season,False,Final,24.0,,,37.0,19.0,False,False
+0022000744,2021-04-02,PHX,Phoenix Suns,140,OKC,Oklahoma City Thunder,103,PHX,OKC,Regular Season,False,Final,24.0,,,34.0,20.0,False,False
+0022000745,2021-04-02,POR,Portland Trail Blazers,109,MIL,Milwaukee Bucks,127,MIL,POR,Regular Season,False,Final,24.0,,,29.0,31.0,False,False
+0022000746,2021-04-02,SAC,Sacramento Kings,94,LAL,Los Angeles Lakers,115,LAL,SAC,Regular Season,False,Final,24.0,,,22.0,31.0,False,False
+0022000747,2021-04-03,WAS,Washington Wizards,87,DAL,Dallas Mavericks,109,DAL,WAS,Regular Season,False,Final,24.0,,,17.0,27.0,False,False
+0022000748,2021-04-03,DET,Detroit Pistons,81,NYK,New York Knicks,125,NYK,DET,Regular Season,False,Final,24.0,,,14.0,25.0,False,False
+0022000749,2021-04-03,MIA,Miami Heat,115,CLE,Cleveland Cavaliers,101,MIA,CLE,Regular Season,False,Final,24.0,,,26.0,17.0,False,False
+0022000750,2021-04-03,PHI,Philadelphia 76ers,122,MIN,Minnesota Timberwolves,113,PHI,MIN,Regular Season,False,Final,24.0,,,34.0,12.0,False,False
+0022000751,2021-04-03,SAS,San Antonio Spurs,133,IND,Indiana Pacers,139,IND,SAS,Regular Season,False,Final,24.0,,,24.0,22.0,False,False
+0022000752,2021-04-03,UTA,Utah Jazz,137,ORL,Orlando Magic,91,UTA,ORL,Regular Season,False,Final,24.0,,,38.0,17.0,False,False
+0022000753,2021-04-03,POR,Portland Trail Blazers,133,OKC,Oklahoma City Thunder,85,POR,OKC,Regular Season,False,Final,24.0,,,30.0,20.0,False,False
+0022000754,2021-04-03,SAC,Sacramento Kings,128,MIL,Milwaukee Bucks,129,MIL,SAC,Regular Season,False,Final,24.0,,,22.0,32.0,False,False
+0022000755,2021-04-04,CHI,Chicago Bulls,115,BKN,Brooklyn Nets,107,CHI,BKN,Regular Season,False,Final,24.0,,,20.0,34.0,False,False
+0022000756,2021-04-04,LAC,LA Clippers,104,LAL,Los Angeles Lakers,86,LAC,LAL,Regular Season,False,Final,24.0,,,33.0,31.0,False,False
+0022000757,2021-04-04,BOS,Boston Celtics,116,CHA,Charlotte Hornets,86,BOS,CHA,Regular Season,False,Final,24.0,,,25.0,25.0,False,False
+0022000758,2021-04-04,PHI,Philadelphia 76ers,100,MEM,Memphis Grizzlies,116,MEM,PHI,Regular Season,False,Final,24.0,,,34.0,24.0,False,False
+0022000759,2021-04-04,ATL,Atlanta Hawks,117,GSW,Golden State Warriors,111,ATL,GSW,Regular Season,False,Final,24.0,,,26.0,23.0,False,False
+0022000760,2021-04-04,HOU,Houston Rockets,115,NOP,New Orleans Pelicans,122,NOP,HOU,Regular Season,False,Final,24.0,,,13.0,22.0,False,False
+0022000761,2021-04-04,DEN,Denver Nuggets,119,ORL,Orlando Magic,109,DEN,ORL,Regular Season,False,Final,24.0,,,31.0,17.0,False,False
+0022000762,2021-04-05,BKN,Brooklyn Nets,114,NYK,New York Knicks,112,BKN,NYK,Regular Season,False,Final,24.0,,,35.0,25.0,False,False
+0022000763,2021-04-05,TOR,Toronto Raptors,103,WAS,Washington Wizards,101,TOR,WAS,Regular Season,False,Final,24.0,,,20.0,17.0,False,False
+0022000764,2021-04-05,DAL,Dallas Mavericks,111,UTA,Utah Jazz,103,DAL,UTA,Regular Season,False,Final,24.0,,,28.0,38.0,False,False
+0022000765,2021-04-05,MIN,Minnesota Timberwolves,116,SAC,Sacramento Kings,106,MIN,SAC,Regular Season,False,Final,24.0,,,13.0,22.0,False,False
+0022000766,2021-04-05,OKC,Oklahoma City Thunder,108,DET,Detroit Pistons,132,DET,OKC,Regular Season,False,Final,24.0,,,20.0,15.0,False,False
+0022000767,2021-04-05,SAS,San Antonio Spurs,101,CLE,Cleveland Cavaliers,125,CLE,SAS,Regular Season,False,Final,24.0,,,24.0,18.0,False,False
+0022000768,2021-04-05,HOU,Houston Rockets,130,PHX,Phoenix Suns,133,PHX,HOU,Regular Season,False,Final,24.0,,,13.0,35.0,False,False
+0022000321,2021-04-06,DEN,Denver Nuggets,134,DET,Detroit Pistons,119,DEN,DET,Regular Season,False,Final,24.0,,,32.0,15.0,False,False
+0022000769,2021-04-06,IND,Indiana Pacers,97,CHI,Chicago Bulls,113,CHI,IND,Regular Season,False,Final,24.0,,,22.0,21.0,False,False
+0022000770,2021-04-06,ATL,Atlanta Hawks,123,NOP,New Orleans Pelicans,107,ATL,NOP,Regular Season,False,Final,24.0,,,27.0,22.0,False,False
+0022000771,2021-04-06,BOS,Boston Celtics,96,PHI,Philadelphia 76ers,106,PHI,BOS,Regular Season,False,Final,24.0,,,25.0,35.0,False,False
+0022000772,2021-04-06,TOR,Toronto Raptors,101,LAL,Los Angeles Lakers,110,LAL,TOR,Regular Season,False,Final,24.0,,,20.0,32.0,False,False
+0022000773,2021-04-06,MIA,Miami Heat,112,MEM,Memphis Grizzlies,124,MEM,MIA,Regular Season,False,Final,24.0,,,26.0,25.0,False,False
+0022000774,2021-04-06,GSW,Golden State Warriors,122,MIL,Milwaukee Bucks,121,GSW,MIL,Regular Season,False,Final,24.0,,,24.0,32.0,False,False
+0022000775,2021-04-06,LAC,LA Clippers,133,POR,Portland Trail Blazers,116,LAC,POR,Regular Season,False,Final,24.0,,,34.0,30.0,False,False
+0022000456,2021-04-07,HOU,Houston Rockets,102,DAL,Dallas Mavericks,93,HOU,DAL,Regular Season,False,Final,25.0,,,14.0,28.0,False,False
+0022000776,2021-04-07,IND,Indiana Pacers,141,MIN,Minnesota Timberwolves,137,IND,MIN,Regular Season,False,Final,25.0,,,23.0,13.0,False,False
+0022000777,2021-04-07,ORL,Orlando Magic,116,WAS,Washington Wizards,131,WAS,ORL,Regular Season,False,Final,25.0,,,17.0,18.0,False,False
+0022000778,2021-04-07,BOS,Boston Celtics,101,NYK,New York Knicks,99,BOS,NYK,Regular Season,False,Final,25.0,,,26.0,25.0,False,False
+0022000779,2021-04-07,BKN,Brooklyn Nets,139,NOP,New Orleans Pelicans,111,BKN,NOP,Regular Season,False,Final,25.0,,,36.0,22.0,False,False
+0022000780,2021-04-07,ATL,Atlanta Hawks,113,MEM,Memphis Grizzlies,131,MEM,ATL,Regular Season,False,Final,25.0,,,27.0,26.0,False,False
+0022000781,2021-04-07,OKC,Oklahoma City Thunder,102,CHA,Charlotte Hornets,113,CHA,OKC,Regular Season,False,Final,25.0,,,20.0,26.0,False,False
+0022000782,2021-04-07,DEN,Denver Nuggets,106,SAS,San Antonio Spurs,96,DEN,SAS,Regular Season,False,Final,25.0,,,33.0,24.0,False,False
+0022000783,2021-04-07,PHX,Phoenix Suns,117,UTA,Utah Jazz,113,PHX,UTA,Regular Season,False,Final,25.0,,,36.0,38.0,False,False
+0022000523,2021-04-08,TOR,Toronto Raptors,113,CHI,Chicago Bulls,122,CHI,TOR,Regular Season,False,Final,25.0,,,20.0,22.0,False,False
+0022000784,2021-04-08,MIA,Miami Heat,110,LAL,Los Angeles Lakers,104,MIA,LAL,Regular Season,False,Final,25.0,,,27.0,32.0,False,False
+0022000785,2021-04-08,OKC,Oklahoma City Thunder,102,CLE,Cleveland Cavaliers,129,CLE,OKC,Regular Season,False,Final,25.0,,,20.0,19.0,False,False
+0022000786,2021-04-08,DAL,Dallas Mavericks,116,MIL,Milwaukee Bucks,101,DAL,MIL,Regular Season,False,Final,25.0,,,29.0,32.0,False,False
+0022000787,2021-04-08,UTA,Utah Jazz,122,POR,Portland Trail Blazers,103,UTA,POR,Regular Season,False,Final,25.0,,,39.0,30.0,False,False
+0022000788,2021-04-08,LAC,LA Clippers,113,PHX,Phoenix Suns,103,LAC,PHX,Regular Season,False,Final,25.0,,,35.0,36.0,False,False
+0022000789,2021-04-08,SAC,Sacramento Kings,101,DET,Detroit Pistons,113,DET,SAC,Regular Season,False,Final,25.0,,,22.0,16.0,False,False
+0022000790,2021-04-09,ORL,Orlando Magic,106,IND,Indiana Pacers,111,IND,ORL,Regular Season,False,Final,25.0,,,17.0,24.0,False,False
+0022000791,2021-04-09,ATL,Atlanta Hawks,120,CHI,Chicago Bulls,108,ATL,CHI,Regular Season,False,Final,25.0,,,28.0,22.0,False,False
+0022000792,2021-04-09,BOS,Boston Celtics,145,MIN,Minnesota Timberwolves,136,BOS,MIN,Regular Season,False,Final,25.0,,,27.0,13.0,False,False
+0022000793,2021-04-09,NYK,New York Knicks,133,MEM,Memphis Grizzlies,129,NYK,MEM,Regular Season,False,Final,25.0,,,26.0,26.0,False,False
+0022000795,2021-04-09,NOP,New Orleans Pelicans,101,PHI,Philadelphia 76ers,94,NOP,PHI,Regular Season,False,Final,25.0,,,23.0,35.0,False,False
+0022000796,2021-04-09,MIL,Milwaukee Bucks,119,CHA,Charlotte Hornets,127,CHA,MIL,Regular Season,False,Final,25.0,,,32.0,27.0,False,False
+0022000797,2021-04-09,DEN,Denver Nuggets,121,SAS,San Antonio Spurs,119,DEN,SAS,Regular Season,False,Final,25.0,,,34.0,24.0,False,False
+0022000798,2021-04-09,GSW,Golden State Warriors,107,WAS,Washington Wizards,110,WAS,GSW,Regular Season,False,Final,25.0,,,24.0,19.0,False,False
+0022000799,2021-04-09,LAC,LA Clippers,126,HOU,Houston Rockets,109,LAC,HOU,Regular Season,False,Final,25.0,,,36.0,14.0,False,False
+0022000199,2021-04-10,OKC,Oklahoma City Thunder,93,PHI,Philadelphia 76ers,117,PHI,OKC,Regular Season,False,Final,25.0,,,20.0,36.0,False,False
+0022000794,2021-04-10,CLE,Cleveland Cavaliers,115,TOR,Toronto Raptors,135,TOR,CLE,Regular Season,False,Final,25.0,,,19.0,21.0,False,False
+0022000800,2021-04-10,BKN,Brooklyn Nets,101,LAL,Los Angeles Lakers,126,LAL,BKN,Regular Season,False,Final,25.0,,,36.0,33.0,False,False
+0022000801,2021-04-10,UTA,Utah Jazz,128,SAC,Sacramento Kings,112,UTA,SAC,Regular Season,False,Final,25.0,,,40.0,22.0,False,False
+0022000802,2021-04-10,GSW,Golden State Warriors,125,HOU,Houston Rockets,109,GSW,HOU,Regular Season,False,Final,25.0,,,25.0,14.0,False,False
+0022000803,2021-04-10,PHX,Phoenix Suns,134,WAS,Washington Wizards,106,PHX,WAS,Regular Season,False,Final,25.0,,,37.0,19.0,False,False
+0022000804,2021-04-10,POR,Portland Trail Blazers,118,DET,Detroit Pistons,103,POR,DET,Regular Season,False,Final,25.0,,,31.0,16.0,False,False
+0022000805,2021-04-11,CHA,Charlotte Hornets,101,ATL,Atlanta Hawks,105,ATL,CHA,Regular Season,False,Final,25.0,,,27.0,29.0,False,False
+0022000806,2021-04-11,DEN,Denver Nuggets,87,BOS,Boston Celtics,105,BOS,DEN,Regular Season,False,Final,25.0,,,34.0,28.0,False,False
+0022000807,2021-04-11,CLE,Cleveland Cavaliers,109,NOP,New Orleans Pelicans,116,NOP,CLE,Regular Season,False,Final,25.0,,,19.0,24.0,False,False
+0022000808,2021-04-11,ORL,Orlando Magic,87,MIL,Milwaukee Bucks,124,MIL,ORL,Regular Season,False,Final,25.0,,,17.0,33.0,False,False
+0022000809,2021-04-11,NYK,New York Knicks,102,TOR,Toronto Raptors,96,NYK,TOR,Regular Season,False,Final,25.0,,,27.0,21.0,False,False
+0022000810,2021-04-11,DAL,Dallas Mavericks,117,SAS,San Antonio Spurs,119,SAS,DAL,Regular Season,False,Final,25.0,,,29.0,25.0,False,False
+0022000811,2021-04-11,MEM,Memphis Grizzlies,125,IND,Indiana Pacers,132,IND,MEM,Regular Season,False,Final,25.0,,,26.0,25.0,False,False
+0022000812,2021-04-11,MIN,Minnesota Timberwolves,121,CHI,Chicago Bulls,117,MIN,CHI,Regular Season,False,Final,25.0,,,14.0,22.0,False,False
+0022000813,2021-04-11,LAC,LA Clippers,131,DET,Detroit Pistons,124,LAC,DET,Regular Season,False,Final,25.0,,,37.0,16.0,False,False
+0022000814,2021-04-11,POR,Portland Trail Blazers,98,MIA,Miami Heat,107,MIA,POR,Regular Season,False,Final,25.0,,,31.0,28.0,False,False
+0022000278,2021-04-12,MEM,Memphis Grizzlies,101,CHI,Chicago Bulls,90,MEM,CHI,Regular Season,False,Final,25.0,,,27.0,22.0,False,False
+0022000815,2021-04-12,NYK,New York Knicks,111,LAL,Los Angeles Lakers,96,NYK,LAL,Regular Season,False,Final,25.0,,,28.0,33.0,False,False
+0022000816,2021-04-12,ORL,Orlando Magic,97,SAS,San Antonio Spurs,120,SAS,ORL,Regular Season,False,Final,25.0,,,17.0,26.0,False,False
+0022000818,2021-04-12,DAL,Dallas Mavericks,95,PHI,Philadelphia 76ers,113,PHI,DAL,Regular Season,False,Final,25.0,,,29.0,37.0,False,False
+0022000819,2021-04-12,NOP,New Orleans Pelicans,117,SAC,Sacramento Kings,110,NOP,SAC,Regular Season,False,Final,25.0,,,25.0,22.0,False,False
+0022000820,2021-04-12,UTA,Utah Jazz,121,WAS,Washington Wizards,125,WAS,UTA,Regular Season,False,Final,25.0,,,40.0,20.0,False,False
+0022000821,2021-04-12,GSW,Golden State Warriors,116,DEN,Denver Nuggets,107,GSW,DEN,Regular Season,False,Final,25.0,,,26.0,34.0,False,False
+0022000822,2021-04-12,PHX,Phoenix Suns,126,HOU,Houston Rockets,120,PHX,HOU,Regular Season,False,Final,25.0,,,38.0,14.0,False,False
+0022000817,2021-04-13,MIN,Minnesota Timberwolves,97,BKN,Brooklyn Nets,127,BKN,MIN,Regular Season,False,Final,25.0,,,14.0,37.0,False,False
+0022000823,2021-04-13,IND,Indiana Pacers,115,LAC,LA Clippers,126,LAC,IND,Regular Season,False,Final,25.0,,,25.0,38.0,False,False
+0022000824,2021-04-13,TOR,Toronto Raptors,103,ATL,Atlanta Hawks,108,ATL,TOR,Regular Season,False,Final,25.0,,,21.0,30.0,False,False
+0022000825,2021-04-13,CHA,Charlotte Hornets,93,LAL,Los Angeles Lakers,101,LAL,CHA,Regular Season,False,Final,25.0,,,27.0,34.0,False,False
+0022000826,2021-04-13,UTA,Utah Jazz,106,OKC,Oklahoma City Thunder,96,UTA,OKC,Regular Season,False,Final,25.0,,,41.0,20.0,False,False
+0022000827,2021-04-13,PHX,Phoenix Suns,106,MIA,Miami Heat,86,PHX,MIA,Regular Season,False,Final,25.0,,,39.0,28.0,False,False
+0022000828,2021-04-13,POR,Portland Trail Blazers,115,BOS,Boston Celtics,116,BOS,POR,Regular Season,False,Final,25.0,,,31.0,29.0,False,False
+0022000461,2021-04-14,HOU,Houston Rockets,124,IND,Indiana Pacers,132,IND,HOU,Regular Season,False,Final,26.0,,,14.0,26.0,False,False
+0022000829,2021-04-14,CHA,Charlotte Hornets,90,CLE,Cleveland Cavaliers,103,CLE,CHA,Regular Season,False,Final,26.0,,,27.0,20.0,False,False
+0022000830,2021-04-14,PHI,Philadelphia 76ers,123,BKN,Brooklyn Nets,117,PHI,BKN,Regular Season,False,Final,26.0,,,38.0,37.0,False,False
+0022000831,2021-04-14,TOR,Toronto Raptors,117,SAS,San Antonio Spurs,112,TOR,SAS,Regular Season,False,Final,26.0,,,22.0,26.0,False,False
+0022000832,2021-04-14,DET,Detroit Pistons,98,LAC,LA Clippers,100,LAC,DET,Regular Season,False,Final,26.0,,,16.0,39.0,False,False
+0022000833,2021-04-14,CHI,Chicago Bulls,106,ORL,Orlando Magic,115,ORL,CHI,Regular Season,False,Final,26.0,,,22.0,18.0,False,False
+0022000834,2021-04-14,MIN,Minnesota Timberwolves,105,MIL,Milwaukee Bucks,130,MIL,MIN,Regular Season,False,Final,26.0,,,14.0,34.0,False,False
+0022000835,2021-04-14,NOP,New Orleans Pelicans,106,NYK,New York Knicks,116,NYK,NOP,Regular Season,False,Final,26.0,,,25.0,29.0,False,False
+0022000836,2021-04-14,OKC,Oklahoma City Thunder,109,GSW,Golden State Warriors,147,GSW,OKC,Regular Season,False,Final,26.0,,,20.0,27.0,False,False
+0022000837,2021-04-14,MEM,Memphis Grizzlies,113,DAL,Dallas Mavericks,114,DAL,MEM,Regular Season,False,Final,26.0,,,27.0,30.0,False,False
+0022000838,2021-04-14,DEN,Denver Nuggets,123,MIA,Miami Heat,106,DEN,MIA,Regular Season,False,Final,26.0,,,35.0,28.0,False,False
+0022000839,2021-04-14,SAC,Sacramento Kings,111,WAS,Washington Wizards,123,WAS,SAC,Regular Season,False,Final,26.0,,,22.0,21.0,False,False
+0022000840,2021-04-15,ATL,Atlanta Hawks,109,MIL,Milwaukee Bucks,120,MIL,ATL,Regular Season,False,Final,26.0,,,30.0,35.0,False,False
+0022000841,2021-04-15,CLE,Cleveland Cavaliers,101,GSW,Golden State Warriors,119,GSW,CLE,Regular Season,False,Final,26.0,,,20.0,28.0,False,False
+0022000842,2021-04-15,LAL,Los Angeles Lakers,113,BOS,Boston Celtics,121,BOS,LAL,Regular Season,False,Final,26.0,,,34.0,30.0,False,False
+0022000843,2021-04-15,PHX,Phoenix Suns,122,SAC,Sacramento Kings,114,PHX,SAC,Regular Season,False,Final,26.0,,,40.0,22.0,False,False
+0022000844,2021-04-16,UTA,Utah Jazz,119,IND,Indiana Pacers,111,UTA,IND,Regular Season,False,Final,26.0,,,42.0,26.0,False,False
+0022000845,2021-04-16,DET,Detroit Pistons,110,OKC,Oklahoma City Thunder,104,DET,OKC,Regular Season,False,Final,26.0,,,17.0,20.0,False,False
+0022000846,2021-04-16,PHI,Philadelphia 76ers,106,LAC,LA Clippers,103,PHI,LAC,Regular Season,False,Final,26.0,,,39.0,39.0,False,False
+0022000847,2021-04-16,WAS,Washington Wizards,117,NOP,New Orleans Pelicans,115,WAS,NOP,Regular Season,False,Final,26.0,,,22.0,25.0,False,False
+0022000848,2021-04-16,BKN,Brooklyn Nets,130,CHA,Charlotte Hornets,115,BKN,CHA,Regular Season,False,Final,26.0,,,38.0,27.0,False,False
+0022000849,2021-04-16,TOR,Toronto Raptors,113,ORL,Orlando Magic,102,TOR,ORL,Regular Season,False,Final,26.0,,,23.0,18.0,False,False
+0022000850,2021-04-16,CHI,Chicago Bulls,115,MEM,Memphis Grizzlies,126,MEM,CHI,Regular Season,False,Final,26.0,,,22.0,28.0,False,False
+0022000851,2021-04-16,HOU,Houston Rockets,99,DEN,Denver Nuggets,128,DEN,HOU,Regular Season,False,Final,26.0,,,14.0,36.0,False,False
+0022000852,2021-04-16,MIN,Minnesota Timberwolves,119,MIA,Miami Heat,111,MIN,MIA,Regular Season,False,Final,26.0,,,15.0,28.0,False,False
+0022000853,2021-04-16,SAS,San Antonio Spurs,106,POR,Portland Trail Blazers,107,POR,SAS,Regular Season,False,Final,26.0,,,26.0,32.0,False,False
+0022000854,2021-04-16,DAL,Dallas Mavericks,109,NYK,New York Knicks,117,NYK,DAL,Regular Season,False,Final,26.0,,,30.0,30.0,False,False
+0022000855,2021-04-17,LAL,Los Angeles Lakers,127,UTA,Utah Jazz,115,LAL,UTA,Regular Season,False,Final,26.0,,,35.0,42.0,False,False
+0022000856,2021-04-17,WAS,Washington Wizards,121,DET,Detroit Pistons,100,WAS,DET,Regular Season,False,Final,26.0,,,23.0,17.0,False,False
+0022000857,2021-04-17,CHI,Chicago Bulls,106,CLE,Cleveland Cavaliers,96,CHI,CLE,Regular Season,False,Final,26.0,,,23.0,20.0,False,False
+0022000858,2021-04-17,BOS,Boston Celtics,119,GSW,Golden State Warriors,114,BOS,GSW,Regular Season,False,Final,26.0,,,31.0,28.0,False,False
+0022000859,2021-04-17,MIL,Milwaukee Bucks,115,MEM,Memphis Grizzlies,128,MEM,MIL,Regular Season,False,Final,26.0,,,35.0,29.0,False,False
+0022000860,2021-04-17,PHX,Phoenix Suns,85,SAS,San Antonio Spurs,111,SAS,PHX,Regular Season,False,Final,26.0,,,40.0,27.0,False,False
+0022000362,2021-04-18,CHA,Charlotte Hornets,109,POR,Portland Trail Blazers,101,CHA,POR,Regular Season,False,Final,26.0,,,28.0,32.0,False,False
+0022000861,2021-04-18,ATL,Atlanta Hawks,129,IND,Indiana Pacers,117,ATL,IND,Regular Season,False,Final,26.0,,,31.0,26.0,False,False
+0022000862,2021-04-18,NYK,New York Knicks,122,NOP,New Orleans Pelicans,112,NYK,NOP,Regular Season,False,Final,26.0,,,31.0,25.0,False,False
+0022000863,2021-04-18,MIA,Miami Heat,109,BKN,Brooklyn Nets,107,MIA,BKN,Regular Season,False,Final,26.0,,,29.0,38.0,False,False
+0022000864,2021-04-18,ORL,Orlando Magic,110,HOU,Houston Rockets,114,HOU,ORL,Regular Season,False,Final,26.0,,,18.0,15.0,False,False
+0022000865,2021-04-18,TOR,Toronto Raptors,112,OKC,Oklahoma City Thunder,106,TOR,OKC,Regular Season,False,Final,26.0,,,24.0,20.0,False,False
+0022000866,2021-04-18,DAL,Dallas Mavericks,107,SAC,Sacramento Kings,121,SAC,DAL,Regular Season,False,Final,26.0,,,30.0,23.0,False,False
+0022000867,2021-04-18,LAC,LA Clippers,124,MIN,Minnesota Timberwolves,105,LAC,MIN,Regular Season,False,Final,26.0,,,40.0,15.0,False,False
+0022000473,2021-04-19,IND,Indiana Pacers,94,SAS,San Antonio Spurs,109,SAS,IND,Regular Season,False,Final,26.0,,,26.0,28.0,False,False
+0022000868,2021-04-19,DET,Detroit Pistons,109,CLE,Cleveland Cavaliers,105,DET,CLE,Regular Season,False,Final,26.0,,,18.0,20.0,False,False
+0022000869,2021-04-19,BOS,Boston Celtics,96,CHI,Chicago Bulls,102,CHI,BOS,Regular Season,False,Final,26.0,,,31.0,24.0,False,False
+0022000870,2021-04-19,PHI,Philadelphia 76ers,96,GSW,Golden State Warriors,107,GSW,PHI,Regular Season,False,Final,26.0,,,39.0,29.0,False,False
+0022000871,2021-04-19,MIA,Miami Heat,113,HOU,Houston Rockets,91,MIA,HOU,Regular Season,False,Final,26.0,,,30.0,15.0,False,False
+0022000872,2021-04-19,WAS,Washington Wizards,119,OKC,Oklahoma City Thunder,107,WAS,OKC,Regular Season,False,Final,26.0,,,24.0,20.0,False,False
+0022000873,2021-04-19,MIL,Milwaukee Bucks,127,PHX,Phoenix Suns,128,PHX,MIL,Regular Season,False,Final,26.0,,,35.0,41.0,False,False
+0022000874,2021-04-19,DEN,Denver Nuggets,139,MEM,Memphis Grizzlies,137,DEN,MEM,Regular Season,False,Final,26.0,,,37.0,29.0,False,False
+0022000875,2021-04-19,LAL,Los Angeles Lakers,97,UTA,Utah Jazz,111,UTA,LAL,Regular Season,False,Final,26.0,,,35.0,43.0,False,False
+0022000876,2021-04-20,ATL,Atlanta Hawks,112,ORL,Orlando Magic,96,ATL,ORL,Regular Season,False,Final,26.0,,,32.0,18.0,False,False
+0022000877,2021-04-20,NYK,New York Knicks,109,CHA,Charlotte Hornets,97,NYK,CHA,Regular Season,False,Final,26.0,,,32.0,28.0,False,False
+0022000878,2021-04-20,NOP,New Orleans Pelicans,129,BKN,Brooklyn Nets,134,BKN,NOP,Regular Season,False,Final,26.0,,,25.0,39.0,False,False
+0022000879,2021-04-20,POR,Portland Trail Blazers,112,LAC,LA Clippers,113,LAC,POR,Regular Season,False,Final,26.0,,,32.0,41.0,False,False
+0022000880,2021-04-20,SAC,Sacramento Kings,120,MIN,Minnesota Timberwolves,134,MIN,SAC,Regular Season,False,Final,26.0,,,23.0,16.0,False,False
+0022000442,2021-04-21,DAL,Dallas Mavericks,127,DET,Detroit Pistons,117,DAL,DET,Regular Season,False,Final,27.0,,,31.0,18.0,False,False
+0022000881,2021-04-21,CLE,Cleveland Cavaliers,121,CHI,Chicago Bulls,105,CLE,CHI,Regular Season,False,Final,27.0,,,21.0,24.0,False,False
+0022000882,2021-04-21,IND,Indiana Pacers,122,OKC,Oklahoma City Thunder,116,IND,OKC,Regular Season,False,Final,27.0,,,27.0,20.0,False,False
+0022000883,2021-04-21,PHI,Philadelphia 76ers,113,PHX,Phoenix Suns,116,PHX,PHI,Regular Season,False,Final,27.0,,,39.0,42.0,False,False
+0022000884,2021-04-21,TOR,Toronto Raptors,114,BKN,Brooklyn Nets,103,TOR,BKN,Regular Season,False,Final,27.0,,,25.0,39.0,False,False
+0022000885,2021-04-21,WAS,Washington Wizards,118,GSW,Golden State Warriors,114,WAS,GSW,Regular Season,False,Final,27.0,,,25.0,29.0,False,False
+0022000886,2021-04-21,NYK,New York Knicks,137,ATL,Atlanta Hawks,127,NYK,ATL,Regular Season,False,Final,27.0,,,33.0,32.0,False,False
+0022000887,2021-04-21,HOU,Houston Rockets,89,UTA,Utah Jazz,112,UTA,HOU,Regular Season,False,Final,27.0,,,15.0,44.0,False,False
+0022000888,2021-04-21,SAS,San Antonio Spurs,87,MIA,Miami Heat,107,MIA,SAS,Regular Season,False,Final,27.0,,,28.0,31.0,False,False
+0022000889,2021-04-21,LAC,LA Clippers,117,MEM,Memphis Grizzlies,105,LAC,MEM,Regular Season,False,Final,27.0,,,42.0,29.0,False,False
+0022000890,2021-04-21,POR,Portland Trail Blazers,105,DEN,Denver Nuggets,106,DEN,POR,Regular Season,False,Final,27.0,,,32.0,38.0,False,False
+0022000891,2021-04-21,SAC,Sacramento Kings,128,MIN,Minnesota Timberwolves,125,SAC,MIN,Regular Season,False,Final,27.0,,,24.0,16.0,False,False
+0022000892,2021-04-22,BOS,Boston Celtics,99,PHX,Phoenix Suns,86,BOS,PHX,Regular Season,False,Final,27.0,,,32.0,42.0,False,False
+0022000893,2021-04-22,ORL,Orlando Magic,100,NOP,New Orleans Pelicans,135,NOP,ORL,Regular Season,False,Final,27.0,,,18.0,26.0,False,False
+0022000894,2021-04-22,MIL,Milwaukee Bucks,124,PHI,Philadelphia 76ers,117,MIL,PHI,Regular Season,False,Final,27.0,,,36.0,39.0,False,False
+0022000895,2021-04-22,SAS,San Antonio Spurs,106,DET,Detroit Pistons,91,SAS,DET,Regular Season,False,Final,27.0,,,29.0,18.0,False,False
+0022000896,2021-04-22,CHI,Chicago Bulls,108,CHA,Charlotte Hornets,91,CHI,CHA,Regular Season,False,Final,27.0,,,25.0,28.0,False,False
+0022000897,2021-04-22,DAL,Dallas Mavericks,115,LAL,Los Angeles Lakers,110,DAL,LAL,Regular Season,False,Final,27.0,,,32.0,35.0,False,False
+0022000225,2021-04-23,POR,Portland Trail Blazers,128,MEM,Memphis Grizzlies,130,MEM,POR,Regular Season,False,Final,27.0,,,32.0,30.0,False,False
+0022000898,2021-04-23,ATL,Atlanta Hawks,118,MIA,Miami Heat,103,ATL,MIA,Regular Season,False,Final,27.0,,,33.0,31.0,False,False
+0022000899,2021-04-23,BKN,Brooklyn Nets,109,BOS,Boston Celtics,104,BKN,BOS,Regular Season,False,Final,27.0,,,40.0,32.0,False,False
+0022000900,2021-04-23,CHA,Charlotte Hornets,108,CLE,Cleveland Cavaliers,102,CHA,CLE,Regular Season,False,Final,27.0,,,29.0,21.0,False,False
+0022000901,2021-04-23,HOU,Houston Rockets,104,LAC,LA Clippers,109,LAC,HOU,Regular Season,False,Final,27.0,,,15.0,43.0,False,False
+0022000902,2021-04-23,OKC,Oklahoma City Thunder,109,WAS,Washington Wizards,129,WAS,OKC,Regular Season,False,Final,27.0,,,20.0,26.0,False,False
+0022000903,2021-04-23,GSW,Golden State Warriors,118,DEN,Denver Nuggets,97,GSW,DEN,Regular Season,False,Final,27.0,,,30.0,38.0,False,False
+0022000264,2021-04-24,NOP,New Orleans Pelicans,108,SAS,San Antonio Spurs,110,SAS,NOP,Regular Season,False,Final,27.0,,,26.0,30.0,False,False
+0022000904,2021-04-24,NYK,New York Knicks,120,TOR,Toronto Raptors,103,NYK,TOR,Regular Season,False,Final,27.0,,,34.0,25.0,False,False
+0022000905,2021-04-24,MIL,Milwaukee Bucks,132,PHI,Philadelphia 76ers,94,MIL,PHI,Regular Season,False,Final,27.0,,,37.0,39.0,False,False
+0022000906,2021-04-24,IND,Indiana Pacers,115,DET,Detroit Pistons,109,IND,DET,Regular Season,False,Final,27.0,,,28.0,18.0,False,False
+0022000907,2021-04-24,MIA,Miami Heat,106,CHI,Chicago Bulls,101,MIA,CHI,Regular Season,False,Final,27.0,,,32.0,25.0,False,False
+0022000908,2021-04-24,DAL,Dallas Mavericks,108,LAL,Los Angeles Lakers,93,DAL,LAL,Regular Season,False,Final,27.0,,,33.0,35.0,False,False
+0022000909,2021-04-24,UTA,Utah Jazz,96,MIN,Minnesota Timberwolves,101,MIN,UTA,Regular Season,False,Final,27.0,,,44.0,17.0,False,False
+0022000910,2021-04-24,DEN,Denver Nuggets,129,HOU,Houston Rockets,116,DEN,HOU,Regular Season,False,Final,27.0,,,39.0,15.0,False,False
+0022000197,2021-04-25,WAS,Washington Wizards,119,CLE,Cleveland Cavaliers,110,WAS,CLE,Regular Season,False,Final,27.0,,,27.0,21.0,False,False
+0022000240,2021-04-25,POR,Portland Trail Blazers,113,MEM,Memphis Grizzlies,120,MEM,POR,Regular Season,False,Final,27.0,,,32.0,31.0,False,False
+0022000911,2021-04-25,CHA,Charlotte Hornets,125,BOS,Boston Celtics,104,CHA,BOS,Regular Season,False,Final,27.0,,,30.0,32.0,False,False
+0022000912,2021-04-25,BKN,Brooklyn Nets,128,PHX,Phoenix Suns,119,BKN,PHX,Regular Season,False,Final,27.0,,,41.0,42.0,False,False
+0022000913,2021-04-25,ATL,Atlanta Hawks,111,MIL,Milwaukee Bucks,104,ATL,MIL,Regular Season,False,Final,27.0,,,34.0,37.0,False,False
+0022000914,2021-04-25,ORL,Orlando Magic,112,IND,Indiana Pacers,131,IND,ORL,Regular Season,False,Final,27.0,,,18.0,29.0,False,False
+0022000915,2021-04-25,GSW,Golden State Warriors,117,SAC,Sacramento Kings,113,GSW,SAC,Regular Season,False,Final,27.0,,,31.0,24.0,False,False
+0022000916,2021-04-26,DET,Detroit Pistons,100,ATL,Atlanta Hawks,86,DET,ATL,Regular Season,False,Final,27.0,,,19.0,34.0,False,False
+0022000917,2021-04-26,ORL,Orlando Magic,103,LAL,Los Angeles Lakers,114,LAL,ORL,Regular Season,False,Final,27.0,,,18.0,36.0,False,False
+0022000918,2021-04-26,PHI,Philadelphia 76ers,121,OKC,Oklahoma City Thunder,90,PHI,OKC,Regular Season,False,Final,27.0,,,40.0,20.0,False,False
+0022000919,2021-04-26,WAS,Washington Wizards,143,SAS,San Antonio Spurs,146,SAS,WAS,Regular Season,False,Final,27.0,,,27.0,31.0,False,False
+0022000920,2021-04-26,NYK,New York Knicks,110,PHX,Phoenix Suns,118,PHX,NYK,Regular Season,False,Final,27.0,,,34.0,43.0,False,False
+0022000921,2021-04-26,TOR,Toronto Raptors,112,CLE,Cleveland Cavaliers,96,TOR,CLE,Regular Season,False,Final,27.0,,,26.0,21.0,False,False
+0022000922,2021-04-26,MIA,Miami Heat,102,CHI,Chicago Bulls,110,CHI,MIA,Regular Season,False,Final,27.0,,,32.0,26.0,False,False
+0022000923,2021-04-26,MIN,Minnesota Timberwolves,105,UTA,Utah Jazz,104,MIN,UTA,Regular Season,False,Final,27.0,,,18.0,44.0,False,False
+0022000924,2021-04-26,NOP,New Orleans Pelicans,120,LAC,LA Clippers,103,NOP,LAC,Regular Season,False,Final,27.0,,,27.0,43.0,False,False
+0022000925,2021-04-26,DEN,Denver Nuggets,120,MEM,Memphis Grizzlies,96,DEN,MEM,Regular Season,False,Final,27.0,,,40.0,31.0,False,False
+0022000926,2021-04-26,SAC,Sacramento Kings,113,DAL,Dallas Mavericks,106,SAC,DAL,Regular Season,False,Final,27.0,,,25.0,33.0,False,False
+0022000927,2021-04-27,BOS,Boston Celtics,115,OKC,Oklahoma City Thunder,119,OKC,BOS,Regular Season,False,Final,27.0,,,32.0,21.0,False,False
+0022000928,2021-04-27,CHA,Charlotte Hornets,104,MIL,Milwaukee Bucks,114,MIL,CHA,Regular Season,False,Final,27.0,,,30.0,38.0,False,False
+0022000929,2021-04-27,IND,Indiana Pacers,112,POR,Portland Trail Blazers,133,POR,IND,Regular Season,False,Final,27.0,,,29.0,33.0,False,False
+0022000930,2021-04-27,TOR,Toronto Raptors,103,BKN,Brooklyn Nets,116,BKN,TOR,Regular Season,False,Final,27.0,,,26.0,42.0,False,False
+0022000931,2021-04-27,HOU,Houston Rockets,107,MIN,Minnesota Timberwolves,114,MIN,HOU,Regular Season,False,Final,27.0,,,15.0,19.0,False,False
+0022000932,2021-04-27,GSW,Golden State Warriors,103,DAL,Dallas Mavericks,133,DAL,GSW,Regular Season,False,Final,27.0,,,31.0,34.0,False,False
+0022000933,2021-04-28,CLE,Cleveland Cavaliers,104,ORL,Orlando Magic,109,ORL,CLE,Regular Season,False,Final,28.0,,,21.0,19.0,False,False
+0022000934,2021-04-28,PHI,Philadelphia 76ers,127,ATL,Atlanta Hawks,83,PHI,ATL,Regular Season,False,Final,28.0,,,41.0,34.0,False,False
+0022000935,2021-04-28,WAS,Washington Wizards,116,LAL,Los Angeles Lakers,107,WAS,LAL,Regular Season,False,Final,28.0,,,28.0,36.0,False,False
+0022000936,2021-04-28,BOS,Boston Celtics,120,CHA,Charlotte Hornets,111,BOS,CHA,Regular Season,False,Final,28.0,,,33.0,30.0,False,False
+0022000937,2021-04-28,NYK,New York Knicks,113,CHI,Chicago Bulls,94,NYK,CHI,Regular Season,False,Final,28.0,,,35.0,26.0,False,False
+0022000938,2021-04-28,MIA,Miami Heat,116,SAS,San Antonio Spurs,111,MIA,SAS,Regular Season,False,Final,28.0,,,33.0,31.0,False,False
+0022000939,2021-04-28,MEM,Memphis Grizzlies,109,POR,Portland Trail Blazers,130,POR,MEM,Regular Season,False,Final,28.0,,,31.0,34.0,False,False
+0022000940,2021-04-28,DEN,Denver Nuggets,114,NOP,New Orleans Pelicans,112,DEN,NOP,Regular Season,False,Final,28.0,,,41.0,27.0,False,False
+0022000941,2021-04-28,PHX,Phoenix Suns,109,LAC,LA Clippers,101,PHX,LAC,Regular Season,False,Final,28.0,,,44.0,43.0,False,False
+0022000942,2021-04-28,SAC,Sacramento Kings,105,UTA,Utah Jazz,154,UTA,SAC,Regular Season,False,Final,28.0,,,25.0,45.0,False,False
+0022000943,2021-04-29,DET,Detroit Pistons,105,DAL,Dallas Mavericks,115,DAL,DET,Regular Season,False,Final,28.0,,,19.0,35.0,False,False
+0022000944,2021-04-29,IND,Indiana Pacers,113,BKN,Brooklyn Nets,130,BKN,IND,Regular Season,False,Final,28.0,,,29.0,43.0,False,False
+0022000945,2021-04-29,HOU,Houston Rockets,143,MIL,Milwaukee Bucks,136,HOU,MIL,Regular Season,False,Final,28.0,,,16.0,38.0,False,False
+0022000946,2021-04-29,MIN,Minnesota Timberwolves,126,GSW,Golden State Warriors,114,MIN,GSW,Regular Season,False,Final,28.0,,,20.0,31.0,False,False
+0022000947,2021-04-29,OKC,Oklahoma City Thunder,95,NOP,New Orleans Pelicans,109,NOP,OKC,Regular Season,False,Final,28.0,,,21.0,28.0,False,False
+0022000948,2021-04-29,DEN,Denver Nuggets,121,TOR,Toronto Raptors,111,DEN,TOR,Regular Season,False,Final,28.0,,,42.0,26.0,False,False
+0022000949,2021-04-30,PHI,Philadelphia 76ers,126,ATL,Atlanta Hawks,104,PHI,ATL,Regular Season,False,Final,28.0,,,42.0,34.0,False,False
+0022000950,2021-04-30,BOS,Boston Celtics,143,SAS,San Antonio Spurs,140,BOS,SAS,Regular Season,False,Final,28.0,,,34.0,31.0,False,False
+0022000951,2021-04-30,CLE,Cleveland Cavaliers,93,WAS,Washington Wizards,122,WAS,CLE,Regular Season,False,Final,28.0,,,21.0,29.0,False,False
+0022000952,2021-04-30,BKN,Brooklyn Nets,109,POR,Portland Trail Blazers,128,POR,BKN,Regular Season,False,Final,28.0,,,43.0,35.0,False,False
+0022000953,2021-04-30,MEM,Memphis Grizzlies,92,ORL,Orlando Magic,75,MEM,ORL,Regular Season,False,Final,28.0,,,32.0,19.0,False,False
+0022000954,2021-04-30,CHI,Chicago Bulls,98,MIL,Milwaukee Bucks,108,MIL,CHI,Regular Season,False,Final,28.0,,,26.0,39.0,False,False
+0022000955,2021-04-30,PHX,Phoenix Suns,121,UTA,Utah Jazz,100,PHX,UTA,Regular Season,False,Final,28.0,,,45.0,45.0,False,False
+0022000956,2021-04-30,LAL,Los Angeles Lakers,106,SAC,Sacramento Kings,110,SAC,LAL,Regular Season,False,Final,28.0,,,36.0,26.0,False,False
+0022000957,2021-05-01,CHA,Charlotte Hornets,107,DET,Detroit Pistons,94,CHA,DET,Regular Season,False,Final,28.0,,,31.0,19.0,False,False
+0022000958,2021-05-01,HOU,Houston Rockets,87,GSW,Golden State Warriors,113,GSW,HOU,Regular Season,False,Final,28.0,,,16.0,32.0,False,False
+0022000959,2021-05-01,ATL,Atlanta Hawks,108,CHI,Chicago Bulls,97,ATL,CHI,Regular Season,False,Final,28.0,,,35.0,26.0,False,False
+0022000960,2021-05-01,CLE,Cleveland Cavaliers,107,MIA,Miami Heat,124,MIA,CLE,Regular Season,False,Final,28.0,,,21.0,34.0,False,False
+0022000961,2021-05-01,ORL,Orlando Magic,112,MEM,Memphis Grizzlies,111,ORL,MEM,Regular Season,False,Final,28.0,,,20.0,32.0,False,False
+0022000962,2021-05-01,MIN,Minnesota Timberwolves,136,NOP,New Orleans Pelicans,140,NOP,MIN,Regular Season,False,Final,28.0,,,20.0,29.0,False,False
+0022000963,2021-05-01,OKC,Oklahoma City Thunder,95,IND,Indiana Pacers,152,IND,OKC,Regular Season,False,Final,28.0,,,21.0,30.0,False,False
+0022000964,2021-05-01,DAL,Dallas Mavericks,125,WAS,Washington Wizards,124,DAL,WAS,Regular Season,False,Final,28.0,,,36.0,29.0,False,False
+0022000965,2021-05-01,UTA,Utah Jazz,106,TOR,Toronto Raptors,102,UTA,TOR,Regular Season,False,Final,28.0,,,46.0,26.0,False,False
+0022000966,2021-05-01,LAC,LA Clippers,104,DEN,Denver Nuggets,110,DEN,LAC,Regular Season,False,Final,28.0,,,43.0,43.0,False,False
+0022000967,2021-05-02,MIL,Milwaukee Bucks,117,BKN,Brooklyn Nets,114,MIL,BKN,Regular Season,False,Final,28.0,,,40.0,43.0,False,False
+0022000968,2021-05-02,BOS,Boston Celtics,119,POR,Portland Trail Blazers,129,POR,BOS,Regular Season,False,Final,28.0,,,34.0,36.0,False,False
+0022000969,2021-05-02,CHA,Charlotte Hornets,111,MIA,Miami Heat,121,MIA,CHA,Regular Season,False,Final,28.0,,,31.0,35.0,False,False
+0022000970,2021-05-02,DAL,Dallas Mavericks,99,SAC,Sacramento Kings,111,SAC,DAL,Regular Season,False,Final,28.0,,,36.0,27.0,False,False
+0022000971,2021-05-02,HOU,Houston Rockets,97,NYK,New York Knicks,122,NYK,HOU,Regular Season,False,Final,28.0,,,16.0,36.0,False,False
+0022000972,2021-05-02,OKC,Oklahoma City Thunder,120,PHX,Phoenix Suns,123,PHX,OKC,Regular Season,False,Final,28.0,,,21.0,46.0,False,False
+0022000973,2021-05-02,SAS,San Antonio Spurs,111,PHI,Philadelphia 76ers,113,PHI,SAS,Regular Season,False,Final,28.0,,,31.0,43.0,False,False
+0022000974,2021-05-02,LAL,Los Angeles Lakers,114,TOR,Toronto Raptors,121,TOR,LAL,Regular Season,False,Final,28.0,,,36.0,27.0,False,False
+0022000975,2021-05-03,DET,Detroit Pistons,112,ORL,Orlando Magic,119,ORL,DET,Regular Season,False,Final,28.0,,,19.0,21.0,False,False
+0022000976,2021-05-03,WAS,Washington Wizards,154,IND,Indiana Pacers,141,WAS,IND,Regular Season,False,Final,28.0,,,30.0,30.0,False,False
+0022000977,2021-05-03,NOP,New Orleans Pelicans,108,GSW,Golden State Warriors,123,GSW,NOP,Regular Season,False,Final,28.0,,,29.0,33.0,False,False
+0022000978,2021-05-03,ATL,Atlanta Hawks,123,POR,Portland Trail Blazers,114,ATL,POR,Regular Season,False,Final,28.0,,,36.0,36.0,False,False
+0022000979,2021-05-03,CHI,Chicago Bulls,94,PHI,Philadelphia 76ers,106,PHI,CHI,Regular Season,False,Final,28.0,,,26.0,44.0,False,False
+0022000980,2021-05-03,MEM,Memphis Grizzlies,104,NYK,New York Knicks,118,NYK,MEM,Regular Season,False,Final,28.0,,,32.0,37.0,False,False
+0022000981,2021-05-03,UTA,Utah Jazz,110,SAS,San Antonio Spurs,99,UTA,SAS,Regular Season,False,Final,28.0,,,47.0,31.0,False,False
+0022000982,2021-05-03,LAL,Los Angeles Lakers,93,DEN,Denver Nuggets,89,LAL,DEN,Regular Season,False,Final,28.0,,,37.0,43.0,False,False
+0022000983,2021-05-04,CLE,Cleveland Cavaliers,118,PHX,Phoenix Suns,134,PHX,CLE,Regular Season,False,Final,28.0,,,21.0,47.0,False,False
+0022000984,2021-05-04,DET,Detroit Pistons,99,CHA,Charlotte Hornets,102,CHA,DET,Regular Season,False,Final,28.0,,,19.0,32.0,False,False
+0022000985,2021-05-04,MIL,Milwaukee Bucks,124,BKN,Brooklyn Nets,118,MIL,BKN,Regular Season,False,Final,28.0,,,41.0,43.0,False,False
+0022000986,2021-05-04,MIA,Miami Heat,113,DAL,Dallas Mavericks,127,DAL,MIA,Regular Season,False,Final,28.0,,,35.0,37.0,False,False
+0022000987,2021-05-04,NOP,New Orleans Pelicans,108,GSW,Golden State Warriors,103,NOP,GSW,Regular Season,False,Final,28.0,,,30.0,33.0,False,False
+0022000988,2021-05-04,OKC,Oklahoma City Thunder,99,SAC,Sacramento Kings,103,SAC,OKC,Regular Season,False,Final,28.0,,,21.0,28.0,False,False
+0022000989,2021-05-04,LAC,LA Clippers,105,TOR,Toronto Raptors,100,LAC,TOR,Regular Season,False,Final,28.0,,,44.0,27.0,False,False
+0022000183,2021-05-05,MIN,Minnesota Timberwolves,135,MEM,Memphis Grizzlies,139,MEM,MIN,Regular Season,False,Final,29.0,,,20.0,33.0,False,False
+0022000235,2021-05-05,MIL,Milwaukee Bucks,135,WAS,Washington Wizards,134,MIL,WAS,Regular Season,False,Final,29.0,,,42.0,30.0,False,False
+0022000990,2021-05-05,ORL,Orlando Magic,96,BOS,Boston Celtics,132,BOS,ORL,Regular Season,False,Final,29.0,,,21.0,35.0,False,False
+0022000991,2021-05-05,CLE,Cleveland Cavaliers,105,POR,Portland Trail Blazers,141,POR,CLE,Regular Season,False,Final,29.0,,,21.0,37.0,False,False
+0022000992,2021-05-05,ATL,Atlanta Hawks,135,PHX,Phoenix Suns,103,ATL,PHX,Regular Season,False,Final,29.0,,,37.0,47.0,False,False
+0022000993,2021-05-05,IND,Indiana Pacers,93,SAC,Sacramento Kings,104,SAC,IND,Regular Season,False,Final,29.0,,,30.0,29.0,False,False
+0022000994,2021-05-05,HOU,Houston Rockets,115,PHI,Philadelphia 76ers,135,PHI,HOU,Regular Season,False,Final,29.0,,,16.0,45.0,False,False
+0022000995,2021-05-05,DEN,Denver Nuggets,113,NYK,New York Knicks,97,DEN,NYK,Regular Season,False,Final,29.0,,,44.0,37.0,False,False
+0022000996,2021-05-05,UTA,Utah Jazz,126,SAS,San Antonio Spurs,94,UTA,SAS,Regular Season,False,Final,29.0,,,48.0,31.0,False,False
+0022000434,2021-05-06,CHA,Charlotte Hornets,99,CHI,Chicago Bulls,120,CHI,CHA,Regular Season,False,Final,29.0,,,32.0,27.0,False,False
+0022000997,2021-05-06,TOR,Toronto Raptors,129,WAS,Washington Wizards,131,WAS,TOR,Regular Season,False,Final,29.0,,,27.0,31.0,False,False
+0022000998,2021-05-06,DAL,Dallas Mavericks,113,BKN,Brooklyn Nets,109,DAL,BKN,Regular Season,False,Final,29.0,,,38.0,43.0,False,False
+0022000999,2021-05-06,DET,Detroit Pistons,111,MEM,Memphis Grizzlies,97,DET,MEM,Regular Season,False,Final,29.0,,,20.0,33.0,False,False
+0022001000,2021-05-06,IND,Indiana Pacers,133,ATL,Atlanta Hawks,126,IND,ATL,Regular Season,False,Final,29.0,,,31.0,37.0,False,False
+0022001001,2021-05-06,GSW,Golden State Warriors,118,OKC,Oklahoma City Thunder,97,GSW,OKC,Regular Season,False,Final,29.0,,,34.0,21.0,False,False
+0022001002,2021-05-06,LAC,LA Clippers,118,LAL,Los Angeles Lakers,94,LAC,LAL,Regular Season,False,Final,29.0,,,45.0,37.0,False,False
+0022000160,2021-05-07,CHI,Chicago Bulls,121,BOS,Boston Celtics,99,CHI,BOS,Regular Season,False,Final,29.0,,,28.0,35.0,False,False
+0022001003,2021-05-07,PHI,Philadelphia 76ers,109,NOP,New Orleans Pelicans,107,PHI,NOP,Regular Season,False,Final,29.0,,,46.0,30.0,False,False
+0022001004,2021-05-07,CHA,Charlotte Hornets,122,ORL,Orlando Magic,112,CHA,ORL,Regular Season,False,Final,29.0,,,33.0,21.0,False,False
+0022001005,2021-05-07,MIA,Miami Heat,121,MIN,Minnesota Timberwolves,112,MIA,MIN,Regular Season,False,Final,29.0,,,36.0,20.0,False,False
+0022001006,2021-05-07,MIL,Milwaukee Bucks,141,HOU,Houston Rockets,133,MIL,HOU,Regular Season,False,Final,29.0,,,43.0,16.0,False,False
+0022001007,2021-05-07,DAL,Dallas Mavericks,110,CLE,Cleveland Cavaliers,90,DAL,CLE,Regular Season,False,Final,29.0,,,39.0,21.0,False,False
+0022001008,2021-05-07,UTA,Utah Jazz,127,DEN,Denver Nuggets,120,UTA,DEN,Regular Season,False,Final,29.0,,,49.0,44.0,False,False
+0022001009,2021-05-07,PHX,Phoenix Suns,128,NYK,New York Knicks,105,PHX,NYK,Regular Season,False,Final,29.0,,,48.0,37.0,False,False
+0022001010,2021-05-07,POR,Portland Trail Blazers,106,LAL,Los Angeles Lakers,101,POR,LAL,Regular Season,False,Final,29.0,,,38.0,37.0,False,False
+0022001011,2021-05-07,SAC,Sacramento Kings,104,SAS,San Antonio Spurs,113,SAS,SAC,Regular Season,False,Final,29.0,,,29.0,32.0,False,False
+0022001012,2021-05-08,IND,Indiana Pacers,132,WAS,Washington Wizards,133,WAS,IND,Regular Season,False,Final,29.0,,,31.0,32.0,False,False
+0022001013,2021-05-08,PHI,Philadelphia 76ers,118,DET,Detroit Pistons,104,PHI,DET,Regular Season,False,Final,29.0,,,47.0,20.0,False,False
+0022001014,2021-05-08,TOR,Toronto Raptors,99,MEM,Memphis Grizzlies,109,MEM,TOR,Regular Season,False,Final,29.0,,,27.0,34.0,False,False
+0022001015,2021-05-08,DEN,Denver Nuggets,119,BKN,Brooklyn Nets,125,BKN,DEN,Regular Season,False,Final,29.0,,,44.0,44.0,False,False
+0022001016,2021-05-08,UTA,Utah Jazz,124,HOU,Houston Rockets,116,UTA,HOU,Regular Season,False,Final,29.0,,,50.0,16.0,False,False
+0022001017,2021-05-08,GSW,Golden State Warriors,136,OKC,Oklahoma City Thunder,97,GSW,OKC,Regular Season,False,Final,29.0,,,35.0,21.0,False,False
+0022001018,2021-05-08,POR,Portland Trail Blazers,124,SAS,San Antonio Spurs,102,POR,SAS,Regular Season,False,Final,29.0,,,39.0,32.0,False,False
+0022000145,2021-05-09,BOS,Boston Celtics,124,MIA,Miami Heat,130,MIA,BOS,Regular Season,False,Final,29.0,,,35.0,37.0,False,False
+0022001019,2021-05-09,LAC,LA Clippers,100,NYK,New York Knicks,106,NYK,LAC,Regular Season,False,Final,29.0,,,45.0,38.0,False,False
+0022001020,2021-05-09,CHA,Charlotte Hornets,110,NOP,New Orleans Pelicans,112,NOP,CHA,Regular Season,False,Final,29.0,,,33.0,31.0,False,False
+0022001021,2021-05-09,CLE,Cleveland Cavaliers,97,DAL,Dallas Mavericks,124,DAL,CLE,Regular Season,False,Final,29.0,,,21.0,40.0,False,False
+0022001022,2021-05-09,ORL,Orlando Magic,96,MIN,Minnesota Timberwolves,128,MIN,ORL,Regular Season,False,Final,29.0,,,21.0,21.0,False,False
+0022001023,2021-05-09,DET,Detroit Pistons,96,CHI,Chicago Bulls,108,CHI,DET,Regular Season,False,Final,29.0,,,20.0,29.0,False,False
+0022001024,2021-05-09,LAL,Los Angeles Lakers,123,PHX,Phoenix Suns,110,LAL,PHX,Regular Season,False,Final,29.0,,,38.0,48.0,False,False
+0022001025,2021-05-09,SAC,Sacramento Kings,126,OKC,Oklahoma City Thunder,98,SAC,OKC,Regular Season,False,Final,29.0,,,30.0,21.0,False,False
+0022001026,2021-05-10,ATL,Atlanta Hawks,125,WAS,Washington Wizards,124,ATL,WAS,Regular Season,False,Final,29.0,,,38.0,32.0,False,False
+0022001027,2021-05-10,CLE,Cleveland Cavaliers,102,IND,Indiana Pacers,111,IND,CLE,Regular Season,False,Final,29.0,,,21.0,32.0,False,False
+0022001028,2021-05-10,MEM,Memphis Grizzlies,115,NOP,New Orleans Pelicans,110,MEM,NOP,Regular Season,False,Final,29.0,,,35.0,31.0,False,False
+0022001029,2021-05-10,SAS,San Antonio Spurs,146,MIL,Milwaukee Bucks,125,SAS,MIL,Regular Season,False,Final,29.0,,,33.0,43.0,False,False
+0022001030,2021-05-10,GSW,Golden State Warriors,119,UTA,Utah Jazz,116,GSW,UTA,Regular Season,False,Final,29.0,,,36.0,50.0,False,False
+0022001031,2021-05-10,POR,Portland Trail Blazers,140,HOU,Houston Rockets,129,POR,HOU,Regular Season,False,Final,29.0,,,40.0,16.0,False,False
+0022000448,2021-05-11,CHA,Charlotte Hornets,112,DEN,Denver Nuggets,117,DEN,CHA,Regular Season,False,Final,29.0,,,33.0,45.0,False,False
+0022001032,2021-05-11,BOS,Boston Celtics,121,MIA,Miami Heat,129,MIA,BOS,Regular Season,False,Final,29.0,,,35.0,38.0,False,False
+0022001033,2021-05-11,DET,Detroit Pistons,100,MIN,Minnesota Timberwolves,119,MIN,DET,Regular Season,False,Final,29.0,,,20.0,22.0,False,False
+0022001034,2021-05-11,TOR,Toronto Raptors,96,LAC,LA Clippers,115,LAC,TOR,Regular Season,False,Final,29.0,,,27.0,46.0,False,False
+0022001035,2021-05-11,IND,Indiana Pacers,103,PHI,Philadelphia 76ers,94,IND,PHI,Regular Season,False,Final,29.0,,,33.0,47.0,False,False
+0022001036,2021-05-11,CHI,Chicago Bulls,107,BKN,Brooklyn Nets,115,BKN,CHI,Regular Season,False,Final,29.0,,,29.0,45.0,False,False
+0022001037,2021-05-11,MEM,Memphis Grizzlies,133,DAL,Dallas Mavericks,104,MEM,DAL,Regular Season,False,Final,29.0,,,36.0,40.0,False,False
+0022001038,2021-05-11,MIL,Milwaukee Bucks,114,ORL,Orlando Magic,102,MIL,ORL,Regular Season,False,Final,29.0,,,44.0,21.0,False,False
+0022001039,2021-05-11,GSW,Golden State Warriors,122,PHX,Phoenix Suns,116,GSW,PHX,Regular Season,False,Final,29.0,,,37.0,48.0,False,False
+0022001040,2021-05-11,SAC,Sacramento Kings,122,OKC,Oklahoma City Thunder,106,SAC,OKC,Regular Season,False,Final,29.0,,,31.0,21.0,False,False
+0022001041,2021-05-11,LAL,Los Angeles Lakers,101,NYK,New York Knicks,99,LAL,NYK,Regular Season,False,Final,29.0,,,39.0,38.0,False,False
+0022000154,2021-05-12,DAL,Dallas Mavericks,125,NOP,New Orleans Pelicans,107,DAL,NOP,Regular Season,False,Final,30.0,,,41.0,31.0,False,False
+0022001042,2021-05-12,ATL,Atlanta Hawks,120,WAS,Washington Wizards,116,ATL,WAS,Regular Season,False,Final,30.0,,,39.0,32.0,False,False
+0022001043,2021-05-12,BKN,Brooklyn Nets,128,SAS,San Antonio Spurs,116,BKN,SAS,Regular Season,False,Final,30.0,,,46.0,33.0,False,False
+0022001044,2021-05-12,CLE,Cleveland Cavaliers,102,BOS,Boston Celtics,94,CLE,BOS,Regular Season,False,Final,30.0,,,22.0,35.0,False,False
+0022001045,2021-05-12,UTA,Utah Jazz,98,POR,Portland Trail Blazers,105,POR,UTA,Regular Season,False,Final,30.0,,,50.0,41.0,False,False
+0022001046,2021-05-12,LAL,Los Angeles Lakers,124,HOU,Houston Rockets,122,LAL,HOU,Regular Season,False,Final,30.0,,,40.0,16.0,False,False
+0022000255,2021-05-13,MEM,Memphis Grizzlies,116,SAC,Sacramento Kings,110,MEM,SAC,Regular Season,False,Final,30.0,,,37.0,31.0,False,False
+0022000458,2021-05-13,NYK,New York Knicks,102,SAS,San Antonio Spurs,98,NYK,SAS,Regular Season,False,Final,30.0,,,39.0,33.0,False,False
+0022001047,2021-05-13,CHA,Charlotte Hornets,90,LAC,LA Clippers,113,LAC,CHA,Regular Season,False,Final,30.0,,,33.0,47.0,False,False
+0022001048,2021-05-13,IND,Indiana Pacers,133,MIL,Milwaukee Bucks,142,MIL,IND,Regular Season,False,Final,30.0,,,33.0,45.0,False,False
+0022001049,2021-05-13,ATL,Atlanta Hawks,116,ORL,Orlando Magic,93,ATL,ORL,Regular Season,False,Final,30.0,,,40.0,21.0,False,False
+0022001050,2021-05-13,MIA,Miami Heat,106,PHI,Philadelphia 76ers,94,MIA,PHI,Regular Season,False,Final,30.0,,,39.0,47.0,False,False
+0022001051,2021-05-13,CHI,Chicago Bulls,114,TOR,Toronto Raptors,102,CHI,TOR,Regular Season,False,Final,30.0,,,30.0,27.0,False,False
+0022001052,2021-05-13,MIN,Minnesota Timberwolves,103,DEN,Denver Nuggets,114,DEN,MIN,Regular Season,False,Final,30.0,,,22.0,46.0,False,False
+0022001053,2021-05-13,PHX,Phoenix Suns,118,POR,Portland Trail Blazers,117,PHX,POR,Regular Season,False,Final,30.0,,,49.0,41.0,False,False
+0022000204,2021-05-14,WAS,Washington Wizards,120,CLE,Cleveland Cavaliers,105,WAS,CLE,Regular Season,False,Final,30.0,,,33.0,22.0,False,False
+0022000263,2021-05-14,MEM,Memphis Grizzlies,107,SAC,Sacramento Kings,106,MEM,SAC,Regular Season,False,Final,30.0,,,38.0,31.0,False,False
+0022001054,2021-05-14,DET,Detroit Pistons,91,DEN,Denver Nuggets,104,DEN,DET,Regular Season,False,Final,30.0,,,20.0,47.0,False,False
+0022001055,2021-05-14,PHI,Philadelphia 76ers,122,ORL,Orlando Magic,97,PHI,ORL,Regular Season,False,Final,30.0,,,48.0,21.0,False,False
+0022001056,2021-05-14,OKC,Oklahoma City Thunder,93,UTA,Utah Jazz,109,UTA,OKC,Regular Season,False,Final,30.0,,,21.0,51.0,False,False
+0022001057,2021-05-14,DAL,Dallas Mavericks,114,TOR,Toronto Raptors,110,DAL,TOR,Regular Season,False,Final,30.0,,,42.0,27.0,False,False
+0022001058,2021-05-14,HOU,Houston Rockets,122,LAC,LA Clippers,115,HOU,LAC,Regular Season,False,Final,30.0,,,17.0,47.0,False,False
+0022001059,2021-05-14,GSW,Golden State Warriors,125,NOP,New Orleans Pelicans,122,GSW,NOP,Regular Season,False,Final,30.0,,,38.0,31.0,False,False
+0022001060,2021-05-15,BKN,Brooklyn Nets,105,CHI,Chicago Bulls,91,BKN,CHI,Regular Season,False,Final,30.0,,,47.0,30.0,False,False
+0022001061,2021-05-15,IND,Indiana Pacers,115,LAL,Los Angeles Lakers,122,LAL,IND,Regular Season,False,Final,30.0,,,33.0,41.0,False,False
+0022001062,2021-05-15,MIL,Milwaukee Bucks,122,MIA,Miami Heat,108,MIL,MIA,Regular Season,False,Final,30.0,,,46.0,39.0,False,False
+0022001063,2021-05-15,MIN,Minnesota Timberwolves,108,BOS,Boston Celtics,124,BOS,MIN,Regular Season,False,Final,30.0,,,22.0,36.0,False,False
+0022001064,2021-05-15,NYK,New York Knicks,118,CHA,Charlotte Hornets,109,NYK,CHA,Regular Season,False,Final,30.0,,,40.0,33.0,False,False
+0022001065,2021-05-15,SAS,San Antonio Spurs,103,PHX,Phoenix Suns,140,PHX,SAS,Regular Season,False,Final,30.0,,,33.0,50.0,False,False
+0022001066,2021-05-16,ATL,Atlanta Hawks,124,HOU,Houston Rockets,95,ATL,HOU,Regular Season,False,Final,30.0,,,41.0,17.0,False,False
+0022001067,2021-05-16,BKN,Brooklyn Nets,123,CLE,Cleveland Cavaliers,109,BKN,CLE,Regular Season,False,Final,30.0,,,48.0,22.0,False,False
+0022001068,2021-05-16,CHI,Chicago Bulls,118,MIL,Milwaukee Bucks,112,CHI,MIL,Regular Season,False,Final,30.0,,,31.0,46.0,False,False
+0022001069,2021-05-16,DET,Detroit Pistons,107,MIA,Miami Heat,120,MIA,DET,Regular Season,False,Final,30.0,,,20.0,40.0,False,False
+0022001070,2021-05-16,GSW,Golden State Warriors,113,MEM,Memphis Grizzlies,101,GSW,MEM,Regular Season,False,Final,30.0,,,39.0,38.0,False,False
+0022001071,2021-05-16,MIN,Minnesota Timberwolves,136,DAL,Dallas Mavericks,121,MIN,DAL,Regular Season,False,Final,30.0,,,23.0,42.0,False,False
+0022001072,2021-05-16,NOP,New Orleans Pelicans,98,LAL,Los Angeles Lakers,110,LAL,NOP,Regular Season,False,Final,30.0,,,31.0,42.0,False,False
+0022001073,2021-05-16,NYK,New York Knicks,96,BOS,Boston Celtics,92,NYK,BOS,Regular Season,False,Final,30.0,,,41.0,36.0,False,False
+0022001074,2021-05-16,OKC,Oklahoma City Thunder,117,LAC,LA Clippers,112,OKC,LAC,Regular Season,False,Final,30.0,,,22.0,47.0,False,False
+0022001075,2021-05-16,PHI,Philadelphia 76ers,128,ORL,Orlando Magic,117,PHI,ORL,Regular Season,False,Final,30.0,,,49.0,21.0,False,False
+0022001076,2021-05-16,POR,Portland Trail Blazers,132,DEN,Denver Nuggets,116,POR,DEN,Regular Season,False,Final,30.0,,,42.0,47.0,False,False
+0022001077,2021-05-16,SAC,Sacramento Kings,99,UTA,Utah Jazz,121,UTA,SAC,Regular Season,False,Final,30.0,,,31.0,52.0,False,False
+0022001078,2021-05-16,SAS,San Antonio Spurs,121,PHX,Phoenix Suns,123,PHX,SAS,Regular Season,False,Final,30.0,,,33.0,51.0,False,False
+0022001079,2021-05-16,TOR,Toronto Raptors,113,IND,Indiana Pacers,125,IND,TOR,Regular Season,False,Final,30.0,,,27.0,34.0,False,False
+0022001080,2021-05-16,WAS,Washington Wizards,115,CHA,Charlotte Hornets,110,WAS,CHA,Regular Season,False,Final,30.0,,,34.0,33.0,False,False
+0052000101,2021-05-18,BOS,Boston Celtics,118,WAS,Washington Wizards,100,BOS,WAS,PlayIn,True,Final,,East Play-In,,1.0,0.0,False,False
+0052000111,2021-05-18,IND,Indiana Pacers,144,CHA,Charlotte Hornets,117,IND,CHA,PlayIn,True,Final,,East Play-In,,1.0,0.0,False,False
+0052000121,2021-05-19,LAL,Los Angeles Lakers,103,GSW,Golden State Warriors,100,LAL,GSW,PlayIn,True,Final,,West Play-In,,1.0,0.0,False,False
+0052000131,2021-05-19,MEM,Memphis Grizzlies,100,SAS,San Antonio Spurs,96,MEM,SAS,PlayIn,True,Final,,West Play-In,,1.0,0.0,False,False
+0052000201,2021-05-20,WAS,Washington Wizards,142,IND,Indiana Pacers,115,WAS,IND,PlayIn,True,Final,,East Play-In,,1.0,1.0,False,False
+0052000211,2021-05-21,GSW,Golden State Warriors,112,MEM,Memphis Grizzlies,117,MEM,GSW,PlayIn,True,Final,,West Play-In,,0.0,2.0,False,False
+0042000111,2021-05-22,BKN,Brooklyn Nets,104,BOS,Boston Celtics,93,BKN,BOS,Playoffs,True,Final,,East - First Round,Game 1,1.0,0.0,False,False
+0042000121,2021-05-22,MIL,Milwaukee Bucks,109,MIA,Miami Heat,107,MIL,MIA,Playoffs,True,Final,,East - First Round,Game 1,1.0,0.0,False,False
+0042000161,2021-05-22,DEN,Denver Nuggets,109,POR,Portland Trail Blazers,123,POR,DEN,Playoffs,True,Final,,West - First Round,Game 1,0.0,1.0,False,False
+0042000171,2021-05-22,LAC,LA Clippers,103,DAL,Dallas Mavericks,113,DAL,LAC,Playoffs,True,Final,,West - First Round,Game 1,0.0,1.0,False,False
+0042000101,2021-05-23,PHI,Philadelphia 76ers,125,WAS,Washington Wizards,118,PHI,WAS,Playoffs,True,Final,,East - First Round,Game 1,1.0,0.0,False,False
+0042000131,2021-05-23,NYK,New York Knicks,105,ATL,Atlanta Hawks,107,ATL,NYK,Playoffs,True,Final,,East - First Round,Game 1,0.0,1.0,False,False
+0042000141,2021-05-23,UTA,Utah Jazz,109,MEM,Memphis Grizzlies,112,MEM,UTA,Playoffs,True,Final,,West - First Round,Game 1,0.0,1.0,False,False
+0042000151,2021-05-23,PHX,Phoenix Suns,99,LAL,Los Angeles Lakers,90,PHX,LAL,Playoffs,True,Final,,West - First Round,Game 1,1.0,0.0,False,False
+0042000122,2021-05-24,MIL,Milwaukee Bucks,132,MIA,Miami Heat,98,MIL,MIA,Playoffs,True,Final,,East - First Round,Game 2,2.0,0.0,False,False
+0042000162,2021-05-24,DEN,Denver Nuggets,128,POR,Portland Trail Blazers,109,DEN,POR,Playoffs,True,Final,,West - First Round,Game 2,1.0,1.0,False,False
+0042000112,2021-05-25,BKN,Brooklyn Nets,130,BOS,Boston Celtics,108,BKN,BOS,Playoffs,True,Final,,East - First Round,Game 2,2.0,0.0,False,False
+0042000152,2021-05-25,PHX,Phoenix Suns,102,LAL,Los Angeles Lakers,109,LAL,PHX,Playoffs,True,Final,,West - First Round,Game 2,1.0,1.0,False,False
+0042000172,2021-05-25,LAC,LA Clippers,121,DAL,Dallas Mavericks,127,DAL,LAC,Playoffs,True,Final,,West - First Round,Game 2,0.0,2.0,False,False
+0042000102,2021-05-26,PHI,Philadelphia 76ers,120,WAS,Washington Wizards,95,PHI,WAS,Playoffs,True,Final,,East - First Round,Game 2,2.0,0.0,False,False
+0042000132,2021-05-26,NYK,New York Knicks,101,ATL,Atlanta Hawks,92,NYK,ATL,Playoffs,True,Final,,East - First Round,Game 2,1.0,1.0,False,False
+0042000142,2021-05-26,UTA,Utah Jazz,141,MEM,Memphis Grizzlies,129,UTA,MEM,Playoffs,True,Final,,West - First Round,Game 2,1.0,1.0,False,False
+0042000123,2021-05-27,MIA,Miami Heat,84,MIL,Milwaukee Bucks,113,MIL,MIA,Playoffs,True,Final,,East - First Round,Game 3,0.0,3.0,False,False
+0042000153,2021-05-27,LAL,Los Angeles Lakers,109,PHX,Phoenix Suns,95,LAL,PHX,Playoffs,True,Final,,West - First Round,Game 3,2.0,1.0,False,False
+0042000163,2021-05-27,POR,Portland Trail Blazers,115,DEN,Denver Nuggets,120,DEN,POR,Playoffs,True,Final,,West - First Round,Game 3,1.0,2.0,False,False
+0042000113,2021-05-28,BOS,Boston Celtics,125,BKN,Brooklyn Nets,119,BOS,BKN,Playoffs,True,Final,,East - First Round,Game 3,1.0,2.0,False,False
+0042000133,2021-05-28,ATL,Atlanta Hawks,105,NYK,New York Knicks,94,ATL,NYK,Playoffs,True,Final,,East - First Round,Game 3,2.0,1.0,False,False
+0042000173,2021-05-28,DAL,Dallas Mavericks,108,LAC,LA Clippers,118,LAC,DAL,Playoffs,True,Final,,West - First Round,Game 3,2.0,1.0,False,False
+0042000103,2021-05-29,WAS,Washington Wizards,103,PHI,Philadelphia 76ers,132,PHI,WAS,Playoffs,True,Final,,East - First Round,Game 3,0.0,3.0,False,False
+0042000124,2021-05-29,MIA,Miami Heat,103,MIL,Milwaukee Bucks,120,MIL,MIA,Playoffs,True,Final,,East - First Round,Game 4,0.0,4.0,False,False
+0042000143,2021-05-29,MEM,Memphis Grizzlies,111,UTA,Utah Jazz,121,UTA,MEM,Playoffs,True,Final,,West - First Round,Game 3,1.0,2.0,False,False
+0042000164,2021-05-29,POR,Portland Trail Blazers,115,DEN,Denver Nuggets,95,POR,DEN,Playoffs,True,Final,,West - First Round,Game 4,2.0,2.0,False,False
+0042000114,2021-05-30,BOS,Boston Celtics,126,BKN,Brooklyn Nets,141,BKN,BOS,Playoffs,True,Final,,East - First Round,Game 4,1.0,3.0,False,False
+0042000134,2021-05-30,ATL,Atlanta Hawks,113,NYK,New York Knicks,96,ATL,NYK,Playoffs,True,Final,,East - First Round,Game 4,3.0,1.0,False,False
+0042000154,2021-05-30,LAL,Los Angeles Lakers,92,PHX,Phoenix Suns,100,PHX,LAL,Playoffs,True,Final,,West - First Round,Game 4,2.0,2.0,False,False
+0042000174,2021-05-30,DAL,Dallas Mavericks,81,LAC,LA Clippers,106,LAC,DAL,Playoffs,True,Final,,West - First Round,Game 4,2.0,2.0,False,False
+0042000104,2021-05-31,WAS,Washington Wizards,122,PHI,Philadelphia 76ers,114,WAS,PHI,Playoffs,True,Final,,East - First Round,Game 4,1.0,3.0,False,False
+0042000144,2021-05-31,MEM,Memphis Grizzlies,113,UTA,Utah Jazz,120,UTA,MEM,Playoffs,True,Final,,West - First Round,Game 4,1.0,3.0,False,False
+0042000115,2021-06-01,BKN,Brooklyn Nets,123,BOS,Boston Celtics,109,BKN,BOS,Playoffs,True,Final,,East - First Round,Game 5,4.0,1.0,False,False
+0042000155,2021-06-01,PHX,Phoenix Suns,115,LAL,Los Angeles Lakers,85,PHX,LAL,Playoffs,True,Final,,West - First Round,Game 5,3.0,2.0,False,False
+0042000165,2021-06-01,DEN,Denver Nuggets,147,POR,Portland Trail Blazers,140,DEN,POR,Playoffs,True,Final,,West - First Round,Game 5,3.0,2.0,False,False
+0042000105,2021-06-02,PHI,Philadelphia 76ers,129,WAS,Washington Wizards,112,PHI,WAS,Playoffs,True,Final,,East - First Round,Game 5,4.0,1.0,False,False
+0042000135,2021-06-02,NYK,New York Knicks,89,ATL,Atlanta Hawks,103,ATL,NYK,Playoffs,True,Final,,East - First Round,Game 5,1.0,4.0,False,False
+0042000145,2021-06-02,UTA,Utah Jazz,126,MEM,Memphis Grizzlies,110,UTA,MEM,Playoffs,True,Final,,West - First Round,Game 5,4.0,1.0,False,False
+0042000175,2021-06-02,LAC,LA Clippers,100,DAL,Dallas Mavericks,105,DAL,LAC,Playoffs,True,Final,,West - First Round,Game 5,2.0,3.0,False,False
+0042000156,2021-06-03,LAL,Los Angeles Lakers,100,PHX,Phoenix Suns,113,PHX,LAL,Playoffs,True,Final,,West - First Round,Game 6,2.0,4.0,False,False
+0042000166,2021-06-03,POR,Portland Trail Blazers,115,DEN,Denver Nuggets,126,DEN,POR,Playoffs,True,Final,,West - First Round,Game 6,2.0,4.0,False,False
+0042000176,2021-06-04,DAL,Dallas Mavericks,97,LAC,LA Clippers,104,LAC,DAL,Playoffs,True,Final,,West - First Round,Game 6,3.0,3.0,False,False
+0042000211,2021-06-05,BKN,Brooklyn Nets,115,MIL,Milwaukee Bucks,107,BKN,MIL,Playoffs,True,Final,,East - Conf. Semifinals,Game 1,1.0,0.0,False,False
+0042000177,2021-06-06,LAC,LA Clippers,126,DAL,Dallas Mavericks,111,LAC,DAL,Playoffs,True,Final,,West - First Round,Game 7,4.0,3.0,False,False
+0042000201,2021-06-06,PHI,Philadelphia 76ers,124,ATL,Atlanta Hawks,128,ATL,PHI,Playoffs,True,Final,,East - Conf. Semifinals,Game 1,0.0,1.0,False,False
+0042000212,2021-06-07,BKN,Brooklyn Nets,125,MIL,Milwaukee Bucks,86,BKN,MIL,Playoffs,True,Final,,East - Conf. Semifinals,Game 2,2.0,0.0,False,False
+0042000231,2021-06-07,PHX,Phoenix Suns,122,DEN,Denver Nuggets,105,PHX,DEN,Playoffs,True,Final,,West - Conf. Semifinals,Game 1,1.0,0.0,False,False
+0042000202,2021-06-08,PHI,Philadelphia 76ers,118,ATL,Atlanta Hawks,102,PHI,ATL,Playoffs,True,Final,,East - Conf. Semifinals,Game 2,1.0,1.0,False,False
+0042000221,2021-06-08,UTA,Utah Jazz,112,LAC,LA Clippers,109,UTA,LAC,Playoffs,True,Final,,West - Conf. Semifinals,Game 1,1.0,0.0,False,False
+0042000232,2021-06-09,PHX,Phoenix Suns,123,DEN,Denver Nuggets,98,PHX,DEN,Playoffs,True,Final,,West - Conf. Semifinals,Game 2,2.0,0.0,False,False
+0042000213,2021-06-10,MIL,Milwaukee Bucks,86,BKN,Brooklyn Nets,83,MIL,BKN,Playoffs,True,Final,,East - Conf. Semifinals,Game 3,1.0,2.0,False,False
+0042000222,2021-06-10,UTA,Utah Jazz,117,LAC,LA Clippers,111,UTA,LAC,Playoffs,True,Final,,West - Conf. Semifinals,Game 2,2.0,0.0,False,False
+0042000203,2021-06-11,ATL,Atlanta Hawks,111,PHI,Philadelphia 76ers,127,PHI,ATL,Playoffs,True,Final,,East - Conf. Semifinals,Game 3,1.0,2.0,False,False
+0042000233,2021-06-11,DEN,Denver Nuggets,102,PHX,Phoenix Suns,116,PHX,DEN,Playoffs,True,Final,,West - Conf. Semifinals,Game 3,0.0,3.0,False,False
+0042000223,2021-06-12,LAC,LA Clippers,132,UTA,Utah Jazz,106,LAC,UTA,Playoffs,True,Final,,West - Conf. Semifinals,Game 3,1.0,2.0,False,False
+0042000214,2021-06-13,MIL,Milwaukee Bucks,107,BKN,Brooklyn Nets,96,MIL,BKN,Playoffs,True,Final,,East - Conf. Semifinals,Game 4,2.0,2.0,False,False
+0042000234,2021-06-13,DEN,Denver Nuggets,118,PHX,Phoenix Suns,125,PHX,DEN,Playoffs,True,Final,,West - Conf. Semifinals,Game 4,0.0,4.0,False,False
+0042000204,2021-06-14,ATL,Atlanta Hawks,103,PHI,Philadelphia 76ers,100,ATL,PHI,Playoffs,True,Final,,East - Conf. Semifinals,Game 4,2.0,2.0,False,False
+0042000224,2021-06-14,LAC,LA Clippers,118,UTA,Utah Jazz,104,LAC,UTA,Playoffs,True,Final,,West - Conf. Semifinals,Game 4,2.0,2.0,False,False
+0042000215,2021-06-15,BKN,Brooklyn Nets,114,MIL,Milwaukee Bucks,108,BKN,MIL,Playoffs,True,Final,,East - Conf. Semifinals,Game 5,3.0,2.0,False,False
+0042000205,2021-06-16,PHI,Philadelphia 76ers,106,ATL,Atlanta Hawks,109,ATL,PHI,Playoffs,True,Final,,East - Conf. Semifinals,Game 5,2.0,3.0,False,False
+0042000225,2021-06-16,UTA,Utah Jazz,111,LAC,LA Clippers,119,LAC,UTA,Playoffs,True,Final,,West - Conf. Semifinals,Game 5,2.0,3.0,False,False
+0042000216,2021-06-17,MIL,Milwaukee Bucks,104,BKN,Brooklyn Nets,89,MIL,BKN,Playoffs,True,Final,,East - Conf. Semifinals,Game 6,3.0,3.0,False,False
+0042000206,2021-06-18,ATL,Atlanta Hawks,99,PHI,Philadelphia 76ers,104,PHI,ATL,Playoffs,True,Final,,East - Conf. Semifinals,Game 6,3.0,3.0,False,False
+0042000226,2021-06-18,LAC,LA Clippers,131,UTA,Utah Jazz,119,LAC,UTA,Playoffs,True,Final,,West - Conf. Semifinals,Game 6,4.0,2.0,False,False
+0042000217,2021-06-19,BKN,Brooklyn Nets,111,MIL,Milwaukee Bucks,115,MIL,BKN,Playoffs,True,Final,,East - Conf. Semifinals,Game 7,3.0,4.0,False,False
+0042000207,2021-06-20,PHI,Philadelphia 76ers,96,ATL,Atlanta Hawks,103,ATL,PHI,Playoffs,True,Final,,East - Conf. Semifinals,Game 7,3.0,4.0,False,False
+0042000311,2021-06-20,PHX,Phoenix Suns,120,LAC,LA Clippers,114,PHX,LAC,Playoffs,True,Final,,West - Conf. Finals,Game 1,1.0,0.0,False,False
+0042000312,2021-06-22,PHX,Phoenix Suns,104,LAC,LA Clippers,103,PHX,LAC,Playoffs,True,Final,,West - Conf. Finals,Game 2,2.0,0.0,False,False
+0042000301,2021-06-23,MIL,Milwaukee Bucks,113,ATL,Atlanta Hawks,116,ATL,MIL,Playoffs,True,Final,,East - Conf. Finals,Game 1,0.0,1.0,False,False
+0042000313,2021-06-24,LAC,LA Clippers,106,PHX,Phoenix Suns,92,LAC,PHX,Playoffs,True,Final,,West - Conf. Finals,Game 3,1.0,2.0,False,False
+0042000302,2021-06-25,MIL,Milwaukee Bucks,125,ATL,Atlanta Hawks,91,MIL,ATL,Playoffs,True,Final,,East - Conf. Finals,Game 2,1.0,1.0,False,False
+0042000314,2021-06-26,LAC,LA Clippers,80,PHX,Phoenix Suns,84,PHX,LAC,Playoffs,True,Final,,West - Conf. Finals,Game 4,1.0,3.0,False,False
+0042000303,2021-06-27,ATL,Atlanta Hawks,102,MIL,Milwaukee Bucks,113,MIL,ATL,Playoffs,True,Final,,East - Conf. Finals,Game 3,1.0,2.0,False,False
+0042000315,2021-06-28,PHX,Phoenix Suns,102,LAC,LA Clippers,116,LAC,PHX,Playoffs,True,Final,,West - Conf. Finals,Game 5,3.0,2.0,False,False
+0042000304,2021-06-29,ATL,Atlanta Hawks,110,MIL,Milwaukee Bucks,88,ATL,MIL,Playoffs,True,Final,,East - Conf. Finals,Game 4,2.0,2.0,False,False
+0042000316,2021-06-30,LAC,LA Clippers,103,PHX,Phoenix Suns,130,PHX,LAC,Playoffs,True,Final,,West - Conf. Finals,Game 6,2.0,4.0,False,False
+0042000305,2021-07-01,MIL,Milwaukee Bucks,123,ATL,Atlanta Hawks,112,MIL,ATL,Playoffs,True,Final,,East - Conf. Finals,Game 5,3.0,2.0,False,False
+0042000306,2021-07-03,ATL,Atlanta Hawks,107,MIL,Milwaukee Bucks,118,MIL,ATL,Playoffs,True,Final,,East - Conf. Finals,Game 6,2.0,4.0,False,False
+0042000401,2021-07-06,PHX,Phoenix Suns,118,MIL,Milwaukee Bucks,105,PHX,MIL,Playoffs,True,Final,,,,,,,
+0042000402,2021-07-08,PHX,Phoenix Suns,118,MIL,Milwaukee Bucks,108,PHX,MIL,Playoffs,True,Final,,,,,,,
+0042000403,2021-07-11,MIL,Milwaukee Bucks,120,PHX,Phoenix Suns,100,MIL,PHX,Playoffs,True,Final,,,,,,,
+0042000404,2021-07-14,MIL,Milwaukee Bucks,109,PHX,Phoenix Suns,103,MIL,PHX,Playoffs,True,Final,,,,,,,
+0042000405,2021-07-17,PHX,Phoenix Suns,119,MIL,Milwaukee Bucks,123,MIL,PHX,Playoffs,True,Final,,,,,,,
+0042000406,2021-07-20,MIL,Milwaukee Bucks,105,PHX,Phoenix Suns,98,MIL,PHX,Playoffs,True,Final,,,,,,,

@@ -1,0 +1,151 @@
+PLAYER_ID,PLAYER_NAME,TEAMS_PLAYED_FOR,NUM_TEAMS,GP,AVG_MIN,AVG_PTS,AVG_REB,AVG_AST,IMPORTANCE_SCORE,STAR_TIER
+1630552,Jalen Johnson,ATL,1,78,35.3,22.3,10.1,7.7,63.48,Tier 1: Franchise Core
+1629638,Nickeil Alexander-Walker,ATL,1,84,33.5,20.3,3.4,3.6,46.49,Tier 2: Co-Star
+1630700,Dyson Daniels,ATL,1,82,32.8,11.5,6.8,5.8,44.83,Tier 2: Co-Star
+1630168,Onyeka Okongwu,ATL,1,80,31.2,15.0,7.5,3.1,44.21,Tier 3: Key Starter
+203468,CJ McCollum,ATL,1,82,29.9,18.8,3.3,3.7,43.26,Tier 3: Key Starter
+1629008,Michael Porter Jr.,BKN,1,52,32.5,24.2,7.1,3.0,53.49,Tier 1: Franchise Core
+203944,Julius Randle,BKN,1,91,33.1,20.4,6.8,4.7,52.29,Tier 2: Co-Star
+1641730,Noah Clowney,BKN,1,66,27.0,12.3,4.1,1.6,33.18,Tier 2: Co-Star
+1642856,Egor Dëmin,BKN,1,52,25.1,10.3,3.2,3.3,31.65,Tier 3: Key Starter
+1630549,Day'Ron Sharpe,BKN,1,62,18.7,8.7,6.7,2.3,29.56,Tier 3: Key Starter
+1628369,Jayson Tatum,BOS,1,22,33.6,22.2,10.2,5.7,59.81,Tier 1: Franchise Core
+1628401,Derrick White,BOS,1,84,34.2,16.0,4.3,5.2,46.08,Tier 2: Co-Star
+1630202,Payton Pritchard,BOS,1,86,32.5,16.8,3.9,5.2,45.51,Tier 2: Co-Star
+202331,Paul George,BOS,1,49,31.9,17.1,5.0,3.5,44.23,Tier 3: Key Starter
+1629674,Neemias Queta,BOS,1,83,25.0,10.1,8.4,1.6,35.07,Tier 3: Key Starter
+1641706,Brandon Miller,CHA,1,67,30.4,20.1,4.9,3.3,46.16,Tier 1: Franchise Core
+1642851,Kon Knueppel,CHA,1,83,31.5,18.3,5.3,3.3,45.34,Tier 2: Co-Star
+1628960,Grayson Allen,CHA,1,53,28.4,16.2,3.0,3.8,39.68,Tier 2: Co-Star
+1629632,Coby White,CHA,1,52,24.8,17.1,3.4,3.9,39.45,Tier 3: Key Starter
+1629675,Naz Reid,CHA,1,89,26.2,13.4,6.3,2.2,37.47,Tier 3: Key Starter
+1630581,Josh Giddey,CHI,1,54,32.1,17.0,8.3,9.1,56.74,Tier 1: Franchise Core
+1626181,Norman Powell,CHI,1,59,29.5,21.6,3.5,2.4,44.12,Tier 2: Co-Star
+1641824,Matas Buzelis,CHI,1,77,29.2,16.3,5.8,2.1,40.92,Tier 2: Co-Star
+1629651,Nic Claxton,CHI,1,69,27.8,11.7,6.9,3.7,39.47,Tier 3: Key Starter
+1630200,Tre Jones,CHI,1,65,27.0,14.1,3.1,5.4,39.39,Tier 3: Key Starter
+1628378,Donovan Mitchell,CLE,1,88,34.0,27.5,4.6,5.1,57.72,Tier 1: Franchise Core
+201935,James Harden,CLE,1,88,35.4,22.7,4.9,7.5,57.41,Tier 2: Co-Star
+1630596,Evan Mobley,CLE,1,83,32.7,17.9,8.8,3.7,50.34,Tier 2: Co-Star
+1628386,Jarrett Allen,CLE,1,74,27.7,14.7,8.2,1.6,40.8,Tier 3: Key Starter
+1631212,Peyton Watson,CLE,1,54,29.6,14.6,4.9,2.1,38.34,Tier 3: Key Starter
+1642843,Cooper Flagg,DAL,1,70,33.6,21.0,6.7,4.5,52.58,Tier 1: Franchise Core
+1629023,P.J. Washington,DAL,1,56,30.9,14.2,7.0,1.8,40.69,Tier 2: Co-Star
+1630230,Naji Marshall,DAL,1,74,29.5,15.2,4.7,3.3,40.52,Tier 2: Co-Star
+1630583,Santi Aldama,DAL,1,43,27.8,14.0,6.7,2.9,40.32,Tier 3: Key Starter
+1631108,Max Christie,DAL,1,77,29.1,12.3,3.2,2.0,33.66,Tier 3: Key Starter
+203999,Nikola Jokić,DEN,1,71,35.2,27.5,12.9,10.6,76.54,Tier 1: Franchise Core
+1627750,Jamal Murray,DEN,1,81,35.7,25.3,4.4,7.0,58.99,Tier 2: Co-Star
+201942,DeMar DeRozan,DEN,1,77,31.3,18.4,2.9,4.1,43.76,Tier 2: Co-Star
+203932,Aaron Gordon,DEN,1,39,28.0,15.8,5.8,2.6,40.68,Tier 3: Key Starter
+1631128,Christian Braun,DEN,1,50,31.7,11.5,4.6,2.6,36.86,Tier 3: Key Starter
+1630595,Cade Cunningham,DET,1,78,35.2,24.7,5.5,9.5,63.04,Tier 1: Franchise Core
+1631105,Jalen Duren,DET,1,84,28.6,18.0,10.2,2.0,47.47,Tier 2: Co-Star
+1628381,John Collins,DET,1,70,27.0,13.5,5.4,1.0,34.96,Tier 2: Co-Star
+1641709,Ausar Thompson,DET,1,87,26.8,9.6,6.1,3.1,34.96,Tier 3: Key Starter
+1629130,Duncan Robinson,DET,1,90,27.7,12.1,2.6,2.1,32.31,Tier 3: Key Starter
+201939,Stephen Curry,GSW,1,45,31.2,26.5,3.5,4.7,53.4,Tier 1: Franchise Core
+202710,Jimmy Butler III,GSW,1,38,31.2,20.0,5.6,4.9,49.56,Tier 2: Co-Star
+1641764,Brandin Podziemski,GSW,1,84,28.7,14.0,5.2,3.6,40.03,Tier 2: Co-Star
+204001,Kristaps Porziņģis,GSW,1,34,23.9,16.6,5.1,2.5,38.44,Tier 3: Key Starter
+203110,Draymond Green,GSW,1,70,27.7,8.3,5.5,5.6,37.12,Tier 3: Key Starter
+201142,Kevin Durant,HOU,1,79,36.5,25.9,5.5,4.8,57.88,Tier 1: Franchise Core
+1630578,Alperen Sengun,HOU,1,78,33.8,20.4,9.0,6.1,57.12,Tier 2: Co-Star
+1641708,Amen Thompson,HOU,1,85,37.9,18.3,7.7,5.3,54.54,Tier 2: Co-Star
+1631095,Jabari Smith Jr.,HOU,1,83,35.6,15.9,7.0,1.9,44.89,Tier 3: Key Starter
+1642263,Reed Sheppard,HOU,1,88,26.6,13.4,2.8,3.5,35.28,Tier 3: Key Starter
+1627783,Pascal Siakam,IND,1,62,33.2,24.0,6.6,3.8,54.21,Tier 1: Franchise Core
+1629614,Andrew Nembhard,IND,1,57,31.3,16.9,2.8,7.7,47.48,Tier 2: Co-Star
+1627826,Ivica Zubac,IND,1,48,30.2,14.1,10.6,2.2,45.21,Tier 2: Co-Star
+1626162,Kelly Oubre Jr.,IND,1,62,31.9,13.7,5.1,1.5,38.13,Tier 3: Key Starter
+1630174,Aaron Nesmith,IND,1,45,29.6,13.8,4.2,1.9,36.48,Tier 3: Key Starter
+1627742,Brandon Ingram,LAC,1,82,33.5,20.9,5.4,3.6,49.61,Tier 1: Franchise Core
+1629636,Darius Garland,LAC,1,46,29.8,18.8,2.4,6.7,46.75,Tier 2: Co-Star
+1629060,Rui Hachimura,LAC,1,78,29.7,12.2,3.4,0.9,32.61,Tier 2: Co-Star
+1629622,Max Strus,LAC,1,30,25.7,10.2,5.1,2.1,32.23,Tier 3: Key Starter
+1627739,Kris Dunn,LAC,1,83,27.3,7.3,3.3,3.7,30.37,Tier 3: Key Starter
+1629029,Luka Dončić,LAL,1,64,35.8,33.5,7.7,8.3,73.1,Tier 1: Franchise Core
+1630559,Austin Reaves,LAL,1,57,34.8,22.9,4.6,5.5,54.18,Tier 2: Co-Star
+1631117,Walker Kessler,LAL,1,5,31.0,14.4,10.8,3.0,47.36,Tier 2: Co-Star
+1629656,Quentin Grimes,LAL,1,87,28.5,12.5,3.5,3.1,35.6,Tier 3: Key Starter
+1629012,Collin Sexton,LAL,1,68,23.7,15.4,2.3,3.3,34.96,Tier 3: Key Starter
+1629660,Ty Jerome,MEM,1,15,22.7,19.7,2.8,5.7,42.89,Tier 1: Franchise Core
+1641744,Zach Edey,MEM,1,11,25.8,13.6,11.1,1.1,41.49,Tier 2: Co-Star
+203924,Jerami Grant,MEM,1,63,29.0,17.9,3.3,2.0,39.35,Tier 2: Co-Star
+1642907,Cedric Coward,MEM,1,62,25.8,13.6,5.9,2.8,37.7,Tier 3: Key Starter
+1642285,Cam Spencer,MEM,1,72,23.8,11.1,2.5,5.6,34.39,Tier 3: Key Starter
+203507,Giannis Antetokounmpo,MIA,1,36,28.9,27.6,9.8,5.4,61.91,Tier 1: Franchise Core
+1628389,Bam Adebayo,MIA,1,74,32.1,19.9,9.9,3.1,52.6,Tier 2: Co-Star
+203952,Andrew Wiggins,MIA,1,69,30.5,15.5,4.9,2.7,40.66,Tier 2: Co-Star
+1630558,Davion Mitchell,MIA,1,71,28.8,9.6,2.7,6.5,36.93,Tier 3: Key Starter
+1626171,Bobby Portis Jr.,MIA,1,67,24.1,13.7,6.4,1.6,35.74,Tier 3: Key Starter
+1629645,Kevin Porter Jr.,MIL,1,38,33.2,17.4,5.2,7.4,51.29,Tier 1: Franchise Core
+1629639,Tyler Herro,MIL,1,34,31.3,20.6,4.7,4.2,48.17,Tier 2: Co-Star
+1631157,Ryan Rollins,MIL,1,74,32.1,17.3,4.6,5.6,47.23,Tier 2: Co-Star
+1631170,Jaime Jaquez Jr.,MIL,1,76,28.5,15.3,5.0,4.7,42.69,Tier 3: Key Starter
+1628398,Kyle Kuzma,MIL,1,69,26.2,13.0,4.5,2.7,35.54,Tier 3: Key Starter
+1630162,Anthony Edwards,MIN,1,71,34.6,27.8,5.1,3.6,56.52,Tier 1: Franchise Core
+1630163,LaMelo Ball,MIN,1,74,28.1,20.2,4.8,7.1,50.75,Tier 2: Co-Star
+203497,Rudy Gobert,MIN,1,88,31.3,10.4,11.2,1.8,42.11,Tier 2: Co-Star
+1630183,Jaden McDaniels,MIN,1,85,32.0,15.1,4.5,2.7,40.45,Tier 3: Key Starter
+1630245,Ayo Dosunmu,MIN,1,79,27.5,14.9,3.5,3.7,38.32,Tier 3: Key Starter
+1630530,Trey Murphy III,NOP,1,66,35.5,21.5,5.7,3.8,51.79,Tier 1: Franchise Core
+1629627,Zion Williamson,NOP,1,62,29.7,21.0,5.7,3.2,47.49,Tier 2: Co-Star
+1627749,Dejounte Murray,NOP,1,14,27.9,16.7,5.4,6.4,46.61,Tier 2: Co-Star
+1630180,Saddiq Bey,NOP,1,72,31.2,17.7,5.6,2.5,43.71,Tier 3: Key Starter
+1642882,Julian Reese,NOP,1,13,30.9,11.8,10.5,1.8,42.72,Tier 3: Key Starter
+1628973,Jalen Brunson,NYK,1,93,35.4,26.5,3.3,6.6,58.16,Tier 1: Franchise Core
+1626157,Karl-Anthony Towns,NYK,1,94,30.8,19.2,11.6,3.4,53.65,Tier 2: Co-Star
+1628384,OG Anunoby,NYK,1,84,33.5,17.4,5.5,2.1,43.75,Tier 2: Co-Star
+1628404,Josh Hart,NYK,1,85,30.7,11.6,7.7,4.8,43.39,Tier 3: Key Starter
+1628969,Mikal Bridges,NYK,1,101,32.7,14.2,3.7,3.5,40.3,Tier 3: Key Starter
+1628983,Shai Gilgeous-Alexander,OKC,1,83,33.8,30.5,4.0,6.8,62.48,Tier 1: Franchise Core
+1631096,Chet Holmgren,OKC,1,84,29.2,16.7,8.8,1.6,44.25,Tier 2: Co-Star
+1631114,Jalen Williams,OKC,1,38,27.4,16.7,4.4,5.1,43.44,Tier 2: Co-Star
+1628392,Isaiah Hartenstein,OKC,1,62,24.1,9.2,9.2,3.3,37.17,Tier 3: Key Starter
+1642349,Ajay Mitchell,OKC,1,68,26.3,13.8,3.4,3.7,36.63,Tier 3: Key Starter
+1631094,Paolo Banchero,ORL,1,81,35.1,22.5,8.4,5.3,58.02,Tier 1: Franchise Core
+1630217,Desmond Bane,ORL,1,91,33.9,20.0,4.2,3.9,47.83,Tier 2: Co-Star
+1630532,Franz Wagner,ORL,1,40,29.9,19.9,5.2,3.4,46.24,Tier 2: Co-Star
+202696,Nikola Vučević,ORL,1,70,27.6,14.3,8.0,3.2,42.64,Tier 3: Key Starter
+1630591,Jalen Suggs,ORL,1,66,28.4,13.3,3.9,5.3,40.23,Tier 3: Key Starter
+1630178,Tyrese Maxey,PHI,1,82,38.3,27.7,4.1,6.5,61.52,Tier 1: Franchise Core
+1627759,Jaylen Brown,PHI,1,78,34.5,28.4,6.8,5.0,61.31,Tier 2: Co-Star
+203954,Joel Embiid,PHI,1,45,31.8,26.4,7.6,4.2,57.76,Tier 2: Co-Star
+2544,LeBron James,PHI,1,70,33.9,21.3,6.2,7.2,56.4,Tier 3: Key Starter
+1642845,VJ Edgecombe,PHI,1,87,35.3,15.8,5.8,4.1,46.43,Tier 3: Key Starter
+1626164,Devin Booker,PHX,1,70,34.0,25.6,3.9,6.0,56.25,Tier 1: Franchise Core
+1631113,Kennedy Chandler,PHX,1,11,32.2,15.0,3.4,6.7,45.22,Tier 2: Co-Star
+1628970,Miles Bridges,PHX,1,79,31.1,17.2,5.8,3.2,44.46,Tier 2: Co-Star
+1628415,Dillon Brooks,PHX,1,62,30.9,20.5,3.8,1.8,43.18,Tier 3: Key Starter
+1630224,Jalen Green,PHX,1,38,27.9,19.1,3.9,2.9,42.09,Tier 3: Key Starter
+1630166,Deni Avdija,POR,1,72,33.5,24.3,6.8,6.6,59.19,Tier 1: Franchise Core
+1629630,Ja Morant,POR,1,20,28.4,19.4,3.2,8.1,49.62,Tier 2: Co-Star
+201950,Jrue Holiday,POR,1,59,30.3,16.4,4.7,6.1,46.38,Tier 2: Co-Star
+1642270,Donovan Clingan,POR,1,83,26.9,11.7,11.3,2.1,41.94,Tier 3: Key Starter
+1631101,Shaedon Sharpe,POR,1,56,27.9,19.5,4.0,2.4,41.88,Tier 3: Key Starter
+1627734,Domantas Sabonis,SAC,1,19,29.7,15.8,11.4,4.1,50.51,Tier 1: Franchise Core
+203897,Zach LaVine,SAC,1,39,31.4,19.2,2.8,2.3,41.64,Tier 2: Co-Star
+1631099,Keegan Murray,SAC,1,23,34.6,14.0,5.7,1.7,40.6,Tier 2: Co-Star
+1642875,Maxime Raynaud,SAC,1,74,26.6,12.5,7.5,1.4,36.8,Tier 3: Key Starter
+1629631,De'Andre Hunter,SAC,1,45,26.2,13.7,4.1,2.0,34.68,Tier 3: Key Starter
+1641705,Victor Wembanyama,SAS,1,86,30.4,24.7,11.3,3.0,58.02,Tier 1: Franchise Core
+1642264,Stephon Castle,SAS,1,91,30.7,17.0,5.3,7.1,49.31,Tier 2: Co-Star
+1628368,De'Aaron Fox,SAS,1,93,31.6,17.9,3.8,6.1,47.37,Tier 2: Co-Star
+202699,Tobias Harris,SAS,1,77,29.0,14.1,5.5,2.3,38.76,Tier 3: Key Starter
+1630170,Devin Vassell,SAS,1,90,31.6,13.7,4.3,2.5,38.5,Tier 3: Key Starter
+202695,Kawhi Leonard,TOR,1,66,32.2,27.8,6.4,3.6,56.92,Tier 1: Franchise Core
+1630567,Scottie Barnes,TOR,1,87,34.0,18.6,7.4,6.1,53.64,Tier 2: Co-Star
+1629628,RJ Barrett,TOR,1,64,31.2,19.8,5.5,3.4,47.01,Tier 2: Co-Star
+1630193,Immanuel Quickley,TOR,1,70,32.0,16.4,4.0,5.9,46.13,Tier 3: Key Starter
+1627751,Jakob Poeltl,TOR,1,53,24.2,10.2,6.9,1.9,33.52,Tier 3: Key Starter
+1628374,Lauri Markkanen,UTA,1,42,34.4,26.7,6.9,2.1,55.36,Tier 1: Franchise Core
+1641718,Keyonte George,UTA,1,54,33.1,23.6,3.7,6.1,53.79,Tier 2: Co-Star
+1628991,Jaren Jackson Jr.,UTA,1,48,30.3,19.4,5.7,2.0,44.29,Tier 2: Co-Star
+203994,Jusuf Nurkić,UTA,1,41,26.4,10.9,10.4,4.8,43.73,Tier 3: Key Starter
+1642268,Isaiah Collier,UTA,1,59,25.7,11.7,2.5,7.2,38.33,Tier 3: Key Starter
+203076,Anthony Davis,WAS,1,20,31.2,20.4,11.1,2.8,53.44,Tier 1: Franchise Core
+1629027,Trae Young,WAS,1,15,25.5,17.9,2.0,8.0,45.07,Tier 2: Co-Star
+1642259,Alex Sarr,WAS,1,48,27.2,16.3,7.4,2.7,42.85,Tier 2: Co-Star
+1642273,Kyshawn George,WAS,1,48,28.9,14.8,5.1,4.5,42.07,Tier 3: Key Starter
+1629028,Deandre Ayton,WAS,1,82,27.4,12.2,8.2,0.8,36.93,Tier 3: Key Starter
