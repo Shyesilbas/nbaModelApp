@@ -2,11 +2,10 @@
 """Fetch closing moneylines and final scores for a season from the SportsGameOdds API.
 
 Writes data/season=YYYY-YY/raw/closing_odds.csv (one row per finished regular-season or
-playoff game, keyed by NBA GAME_ID). The API key is read from SPORTSGAMEODDS_API_KEY and
-never stored. Existing rows are kept, so reruns only add newly finished games.
+playoff game, keyed by NBA GAME_ID). The API key is read from SPORTSGAMEODDS_API_KEY (environment or the
+git-ignored .env) and never stored. Existing rows are kept, so reruns only add newly finished games.
 """
 import argparse
-import os
 import sys
 import time
 from pathlib import Path
@@ -21,7 +20,7 @@ if str(ROOT) not in sys.path:
 from src.api.services.paper_trading import COUNTED_SEASON_TYPES
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import get_default_season, normalize_season
-from src.ingestion.sportsgameodds import fetch_events, to_float, to_int, total_ladder
+from src.ingestion.sportsgameodds import fetch_events, get_api_key, to_float, to_int, total_ladder
 
 COLUMNS = [
     "game_id", "event_id", "game_date", "start_utc", "home_team", "away_team",
@@ -98,9 +97,9 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    api_key = os.environ.get("SPORTSGAMEODDS_API_KEY")
+    api_key = get_api_key()
     if not api_key:
-        print("SPORTSGAMEODDS_API_KEY is not set", file=sys.stderr)
+        print("SPORTSGAMEODDS_API_KEY is not set (env or .env)", file=sys.stderr)
         return 1
 
     season = normalize_season(args.season or get_default_season())

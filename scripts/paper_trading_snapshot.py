@@ -6,7 +6,6 @@ are never rewritten and games that have started are skipped, so each record is a
 true pre-game call. Uses the production models; trains nothing.
 """
 import argparse
-import os
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -24,7 +23,7 @@ from src.api.services.score_prediction import predict_score
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import get_default_season, normalize_season
 from src.features.build_matchup_features import build_features
-from src.ingestion.sportsgameodds import TOTAL_OVER, fetch_events, to_float, total_ladder, total_window
+from src.ingestion.sportsgameodds import TOTAL_OVER, fetch_events, get_api_key, to_float, total_ladder, total_window
 
 
 def fetch_total_lines(first_day: str, last_day: str) -> dict:
@@ -33,9 +32,9 @@ def fetch_total_lines(first_day: str, last_day: str) -> dict:
     Needs SPORTSGAMEODDS_API_KEY; without it (or on an API error) the records are
     written without totals, exactly as before.
     """
-    api_key = os.environ.get("SPORTSGAMEODDS_API_KEY")
+    api_key = get_api_key()
     if not api_key:
-        print("SPORTSGAMEODDS_API_KEY not set: total lines are not frozen")
+        print("SPORTSGAMEODDS_API_KEY not set (env or .env): total lines are not frozen")
         return {}
     start = f"{first_day}T00:00:00Z"
     end = (pd.Timestamp(last_day) + pd.Timedelta(days=2)).strftime("%Y-%m-%dT00:00:00Z")

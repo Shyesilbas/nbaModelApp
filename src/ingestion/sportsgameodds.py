@@ -1,7 +1,9 @@
 """SportsGameOdds API helpers: event paging, total-line ladders and the line window around a main line."""
 from __future__ import annotations
 
+import os
 import time
+from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
 
 import requests
@@ -11,6 +13,20 @@ PAGE_SIZE = 50
 WINDOW_STEPS = 2
 TOTAL_OVER = "points-all-game-ou-over"
 TOTAL_UNDER = "points-all-game-ou-under"
+KEY_NAME = "SPORTSGAMEODDS_API_KEY"
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
+
+def get_api_key() -> Optional[str]:
+    """The API key from the environment, else from the git-ignored .env at the repo root."""
+    key = os.environ.get(KEY_NAME)
+    if key or not ENV_FILE.exists():
+        return key
+    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+        name, _, value = line.strip().partition("=")
+        if name == KEY_NAME and value.strip():
+            return value.strip().strip("\"'")
+    return None
 
 
 def to_int(value) -> Optional[int]:
