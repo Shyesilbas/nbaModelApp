@@ -77,6 +77,7 @@ def build_record(
     origin: str = "live",
     total_line: Optional[float] = None,
     total_window_rungs: Optional[List[Dict[str, Any]]] = None,
+    injury_report: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     p = float(home_win_probability)
     record = {
@@ -97,6 +98,9 @@ def build_record(
         # Market total line and its two rungs either side, frozen with the prediction.
         record["total_line"] = total_line
         record["total_window"] = total_window_rungs
+    if injury_report is not None:
+        # Official injury report the prediction was made with (published time, who filed, players listed).
+        record["injury_report"] = injury_report
     return record
 
 

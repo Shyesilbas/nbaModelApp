@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, ClipboardCheck } from "lucide-react";
-import { Badge, Button, Card, EmptyState, InlineError, Select, Skeleton } from "./common";
+import { ChevronLeft, ChevronRight, ClipboardCheck, ChevronDown, Calendar } from "lucide-react";
+import { Badge, Button, Card, EmptyState, InlineError, Skeleton } from "./common";
 import TeamLogo from "./TeamLogo";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
+import { fmtDate } from "./game-results/utils";
 
 type PaperGame = {
   game_id: string;
@@ -32,6 +33,11 @@ type PaperGame = {
   total_line_close?: number;
   over_odds_close?: number;
   under_odds_close?: number;
+  injury_report?: {
+    published_et: string;
+    submitted: Record<string, boolean>;
+    players: { team: string; player_name: string; status: string; reason: string }[];
+  };
   total_line_ref?: number;
   total_line_source?: "snapshot" | "closing";
   total_window?: { line: number; over_odds: number | null; under_odds: number | null }[];
@@ -76,6 +82,17 @@ type Report = { season: string; summary: Summary; games: PaperGame[] };
 
 const pct = (v: number | null, digits = 1) => (v == null ? "-" : `${(v * 100).toFixed(digits)}%`);
 const num = (v: number | null | undefined, digits = 2) => (v == null ? "-" : v.toFixed(digits));
+const injurySummary = (g: PaperGame) => {
+  const r = g.injury_report;
+  if (!r) return "No injury report";
+  const out = r.players.filter((p) => p.status === "Out").length;
+  const uncertain = r.players.length - out;
+  const missing = Object.entries(r.submitted).filter(([, ok]) => !ok).map(([t]) => t);
+  const time = r.published_et.split(" ").slice(1).join(" ");
+  return `Report ${time}: ${out} out, ${uncertain} uncertain${missing.length ? `, ${missing.join("/")} not filed` : ""}`;
+};
+const injuryTitle = (g: PaperGame) =>
+  g.injury_report?.players.map((p) => `${p.team} ${p.player_name}: ${p.status} (${p.reason})`).join("\n") ?? "";
 const leanOf = (g: PaperGame) => {
   if (g.total_line_ref == null) return null;
   const total = g.predicted_home_score + g.predicted_away_score;
@@ -110,6 +127,7 @@ export default function PaperTrading() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"over-under" | "moneyline">("over-under");
+  const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -179,23 +197,55 @@ export default function PaperTrading() {
         </p>
       </div>
 
+      {/* Dynamic Top Stat Bar Based on Active Tab */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat
-          label="Winner accuracy"
-          value={pct(s.accuracy)}
-          hint={s.games_graded ? `${Math.round((s.accuracy ?? 0) * s.games_graded)} of ${s.games_graded} graded` : "No graded games yet"}
-        />
-        <Stat
-          label="Always home baseline"
-          value={pct(s.home_baseline_accuracy)}
-          hint={edge == null ? undefined : `Model ${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)} pts`}
-        />
-        <Stat label="Brier / log loss" value={`${num(s.brier, 3)} / ${num(s.log_loss, 3)}`} hint="Lower is better" />
-        <Stat
-          label="Score error (MAE)"
-          value={`${num(s.mae_margin, 1)} / ${num(s.mae_total, 1)}`}
-          hint="Margin / total points"
-        />
+        {activeTab === "over-under" ? (
+          <>
+            <Stat
+              label="Totals bet win rate"
+              value={pct(s.line_bet_win_rate)}
+              hint={s.line_bets ? `${s.line_bets} games against closing line (pushes excluded)` : "No line bets graded"}
+            />
+            <Stat
+              label="Total reached model number"
+              value={pct(s.total_lean_hit_rate)}
+              hint={`${s.total_leans} games with model lean`}
+            />
+            <Stat
+              label="Model total error (MAE)"
+              value={`${num(s.model_mae_total_on_line, 1)} pts`}
+              hint={`Market line MAE: ${num(s.market_mae_total, 1)} pts`}
+            />
+            <Stat
+              label="Total score error (MAE)"
+              value={`${num(s.mae_total, 1)} pts`}
+              hint="All games average absolute error"
+            />
+          </>
+        ) : (
+          <>
+            <Stat
+              label="Winner accuracy"
+              value={pct(s.accuracy)}
+              hint={s.games_graded ? `${Math.round((s.accuracy ?? 0) * s.games_graded)} of ${s.games_graded} graded` : "No graded games yet"}
+            />
+            <Stat
+              label="Market favorite accuracy"
+              value={pct(s.market_accuracy)}
+              hint={s.games_with_odds ? `${s.games_with_odds} games with closing odds. Model ${pct(s.model_accuracy_on_odds)}` : "No odds data"}
+            />
+            <Stat
+              label="Model edge vs home"
+              value={edge == null ? "—" : `${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}%`}
+              hint={`Home baseline: ${pct(s.home_baseline_accuracy)}`}
+            />
+            <Stat
+              label="Margin error (MAE)"
+              value={`${num(s.mae_margin, 1)} pts`}
+              hint="Average margin prediction error"
+            />
+          </>
+        )}
       </div>
 
       {/* Tabs Header */}
@@ -245,15 +295,58 @@ export default function PaperTrading() {
         >
           <ChevronLeft size={16} strokeWidth={1.5} />
         </Button>
-        <Select
-          aria-label="Game day"
-          value={activeDate ?? ""}
-          onChange={(e) => setSelectedDate(e.target.value)}
-        >
-          {[...dates].reverse().map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
-        </Select>
+
+        {/* Date Dropdown Picker */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsDateMenuOpen((open) => !open)}
+            className="flex items-center gap-2 rounded border border-border bg-background-primary px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-border-hover hover:bg-background-tertiary transition-colors"
+          >
+            <Calendar size={14} strokeWidth={1.5} className="text-primary" />
+            <span>{activeDate ? fmtDate(activeDate) : "Tarih Seç"}</span>
+            <span className="text-[10px] text-text-muted font-mono">({activeDate})</span>
+            <ChevronDown className={`h-3.5 w-3.5 text-text-muted transition-transform ${isDateMenuOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {isDateMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setIsDateMenuOpen(false)} />
+              <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-xl">
+                {[...dates].reverse().map((d) => {
+                  const isSelected = activeDate === d;
+                  const gamesOnDate = (report?.games ?? []).filter((g) => g.game_date === d).length;
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(d);
+                        setIsDateMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs transition-all ${
+                        isSelected
+                          ? "bg-primary text-white font-semibold"
+                          : "text-text-primary hover:bg-background-tertiary"
+                      }`}
+                    >
+                      <div className="flex flex-col">
+                        <span>{fmtDate(d)}</span>
+                        <span className={`text-[10px] font-mono ${isSelected ? "text-white/80" : "text-text-muted"}`}>
+                          {d}
+                        </span>
+                      </div>
+                      <span className={`text-[11px] tabular-nums ${isSelected ? "text-white/90" : "text-text-secondary"}`}>
+                        {gamesOnDate} maç
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
         <Button
           variant="secondary"
           size="sm"
@@ -273,26 +366,6 @@ export default function PaperTrading() {
       {/* TAB CONTENT: Over / Under */}
       {activeTab === "over-under" && (
         <div className="space-y-4">
-          {s.games_with_total > 0 && (
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <Stat
-                label="Total reached model number"
-                value={pct(s.total_lean_hit_rate)}
-                hint={`${s.total_leans} games. Over: model and game clear the line minus 2. Under: both stay under the line plus 2`}
-              />
-              <Stat
-                label="Total bet at the line"
-                value={pct(s.line_bet_win_rate)}
-                hint={`${s.line_bets} games, pushes excluded`}
-              />
-              <Stat
-                label="Total error: model / line"
-                value={`${num(s.model_mae_total_on_line, 1)} / ${num(s.market_mae_total, 1)}`}
-                hint="Mean absolute error in points"
-              />
-            </div>
-          )}
-
           {dayTotals.length > 0 ? (
             <Card padding="none" className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -333,13 +406,13 @@ export default function PaperTrading() {
                             <span className="text-text-muted">{g.total_line_source === "snapshot" ? "pre-game" : "closing"}</span>
                           </p>
                           <p className="text-xs text-text-secondary">
-                            Over {decimalOdds(g.over_odds_close)} / Under {decimalOdds(g.under_odds_close)}
+                            O {decimalOdds(g.over_odds_close)} / U {decimalOdds(g.under_odds_close)}
                           </p>
                           {g.total_window && g.total_window.length > 0 && (
                             <p className="text-xs text-text-secondary">
                               {(g.total_lean ?? leanOf(g)) === "under"
-                                ? `Under up to ${g.total_window[g.total_window.length - 1].line.toFixed(1)} at ${decimalOdds(g.total_window[g.total_window.length - 1].under_odds ?? undefined)}`
-                                : `Over from ${g.total_window[0].line.toFixed(1)} at ${decimalOdds(g.total_window[0].over_odds ?? undefined)}`}
+                                ? `U ≤ ${g.total_window[g.total_window.length - 1].line.toFixed(1)} (${decimalOdds(g.total_window[g.total_window.length - 1].under_odds ?? undefined)})`
+                                : `O ≥ ${g.total_window[0].line.toFixed(1)} (${decimalOdds(g.total_window[0].over_odds ?? undefined)})`}
                             </p>
                           )}
                         </td>
@@ -471,6 +544,7 @@ export default function PaperTrading() {
                         <p className="text-xs text-text-secondary">
                           Score {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
                         </p>
+                        <p className="text-xs text-text-muted" title={injuryTitle(g)}>{injurySummary(g)}</p>
                       </td>
                       <td className="whitespace-nowrap px-4 py-2">
                         {hasOdds ? (

@@ -23,6 +23,7 @@ from src.api.services.score_prediction import predict_score
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import get_default_season, normalize_season
 from src.features.build_matchup_features import build_features
+from src.ingestion import nba_injury_report as inj
 from src.ingestion.sportsgameodds import TOTAL_OVER, fetch_events, get_api_key, to_float, total_ladder, total_window
 
 
@@ -52,6 +53,35 @@ def fetch_total_lines(first_day: str, last_day: str) -> dict:
     return lines
 
 
+def fetch_injuries(season: str):
+    """Latest official injury report published today (Eastern), or None when unavailable."""
+    try:
+        report = inj.fetch_report(season, datetime.now(inj.ET).strftime("%Y-%m-%d"))
+    except Exception as exc:
+        print(f"injury report unavailable: {exc}")
+        return None
+    if report is None:
+        print("no injury report published yet today: statuses fall back to the carry-forward default")
+    return report
+
+
+def game_injuries(report, season: str, game_date: str, away: str, home: str):
+    """Overrides for the model and the frozen summary for the ledger, for one game."""
+    if report is None:
+        return None, None
+    mm_dd_yyyy = datetime.strptime(game_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+    entries = [e for e in report.for_matchup(away, home) if e["game_date"] == mm_dd_yyyy]
+    overrides, unmatched = inj.to_overrides(entries, season)
+    summary = {
+        "published_et": report.published_et,
+        "submitted": {away: report.submitted(away, home, away), home: report.submitted(away, home, home)},
+        "players": [{k: e[k] for k in ("team", "player_name", "status", "reason")} for e in entries],
+    }
+    if unmatched:
+        print(f"  no player id for: {', '.join(unmatched)}")
+    return overrides, summary
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--season", default=None)
@@ -76,6 +106,7 @@ def main() -> int:
 
     records = []
     total_lines = {} if args.backfill else fetch_total_lines(args.date, args.through or args.date)
+    report = None if args.backfill else fetch_injuries(season)
     for g in games.itertuples():
         gid = str(g.GAME_ID).zfill(10)
         if gid in logged:
@@ -86,8 +117,9 @@ def main() -> int:
             continue
         home, away = g.HOME_TEAM_ABBREVIATION, g.AWAY_TEAM_ABBREVIATION
         day = g.GAME_DATE
-        feats_home = build_features(home, away, day)
-        feats_away = build_features(away, home, day, team_is_home=False)
+        overrides, injuries = (None, None) if started else game_injuries(report, season, day, away, home)
+        feats_home = build_features(home, away, day, player_status_overrides=overrides)
+        feats_away = build_features(away, home, day, team_is_home=False, player_status_overrides=overrides)
         win = win_prediction.predict(
             WinProbRequest(home_team=home, away_team=away, prediction_date=day), features=feats_home
         )
@@ -103,6 +135,7 @@ def main() -> int:
             origin="backfill" if started else "live",
             total_line=total_lines.get((home, away), (None, None))[0],
             total_window_rungs=total_lines.get((home, away), (None, None))[1],
+            injury_report=injuries,
         ))
         print(f"{gid} {away}@{home}: {win.predicted_winner} {max(win.home_win_probability, win.away_win_probability):.1%}")
 
