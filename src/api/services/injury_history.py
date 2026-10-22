@@ -202,33 +202,75 @@ def recent_returns(season: str, today: str, history: pd.DataFrame, teams: pd.Dat
     return sorted(out, key=lambda r: r["returned_on"], reverse=True)
 
 
-def changes_for_day(season: str, day: str) -> List[Dict[str, Any]]:
-    """Status changes between the day's first report and its latest, per listed player."""
+SAMPLE_MINUTES = 60
+
+
+def _sample_reports(season: str, day: str) -> List[Tuple[datetime, inj.InjuryReport]]:
+    """About one report per hour of ``day`` plus the newest one, parsed in parallel and cached."""
+    from concurrent.futures import ThreadPoolExecutor
+
     day_urls = [(w, u) for w, u in _urls(season) if w.strftime("%Y-%m-%d") == day]
-    if len(day_urls) < 2:
+    if not day_urls:
         return []
-    first, last = _report(day_urls[0][1]), _report(day_urls[-1][1])
-    mmddyyyy = datetime.strptime(day, "%Y-%m-%d").strftime("%m/%d/%Y")
+    picked, last_slot = [], None
+    for when, url in day_urls:
+        slot = when.replace(minute=0, second=0, microsecond=0)
+        if slot != last_slot:
+            picked.append((when, url))
+            last_slot = slot
+    if picked[-1][1] != day_urls[-1][1]:
+        picked.append(day_urls[-1])
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        reports = list(pool.map(lambda wu: _report(wu[1]), picked))
+    return [(w, r) for (w, _), r in zip(picked, reports)]
+
+
+def status_changes(season: str, day: str, game_date: Optional[str] = None, matchup: Optional[str] = None
+                   ) -> List[Dict[str, Any]]:
+    """Players whose status changed across the day's reports, with each step and its report time.
+
+    A status of None means the player is not on the report (no restriction). ``game_date`` and
+    ``matchup`` narrow the rows to one game.
+    """
+    samples = _sample_reports(season, day)
+    if len(samples) < 2:
+        return []
+    mmddyyyy = datetime.strptime(game_date or day, "%Y-%m-%d").strftime("%m/%d/%Y")
+
+    matchups: Dict[Tuple[str, str], str] = {}
 
     def table(report):
-        return {(e["team"], e["player_name"]): e for e in report.entries if e["game_date"] == mmddyyyy}
+        rows = {}
+        for e in report.entries:
+            if e["game_date"] == mmddyyyy and (matchup is None or e["matchup"] == matchup):
+                rows[(e["team"], e["player_name"])] = e["status"]
+                matchups[(e["team"], e["player_name"])] = e["matchup"]
+        return rows
 
-    before, after = table(first), table(last)
-    changes = []
-    for key in sorted(set(before) | set(after)):
-        b, a = before.get(key), after.get(key)
-        if (b and a and b["status"] == a["status"]) or (not b and not a):
-            continue
-        entry = a or b
-        changes.append({"team": key[0], "player_name": key[1], "matchup": entry["matchup"],
-                        "from": b["status"] if b else None, "to": a["status"] if a else None,
-                        "since_report_et": first.published_et})
-    return changes
+    tables = [(r.published_et, table(r), r.not_submitted) for _, r in samples]
+    out = []
+    for key in sorted({k for _, t, _ in tables for k in t}):
+        steps: List[Dict[str, Any]] = []
+        for published, t, unfiled in tables:
+            if (matchups[key], key[0]) in unfiled:
+                continue  # the team had not filed yet: absence says nothing about the player
+            status = t.get(key)
+            if not steps or steps[-1]["status"] != status:
+                steps.append({"status": status, "at": published})
+        if len(steps) > 1:
+            out.append({"team": key[0], "player_name": key[1], "steps": steps})
+    return out
+
+
+def changes_for_day(season: str, day: str) -> List[Dict[str, Any]]:
+    return status_changes(season, day, game_date=day)
 
 
 def changes_for_game(season: str, day: str, away: str, home: str) -> List[Dict[str, Any]]:
+    """Status changes for one game, from today's reports (the day the report is read, Eastern)."""
+    today = datetime.now(inj.ET).strftime("%Y-%m-%d")
     try:
-        return [c for c in changes_for_day(season, day) if c["matchup"] == f"{away}@{home}"]
+        return status_changes(season, today, game_date=day, matchup=f"{away}@{home}")
     except Exception as exc:
         logger.warning("Injury changes unavailable: %s", exc)
         return []

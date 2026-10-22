@@ -21,6 +21,7 @@ import {
   predictGameFull,
 } from "../api/predictions";
 import { loadArchivedGameIndex } from "../lib/archiveData";
+import { loadPrivateApiFresh } from "../lib/dataCache";
 import { NBA_TEAMS } from "../lib/nbaTeams";
 import { CURRENT_SEASON, MIN_PREDICTION_DATE } from "../lib/constants";
 import { fmtDate } from "./game-results/utils";
@@ -32,6 +33,8 @@ import {
   ModelExplanationSection,
   PlayerSpotlight,
   InjuryReportPanel,
+  InjuryChangesList,
+  type InjuryChange,
 } from "./prediction";
 
 interface NbaPredictionProps {
@@ -42,6 +45,10 @@ interface NbaPredictionProps {
   } | null;
   onClearInitialGame?: () => void;
 }
+
+/** Eastern-time calendar date (the injury report covers today and tomorrow in this zone). */
+const etDate = (offsetDays: number) =>
+  new Date(Date.now() + offsetDays * 86400000).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
 export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPredictionProps = {}) {
   const [home, setHome] = useState(initialGame?.home || "");
@@ -60,6 +67,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [filterTeam1, setFilterTeam1] = useState("");
   const [filterTeam2, setFilterTeam2] = useState("");
   const [modelStatus, setModelStatus] = useState<any>(null);
+  const [injuryChanges, setInjuryChanges] = useState<InjuryChange[]>([]);
   const [selectorOpen, setSelectorOpen] = useState(!initialGame);
   const [activeResultTab, setActiveResultTab] = useState<"overview" | "explanation" | "players" | "technical">("overview");
 
@@ -131,6 +139,24 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         return true;
       });
   }, [selectedDate, seasonGames]);
+
+  // Injury report changes for the two teams, shown as soon as a game is selected
+  useEffect(() => {
+    const isNear = date >= etDate(0) && date <= etDate(1);
+    if (!home || !away || home === away || !date || !isNear) {
+      setInjuryChanges([]);
+      return;
+    }
+    let active = true;
+    loadPrivateApiFresh<{ changes: InjuryChange[] }>(
+      `/frontend-data-api/injury-changes?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}`
+    )
+      .then((r) => active && setInjuryChanges(r.changes ?? []))
+      .catch(() => active && setInjuryChanges([]));
+    return () => {
+      active = false;
+    };
+  }, [home, away, date]);
 
   const selectedDateIndex = uniqueDates.indexOf(selectedDate);
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -502,6 +528,8 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                 </div>
               </div>
             </div>
+
+            {injuryChanges.length > 0 && <InjuryChangesList changes={injuryChanges} />}
 
             {/* CTA Buttons */}
             {home && away && date && (

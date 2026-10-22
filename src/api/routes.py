@@ -287,6 +287,21 @@ def frontend_injury_report(request: Request, season: str = None, date: str = Non
     return _run_endpoint(_injury)
 
 
+@router.get("/frontend-data-api/injury-changes")
+def frontend_injury_changes(request: Request, home: str, away: str, date: str, season: str = None):
+    """Status changes of the two teams' players across today's reports, for the prediction screen."""
+    def _changes():
+        from .services.frontend_data import _check_token
+        from .services.injury_history import changes_for_game
+        from src.core.season_utils import get_default_season, normalize_season
+
+        _check_token(request)
+        return {"changes": changes_for_game(normalize_season(season or get_default_season()), date,
+                                            away.upper(), home.upper())}
+
+    return _run_endpoint(_changes)
+
+
 @router.get("/frontend-data-api/injuries")
 def frontend_injuries(request: Request, season: str = None, date: str = None):
     def _injuries():

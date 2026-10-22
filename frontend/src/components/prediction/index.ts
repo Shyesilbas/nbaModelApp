@@ -9,3 +9,4 @@ export { InjuryReportPanel } from "./InjuryReportPanel";
 export { SignalCards } from "./SignalCards";
 export { WinProbabilityArc } from "./WinProbabilityArc";
 export type { TeamInfo } from "./types";
+export { InjuryChangesList, type InjuryChange } from "./InjuryChangesList";

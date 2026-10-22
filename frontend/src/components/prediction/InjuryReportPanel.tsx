@@ -1,5 +1,6 @@
 import { Badge } from "../common";
 import TeamLogo from "../TeamLogo";
+import { InjuryChangesList, type InjuryChange } from "./InjuryChangesList";
 import type { TeamInfo } from "./types";
 
 export type InjuryReportSummary = {
@@ -7,7 +8,7 @@ export type InjuryReportSummary = {
   submitted: Record<string, boolean>;
   players: { team: string; player_name: string; status: string; reason: string }[];
   promoted_starters?: number[];
-  changes?: { team: string; player_name: string; from: string | null; to: string | null; since_report_et: string }[];
+  changes?: InjuryChange[];
 };
 
 const STATUS_VARIANT: Record<string, "error" | "warning" | "neutral" | "success"> = {
@@ -69,18 +70,8 @@ export function InjuryReportPanel({ report, homeInfo, awayInfo }: InjuryReportPa
         </span>
       </div>
       {report.changes && report.changes.length > 0 && (
-        <div className="mb-3 rounded border border-status-warning/30 bg-status-warning/10 p-3">
-          <p className="mb-1.5 text-xs font-medium text-text-primary">
-            Changed since the {report.changes[0].since_report_et} report
-          </p>
-          <ul className="space-y-1">
-            {report.changes.map((c) => (
-              <li key={`${c.team}-${c.player_name}`} className="text-xs text-text-secondary">
-                <span className="text-text-primary">{c.player_name}</span> ({c.team}): {c.from ?? "not listed"} to{" "}
-                {c.to ?? "removed from the report"}
-              </li>
-            ))}
-          </ul>
+        <div className="mb-3">
+          <InjuryChangesList changes={report.changes} />
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2">

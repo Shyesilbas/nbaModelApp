@@ -24,29 +24,39 @@ def _report(time, rows):
     return InjuryReport(published_et=time, entries=entries)
 
 
-def test_changes_between_first_and_latest_report(monkeypatch):
-    from datetime import datetime
+def _stub_day(monkeypatch, reports):
+    from datetime import datetime, timedelta
 
-    first = _report("10/22/26 12:00 AM", [("CLE", "Jarrett Allen", "Questionable"), ("PHI", "Dean Wade", "Out")])
-    last = _report("10/22/26 04:15 PM", [("CLE", "Jarrett Allen", "Out"), ("CLE", "Evan Mobley", "Questionable")])
-    reports = {"u1": first, "u2": last}
-    when = datetime(2026, 10, 22, tzinfo=ih.inj.ET)
-    monkeypatch.setattr(ih, "_urls", lambda season: [(when, "u1"), (when, "u2")])
-    monkeypatch.setattr(ih, "_report", lambda url: reports[url])
-    changes = {(c["player_name"]): (c["from"], c["to"]) for c in ih.changes_for_day("2026-27", "2026-10-22")}
+    base = datetime(2026, 10, 22, 12, 0, tzinfo=ih.inj.ET)
+    urls = [(base + timedelta(hours=i), f"u{i}") for i in range(len(reports))]
+    monkeypatch.setattr(ih, "_urls", lambda season: urls)
+    monkeypatch.setattr(ih, "_report", lambda url: reports[int(url[1:])])
+
+
+def test_status_changes_keep_every_step_with_its_report_time(monkeypatch):
+    _stub_day(monkeypatch, [
+        _report("10/22/26 12:00 PM", [("CLE", "Jarrett Allen", "Out"), ("PHI", "Dean Wade", "Out")]),
+        _report("10/22/26 01:00 PM", [("CLE", "Jarrett Allen", "Out"), ("PHI", "Dean Wade", "Out")]),
+        _report("10/22/26 02:00 PM", [("CLE", "Jarrett Allen", "Questionable"), ("CLE", "Evan Mobley", "Questionable")]),
+    ])
+    changes = {c["player_name"]: [(s["status"], s["at"]) for s in c["steps"]]
+               for c in ih.status_changes("2026-27", "2026-10-22", game_date="2026-10-22")}
     assert changes == {
-        "Jarrett Allen": ("Questionable", "Out"),
-        "Dean Wade": ("Out", None),
-        "Evan Mobley": (None, "Questionable"),
+        "Jarrett Allen": [("Out", "10/22/26 12:00 PM"), ("Questionable", "10/22/26 02:00 PM")],
+        "Dean Wade": [("Out", "10/22/26 12:00 PM"), (None, "10/22/26 02:00 PM")],
+        "Evan Mobley": [(None, "10/22/26 12:00 PM"), ("Questionable", "10/22/26 02:00 PM")],
     }
 
 
 def test_no_changes_with_a_single_report(monkeypatch):
-    from datetime import datetime
+    _stub_day(monkeypatch, [_report("10/22/26 12:00 PM", [("CLE", "Jarrett Allen", "Out")])])
+    assert ih.status_changes("2026-27", "2026-10-22", game_date="2026-10-22") == []
 
-    when = datetime(2026, 10, 22, tzinfo=ih.inj.ET)
-    monkeypatch.setattr(ih, "_urls", lambda season: [(when, "u1")])
-    assert ih.changes_for_day("2026-27", "2026-10-22") == []
+
+def test_unchanged_players_are_left_out(monkeypatch):
+    rows = [("CLE", "Jarrett Allen", "Out")]
+    _stub_day(monkeypatch, [_report("10/22/26 12:00 PM", rows), _report("10/22/26 01:00 PM", rows)])
+    assert ih.status_changes("2026-27", "2026-10-22", game_date="2026-10-22") == []
 
 
 def test_recent_returns_need_a_serious_listing_and_a_game_after(monkeypatch):
@@ -63,3 +73,11 @@ def test_recent_returns_need_a_serious_listing_and_a_game_after(monkeypatch):
     ])
     returned = ih.recent_returns("2026-27", "2026-10-27", history, teams, players)
     assert [(r["player_name"], r["returned_on"], r["games_missed"]) for r in returned] == [("Dean Wade", "2026-10-26", 3)]
+
+
+def test_a_team_that_had_not_filed_is_not_treated_as_available(monkeypatch):
+    early = _report("10/22/26 12:00 PM", [])
+    early.not_submitted = {("CLE@PHI", "CLE")}
+    late = _report("10/22/26 02:00 PM", [("CLE", "Jarrett Allen", "Out")])
+    _stub_day(monkeypatch, [early, late])
+    assert ih.status_changes("2026-27", "2026-10-22", game_date="2026-10-22") == []
