@@ -114,7 +114,33 @@ def load_results(season: str) -> Dict[str, Dict[str, Any]]:
     return results
 
 
-def grade(records: List[Dict[str, Any]], results: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+def american_to_prob(odds: float) -> float:
+    return 100.0 / (odds + 100.0) if odds > 0 else -odds / (-odds + 100.0)
+
+
+def load_closing_odds(season: str) -> Dict[str, Dict[str, Any]]:
+    """Closing moneylines by GAME_ID, written by scripts/ingest/fetch_closing_odds.py."""
+    path = Path(get_data_paths(season).team_games_raw).parent / "closing_odds.csv"
+    if not path.exists():
+        return {}
+    df = pd.read_csv(path, dtype={"game_id": str})
+    odds: Dict[str, Dict[str, Any]] = {}
+    for r in df.itertuples():
+        home_raw, away_raw = american_to_prob(r.home_ml_close), american_to_prob(r.away_ml_close)
+        odds[str(r.game_id).zfill(10)] = {
+            "home_ml_close": int(r.home_ml_close),
+            "away_ml_close": int(r.away_ml_close),
+            # Vig removed by normalizing the two implied probabilities.
+            "market_home_probability": round(home_raw / (home_raw + away_raw), 4),
+        }
+    return odds
+
+
+def grade(
+    records: List[Dict[str, Any]],
+    results: Dict[str, Dict[str, Any]],
+    odds: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
     """Attach the outcome to each record. A record made after tip-off is flagged and never counted."""
     graded = []
     for rec in records:
@@ -124,6 +150,7 @@ def grade(records: List[Dict[str, Any]], results: Dict[str, Dict[str, Any]]) -> 
         row["valid"] = row["origin"] == "backfill" or rec["created_utc"] < rec["start_utc"].replace("Z", "+00:00")
         res = results.get(rec["game_id"])
         row["status"] = "final" if res else "pending"
+        row.update((odds or {}).get(rec["game_id"], {}))
         if res:
             hs, as_ = res["home_score"], res["away_score"]
             winner = res["home_team"] if hs > as_ else res["away_team"]
@@ -141,6 +168,33 @@ def grade(records: List[Dict[str, Any]], results: Dict[str, Dict[str, Any]]) -> 
     return graded
 
 
+def _market_comparison(done: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Model versus the no-vig closing line on the graded games that have odds."""
+    rows = [g for g in done if g.get("market_home_probability") is not None]
+    out: Dict[str, Any] = {"games_with_odds": len(rows), "market_accuracy": None, "market_brier": None,
+                           "market_log_loss": None, "model_accuracy_on_odds": None, "model_brier_on_odds": None,
+                           "model_log_loss_on_odds": None}
+    if not rows:
+        return out
+
+    def scores(prob_of):
+        brier = ll = hits = 0.0
+        for g in rows:
+            p = min(max(prob_of(g), 1e-6), 1 - 1e-6)
+            y = 1.0 if g["actual_winner"] == g["home_team"] else 0.0
+            brier += (p - y) ** 2
+            ll -= y * math.log(p) + (1 - y) * math.log(1 - p)
+            hits += (p >= 0.5) == (y == 1.0)
+        n = len(rows)
+        return round(hits / n, 4), round(brier / n, 4), round(ll / n, 4)
+
+    out["market_accuracy"], out["market_brier"], out["market_log_loss"] = scores(lambda g: g["market_home_probability"])
+    out["model_accuracy_on_odds"], out["model_brier_on_odds"], out["model_log_loss_on_odds"] = scores(
+        lambda g: g["home_win_probability"]
+    )
+    return out
+
+
 def summarize(graded: List[Dict[str, Any]]) -> Dict[str, Any]:
     done = [g for g in graded if g["status"] == "final" and g["valid"]]
     summary: Dict[str, Any] = {
@@ -150,6 +204,7 @@ def summarize(graded: List[Dict[str, Any]]) -> Dict[str, Any]:
         "backfilled_graded": sum(1 for g in done if g["origin"] == "backfill"),
         "invalid_late": sum(1 for g in graded if not g["valid"]),
     }
+    summary.update(_market_comparison(done))
     if not done:
         return {**summary, "accuracy": None, "brier": None, "log_loss": None, "home_baseline_accuracy": None,
                 "mae_margin": None, "mae_total": None, "bands": []}
@@ -190,6 +245,6 @@ def summarize(graded: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def paper_trading_report(season: str) -> Dict[str, Any]:
     season = normalize_season(season)
-    graded = grade(read_ledger(season), load_results(season))
+    graded = grade(read_ledger(season), load_results(season), load_closing_odds(season))
     graded.sort(key=lambda g: (g["game_date"], g["start_utc"], g["game_id"]), reverse=True)
     return {"season": season, "summary": summarize(graded), "games": graded}
