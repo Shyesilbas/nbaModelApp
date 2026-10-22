@@ -13,6 +13,10 @@ on:
       pre_tip:
         description: "Minutes before tip-off a game counts as due"
         default: "20"
+      dry_run:
+        description: "Predict and print only, write nothing"
+        type: boolean
+        default: false
 
 concurrency:
   group: snapshot
@@ -33,7 +37,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - name: Snapshot games about to start
-        run: PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --pre-tip "${{ inputs.pre_tip || '20' }}"
+        run: PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --pre-tip "${{ inputs.pre_tip || '20' }}" ${{ inputs.dry_run && '--dry-run' || '' }}
       - name: Commit the ledger
         run: |
           git config user.name "snapshot-bot"
