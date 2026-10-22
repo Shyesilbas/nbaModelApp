@@ -27,6 +27,7 @@ PAGE_SIZE = 50
 COLUMNS = [
     "game_id", "event_id", "game_date", "start_utc", "home_team", "away_team",
     "home_score", "away_score", "home_ml_close", "away_ml_close",
+    "total_line_close", "over_odds_close", "under_odds_close",
 ]
 # SportsGameOdds abbreviation -> NBA abbreviation, where they differ.
 TEAM_ALIASES: dict = {}
@@ -59,10 +60,19 @@ def to_int(value):
         return None
 
 
+def to_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def parse_event(ev: dict) -> dict | None:
     odds = ev.get("odds", {})
     home_ml = odds.get("points-home-game-ml-home", {})
     away_ml = odds.get("points-away-game-ml-away", {})
+    over = odds.get("points-all-game-ou-over", {})
+    under = odds.get("points-all-game-ou-under", {})
     teams = ev["teams"]
     home = teams["home"]["names"]["short"]
     away = teams["away"]["names"]["short"]
@@ -75,6 +85,9 @@ def parse_event(ev: dict) -> dict | None:
         "away_score": away_ml.get("score"),
         "home_ml_close": to_int(home_ml.get("closeBookOdds")),
         "away_ml_close": to_int(away_ml.get("closeBookOdds")),
+        "total_line_close": to_float(over.get("closeBookOverUnder")),
+        "over_odds_close": to_int(over.get("closeBookOdds")),
+        "under_odds_close": to_int(under.get("closeBookOdds")),
     }
     if row["home_ml_close"] is None or row["away_ml_close"] is None or row["home_score"] is None:
         return None

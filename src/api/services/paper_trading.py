@@ -127,13 +127,41 @@ def load_closing_odds(season: str) -> Dict[str, Dict[str, Any]]:
     odds: Dict[str, Dict[str, Any]] = {}
     for r in df.itertuples():
         home_raw, away_raw = american_to_prob(r.home_ml_close), american_to_prob(r.away_ml_close)
-        odds[str(r.game_id).zfill(10)] = {
+        entry = {
             "home_ml_close": int(r.home_ml_close),
             "away_ml_close": int(r.away_ml_close),
             # Vig removed by normalizing the two implied probabilities.
             "market_home_probability": round(home_raw / (home_raw + away_raw), 4),
         }
+        if "total_line_close" in df.columns and pd.notna(r.total_line_close):
+            entry.update(
+                total_line_close=float(r.total_line_close),
+                over_odds_close=int(r.over_odds_close),
+                under_odds_close=int(r.under_odds_close),
+            )
+        odds[str(r.game_id).zfill(10)] = entry
     return odds
+
+
+def _total_outcome(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Over/under grading against the model's own total and against the closing line.
+
+    The model leans Over when its total is above the line, Under when below. `total_lean_hit`
+    asks whether the game reached the model's number in that direction (actual >= predicted for
+    Over, actual <= predicted for Under). `line_bet_won` is the plain bet result at the line.
+    """
+    line = row.get("total_line_close")
+    if line is None:
+        return {}
+    pred, actual = row["predicted_total"], row["actual_total"]
+    lean = "over" if pred > line else "under" if pred < line else None
+    line_result = "over" if actual > line else "under" if actual < line else "push"
+    out: Dict[str, Any] = {"total_lean": lean, "total_line_result": line_result,
+                           "total_lean_hit": None, "line_bet_won": None}
+    if lean:
+        out["total_lean_hit"] = actual >= pred if lean == "over" else actual <= pred
+        out["line_bet_won"] = None if line_result == "push" else lean == line_result
+    return out
 
 
 def grade(
@@ -164,6 +192,7 @@ def grade(
                 predicted_total=round(rec["predicted_home_score"] + rec["predicted_away_score"], 1),
                 actual_total=hs + as_,
             )
+            row.update(_total_outcome(row))
         graded.append(row)
     return graded
 
@@ -195,6 +224,23 @@ def _market_comparison(done: List[Dict[str, Any]]) -> Dict[str, Any]:
     return out
 
 
+def _totals_comparison(done: List[Dict[str, Any]]) -> Dict[str, Any]:
+    rows = [g for g in done if g.get("total_line_close") is not None]
+    leaned = [g for g in rows if g["total_lean"]]
+    bets = [g for g in leaned if g["line_bet_won"] is not None]
+    out: Dict[str, Any] = {"games_with_total": len(rows), "total_leans": len(leaned), "total_lean_hit_rate": None,
+                           "line_bets": len(bets), "line_bet_win_rate": None,
+                           "market_mae_total": None, "model_mae_total_on_line": None}
+    if leaned:
+        out["total_lean_hit_rate"] = round(sum(g["total_lean_hit"] for g in leaned) / len(leaned), 4)
+    if bets:
+        out["line_bet_win_rate"] = round(sum(g["line_bet_won"] for g in bets) / len(bets), 4)
+    if rows:
+        out["market_mae_total"] = round(sum(abs(g["total_line_close"] - g["actual_total"]) for g in rows) / len(rows), 2)
+        out["model_mae_total_on_line"] = round(sum(abs(g["predicted_total"] - g["actual_total"]) for g in rows) / len(rows), 2)
+    return out
+
+
 def summarize(graded: List[Dict[str, Any]]) -> Dict[str, Any]:
     done = [g for g in graded if g["status"] == "final" and g["valid"]]
     summary: Dict[str, Any] = {
@@ -205,6 +251,7 @@ def summarize(graded: List[Dict[str, Any]]) -> Dict[str, Any]:
         "invalid_late": sum(1 for g in graded if not g["valid"]),
     }
     summary.update(_market_comparison(done))
+    summary.update(_totals_comparison(done))
     if not done:
         return {**summary, "accuracy": None, "brier": None, "log_loss": None, "home_baseline_accuracy": None,
                 "mae_margin": None, "mae_total": None, "bands": []}

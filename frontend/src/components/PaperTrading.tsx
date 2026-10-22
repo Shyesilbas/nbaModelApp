@@ -29,6 +29,13 @@ type PaperGame = {
   home_ml_close?: number;
   away_ml_close?: number;
   market_home_probability?: number;
+  total_line_close?: number;
+  over_odds_close?: number;
+  under_odds_close?: number;
+  total_lean?: "over" | "under" | null;
+  total_lean_hit?: boolean | null;
+  total_line_result?: "over" | "under" | "push";
+  line_bet_won?: boolean | null;
 };
 
 type Band = { label: string; games: number; accuracy: number; mean_confidence: number };
@@ -53,6 +60,13 @@ type Summary = {
   model_accuracy_on_odds: number | null;
   model_brier_on_odds: number | null;
   model_log_loss_on_odds: number | null;
+  games_with_total: number;
+  total_leans: number;
+  total_lean_hit_rate: number | null;
+  line_bets: number;
+  line_bet_win_rate: number | null;
+  market_mae_total: number | null;
+  model_mae_total_on_line: number | null;
 };
 
 type Report = { season: string; summary: Summary; games: PaperGame[] };
@@ -111,6 +125,7 @@ export default function PaperTrading() {
   const dayIndex = activeDate ? dates.indexOf(activeDate) : -1;
   const dayGraded = dayGames.filter((g) => g.status === "final" && g.valid);
   const dayCorrect = dayGraded.filter((g) => g.correct).length;
+  const dayTotals = dayGames.filter((g) => g.total_line_close != null);
 
   if (error) {
     return <InlineError title="Failed to load paper trading" message={error} onRetry={load} />;
@@ -220,6 +235,26 @@ export default function PaperTrading() {
             </tbody>
           </table>
         </Card>
+      )}
+
+      {s.games_with_total > 0 && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat
+            label="Total reached model number"
+            value={pct(s.total_lean_hit_rate)}
+            hint={`${s.total_leans} games. Over: actual at or above model total. Under: at or below`}
+          />
+          <Stat
+            label="Total bet vs closing line"
+            value={pct(s.line_bet_win_rate)}
+            hint={`${s.line_bets} games, pushes excluded`}
+          />
+          <Stat
+            label="Total error: model / line"
+            value={`${num(s.model_mae_total_on_line, 1)} / ${num(s.market_mae_total, 1)}`}
+            hint="Mean absolute error in points"
+          />
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
@@ -346,6 +381,77 @@ export default function PaperTrading() {
           </tbody>
         </table>
       </Card>
+
+      {dayTotals.length > 0 && (
+        <Card padding="none" className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold text-text-primary">
+              Over / Under, {activeDate}
+            </caption>
+            <thead className="bg-background-tertiary text-xs text-text-muted">
+              <tr>
+                <th className="px-4 py-2 font-medium">Game</th>
+                <th className="px-4 py-2 font-medium">Model total</th>
+                <th className="px-4 py-2 font-medium">Market (closing line)</th>
+                <th className="px-4 py-2 font-medium">Final total</th>
+                <th className="px-4 py-2 font-medium">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dayTotals.map((g) => {
+                return (
+                  <tr key={g.game_id} className="border-t border-border-light align-top">
+                    <td className="whitespace-nowrap px-4 py-2">
+                      <span className="inline-flex items-center gap-2">
+                        <TeamCell abbr={g.away_team} bold={false} />
+                        <span className="text-text-muted">@</span>
+                        <TeamCell abbr={g.home_team} bold={false} />
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2">
+                      <p className="text-text-primary">
+                        {(g.predicted_home_score + g.predicted_away_score).toFixed(1)}
+                      </p>
+                      <p className="text-xs text-text-secondary">
+                        {g.total_lean ? `Leans ${g.total_lean === "over" ? "Over" : "Under"}` : "On the line"}
+                      </p>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2">
+                      <p className="text-text-primary">{g.total_line_close?.toFixed(1)}</p>
+                      <p className="text-xs text-text-secondary">
+                        Over {decimalOdds(g.over_odds_close)} / Under {decimalOdds(g.under_odds_close)}
+                      </p>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2">
+                      {g.status === "final" ? (
+                        <>
+                          <p className="text-text-primary">{g.actual_total}</p>
+                          <p className="text-xs text-text-secondary">
+                            Line result: {g.total_line_result === "push" ? "Push" : g.total_line_result === "over" ? "Over" : "Under"}
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-text-muted">-</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2">
+                      {g.status === "pending" ? (
+                        <Badge variant="neutral" size="sm">Pending</Badge>
+                      ) : g.total_lean_hit == null ? (
+                        <Badge variant="neutral" size="sm">No lean</Badge>
+                      ) : (
+                        <Badge variant={g.total_lean_hit ? "success" : "error"} size="sm">
+                          {g.total_lean_hit ? "Reached" : "Missed"}
+                        </Badge>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+      )}
     </div>
   );
 }
