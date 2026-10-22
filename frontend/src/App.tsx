@@ -1,12 +1,15 @@
 import { useState, useEffect, lazy, Suspense, useCallback } from "react";
 import {
   Search,
-  Trophy,
+  CalendarDays,
   RefreshCw,
   BarChart2,
   UserCircle,
   ArrowLeftRight,
   ClipboardCheck,
+  Stethoscope,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import GameResults from "./components/GameResults";
 import { parseUrlRoute, updateUrlRoute } from "./lib/router";
@@ -18,6 +21,7 @@ const TradeBoard = lazy(() => import("./components/TradeBoard"));
 const NbaPrediction = lazy(() => import("./components/NbaPrediction"));
 const PlayerPage = lazy(() => import("./components/PlayerPage"));
 const PaperTrading = lazy(() => import("./components/PaperTrading"));
+const InjuriesTab = lazy(() => import("./components/InjuriesTab"));
 const PlayerCompare = lazy(() =>
   import("./components/PlayerCompare").then((m) => ({ default: m.PlayerCompare }))
 );
@@ -25,13 +29,14 @@ const PlayerCompare = lazy(() =>
 import { loadPrivateApi } from "./lib/dataCache";
 
 const MENU = [
-  { id: "game-results",   label: "Game Results",   icon: <Trophy size={16} strokeWidth={1.5} />,      section: null },
-  { id: "player-profile", label: "Player Profile", icon: <UserCircle size={16} strokeWidth={1.5} />,  section: null },
+  { id: "game-results",   label: "Game Results",   icon: <CalendarDays size={16} strokeWidth={1.5} />, section: "Fixture" },
+  { id: "player-profile", label: "Player Profile", icon: <UserCircle size={16} strokeWidth={1.5} />,  section: "Players" },
   { id: "player-compare", label: "Head-to-Head",   icon: <ArrowLeftRight size={16} strokeWidth={1.5} />, section: null },
   { id: "team-explorer",  label: "Team Explorer",  icon: <Search size={16} strokeWidth={1.5} />,      section: "Analysis" },
   { id: "multi-team",     label: "Trade Discovery",icon: <RefreshCw size={16} strokeWidth={1.5} />,   section: null },
   { id: "nba-prediction", label: "Predictions",    icon: <BarChart2 size={16} strokeWidth={1.5} />,   section: "Models" },
   { id: "paper-trading",  label: "Paper Trading",  icon: <ClipboardCheck size={16} strokeWidth={1.5} />, section: null },
+  { id: "injuries",       label: "Injuries",       icon: <Stethoscope size={16} strokeWidth={1.5} />,    section: null },
 ];
 
 export default function App() {
@@ -41,6 +46,18 @@ export default function App() {
     const savedTab = sessionStorage.getItem("nba-intel-active-tab");
     return MENU.some((item) => item.id === savedTab) ? savedTab! : "game-results";
   });
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem("nba-intel-sidebar-collapsed") === "true";
+  });
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("nba-intel-sidebar-collapsed", String(next));
+      return next;
+    });
+  };
 
   const [predictionTarget, setPredictionTarget] = useState<{ home: string; away: string; date: string } | null>(() => {
     const urlRoute = parseUrlRoute();
@@ -186,37 +203,51 @@ export default function App() {
     <div className="min-h-screen bg-background-secondary text-text-primary">
       <div className="flex min-h-screen">
         {/* ── Sidebar ── */}
-        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border bg-background-primary text-text-primary lg:flex">
-          {/* Logo / Brand */}
-          <div className="border-b border-border px-5 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded bg-primary text-white">
-                <BarChart2 size={18} strokeWidth={1.5} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-text-primary">NBA Intel</p>
-                <p className="text-xs text-text-secondary">Model dashboard</p>
-              </div>
-            </div>
+        <aside
+          className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-background-primary text-text-primary transition-all duration-200 lg:flex ${
+            sidebarCollapsed ? "w-16" : "w-60"
+          }`}
+        >
+          {/* Collapse Toggle Header (Replaces former NBA Intel / Model dashboard text) */}
+          <div className="flex h-14 items-center border-b border-border px-3">
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className={`flex h-8 w-8 items-center justify-center rounded text-text-secondary hover:bg-background-tertiary hover:text-text-primary transition-colors ${
+                sidebarCollapsed ? "mx-auto" : "ml-auto"
+              }`}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeft size={18} strokeWidth={1.5} />
+              ) : (
+                <PanelLeftClose size={18} strokeWidth={1.5} />
+              )}
+            </button>
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 overflow-y-auto p-3">
+          <nav className="flex-1 overflow-y-auto p-2">
             {MENU.map((item) => (
-              <div key={item.id}>
-                {item.section && (
-                  <p className="px-3 pb-1 pt-4 text-xs font-medium text-text-secondary">
+              <div key={item.id} className="mb-1">
+                {item.section && !sidebarCollapsed && (
+                  <p className="px-3 pb-1 pt-3 text-xs font-medium text-text-secondary">
                     {item.section}
                   </p>
                 )}
                 <button
                   onClick={() => handleTabChange(item.id)}
-                  className={activeTab === item.id ? "nav-btn-active nav-btn" : "nav-btn"}
+                  title={sidebarCollapsed ? item.label : undefined}
+                  className={`flex w-full items-center gap-3 rounded px-3 py-2 text-xs font-medium transition-colors ${
+                    activeTab === item.id
+                      ? "bg-primary text-white"
+                      : "text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
+                  } ${sidebarCollapsed ? "justify-center px-0" : ""}`}
                 >
                   <span className={activeTab === item.id ? "text-white" : "text-text-secondary"}>
                     {item.icon}
                   </span>
-                  <span>{item.label}</span>
+                  {!sidebarCollapsed && <span>{item.label}</span>}
                 </button>
               </div>
             ))}
@@ -335,6 +366,7 @@ export default function App() {
                       />
                     )}
                     {activeTab === "paper-trading" && <PaperTrading />}
+                    {activeTab === "injuries" && <InjuriesTab />}
                     {activeTab === "player-compare" && (
                       <PlayerCompare
                         initialP1Id={compareP1}

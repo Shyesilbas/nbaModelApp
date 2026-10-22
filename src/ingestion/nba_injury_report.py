@@ -157,19 +157,21 @@ def latest_report_url(season: str, day: str, as_of: Optional[datetime] = None) -
     return options[-1] if options else None
 
 
-def fetch_report(season: str, day: str, as_of: Optional[datetime] = None) -> Optional[InjuryReport]:
+def fetch_report_from_url(url: str) -> InjuryReport:
     try:
         import pymupdf as fitz
     except ImportError:
         import fitz
 
-    hit = latest_report_url(season, day, as_of)
-    if hit is None:
-        return None
-    resp = _get(hit[1])
+    resp = _get(url)
     resp.raise_for_status()
     with fitz.open(stream=resp.content, filetype="pdf") as doc:
         return parse_report("\n".join(page.get_text() for page in doc))
+
+
+def fetch_report(season: str, day: str, as_of: Optional[datetime] = None) -> Optional[InjuryReport]:
+    hit = latest_report_url(season, day, as_of)
+    return None if hit is None else fetch_report_from_url(hit[1])
 
 
 def _previous_season(season: str) -> str:

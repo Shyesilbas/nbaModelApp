@@ -4,6 +4,7 @@ from typing import Callable
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from src.ingestion.nba_injury_report import ET
 from .schemas import (
     PlayerStatusOverride,
     GameFullRequest,
@@ -122,8 +123,6 @@ def _with_injury_report(req, home: str, away: str):
     from .services.auto_status import auto_overrides
 
     from datetime import datetime
-    from src.ingestion.nba_injury_report import ET
-
     game_date = str(req.prediction_date or datetime.now(ET).date())
     overrides, summary = auto_overrides(home, away, game_date)
     if overrides:
@@ -276,6 +275,18 @@ def frontend_injury_report(request: Request, season: str = None, date: str = Non
     return _run_endpoint(_injury)
 
 
+@router.get("/frontend-data-api/injuries")
+def frontend_injuries(request: Request, season: str = None, date: str = None):
+    def _injuries():
+        from .services.frontend_data import _check_token
+        from .services.injury_history import injuries_payload
+
+        _check_token(request)
+        return injuries_payload(season, date)
+
+    return _run_endpoint(_injuries)
+
+
 @router.post("/frontend-data-api/snapshot-publish")
 def start_snapshot_publish(request: Request):
     from .services.snapshot_publish import start_publish
@@ -319,6 +330,13 @@ def predict_game_full_endpoint(req: GameFullRequest):
     def _predict():
         summary = _with_injury_report(req, req.home_team_id, req.away_team_id)
         response = predict_game_full(req)
+        if summary is not None:
+            from datetime import datetime
+            from src.core.season_utils import get_default_season
+            from .services.injury_history import changes_for_game
+
+            day = str(req.prediction_date or datetime.now(ET).date())
+            summary["changes"] = changes_for_game(get_default_season(), day, req.away_team_id.upper(), req.home_team_id.upper())
         response.injury_report = summary
         return response
 
