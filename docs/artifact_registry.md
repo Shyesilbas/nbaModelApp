@@ -23,6 +23,7 @@ The paths are defined in `src/core/data_paths.py` (`get_data_paths(season)` for 
 - `data/training/player_model_ready.csv` — **ACTIVE PLAYER MODEL-READY DATASET (V4)** (6 seasons, 165,988 rows; rolling/EMA form, usage, opponent allowance per position group, rest. CSV only: the stale parquet copy was removed on 2026-10-20 because nothing refreshed it)
 - `data/season={YYYY-YY}/features/team_features.csv` — Season-scoped pre-game team features
 - `data/season={YYYY-YY}/features/player_features.csv` — Season-scoped individual player features
+- `data/season={YYYY-YY}/processed/pbp_stints.csv`, `pbp_player_games.csv`, `pbp_game_quality.csv` — **EXPERIMENTAL** lineup stints (ten-player lineup, seconds, points for/against), per-player on-court seconds and margin, and a per-game box score check (`USABLE` flag). Built from cached play-by-play by `scripts/build_pbp_lineups.py --season YYYY-YY` (`src/processing/pbp_lineups.py`; no API calls); `src/features/player_impact.py` fits ridge player impact from the stints. Not read by production
 - `data/season={YYYY-YY}/analysis/core_players.csv` — Source of truth for the season's team core rotations (written by `--run-roster-analysis`)
 - `data/season=2026-27/analysis/team_elo_initial.json` — **ACTIVE 2026-27 OPENING ELO RATINGS** (Chained multi-season continuous Elo across 2020-2026, regressed by 25% towards 1500 with offseason roster talent turnover adjustments)
 
