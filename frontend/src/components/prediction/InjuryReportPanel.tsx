@@ -1,4 +1,5 @@
 import { Badge } from "../common";
+import { reportStampText } from "../../lib/injuryTime";
 import TeamLogo from "../TeamLogo";
 import { InjuryChangesList, type InjuryChange } from "./InjuryChangesList";
 import type { TeamInfo } from "./types";
@@ -25,31 +26,6 @@ interface InjuryReportPanelProps {
   awayInfo: TeamInfo;
 }
 
-function formatPublishedTSI(publishedEt?: string | null): string {
-  if (!publishedEt) return "";
-  const m = publishedEt.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})\s+([AP]M)/i);
-  if (!m) return publishedEt;
-  const [, mon, day, yr, hh, mm, ap] = m;
-  const fullYear = yr.length === 2 ? `20${yr}` : yr;
-  let h = parseInt(hh, 10);
-  if (ap.toUpperCase() === "PM" && h < 12) h += 12;
-  if (ap.toUpperCase() === "AM" && h === 12) h = 0;
-  try {
-    const iso = `${fullYear}-${mon.padStart(2, "0")}-${day.padStart(2, "0")}T${String(h).padStart(2, "0")}:${mm}:00-04:00`;
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return publishedEt;
-    const fmt = new Intl.DateTimeFormat("tr-TR", {
-      timeZone: "Europe/Istanbul",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    return `${fmt.format(d)} TSİ`;
-  } catch {
-    return publishedEt;
-  }
-}
-
 /** The official injury report the prediction was made with (applied automatically, read only). */
 export function InjuryReportPanel({ report, homeInfo, awayInfo }: InjuryReportPanelProps) {
   if (!report) {
@@ -65,7 +41,7 @@ export function InjuryReportPanel({ report, homeInfo, awayInfo }: InjuryReportPa
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs font-semibold text-text-primary">Official injury report</span>
         <span className="text-xs text-text-secondary">
-          Rapor Saati: {formatPublishedTSI(report.published_et)}
+          Rapor Saati: {reportStampText(report.published_et)}
           {promoted > 0 && `, ${promoted} starter${promoted > 1 ? "s" : ""} replaced automatically`}
         </span>
       </div>

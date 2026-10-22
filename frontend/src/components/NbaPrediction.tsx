@@ -34,6 +34,7 @@ import {
   PlayerSpotlight,
   InjuryReportPanel,
   InjuryChangesList,
+  InjuryReportStamp,
   type InjuryChange,
 } from "./prediction";
 
@@ -68,6 +69,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [filterTeam2, setFilterTeam2] = useState("");
   const [modelStatus, setModelStatus] = useState<any>(null);
   const [injuryChanges, setInjuryChanges] = useState<InjuryChange[]>([]);
+  const [latestReportTime, setLatestReportTime] = useState<string | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(!initialGame);
   const [activeResultTab, setActiveResultTab] = useState<"overview" | "explanation" | "players" | "technical">("overview");
 
@@ -145,14 +147,23 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
     const isNear = date >= etDate(0) && date <= etDate(1);
     if (!home || !away || home === away || !date || !isNear) {
       setInjuryChanges([]);
+      setLatestReportTime(null);
       return;
     }
     let active = true;
-    loadPrivateApiFresh<{ changes: InjuryChange[] }>(
+    loadPrivateApiFresh<{ published_et: string | null; changes: InjuryChange[] }>(
       `/frontend-data-api/injury-changes?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}`
     )
-      .then((r) => active && setInjuryChanges(r.changes ?? []))
-      .catch(() => active && setInjuryChanges([]));
+      .then((r) => {
+        if (!active) return;
+        setInjuryChanges(r.changes ?? []);
+        setLatestReportTime(r.published_et);
+      })
+      .catch(() => {
+        if (!active) return;
+        setInjuryChanges([]);
+        setLatestReportTime(null);
+      });
     return () => {
       active = false;
     };
@@ -529,7 +540,12 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
               </div>
             </div>
 
-            {injuryChanges.length > 0 && <InjuryChangesList changes={injuryChanges} />}
+            {home && away && date && home !== away && date >= etDate(0) && date <= etDate(1) && (
+              <div className="space-y-2">
+                <InjuryReportStamp published={latestReportTime} mode="latest" />
+                {injuryChanges.length > 0 && <InjuryChangesList changes={injuryChanges} />}
+              </div>
+            )}
 
             {/* CTA Buttons */}
             {home && away && date && (
@@ -650,6 +666,8 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
               isLoading={loading}
             />
           )}
+
+          <InjuryReportStamp published={result.injury_report?.published_et} mode="used" />
 
           {/* Result Tabs Panel */}
           <section className="overflow-hidden rounded border border-border bg-background-primary">

@@ -295,9 +295,14 @@ def frontend_injury_changes(request: Request, home: str, away: str, date: str, s
         from .services.injury_history import changes_for_game
         from src.core.season_utils import get_default_season, normalize_season
 
+        from .services.auto_status import cached_report
+        from datetime import datetime
+
         _check_token(request)
-        return {"changes": changes_for_game(normalize_season(season or get_default_season()), date,
-                                            away.upper(), home.upper())}
+        season_key = normalize_season(season or get_default_season())
+        report = cached_report(season_key, datetime.now(ET).strftime("%Y-%m-%d"))
+        return {"published_et": report.published_et if report else None,
+                "changes": changes_for_game(season_key, date, away.upper(), home.upper())}
 
     return _run_endpoint(_changes)
 
