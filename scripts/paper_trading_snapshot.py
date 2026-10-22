@@ -118,6 +118,10 @@ def main() -> int:
     logged = {r["game_id"] for r in pt.read_ledger(season)}
 
     records = []
+    pending = [g for g in games.itertuples() if str(g.GAME_ID).zfill(10) not in logged]
+    if not pending:
+        print(f"{season}: no unlogged games to snapshot")
+        return 0
     total_lines = {} if args.backfill else fetch_total_lines(args.date, args.through or args.date)
     report = None if args.backfill else fetch_injuries(season)
     for g in games.itertuples():
