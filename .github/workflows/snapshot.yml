@@ -1,0 +1,45 @@
+name: paper trading snapshot
+
+# Freezes each game's prediction shortly before tip-off, using the newest official injury
+# report. Data inputs come from scripts/ops/publish_snapshot_data.py (run each morning).
+# UTC windows cover US evening tip-offs (22:00-04:59 on weekdays, 16:00-04:59 on weekends);
+# start it by hand from the Actions tab for other days. Runs where no game is due exit at once.
+on:
+  schedule:
+    - cron: "*/10 22-23,0-4 * * 1-5"
+    - cron: "*/10 16-23,0-4 * * 0,6"
+  workflow_dispatch:
+    inputs:
+      pre_tip:
+        description: "Minutes before tip-off a game counts as due"
+        default: "20"
+
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Snapshot games about to start
+        run: PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --pre-tip "${{ inputs.pre_tip || '20' }}"
+      - name: Commit the ledger
+        run: |
+          git config user.name "snapshot-bot"
+          git config user.email "snapshot-bot@users.noreply.github.com"
+          git add -f data/predictions/paper_ledger_*.jsonl || true
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "ledger: pre-tip snapshot $(date -u +%FT%TZ)"
+          git pull --rebase
+          git push
