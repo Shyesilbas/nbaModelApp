@@ -257,3 +257,32 @@ def build_season(season: str, limit: int | None = None) -> tuple[pd.DataFrame, p
     pg = player_games_from_stints(stints_df) if not stints_df.empty else pd.DataFrame()
     summary = {"season": season, "games_cached": len(files), "games_ok": len(files) - len(failed), "failed": failed}
     return stints_df, pg, summary
+
+
+def build_and_write(season: str, limit: int | None = None, dry_run: bool = False) -> int:
+    """Rebuild stints for ``season``, print coverage and the box score check, write the processed files unless ``dry_run``."""
+    from src.core.data_paths import get_data_paths
+
+    stints, pg, summary = build_season(season, limit)
+    print(f"{season}: {summary['games_ok']}/{summary['games_cached']} games rebuilt")
+    for gid, reasons in list(summary["failed"].items())[:10]:
+        print(f"  failed {gid}: {reasons[0]}")
+    if pg.empty:
+        return 1
+
+    box = pd.read_csv(get_data_paths(season).raw_player_boxscores)
+    qc = quality_check(pg, box)
+    print(f"player-games {len(qc)}: plus-minus exact {(qc['PM_DIFF'] == 0).mean():.3f}, "
+          f"within 2 {(qc['PM_DIFF'].abs() <= 2).mean():.3f}, minutes MAE {qc['MIN_DIFF'].abs().mean():.3f}")
+    quality = game_quality(qc)
+    print(f"usable games {int(quality['USABLE'].sum())}/{len(quality)} (plus-minus and minutes within limits)")
+    if dry_run:
+        return 0
+
+    out_dir = Path(get_data_paths(season).game_results).parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stints.to_csv(out_dir / "pbp_stints.csv", index=False)
+    pg.to_csv(out_dir / "pbp_player_games.csv", index=False)
+    quality.to_csv(out_dir / "pbp_game_quality.csv", index=False)
+    print(f"wrote pbp_stints.csv, pbp_player_games.csv and pbp_game_quality.csv under {out_dir}")
+    return 0

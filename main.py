@@ -116,6 +116,11 @@ def main():
   scripts/update_all_game_data.py [--season YYYY-YY] [--pbp-limit N]
       One-shot daily refresh: --update-data, box scores, play-by-play, then rebuild the
       PBP situational table (data/training/) and the frontend store.
+  scripts/build_play_by_play.py --season YYYY-YY [--limit N] [--dry-run]
+      Fetch and cache play-by-play JSON per game (NBA API calls; resumes where it stopped).
+  scripts/build_pbp_lineups.py --season YYYY-YY [--limit N] [--dry-run]
+      Rebuild lineup stints and on-court player games from the cached play-by-play and
+      check them against box scores (same as main.py --season YYYY-YY --build-pbp-lineups).
   scripts/refresh_current_season_views.py --season YYYY-YY
       Refresh the live roster (team_rosters_live.csv) and the season's frontend store
       with current regular-season games. Also runs automatically in --update-data (Step 9b).
@@ -231,6 +236,11 @@ def main():
         help="Rebuild the season's frontend store (data/frontend_store/) and the global store"
     )
     parser.add_argument(
+        "--build-pbp-lineups",
+        action="store_true",
+        help="Rebuild lineup stints and on-court player games from cached play-by-play (no API calls) and check them against the box scores"
+    )
+    parser.add_argument(
         "--update-data",
         action="store_true",
         help="Update NBA schedule and fetch/append missing completed game logs locally"
@@ -270,6 +280,7 @@ def main():
         "fetch_boxscores": "--fetch-boxscores",
         "check_data_freshness": "--check-data-freshness",
         "run_roster_analysis": "--run-roster-analysis",
+        "build_pbp_lineups": "--build-pbp-lineups",
     }
     pipeline_flags = {
         "mock": "--mock",
@@ -296,6 +307,10 @@ def main():
     # An explicit season always writes the production season files.
     if args.season:
         args.output_scope = "production"
+
+    if args.build_pbp_lineups:
+        from src.processing.pbp_lineups import build_and_write
+        sys.exit(build_and_write(season))
 
     if PipelineOrchestrator(args).dispatch():
         return
