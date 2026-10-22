@@ -1,18 +1,19 @@
 name: paper trading snapshot
 
-# Freezes each game's prediction shortly before tip-off, using the newest official injury
-# report. Data inputs come from scripts/ops/publish_snapshot_data.py (run each morning).
-# UTC windows cover US evening tip-offs (22:00-04:59 on weekdays, 16:00-04:59 on weekends);
-# start it by hand from the Actions tab for other days. Runs where no game is due exit at once.
+# Freezes each game's prediction 15 minutes before tip-off with the newest official injury
+# report. GitHub cron cannot be scheduled per game, so it fires at :15 and :45 during US game
+# hours (UTC, covers both daylight and standard time); NBA tip-offs fall on the hour or half
+# hour, so each lands in a run's 30 minute window. Runs with no game due exit before any
+# network call. Data inputs come from scripts/ops/publish_snapshot_data.py (run each morning).
 on:
   schedule:
-    - cron: "*/10 22-23,0-4 * * 1-5"
-    - cron: "*/10 16-23,0-4 * * 0,6"
+    - cron: "15,45 22-23,0-3 * * 1-5"
+    - cron: "15,45 15-23,0-3 * * 0,6"
   workflow_dispatch:
     inputs:
       pre_tip:
         description: "Minutes before tip-off a game counts as due"
-        default: "20"
+        default: "30"
       dry_run:
         description: "Predict and print only, write nothing"
         type: boolean
@@ -35,9 +36,10 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt
+          cache-dependency-path: requirements-snapshot.txt
+      - run: pip install -r requirements-snapshot.txt
       - name: Snapshot games about to start
-        run: PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --pre-tip "${{ inputs.pre_tip || '20' }}" ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --pre-tip "${{ inputs.pre_tip || '30' }}" --final-attempt 20 ${{ inputs.dry_run && '--dry-run' || '' }}
       - name: Commit the ledger
         run: |
           git config user.name "snapshot-bot"

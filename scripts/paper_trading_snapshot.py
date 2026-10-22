@@ -5,12 +5,14 @@ Run after `main.py --update-data` and before tip-off. Games already in the ledge
 are never rewritten and games that have started are skipped, so each record is a
 true pre-game call. Uses the production models; trains nothing.
 
-Best timing: run `--pre-tip 15` every 5 minutes. Each game is frozen on the first run inside
-its window that has the official injury report. If the report cannot be fetched, the game is
-left for the next run and is frozen without it only on the last attempt before tip-off.
+Best timing: run `--pre-tip 30 --final-attempt 20` at :15 and :45 past the hour during game
+hours. A game tipping off on the hour or half hour is then frozen 15 minutes before tip-off with
+the newest official injury report. Failed downloads are retried inside the run; if the report is
+still missing, the game waits for the next run only while more than --final-attempt minutes remain.
 """
 import argparse
 import sys
+import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -31,18 +33,28 @@ from src.ingestion import nba_injury_report as inj
 
 
 FINAL_ATTEMPT_MINUTES = 6  # inside this many minutes to tip-off a game is frozen even without a report
+FETCH_TRIES = 3
+FETCH_PAUSE_SECONDS = 20
 
 
 def fetch_injuries(season: str):
-    """Latest official injury report published today (Eastern), or None when unavailable."""
-    try:
-        report = inj.fetch_report(season, datetime.now(inj.ET).strftime("%Y-%m-%d"))
-    except Exception as exc:
-        print(f"injury report unavailable: {exc}")
-        return None
-    if report is None:
-        print("no injury report published yet today: statuses fall back to the carry-forward default")
-    return report
+    """Latest official injury report published today (Eastern), or None when unavailable.
+
+    A failed download is retried a few times within the run, since a sparse schedule leaves
+    little room for retrying on the next one.
+    """
+    day = datetime.now(inj.ET).strftime("%Y-%m-%d")
+    for attempt in range(1, FETCH_TRIES + 1):
+        try:
+            report = inj.fetch_report(season, day)
+            if report is None:
+                print("no injury report published yet today: statuses fall back to the carry-forward default")
+            return report
+        except Exception as exc:
+            print(f"injury report unavailable (try {attempt} of {FETCH_TRIES}): {exc}")
+            if attempt < FETCH_TRIES:
+                time.sleep(FETCH_PAUSE_SECONDS)
+    return None
 
 
 def game_injuries(report, season: str, game_date: str, away: str, home: str):
@@ -73,6 +85,9 @@ def main() -> int:
                         help="Only snapshot games that tip off within MINUTES from now (ignores --date). Run it every "
                              "5 minutes: each game is frozen on the first run in its window that has the newest injury "
                              "report")
+    parser.add_argument("--final-attempt", type=int, default=FINAL_ATTEMPT_MINUTES, metavar="MINUTES",
+                        help="With --pre-tip, a game with no injury report is left for the next run unless it tips off "
+                             "within MINUTES; use a larger value when runs are far apart")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     now = datetime.now(timezone.utc)
@@ -111,7 +126,7 @@ def main() -> int:
         home, away = g.HOME_TEAM_ABBREVIATION, g.AWAY_TEAM_ABBREVIATION
         day = g.GAME_DATE
         minutes_to_tip = (pd.Timestamp(g.GAME_START_UTC) - pd.Timestamp(now)).total_seconds() / 60
-        if args.pre_tip is not None and report is None and minutes_to_tip > FINAL_ATTEMPT_MINUTES:
+        if args.pre_tip is not None and report is None and minutes_to_tip > args.final_attempt:
             print(f"retry later {gid} {away}@{home}: no injury report, {minutes_to_tip:.0f} min to tip-off")
             continue
         overrides, injuries = (None, None) if started else game_injuries(report, season, day, away, home)

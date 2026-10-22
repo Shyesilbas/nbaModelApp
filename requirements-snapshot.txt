@@ -1,0 +1,10 @@
+pydantic
+joblib
+pandas
+numpy
+scikit-learn==1.5.2
+pyyaml
+lightgbm
+requests
+pymupdf
+fastapi
