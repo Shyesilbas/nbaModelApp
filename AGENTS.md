@@ -54,6 +54,7 @@ Single release **v11** (`release: v11` in `config/production_artifacts.yaml`); f
 - Safe Retraining & Promotion Pipeline: `PYTHONPATH=. python3 scripts/retrain_pipeline.py --season YYYY-YY [--dry-run]`
 
 ### Daily Operations & Data Freshness
+- Morning routine (data refresh, then publish the snapshot inputs so GitHub Actions can predict): `PYTHONPATH=. python3 scripts/ops/morning.py`
 - Daily Data Update (fetches latest completed game logs): `PYTHONPATH=. python3 main.py --update-data`
 - Package Frontend Schedule Context: `PYTHONPATH=. python3 main.py --build-schedule-context`
 - Build Frontend Store (per-season SQLite, closed seasons skipped): `PYTHONPATH=. python3 scripts/build_frontend_store.py`
