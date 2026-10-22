@@ -301,8 +301,19 @@ def frontend_injury_changes(request: Request, home: str, away: str, date: str, s
         _check_token(request)
         season_key = normalize_season(season or get_default_season())
         report = cached_report(season_key, datetime.now(ET).strftime("%Y-%m-%d"))
-        return {"published_et": report.published_et if report else None,
-                "changes": changes_for_game(season_key, date, away.upper(), home.upper())}
+        away_u, home_u = away.upper(), home.upper()
+        summary = None
+        if report:
+            mmddyyyy = datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            entries = [e for e in report.for_matchup(away_u, home_u) if e["game_date"] == mmddyyyy]
+            summary = {
+                "published_et": report.published_et,
+                "submitted": {away_u: report.submitted(away_u, home_u, away_u),
+                              home_u: report.submitted(away_u, home_u, home_u)},
+                "players": [{k: e[k] for k in ("team", "player_name", "status", "reason")} for e in entries],
+            }
+        return {"published_et": report.published_et if report else None, "report": summary,
+                "changes": changes_for_game(season_key, date, away_u, home_u)}
 
     return _run_endpoint(_changes)
 

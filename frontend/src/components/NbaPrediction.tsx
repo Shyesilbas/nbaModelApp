@@ -35,6 +35,7 @@ import {
   InjuryReportPanel,
   InjuryChangesList,
   InjuryReportStamp,
+  type InjuryReportSummary,
   type InjuryChange,
 } from "./prediction";
 
@@ -69,7 +70,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [filterTeam2, setFilterTeam2] = useState("");
   const [modelStatus, setModelStatus] = useState<any>(null);
   const [injuryChanges, setInjuryChanges] = useState<InjuryChange[]>([]);
-  const [latestReportTime, setLatestReportTime] = useState<string | null>(null);
+  const [latestReport, setLatestReport] = useState<InjuryReportSummary | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(!initialGame);
   const [activeResultTab, setActiveResultTab] = useState<"overview" | "explanation" | "players" | "technical">("overview");
 
@@ -147,22 +148,22 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
     const isNear = date >= etDate(0) && date <= etDate(1);
     if (!home || !away || home === away || !date || !isNear) {
       setInjuryChanges([]);
-      setLatestReportTime(null);
+      setLatestReport(null);
       return;
     }
     let active = true;
-    loadPrivateApiFresh<{ published_et: string | null; changes: InjuryChange[] }>(
+    loadPrivateApiFresh<{ report: InjuryReportSummary | null; changes: InjuryChange[] }>(
       `/frontend-data-api/injury-changes?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}`
     )
       .then((r) => {
         if (!active) return;
         setInjuryChanges(r.changes ?? []);
-        setLatestReportTime(r.published_et);
+        setLatestReport(r.report);
       })
       .catch(() => {
         if (!active) return;
         setInjuryChanges([]);
-        setLatestReportTime(null);
+        setLatestReport(null);
       });
     return () => {
       active = false;
@@ -542,7 +543,11 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
             {home && away && date && home !== away && date >= etDate(0) && date <= etDate(1) && (
               <div className="space-y-2">
-                <InjuryReportStamp published={latestReportTime} mode="latest" />
+                <InjuryReportStamp published={latestReport?.published_et} mode="latest" />
+                {latestReport && <InjuryReportPanel report={latestReport} homeInfo={getTeamInfo(home)} awayInfo={getTeamInfo(away)} />}
+                {latestReport && injuryChanges.length === 0 && (
+                  <p className="text-xs text-text-secondary">Bugünkü raporlarda bu iki takımın oyuncularında durum değişikliği yok.</p>
+                )}
                 {injuryChanges.length > 0 && <InjuryChangesList changes={injuryChanges} />}
               </div>
             )}

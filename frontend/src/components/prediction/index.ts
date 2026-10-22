@@ -5,7 +5,7 @@ export { ModelExplanationSection } from "./ModelExplanationSection";
 export { NarrativeBlock } from "./NarrativeBlock";
 export { PlayerSpotlight } from "./PlayerSpotlight";
 export { PlayerMatchupModal } from "./PlayerMatchupModal";
-export { InjuryReportPanel } from "./InjuryReportPanel";
+export { InjuryReportPanel, type InjuryReportSummary } from "./InjuryReportPanel";
 export { SignalCards } from "./SignalCards";
 export { WinProbabilityArc } from "./WinProbabilityArc";
 export type { TeamInfo } from "./types";
