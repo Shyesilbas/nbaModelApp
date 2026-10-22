@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from src.core.data_paths import get_data_paths
+from src.core.data_paths import PLAYER_METADATA_CSV, get_data_paths
 from src.core.season_utils import get_default_season, normalize_season
 from src.ingestion import nba_injury_report as inj
 from src.ingestion.starters_fetcher import starters_path
@@ -26,6 +26,9 @@ logger = logging.getLogger(__name__)
 REPORT_TTL_SECONDS = 300
 RECENT_GAMES = 10
 STARTERS = 5
+# Position groups in data/reference/player_metadata.csv. A replacement comes from the same group as
+# the starter he replaces; if the bench has nobody there, from the closest group, then anyone.
+NEXT_BEST_GROUPS = {"BIG": ("WING", "GUARD"), "WING": ("GUARD", "BIG"), "GUARD": ("WING", "BIG")}
 
 _cache_lock = threading.Lock()
 _cache: Dict[str, Tuple[float, Optional[inj.InjuryReport]]] = {}
@@ -48,11 +51,20 @@ def cached_report(season: str, day: str) -> Optional[inj.InjuryReport]:
     return report
 
 
+def _position_groups() -> Dict[int, str]:
+    """Player id -> BIG / WING / GUARD (UNKNOWN when the metadata has none)."""
+    if not PLAYER_METADATA_CSV.exists():
+        return {}
+    meta = pd.read_csv(PLAYER_METADATA_CSV, usecols=["PLAYER_ID", "POSITION_GROUP"]).drop_duplicates("PLAYER_ID")
+    return {int(r.PLAYER_ID): str(r.POSITION_GROUP).upper() for r in meta.itertuples()}
+
+
 def starter_replacements(team: str, game_date: str, out_ids: set, season: str) -> List[int]:
     """Players to promote because starters of the previous game are out.
 
-    The previous game's starting five minus the out players, topped up with the players who
-    logged the most minutes over the team's recent games (who also played the previous game).
+    Each out starter is replaced by the player with the most minutes over the team's recent games
+    who also played the previous game, preferring the same position group (a center out brings in
+    a big man before a guard who simply plays more).
     """
     if not out_ids:
         return []
@@ -84,17 +96,22 @@ def starter_replacements(team: str, game_date: str, out_ids: set, season: str) -
                              & (starters["IS_STARTER"] == 1)]["Player_ID"].astype(int))
     if not last_five & out_ids:
         return []
-    keep = last_five - out_ids
+    lost = [pid for pid in last_five if pid in out_ids]
     recent_ids = list(mine.sort_values(["GAME_DATE", "Game_ID"])["Game_ID"].drop_duplicates().tail(RECENT_GAMES))
     played_last = set(mine[mine["Game_ID"] == last_id]["Player_ID"].astype(int))
     pool = (mine[mine["Game_ID"].isin(recent_ids)].groupby("Player_ID")["MIN"].mean().sort_values(ascending=False))
-    promoted = []
-    for pid in pool.index.astype(int):
-        if len(keep) + len(promoted) >= STARTERS:
-            break
-        if pid in keep or pid in out_ids or pid not in played_last:
-            continue
-        promoted.append(pid)
+    candidates = [int(pid) for pid in pool.index if int(pid) in played_last and int(pid) not in last_five
+                  and int(pid) not in out_ids]
+    groups = _position_groups()
+    minutes = pool.to_dict()
+    promoted: List[int] = []
+    for starter in sorted(lost, key=lambda pid: -minutes.get(pid, 0.0)):
+        wanted = groups.get(starter, "UNKNOWN")
+        for group in (wanted, *NEXT_BEST_GROUPS.get(wanted, ()), None):
+            pick = next((c for c in candidates if c not in promoted and (group is None or groups.get(c) == group)), None)
+            if pick is not None:
+                promoted.append(pick)
+                break
     return promoted
 
 
