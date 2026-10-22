@@ -17,6 +17,7 @@ import pandas as pd
 
 from src.core.data_paths import ROOT, get_data_paths
 from src.core.season_utils import normalize_season, season_to_file_token
+from src.ingestion.sportsgameodds import total_window
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +75,11 @@ def build_record(
     predicted_away_score: float,
     now: Optional[datetime] = None,
     origin: str = "live",
+    total_line: Optional[float] = None,
+    total_window_rungs: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     p = float(home_win_probability)
-    return {
+    record = {
         "game_id": str(game_id).zfill(10),
         "game_date": str(game_date),
         "start_utc": str(start_utc),
@@ -90,6 +93,11 @@ def build_record(
         "predicted_home_score": round(float(predicted_home_score), 1),
         "predicted_away_score": round(float(predicted_away_score), 1),
     }
+    if total_line is not None and total_window_rungs:
+        # Market total line and its two rungs either side, frozen with the prediction.
+        record["total_line"] = total_line
+        record["total_window"] = total_window_rungs
+    return record
 
 
 def load_results(season: str) -> Dict[str, Dict[str, Any]]:
@@ -124,6 +132,15 @@ def load_closing_odds(season: str) -> Dict[str, Dict[str, Any]]:
     if not path.exists():
         return {}
     df = pd.read_csv(path, dtype={"game_id": str})
+    ladders: Dict[str, Dict[float, Dict[str, int]]] = {}
+    ladder_file = path.with_name("closing_total_ladder.csv")
+    if ladder_file.exists():
+        for lr in pd.read_csv(ladder_file, dtype={"game_id": str}).itertuples():
+            rung = ladders.setdefault(str(lr.game_id).zfill(10), {}).setdefault(float(lr.line), {})
+            if pd.notna(lr.over_odds):
+                rung["over"] = int(lr.over_odds)
+            if pd.notna(lr.under_odds):
+                rung["under"] = int(lr.under_odds)
     odds: Dict[str, Dict[str, Any]] = {}
     for r in df.itertuples():
         home_raw, away_raw = american_to_prob(r.home_ml_close), american_to_prob(r.away_ml_close)
@@ -139,13 +156,7 @@ def load_closing_odds(season: str) -> Dict[str, Dict[str, Any]]:
                 over_odds_close=int(r.over_odds_close),
                 under_odds_close=int(r.under_odds_close),
             )
-            if "over_min_line" in df.columns and pd.notna(r.over_min_line):
-                entry.update(
-                    over_min_line=float(r.over_min_line),
-                    over_min_odds=int(r.over_min_odds),
-                    under_max_line=float(r.under_max_line),
-                    under_max_odds=int(r.under_max_odds),
-                )
+            entry["total_window"] = total_window(entry["total_line_close"], ladders.get(str(r.game_id).zfill(10), {}))
         odds[str(r.game_id).zfill(10)] = entry
     return odds
 
@@ -153,12 +164,13 @@ def load_closing_odds(season: str) -> Dict[str, Dict[str, Any]]:
 def _total_outcome(row: Dict[str, Any]) -> Dict[str, Any]:
     """Over/under grading against the model's own total and against the closing line.
 
-    The model leans Over when its total is above the main line, Under when below. For an Over
-    lean `total_lean_hit` is true when the model total and the final total both clear the lowest
-    Over line any bookmaker offered; for an Under lean, when both are below the highest Under line.
-    `line_bet_won` is the plain bet result at the main line.
+    The reference line is the one frozen with the prediction when the ledger has it, else the
+    closing line. The model leans Over when its total is above that line, Under when below. For
+    an Over lean `total_lean_hit` is true when the model total and the final total both clear the
+    lowest rung of the window (two rungs under the line); for an Under lean, when both stay under
+    the highest rung (two rungs over). `line_bet_won` is the plain bet result at the line.
     """
-    line = row.get("total_line_close")
+    line = row.get("total_line_ref")
     if line is None:
         return {}
     pred, actual = row["predicted_total"], row["actual_total"]
@@ -166,11 +178,14 @@ def _total_outcome(row: Dict[str, Any]) -> Dict[str, Any]:
     line_result = "over" if actual > line else "under" if actual < line else "push"
     out: Dict[str, Any] = {"total_lean": lean, "total_line_result": line_result,
                            "total_lean_hit": None, "line_bet_won": None}
-    if lean and row.get("over_min_line") is not None:
+    window = row.get("total_window")
+    if lean and window:
         if lean == "over":
-            out["total_lean_hit"] = pred > row["over_min_line"] and actual > row["over_min_line"]
+            low = window[0]["line"]
+            out["total_lean_hit"] = pred > low and actual > low
         else:
-            out["total_lean_hit"] = pred < row["under_max_line"] and actual < row["under_max_line"]
+            high = window[-1]["line"]
+            out["total_lean_hit"] = pred < high and actual < high
     if lean:
         out["line_bet_won"] = None if line_result == "push" else lean == line_result
     return out
@@ -191,6 +206,10 @@ def grade(
         res = results.get(rec["game_id"])
         row["status"] = "final" if res else "pending"
         row.update((odds or {}).get(rec["game_id"], {}))
+        if rec.get("total_window"):
+            row["total_line_ref"], row["total_window"], row["total_line_source"] = rec["total_line"], rec["total_window"], "snapshot"
+        elif row.get("total_line_close") is not None:
+            row["total_line_ref"], row["total_line_source"] = row["total_line_close"], "closing"
         if res:
             hs, as_ = res["home_score"], res["away_score"]
             winner = res["home_team"] if hs > as_ else res["away_team"]
@@ -237,7 +256,7 @@ def _market_comparison(done: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _totals_comparison(done: List[Dict[str, Any]]) -> Dict[str, Any]:
-    rows = [g for g in done if g.get("total_line_close") is not None]
+    rows = [g for g in done if g.get("total_line_ref") is not None]
     leaned = [g for g in rows if g["total_lean"]]
     bets = [g for g in leaned if g["line_bet_won"] is not None]
     out: Dict[str, Any] = {"games_with_total": len(rows), "total_leans": len(leaned), "total_lean_hit_rate": None,
@@ -248,7 +267,7 @@ def _totals_comparison(done: List[Dict[str, Any]]) -> Dict[str, Any]:
     if bets:
         out["line_bet_win_rate"] = round(sum(g["line_bet_won"] for g in bets) / len(bets), 4)
     if rows:
-        out["market_mae_total"] = round(sum(abs(g["total_line_close"] - g["actual_total"]) for g in rows) / len(rows), 2)
+        out["market_mae_total"] = round(sum(abs(g["total_line_ref"] - g["actual_total"]) for g in rows) / len(rows), 2)
         out["model_mae_total_on_line"] = round(sum(abs(g["predicted_total"] - g["actual_total"]) for g in rows) / len(rows), 2)
     return out
 

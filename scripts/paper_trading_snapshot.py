@@ -6,6 +6,7 @@ are never rewritten and games that have started are skipped, so each record is a
 true pre-game call. Uses the production models; trains nothing.
 """
 import argparse
+import os
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -23,6 +24,33 @@ from src.api.services.score_prediction import predict_score
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import get_default_season, normalize_season
 from src.features.build_matchup_features import build_features
+from src.ingestion.sportsgameodds import TOTAL_OVER, fetch_events, to_float, total_ladder, total_window
+
+
+def fetch_total_lines(first_day: str, last_day: str) -> dict:
+    """Current market total line and rung window per (home, away) for upcoming games.
+
+    Needs SPORTSGAMEODDS_API_KEY; without it (or on an API error) the records are
+    written without totals, exactly as before.
+    """
+    api_key = os.environ.get("SPORTSGAMEODDS_API_KEY")
+    if not api_key:
+        print("SPORTSGAMEODDS_API_KEY not set: total lines are not frozen")
+        return {}
+    start = f"{first_day}T00:00:00Z"
+    end = (pd.Timestamp(last_day) + pd.Timedelta(days=2)).strftime("%Y-%m-%dT00:00:00Z")
+    lines = {}
+    try:
+        for ev in fetch_events(api_key, startsAfter=start, startsBefore=end, finalized="false"):
+            main = to_float(ev.get("odds", {}).get(TOTAL_OVER, {}).get("bookOverUnder"))
+            if main is None:
+                continue
+            names = ev["teams"]
+            key = (names["home"]["names"]["short"], names["away"]["names"]["short"])
+            lines[key] = (main, total_window(main, total_ladder(ev)))
+    except Exception as exc:
+        print(f"total lines unavailable: {exc}")
+    return lines
 
 
 def main() -> int:
@@ -48,6 +76,7 @@ def main() -> int:
     logged = {r["game_id"] for r in pt.read_ledger(season)}
 
     records = []
+    total_lines = {} if args.backfill else fetch_total_lines(args.date, args.through or args.date)
     for g in games.itertuples():
         gid = str(g.GAME_ID).zfill(10)
         if gid in logged:
@@ -73,6 +102,8 @@ def main() -> int:
             gid, g.GAME_DATE, g.GAME_START_UTC, home, away, win.model_version,
             win.home_win_probability, score.predicted_home_score, score.predicted_away_score, now=now,
             origin="backfill" if started else "live",
+            total_line=total_lines.get((home, away), (None, None))[0],
+            total_window_rungs=total_lines.get((home, away), (None, None))[1],
         ))
         print(f"{gid} {away}@{home}: {win.predicted_winner} {max(win.home_win_probability, win.away_win_probability):.1%}")
 

@@ -32,10 +32,9 @@ type PaperGame = {
   total_line_close?: number;
   over_odds_close?: number;
   under_odds_close?: number;
-  over_min_line?: number;
-  over_min_odds?: number;
-  under_max_line?: number;
-  under_max_odds?: number;
+  total_line_ref?: number;
+  total_line_source?: "snapshot" | "closing";
+  total_window?: { line: number; over_odds: number | null; under_odds: number | null }[];
   total_lean?: "over" | "under" | null;
   total_lean_hit?: boolean | null;
   total_line_result?: "over" | "under" | "push";
@@ -77,6 +76,11 @@ type Report = { season: string; summary: Summary; games: PaperGame[] };
 
 const pct = (v: number | null, digits = 1) => (v == null ? "-" : `${(v * 100).toFixed(digits)}%`);
 const num = (v: number | null | undefined, digits = 2) => (v == null ? "-" : v.toFixed(digits));
+const leanOf = (g: PaperGame) => {
+  if (g.total_line_ref == null) return null;
+  const total = g.predicted_home_score + g.predicted_away_score;
+  return total > g.total_line_ref ? "over" : total < g.total_line_ref ? "under" : null;
+};
 const decimalOdds = (v: number | undefined) =>
   v == null ? "-" : (v > 0 ? 1 + v / 100 : 1 + 100 / -v).toFixed(2);
 const signed = (v: number) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1));
@@ -130,7 +134,7 @@ export default function PaperTrading() {
   const dayIndex = activeDate ? dates.indexOf(activeDate) : -1;
   const dayGraded = dayGames.filter((g) => g.status === "final" && g.valid);
   const dayCorrect = dayGraded.filter((g) => g.correct).length;
-  const dayTotals = dayGames.filter((g) => g.total_line_close != null);
+  const dayTotals = dayGames.filter((g) => g.total_line_ref != null);
 
   if (error) {
     return <InlineError title="Failed to load paper trading" message={error} onRetry={load} />;
@@ -194,74 +198,43 @@ export default function PaperTrading() {
         />
       </div>
 
-      {s.games_with_odds > 0 && (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat
-            label="Market accuracy"
-            value={pct(s.market_accuracy)}
-            hint={`Closing moneyline favorite, ${s.games_with_odds} games. Model ${pct(s.model_accuracy_on_odds)}`}
-          />
-          <Stat
-            label="Market Brier / log loss"
-            value={`${num(s.market_brier, 3)} / ${num(s.market_log_loss, 3)}`}
-            hint="Vig removed, lower is better"
-          />
-          <Stat
-            label="Model Brier / log loss"
-            value={`${num(s.model_brier_on_odds, 3)} / ${num(s.model_log_loss_on_odds, 3)}`}
-            hint="Same games as the market"
-          />
-        </div>
-      )}
+      {/* Tabs Header */}
+      <div className="flex border-b border-border">
+        <button
+          type="button"
+          onClick={() => setActiveTab("over-under")}
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-medium transition-colors ${
+            activeTab === "over-under"
+              ? "border-primary text-primary"
+              : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
+          }`}
+        >
+          Over / Under
+          {s.games_with_total > 0 && (
+            <span className="rounded-full bg-background-tertiary px-1.5 py-0.5 text-[10px] text-text-muted">
+              {s.games_with_total}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("moneyline")}
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-medium transition-colors ${
+            activeTab === "moneyline"
+              ? "border-primary text-primary"
+              : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
+          }`}
+        >
+          Moneyline (Winner)
+          {s.games_graded > 0 && (
+            <span className="rounded-full bg-background-tertiary px-1.5 py-0.5 text-[10px] text-text-muted">
+              {s.games_graded}
+            </span>
+          )}
+        </button>
+      </div>
 
-      {s.bands.length > 0 && (
-        <Card padding="none" className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold text-text-primary">
-              Accuracy by model confidence
-            </caption>
-            <thead className="bg-background-tertiary text-xs text-text-muted">
-              <tr>
-                <th className="px-4 py-2 font-medium">Confidence</th>
-                <th className="px-4 py-2 font-medium">Games</th>
-                <th className="px-4 py-2 font-medium">Model said</th>
-                <th className="px-4 py-2 font-medium">Actual hit rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {s.bands.map((b) => (
-                <tr key={b.label} className="border-t border-border-light">
-                  <td className="px-4 py-2 text-text-primary">{b.label}</td>
-                  <td className="px-4 py-2 text-text-secondary">{b.games}</td>
-                  <td className="px-4 py-2 text-text-secondary">{pct(b.mean_confidence)}</td>
-                  <td className="px-4 py-2 text-text-primary">{pct(b.accuracy)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
-
-      {s.games_with_total > 0 && (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat
-            label="Total reached model number"
-            value={pct(s.total_lean_hit_rate)}
-            hint={`${s.total_leans} games. Over: model and game clear the lowest Over line. Under: both below the highest Under line`}
-          />
-          <Stat
-            label="Total bet vs closing line"
-            value={pct(s.line_bet_win_rate)}
-            hint={`${s.line_bets} games, pushes excluded`}
-          />
-          <Stat
-            label="Total error: model / line"
-            value={`${num(s.model_mae_total_on_line, 1)} / ${num(s.market_mae_total, 1)}`}
-            hint="Mean absolute error in points"
-          />
-        </div>
-      )}
-
+      {/* Date Navigation */}
       <div className="flex flex-wrap items-center gap-2">
         <Button
           variant="secondary"
@@ -292,177 +265,265 @@ export default function PaperTrading() {
         </Button>
         <span className="text-xs text-text-secondary">
           {dayGames.length} games
-          {dayGraded.length > 0 && `, ${dayCorrect} of ${dayGraded.length} picked correctly`}
+          {activeTab === "moneyline" && dayGraded.length > 0 && `, ${dayCorrect} of ${dayGraded.length} picked correctly`}
+          {activeTab === "over-under" && dayTotals.length > 0 && `, ${dayTotals.length} with totals line`}
         </span>
       </div>
 
-      <Card padding="none" className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold text-text-primary">
-            {activeDate} ({s.games_logged} logged this season, {s.games_pending} pending)
-          </caption>
-          <thead className="bg-background-tertiary text-xs text-text-muted">
-            <tr>
-              <th className="px-4 py-2 font-medium">Game</th>
-              <th className="px-4 py-2 font-medium">Model</th>
-              <th className="px-4 py-2 font-medium">Market (closing odds)</th>
-              <th className="px-4 py-2 font-medium">Final</th>
-              <th className="px-4 py-2 font-medium">Result</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dayGames.map((g) => {
-              const conf = Math.max(g.home_win_probability, 1 - g.home_win_probability);
-              const hasOdds = g.market_home_probability != null;
-              const marketPickHome = hasOdds && (g.market_home_probability as number) >= 0.5;
-              const marketConf = hasOdds
-                ? Math.max(g.market_home_probability as number, 1 - (g.market_home_probability as number))
-                : 0;
-              return (
-                <tr key={g.game_id} className="border-t border-border-light align-top">
-                  <td className="whitespace-nowrap px-4 py-2">
-                    <span className="inline-flex items-center gap-2">
-                      <TeamCell abbr={g.away_team} bold={g.status === "final" && g.actual_winner === g.away_team} />
-                      <span className="text-text-muted">@</span>
-                      <TeamCell abbr={g.home_team} bold={g.status === "final" && g.actual_winner === g.home_team} />
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2">
-                    <p className="text-text-primary">
-                      {g.predicted_winner} <span className="text-text-muted">{pct(conf, 0)}</span>
-                    </p>
-                    <p className="text-xs text-text-secondary">
-                      Score {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
-                    </p>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2">
-                    {hasOdds ? (
-                      <>
-                        <p className="text-text-primary">
-                          {marketPickHome ? g.home_team : g.away_team}{" "}
-                          <span className="text-text-muted">{pct(marketConf, 0)}</span>
-                        </p>
-                        <p className="text-xs text-text-secondary">
-                          {g.away_team} {decimalOdds(g.away_ml_close)} / {g.home_team} {decimalOdds(g.home_ml_close)}
-                        </p>
-                      </>
-                    ) : (
-                      <span className="text-text-muted">-</span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2">
-                    {g.status === "final" ? (
-                      <>
-                        <p className="text-text-primary">{g.actual_away_score} - {g.actual_home_score}</p>
-                        {g.predicted_margin != null && g.actual_margin != null && (
-                          <p className="text-xs text-text-secondary">
-                            Margin error {signed(g.predicted_margin - g.actual_margin)}
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-text-muted">-</span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2">
-                    {!g.valid ? (
-                      <Badge variant="warning" size="sm">Logged late</Badge>
-                    ) : g.status === "pending" ? (
-                      <Badge variant="neutral" size="sm">Pending</Badge>
-                    ) : g.origin === "backfill" && g.correct != null ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <Badge variant={g.correct ? "success" : "error"} size="sm">{g.correct ? "Correct" : "Wrong"}</Badge>
-                        <Badge variant="info" size="sm">Backfill</Badge>
-                      </span>
-                    ) : g.correct ? (
-                      <Badge variant="success" size="sm">Correct</Badge>
-                    ) : (
-                      <Badge variant="error" size="sm">Wrong</Badge>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
+      {/* TAB CONTENT: Over / Under */}
+      {activeTab === "over-under" && (
+        <div className="space-y-4">
+          {s.games_with_total > 0 && (
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Stat
+                label="Total reached model number"
+                value={pct(s.total_lean_hit_rate)}
+                hint={`${s.total_leans} games. Over: model and game clear the line minus 2. Under: both stay under the line plus 2`}
+              />
+              <Stat
+                label="Total bet at the line"
+                value={pct(s.line_bet_win_rate)}
+                hint={`${s.line_bets} games, pushes excluded`}
+              />
+              <Stat
+                label="Total error: model / line"
+                value={`${num(s.model_mae_total_on_line, 1)} / ${num(s.market_mae_total, 1)}`}
+                hint="Mean absolute error in points"
+              />
+            </div>
+          )}
 
-      {dayTotals.length > 0 && (
-        <Card padding="none" className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold text-text-primary">
-              Over / Under, {activeDate}
-            </caption>
-            <thead className="bg-background-tertiary text-xs text-text-muted">
-              <tr>
-                <th className="px-4 py-2 font-medium">Game</th>
-                <th className="px-4 py-2 font-medium">Model total</th>
-                <th className="px-4 py-2 font-medium">Market (closing line)</th>
-                <th className="px-4 py-2 font-medium">Final total</th>
-                <th className="px-4 py-2 font-medium">Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dayTotals.map((g) => {
-                return (
-                  <tr key={g.game_id} className="border-t border-border-light align-top">
-                    <td className="whitespace-nowrap px-4 py-2">
-                      <span className="inline-flex items-center gap-2">
-                        <TeamCell abbr={g.away_team} bold={false} />
-                        <span className="text-text-muted">@</span>
-                        <TeamCell abbr={g.home_team} bold={false} />
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2">
-                      <p className="text-text-primary">
-                        {(g.predicted_home_score + g.predicted_away_score).toFixed(1)}
-                      </p>
-                      <p className="text-xs text-text-secondary">
-                        {g.total_lean ? `Leans ${g.total_lean === "over" ? "Over" : "Under"}` : "On the line"}
-                      </p>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2">
-                      <p className="text-text-primary">{g.total_line_close?.toFixed(1)}</p>
-                      <p className="text-xs text-text-secondary">
-                        Over {decimalOdds(g.over_odds_close)} / Under {decimalOdds(g.under_odds_close)}
-                      </p>
-                      {g.over_min_line != null && g.under_max_line != null && (
-                        <p className="text-xs text-text-secondary">
-                          {g.total_lean === "under"
-                            ? `Highest Under ${g.under_max_line.toFixed(1)} at ${decimalOdds(g.under_max_odds)}`
-                            : `Lowest Over ${g.over_min_line.toFixed(1)} at ${decimalOdds(g.over_min_odds)}`}
-                        </p>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2">
-                      {g.status === "final" ? (
-                        <>
-                          <p className="text-text-primary">{g.actual_total}</p>
-                          <p className="text-xs text-text-secondary">
-                            Line result: {g.total_line_result === "push" ? "Push" : g.total_line_result === "over" ? "Over" : "Under"}
-                          </p>
-                        </>
-                      ) : (
-                        <span className="text-text-muted">-</span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2">
-                      {g.status === "pending" ? (
-                        <Badge variant="neutral" size="sm">Pending</Badge>
-                      ) : g.total_lean_hit == null ? (
-                        <Badge variant="neutral" size="sm">No lean</Badge>
-                      ) : (
-                        <Badge variant={g.total_lean_hit ? "success" : "error"} size="sm">
-                          {g.total_lean_hit ? "Reached" : "Missed"}
-                        </Badge>
-                      )}
-                    </td>
+          {dayTotals.length > 0 ? (
+            <Card padding="none" className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold text-text-primary">
+                  Over / Under, {activeDate}
+                </caption>
+                <thead className="bg-background-tertiary text-xs text-text-muted">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Game</th>
+                    <th className="px-4 py-2 font-medium">Model total</th>
+                    <th className="px-4 py-2 font-medium">Market line</th>
+                    <th className="px-4 py-2 font-medium">Final total</th>
+                    <th className="px-4 py-2 font-medium">Result</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </Card>
+                </thead>
+                <tbody>
+                  {dayTotals.map((g) => {
+                    return (
+                      <tr key={g.game_id} className="border-t border-border-light align-top">
+                        <td className="whitespace-nowrap px-4 py-2">
+                          <span className="inline-flex items-center gap-2">
+                            <TeamCell abbr={g.away_team} bold={false} />
+                            <span className="text-text-muted">@</span>
+                            <TeamCell abbr={g.home_team} bold={false} />
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2">
+                          <p className="text-text-primary">
+                            {(g.predicted_home_score + g.predicted_away_score).toFixed(1)}
+                          </p>
+                          <p className="text-xs text-text-secondary">
+                            {(g.total_lean ?? leanOf(g)) ? `Leans ${(g.total_lean ?? leanOf(g)) === "over" ? "Over" : "Under"}` : "On the line"}
+                          </p>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2">
+                          <p className="text-text-primary">
+                            {g.total_line_ref?.toFixed(1)}{" "}
+                            <span className="text-text-muted">{g.total_line_source === "snapshot" ? "pre-game" : "closing"}</span>
+                          </p>
+                          <p className="text-xs text-text-secondary">
+                            Over {decimalOdds(g.over_odds_close)} / Under {decimalOdds(g.under_odds_close)}
+                          </p>
+                          {g.total_window && g.total_window.length > 0 && (
+                            <p className="text-xs text-text-secondary">
+                              {(g.total_lean ?? leanOf(g)) === "under"
+                                ? `Under up to ${g.total_window[g.total_window.length - 1].line.toFixed(1)} at ${decimalOdds(g.total_window[g.total_window.length - 1].under_odds ?? undefined)}`
+                                : `Over from ${g.total_window[0].line.toFixed(1)} at ${decimalOdds(g.total_window[0].over_odds ?? undefined)}`}
+                            </p>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2">
+                          {g.status === "final" ? (
+                            <>
+                              <p className="text-text-primary">{g.actual_total}</p>
+                              <p className="text-xs text-text-secondary">
+                                Line result: {g.total_line_result === "push" ? "Push" : g.total_line_result === "over" ? "Over" : "Under"}
+                              </p>
+                            </>
+                          ) : (
+                            <span className="text-text-muted">-</span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2">
+                          {g.status === "pending" ? (
+                            <Badge variant="neutral" size="sm">Pending</Badge>
+                          ) : g.total_lean_hit == null ? (
+                            <Badge variant="neutral" size="sm">No lean</Badge>
+                          ) : (
+                            <Badge variant={g.total_lean_hit ? "success" : "error"} size="sm">
+                              {g.total_lean_hit ? "Reached" : "Missed"}
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Card>
+          ) : (
+            <Card padding="md">
+              <p className="text-xs text-text-secondary">
+                {activeDate} tarihi için Over/Under bahis çizgisi veya maçı bulunamadı.
+              </p>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* TAB CONTENT: Moneyline (Winner) */}
+      {activeTab === "moneyline" && (
+        <div className="space-y-4">
+          {s.games_with_odds > 0 && (
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Stat
+                label="Market accuracy"
+                value={pct(s.market_accuracy)}
+                hint={`Closing moneyline favorite, ${s.games_with_odds} games. Model ${pct(s.model_accuracy_on_odds)}`}
+              />
+              <Stat
+                label="Market Brier / log loss"
+                value={`${num(s.market_brier, 3)} / ${num(s.market_log_loss, 3)}`}
+                hint="Vig removed, lower is better"
+              />
+              <Stat
+                label="Model Brier / log loss"
+                value={`${num(s.model_brier_on_odds, 3)} / ${num(s.model_log_loss_on_odds, 3)}`}
+                hint="Same games as the market"
+              />
+            </div>
+          )}
+
+          {s.bands.length > 0 && (
+            <Card padding="none" className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold text-text-primary">
+                  Accuracy by model confidence
+                </caption>
+                <thead className="bg-background-tertiary text-xs text-text-muted">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Confidence</th>
+                    <th className="px-4 py-2 font-medium">Games</th>
+                    <th className="px-4 py-2 font-medium">Model said</th>
+                    <th className="px-4 py-2 font-medium">Actual hit rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {s.bands.map((b) => (
+                    <tr key={b.label} className="border-t border-border-light">
+                      <td className="px-4 py-2 text-text-primary">{b.label}</td>
+                      <td className="px-4 py-2 text-text-secondary">{b.games}</td>
+                      <td className="px-4 py-2 text-text-secondary">{pct(b.mean_confidence)}</td>
+                      <td className="px-4 py-2 text-text-primary">{pct(b.accuracy)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
+          <Card padding="none" className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold text-text-primary">
+                {activeDate} ({s.games_logged} logged this season, {s.games_pending} pending)
+              </caption>
+              <thead className="bg-background-tertiary text-xs text-text-muted">
+                <tr>
+                  <th className="px-4 py-2 font-medium">Game</th>
+                  <th className="px-4 py-2 font-medium">Model</th>
+                  <th className="px-4 py-2 font-medium">Market (closing odds)</th>
+                  <th className="px-4 py-2 font-medium">Final</th>
+                  <th className="px-4 py-2 font-medium">Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dayGames.map((g) => {
+                  const conf = Math.max(g.home_win_probability, 1 - g.home_win_probability);
+                  const hasOdds = g.market_home_probability != null;
+                  const marketPickHome = hasOdds && (g.market_home_probability as number) >= 0.5;
+                  const marketConf = hasOdds
+                    ? Math.max(g.market_home_probability as number, 1 - (g.market_home_probability as number))
+                    : 0;
+                  return (
+                    <tr key={g.game_id} className="border-t border-border-light align-top">
+                      <td className="whitespace-nowrap px-4 py-2">
+                        <span className="inline-flex items-center gap-2">
+                          <TeamCell abbr={g.away_team} bold={g.status === "final" && g.actual_winner === g.away_team} />
+                          <span className="text-text-muted">@</span>
+                          <TeamCell abbr={g.home_team} bold={g.status === "final" && g.actual_winner === g.home_team} />
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2">
+                        <p className="text-text-primary">
+                          {g.predicted_winner} <span className="text-text-muted">{pct(conf, 0)}</span>
+                        </p>
+                        <p className="text-xs text-text-secondary">
+                          Score {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
+                        </p>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2">
+                        {hasOdds ? (
+                          <>
+                            <p className="text-text-primary">
+                              {marketPickHome ? g.home_team : g.away_team}{" "}
+                              <span className="text-text-muted">{pct(marketConf, 0)}</span>
+                            </p>
+                            <p className="text-xs text-text-secondary">
+                              {g.away_team} {decimalOdds(g.away_ml_close)} / {g.home_team} {decimalOdds(g.home_ml_close)}
+                            </p>
+                          </>
+                        ) : (
+                          <span className="text-text-muted">-</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2">
+                        {g.status === "final" ? (
+                          <>
+                            <p className="text-text-primary">{g.actual_away_score} - {g.actual_home_score}</p>
+                            {g.predicted_margin != null && g.actual_margin != null && (
+                              <p className="text-xs text-text-secondary">
+                                Margin error {signed(g.predicted_margin - g.actual_margin)}
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-text-muted">-</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2">
+                        {!g.valid ? (
+                          <Badge variant="warning" size="sm">Logged late</Badge>
+                        ) : g.status === "pending" ? (
+                          <Badge variant="neutral" size="sm">Pending</Badge>
+                        ) : g.origin === "backfill" && g.correct != null ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <Badge variant={g.correct ? "success" : "error"} size="sm">{g.correct ? "Correct" : "Wrong"}</Badge>
+                            <Badge variant="info" size="sm">Backfill</Badge>
+                          </span>
+                        ) : g.correct ? (
+                          <Badge variant="success" size="sm">Correct</Badge>
+                        ) : (
+                          <Badge variant="error" size="sm">Wrong</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </Card>
+        </div>
       )}
     </div>
   );

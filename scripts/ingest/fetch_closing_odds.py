@@ -21,14 +21,12 @@ if str(ROOT) not in sys.path:
 from src.api.services.paper_trading import COUNTED_SEASON_TYPES
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import get_default_season, normalize_season
+from src.ingestion.sportsgameodds import fetch_events, to_float, to_int, total_ladder
 
-API_URL = "https://api.sportsgameodds.com/v2/events"
-PAGE_SIZE = 50
 COLUMNS = [
     "game_id", "event_id", "game_date", "start_utc", "home_team", "away_team",
     "home_score", "away_score", "home_ml_close", "away_ml_close",
     "total_line_close", "over_odds_close", "under_odds_close",
-    "over_min_line", "over_min_odds", "under_max_line", "under_max_odds",
 ]
 LADDER_COLUMNS = ["game_id", "line", "over_odds", "under_odds"]
 # SportsGameOdds abbreviation -> NBA abbreviation, where they differ.
@@ -41,64 +39,6 @@ def odds_path(season: str) -> Path:
 
 def ladder_path(season: str) -> Path:
     return Path(get_data_paths(season).team_games_raw).parent / "closing_total_ladder.csv"
-
-
-def decimal(american: int) -> float:
-    return 1 + american / 100 if american > 0 else 1 + 100 / -american
-
-
-def total_ladder(ev: dict) -> dict:
-    """Pre-game total lines offered by any bookmaker, with the best odds per side at each line.
-
-    Includes each book's main line and its alternate lines; quotes updated after the
-    scheduled start are in-game prices and are dropped.
-    """
-    odds = ev.get("odds", {})
-    start = ev["status"]["startsAt"]
-    ladder: dict = {}
-    for side in ("over", "under"):
-        for quote_book in odds.get(f"points-all-game-ou-{side}", {}).get("byBookmaker", {}).values():
-            for q in [quote_book, *quote_book.get("altLines", [])]:
-                line, price = to_float(q.get("overUnder")), to_int(q.get("odds"))
-                if line is None or price is None or q.get("lastUpdatedAt", start) >= start:
-                    continue
-                best = ladder.setdefault(line, {}).get(side)
-                if best is None or decimal(price) > decimal(best):
-                    ladder[line][side] = price
-    return ladder
-
-
-def fetch_events(api_key: str, starts_after: str):
-    cursor = None
-    while True:
-        params = {
-            "leagueID": "NBA", "startsAfter": starts_after, "finalized": "true", "limit": PAGE_SIZE,
-            "includeAltLines": "true",
-        }
-        if cursor:
-            params["cursor"] = cursor
-        resp = requests.get(API_URL, headers={"X-Api-Key": api_key}, params=params, timeout=60)
-        resp.raise_for_status()
-        body = resp.json()
-        yield from body.get("data", [])
-        cursor = body.get("nextCursor")
-        if not cursor:
-            return
-        time.sleep(0.5)
-
-
-def to_int(value):
-    try:
-        return int(str(value).replace("+", ""))
-    except (TypeError, ValueError):
-        return None
-
-
-def to_float(value):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def parse_event(ev: dict) -> dict | None:
@@ -123,15 +63,7 @@ def parse_event(ev: dict) -> dict | None:
         "over_odds_close": to_int(over.get("closeBookOdds")),
         "under_odds_close": to_int(under.get("closeBookOdds")),
     }
-    ladder = total_ladder(ev)
-    over_lines = [l for l, v in ladder.items() if "over" in v]
-    under_lines = [l for l, v in ladder.items() if "under" in v]
-    if over_lines and under_lines:
-        row.update(
-            over_min_line=min(over_lines), over_min_odds=ladder[min(over_lines)]["over"],
-            under_max_line=max(under_lines), under_max_odds=ladder[max(under_lines)]["under"],
-        )
-    row["ladder"] = ladder
+    row["ladder"] = total_ladder(ev)
     if row["home_ml_close"] is None or row["away_ml_close"] is None or row["home_score"] is None:
         return None
     return row
@@ -179,13 +111,11 @@ def main() -> int:
         return 1
     path = odds_path(season)
     first_day = pd.Timestamp(counted["GAME_DATE"].min())
-    if path.exists() and not args.full:
-        stored = pd.read_csv(path, usecols=["game_date", "over_min_line"])
-        if stored["over_min_line"].notna().all():
-            first_day = pd.Timestamp(stored["game_date"].max())
+    if path.exists() and ladder_path(season).exists() and not args.full:
+        first_day = pd.Timestamp(pd.read_csv(path, usecols=["game_date"])["game_date"].max())
     starts_after = args.starts_after or (first_day - pd.Timedelta(days=1)).date().isoformat()
 
-    parsed = [p for p in (parse_event(ev) for ev in fetch_events(api_key, starts_after)) if p]
+    parsed = [p for p in (parse_event(ev) for ev in fetch_events(api_key, startsAfter=starts_after, finalized="true")) if p]
     fetched = attach_game_ids(pd.DataFrame(parsed), schedule) if parsed else pd.DataFrame(columns=COLUMNS)
     event_game = dict(zip(fetched["event_id"], fetched["game_id"]))
     ladder_rows = [
