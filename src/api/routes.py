@@ -224,6 +224,56 @@ def frontend_team_rosters(request: Request, season: str = None):
     return _run_endpoint(lambda: get_team_rosters(request, season))
 
 
+@router.get("/frontend-data-api/injury-report")
+def frontend_injury_report(request: Request, season: str = None, date: str = None):
+    def _injury():
+        from .services.frontend_data import _check_token
+        from src.core.season_utils import get_default_season
+        from src.ingestion import nba_injury_report as inj
+        from datetime import datetime
+        _check_token(request)
+        s = season or get_default_season()
+        d = date or datetime.now(inj.ET).strftime("%Y-%m-%d")
+        try:
+            rep = inj.fetch_report(s, d)
+            if not rep:
+                return {"published_et": None, "date": d, "entries": []}
+            return {
+                "published_et": rep.published_et,
+                "date": d,
+                "entries": rep.entries,
+                "not_submitted": [list(x) for x in rep.not_submitted],
+            }
+        except Exception as exc:
+            return {"published_et": None, "date": d, "entries": [], "error": str(exc)}
+
+    return _run_endpoint(_injury)
+
+
+@router.post("/frontend-data-api/snapshot-publish")
+def start_snapshot_publish(request: Request):
+    from .services.snapshot_publish import start_publish
+
+    def _start():
+        from .services.frontend_data import _check_token
+        _check_token(request)
+        return start_publish()
+
+    return _run_endpoint(_start)
+
+
+@router.get("/frontend-data-api/snapshot-publish")
+def snapshot_publish_status(request: Request):
+    from .services.snapshot_publish import get_status
+
+    def _status():
+        from .services.frontend_data import _check_token
+        _check_token(request)
+        return get_status()
+
+    return _run_endpoint(_status)
+
+
 @router.post("/predict/players", response_model=PlayerPredictionResponse)
 def predict_players_endpoint(req: ScorePredictionRequest):
     return _run_endpoint(lambda: predict_players(req))

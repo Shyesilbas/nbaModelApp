@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, ClipboardCheck, ChevronDown, Calendar } from "lucide-react";
 import { Badge, Button, Card, EmptyState, InlineError, Skeleton } from "./common";
 import TeamLogo from "./TeamLogo";
+import PublishSnapshotButton from "./PublishSnapshotButton";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
 import { fmtDate } from "./game-results/utils";
@@ -152,14 +153,17 @@ export default function PaperTrading() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold text-text-primary">Paper Trading</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Season {report.season}. Each prediction is frozen before tip-off and never rewritten; the result is
-          attached once the game is final.
-          {s.backfilled_graded > 0 &&
-            ` ${s.backfilled_graded} graded games are backfills: re-predicted as of their date using only earlier games.`}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-text-primary">Paper Trading</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Season {report.season}. Each prediction is frozen before tip-off and never rewritten; the result is
+            attached once the game is final.
+            {s.backfilled_graded > 0 &&
+              ` ${s.backfilled_graded} graded games are backfills: re-predicted as of their date using only earlier games.`}
+          </p>
+        </div>
+        <PublishSnapshotButton />
       </div>
 
       {/* Dynamic Top Stat Bar Based on Active Tab */}
