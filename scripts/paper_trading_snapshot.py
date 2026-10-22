@@ -4,10 +4,13 @@
 Run after `main.py --update-data` and before tip-off. Games already in the ledger
 are never rewritten and games that have started are skipped, so each record is a
 true pre-game call. Uses the production models; trains nothing.
+
+Best timing: run `--pre-tip 30` every 15 minutes. Each game is then frozen on the run
+just before tip-off, with the newest official injury report and market total line.
 """
 import argparse
 import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -89,8 +92,16 @@ def main() -> int:
     parser.add_argument("--through", default=None, help="Last game date of a range starting at --date")
     parser.add_argument("--backfill", action="store_true",
                         help="Also predict games already played, as of their date (origin=backfill, labeled in the UI)")
+    parser.add_argument("--pre-tip", type=int, default=None, metavar="MINUTES",
+                        help="Only snapshot games that tip off within MINUTES from now (ignores --date). Run it every "
+                             "15 minutes: each game is frozen on the run just before tip-off, with the newest injury "
+                             "report and market line")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+    now = datetime.now(timezone.utc)
+    if args.pre_tip is not None:
+        args.date = now.date().isoformat()
+        args.through = (now + timedelta(days=1)).date().isoformat()
 
     season = normalize_season(args.season or get_default_season())
     schedule = pd.read_csv(get_data_paths(season).raw_schedule, dtype={"GAME_ID": str})
@@ -101,7 +112,9 @@ def main() -> int:
     ]
     if not args.backfill:
         games = games[games["GAME_STATUS"] == "Scheduled"]
-    now = datetime.now(timezone.utc)
+    if args.pre_tip is not None:
+        start = pd.to_datetime(games["GAME_START_UTC"], utc=True)
+        games = games[(start > now) & (start <= now + timedelta(minutes=args.pre_tip))]
     logged = {r["game_id"] for r in pt.read_ledger(season)}
 
     records = []
