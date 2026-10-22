@@ -9,6 +9,7 @@ import {
   ChevronRight,
   LayoutGrid,
   List,
+  RefreshCw,
   Search,
   Trophy,
 } from "lucide-react";
@@ -27,11 +28,13 @@ import {
   type PlayerBoxScore,
   type TeamBoxScore,
 } from "./game-results";
+import { Button } from "./common";
+import { parseUrlRoute, updateUrlRoute } from "../lib/router";
 import type { ActiveView, DayGroup, DisplayMode } from "./fixtures/types";
 import { FixturesScheduleView } from "./fixtures/FixturesScheduleView";
 import { FixturesStandingsView } from "./fixtures/FixturesStandingsView";
 
-type SeasonTypeFilter = "all" | "preseason" | "regular" | "playin" | "playoffs" | "finals";
+type SeasonTypeFilter = "all" | "regular" | "playin" | "playoffs" | "finals";
 
 const SEASON_TYPE_FILTERS: { id: SeasonTypeFilter; label: string; values: string[] }[] = [
   { id: "all", label: "Tumu", values: [] },
@@ -39,7 +42,6 @@ const SEASON_TYPE_FILTERS: { id: SeasonTypeFilter; label: string; values: string
   { id: "playoffs", label: "Play-Off", values: ["Playoffs"] },
   { id: "playin", label: "Play-In", values: ["PlayIn"] },
   { id: "finals", label: "NBA Finals", values: ["NBA Finals"] },
-  { id: "preseason", label: "Pre-Season", values: ["Pre Season", "Preseason"] },
 ];
 
 export interface FixturesTabProps {
@@ -99,12 +101,16 @@ export default function FixturesTab({
     () => sessionStorage.getItem("nba-results-date") ?? ""
   );
   const [isDateMenuOpen, setIsDateMenuOpen] = useState<boolean>(false);
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(
-    () => sessionStorage.getItem("nba-results-game")
-  );
-  const [initialDetailTab, setInitialDetailTab] = useState<"game" | "home" | "away" | "pbp">(
-    () => (sessionStorage.getItem("nba-results-detail-tab") as "game" | "home" | "away" | "pbp" | null) ?? "game"
-  );
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(() => {
+    const urlRoute = parseUrlRoute();
+    return urlRoute.gameId ?? sessionStorage.getItem("nba-results-game");
+  });
+  const [initialDetailTab, setInitialDetailTab] = useState<"game" | "home" | "away" | "pbp">(() => {
+    const urlRoute = parseUrlRoute();
+    return (urlRoute.detailTab as "game" | "home" | "away" | "pbp") ??
+      (sessionStorage.getItem("nba-results-detail-tab") as "game" | "home" | "away" | "pbp" | null) ??
+      "game";
+  });
 
   const [gameDetailCache, setGameDetailCache] = useState<
     Record<
@@ -123,7 +129,7 @@ export default function FixturesTab({
   const [refreshDone, setRefreshDone] = useState<boolean>(false);
   const [freshPlayByPlay, setFreshPlayByPlay] = useState<any>(null);
 
-  // Persistence to session storage
+  // Persistence to session storage and URL (only if game-results is the active tab)
   useEffect(() => {
     sessionStorage.setItem("nba-fixtures-active-view", activeView);
     sessionStorage.setItem("nba-results-search", search);
@@ -133,6 +139,17 @@ export default function FixturesTab({
     if (selectedGameId) sessionStorage.setItem("nba-results-game", selectedGameId);
     else sessionStorage.removeItem("nba-results-game");
     sessionStorage.setItem("nba-results-detail-tab", initialDetailTab);
+
+    const currentRoute = parseUrlRoute();
+    if (currentRoute.tab === "game-results") {
+      updateUrlRoute(
+        {
+          gameId: selectedGameId || null,
+          detailTab: selectedGameId && initialDetailTab !== "game" ? initialDetailTab : null,
+        },
+        true
+      );
+    }
   }, [activeView, search, seasonTypeFilter, pickedDate, selectedSeason, selectedGameId, initialDetailTab]);
 
   // Load available seasons
@@ -145,6 +162,23 @@ export default function FixturesTab({
       })
       .catch(() => {});
   }, []);
+
+  // Listen to browser popstate (back/forward)
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parseUrlRoute();
+      if (route.tab === "game-results") {
+        if (!route.gameId) {
+          setSelectedGameId(null);
+          sessionStorage.removeItem("nba-results-game");
+        } else if (route.gameId !== selectedGameId) {
+          setSelectedGameId(route.gameId);
+        }
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [selectedGameId]);
 
   // Load matches of selected season
   useEffect(() => {
@@ -281,7 +315,7 @@ export default function FixturesTab({
             : seasonPool.filter((g) => filter.values.includes(g.SEASON_TYPE ?? "")).length;
         return acc;
       },
-      { all: 0, regular: 0, playoffs: 0, playin: 0, finals: 0, preseason: 0 }
+      { all: 0, regular: 0, playoffs: 0, playin: 0, finals: 0 }
     );
   }, [seasonPool]);
 
@@ -294,6 +328,7 @@ export default function FixturesTab({
     }
     setInitialDetailTab(startTab);
     setSelectedGameId(gameId);
+    updateUrlRoute({ gameId, detailTab: startTab !== "game" ? startTab : null });
   };
 
   const selectedGame = useMemo(() => {
@@ -409,7 +444,7 @@ export default function FixturesTab({
   const [missingIds, setMissingIds] = useState<string[]>([]);
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchMsg, setBatchMsg] = useState<string | null>(null);
-  const [batchLog, setBatchLog] = useState<{ gid: string; label: string; state: string }[]>([]);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; done: number; failed: number } | null>(null);
   useEffect(() => {
     if (dueGames.length === 0 || batchRunning) {
       setMissingIds([]);
@@ -433,11 +468,9 @@ export default function FixturesTab({
     const games = pendingDateGames;
     if (games.length === 0 || batchRunning) return;
     setBatchRunning(true);
-    setBatchMsg(`0/${games.length}`);
-    const labels = games.map((g) => ({ gid: normGid(g.GAME_ID), label: `${g.AWAY_TEAM_ABBREVIATION}@${g.HOME_TEAM_ABBREVIATION}` }));
+    setBatchProgress({ current: 0, total: games.length, done: 0, failed: 0 });
+    setBatchMsg(`0/${games.length} maç güncelleniyor...`);
     const stateOf: Record<string, string> = {};
-    const syncLog = () => setBatchLog(labels.map((l) => ({ ...l, state: stateOf[l.gid] ?? "queued" })));
-    syncLog();
     const ids = games.map((g) => g.GAME_ID);
     const done = new Set<string>();
     const failed = new Set<string>();
@@ -458,14 +491,18 @@ export default function FixturesTab({
             done.add(gid);
           } else if (stateOf[gid] === "failed") failed.add(gid);
         }
-        syncLog();
-        setBatchMsg(`${done.size + failed.size}/${games.length}`);
+        const finished = done.size + failed.size;
+        setBatchProgress({ current: finished, total: games.length, done: done.size, failed: failed.size });
+        setBatchMsg(`${finished}/${games.length} maç işlendi`);
       }
-      setBatchMsg(failed.size ? `${done.size} alindi, ${failed.size} alinamadi` : `${done.size} mac alindi`);
+      setBatchMsg(failed.size ? `${done.size} alındı, ${failed.size} alınamadı` : `${done.size} maç güncellendi`);
     } catch (err) {
-      setBatchMsg(err instanceof Error ? err.message : "Mac verileri alinamadi.");
+      setBatchMsg(err instanceof Error ? err.message : "Maç verileri alınamadı.");
     } finally {
       setBatchRunning(false);
+      setTimeout(() => {
+        setBatchProgress(null);
+      }, 4000);
     }
   };
 
@@ -483,18 +520,24 @@ export default function FixturesTab({
     const awayBS =
       teamRows.find((t) => normGid(t.GAME_ID) === gid && t.TEAM_ABBREVIATION === selectedGame.AWAY_TEAM_ABBREVIATION) ?? null;
 
+    const handleBackToFixtures = () => {
+      setSelectedGameId(null);
+      sessionStorage.removeItem("nba-results-game");
+      updateUrlRoute({ gameId: null, detailTab: null });
+    };
+
     return (
       <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => setSelectedGameId(null)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background-primary px-3 py-1.5 text-xs font-bold text-text-primary transition-colors hover:bg-background-tertiary"
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleBackToFixtures}
+          leftIcon={<ArrowLeft size={16} strokeWidth={1.5} />}
         >
-          <ArrowLeft size={13} />
-          <span>Fiksture Don</span>
-        </button>
+          Fikstüre dön
+        </Button>
         {isCompletedGame && detailLoading ? (
-          <div className="flex h-32 items-center justify-center gap-2 rounded-xl border border-border bg-background-primary shadow-xs">
+          <div className="flex h-32 items-center justify-center gap-2 rounded border border-border bg-background-primary ">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <span className="text-xs text-text-secondary">Kutu puanlari yukleniyor...</span>
           </div>
@@ -514,6 +557,7 @@ export default function FixturesTab({
             refreshDone={refreshDone}
             freshPlayByPlay={freshPlayByPlay}
             onRefresh={() => refreshGame(selectedGame)}
+            onBack={handleBackToFixtures}
             onPredict={() => {
               if (onNavigateToPrediction) {
                 onNavigateToPrediction({
@@ -532,19 +576,19 @@ export default function FixturesTab({
   return (
     <div className="space-y-5">
       {/* Consolidated Control Bar matching Premier League App format */}
-      <div className="rounded-2xl border border-border bg-background-primary p-3 shadow-xs">
+      <div className="rounded border border-border bg-background-primary p-3 ">
         <div className="flex flex-col items-stretch justify-between gap-2.5 lg:flex-row lg:items-center">
           
           {/* Left: View Tabs (Fikstur vs Puan Tablosu) + Date Stepper */}
           <div className="flex flex-wrap items-center gap-2">
             {/* View Mode Toggle: Fikstur vs Puan Tablosu */}
-            <div className="flex items-center rounded-xl border border-border bg-background-tertiary p-0.5 shrink-0">
+            <div className="flex items-center rounded border border-border bg-background-tertiary p-0.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveView("fixtures")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-bold transition-all ${
                   activeView === "fixtures"
-                    ? "bg-primary text-white shadow-xs"
+                    ? "bg-primary text-white "
                     : "text-text-secondary hover:text-text-primary"
                 }`}
               >
@@ -554,9 +598,9 @@ export default function FixturesTab({
               <button
                 type="button"
                 onClick={() => setActiveView("table")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-bold transition-all ${
                   activeView === "table"
-                    ? "bg-primary text-white shadow-xs"
+                    ? "bg-primary text-white "
                     : "text-text-secondary hover:text-text-primary"
                 }`}
               >
@@ -567,12 +611,12 @@ export default function FixturesTab({
 
             {/* Date Stepper (Only active in fixtures view) */}
             {activeView === "fixtures" && uniqueDates.length > 0 && (
-              <div className="flex items-center rounded-xl border border-border bg-background-tertiary/70 p-0.5 shrink-0">
+              <div className="flex items-center rounded border border-border bg-background-tertiary/70 p-0.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setSelectedDate(uniqueDates[selectedDateIndex - 1] ?? selectedDate)}
                   disabled={selectedDateIndex <= 0}
-                  className="rounded-lg p-1 text-text-secondary transition-all hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="rounded p-1 text-text-secondary transition-all hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Onceki Gun"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -595,7 +639,7 @@ export default function FixturesTab({
                   {isDateMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsDateMenuOpen(false)} />
-                      <div className="absolute left-0 top-full z-50 mt-1.5 max-h-64 w-60 overflow-y-auto rounded-xl border border-border bg-background-primary p-1.5 shadow-xl scrollbar-thin">
+                      <div className="absolute left-0 top-full z-50 mt-1.5 max-h-64 w-60 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-xl scrollbar-thin">
                         {uniqueDates.map((d) => {
                           const isSelected = selectedDate === d;
                           const isToday = d === todayStr;
@@ -608,7 +652,7 @@ export default function FixturesTab({
                                 setSelectedDate(d);
                                 setIsDateMenuOpen(false);
                               }}
-                              className={`mt-0.5 flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-bold transition-all ${
+                              className={`mt-0.5 flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs font-bold transition-all ${
                                 isSelected ? "bg-primary text-white" : "text-text-primary hover:bg-background-tertiary"
                               }`}
                             >
@@ -616,7 +660,7 @@ export default function FixturesTab({
                               <div className="flex items-center gap-1.5">
                                 {isToday && (
                                   <span
-                                    className={`rounded px-1.5 py-0.2 text-[9px] font-sans font-black uppercase ${
+                                    className={`rounded px-1.5 py-0.2 text-[9px] font-sans font-semibold uppercase ${
                                       isSelected ? "bg-status-success text-white" : "bg-status-success/20 text-status-success"
                                     }`}
                                   >
@@ -639,7 +683,7 @@ export default function FixturesTab({
                   type="button"
                   onClick={() => setSelectedDate(uniqueDates[selectedDateIndex + 1] ?? selectedDate)}
                   disabled={selectedDateIndex >= uniqueDates.length - 1}
-                  className="rounded-lg p-1 text-text-secondary transition-all hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="rounded p-1 text-text-secondary transition-all hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Sonraki Gun"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -648,26 +692,44 @@ export default function FixturesTab({
             )}
 
             {/* Fetch every finished game of the day that has no data yet */}
-            {activeView === "fixtures" && selectedDate && (
+            {activeView === "fixtures" && selectedDate && (pendingDateGames.length > 0 || batchRunning || batchProgress) && (
               <div className="flex shrink-0 items-center gap-2">
                 <button
                   type="button"
                   onClick={refreshDateGames}
-                  disabled={batchRunning || pendingDateGames.length === 0}
-                  className="rounded-lg border border-border bg-background-tertiary px-2 py-1 text-[11px] font-bold text-text-primary transition-all hover:border-primary disabled:opacity-40"
-                  title="Bu gunun tamamlanan ve henuz cekilmemis tum maclarini cek"
+                  disabled={batchRunning}
+                  className="inline-flex items-center gap-1.5 rounded border border-border bg-background-tertiary px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:border-primary disabled:opacity-50"
+                  title={`${pendingDateGames.length} tamamlanan maçın kutu puanını çek`}
                 >
-                  {batchRunning ? `Cekiliyor ${batchMsg ?? ""}` : `Tamamlananlari cek (${pendingDateGames.length})`}
-                </button>
-                {!batchRunning && batchMsg && <span className="text-[11px] text-text-muted">{batchMsg}</span>}
-                {batchLog.length > 0 && (
-                  <span className="flex flex-wrap gap-x-2 text-[10px] text-text-muted">
-                    {batchLog.map((l) => (
-                      <span key={l.gid}>
-                        {l.label} {l.state === "complete" ? "✓" : l.state === "failed" ? "✗" : l.state === "running" ? "…" : "·"}
-                      </span>
-                    ))}
+                  <RefreshCw size={12} className={batchRunning ? "animate-spin text-primary" : "text-text-muted"} />
+                  <span>{batchRunning ? "Çekiliyor..." : "Yenile"}</span>
+                  <span className="rounded-sm border border-border bg-background-primary px-1 py-0.2 text-[10px] text-text-muted">
+                    {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : pendingDateGames.length}
                   </span>
+                </button>
+
+                {/* Progress Bar & Status */}
+                {batchProgress && (
+                  <div className="flex items-center gap-2 rounded border border-border bg-background-primary px-2 py-1">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center justify-between gap-3 text-[10px] font-medium text-text-secondary">
+                        <span>{batchMsg || `${batchProgress.current}/${batchProgress.total}`}</span>
+                        <span>{Math.round((batchProgress.current / (batchProgress.total || 1)) * 100)}%</span>
+                      </div>
+                      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-background-tertiary">
+                        <div
+                          className="h-full bg-primary transition-all duration-300"
+                          style={{
+                            width: `${Math.round((batchProgress.current / (batchProgress.total || 1)) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!batchRunning && !batchProgress && batchMsg && (
+                  <span className="text-[11px] text-text-muted">{batchMsg}</span>
                 )}
               </div>
             )}
@@ -677,11 +739,11 @@ export default function FixturesTab({
               <button
                 type="button"
                 onClick={() => setSelectedDate(todayStr)}
-                className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-background-tertiary px-2 py-1 text-[11px] font-bold text-text-primary transition-all hover:border-primary"
-                title="Bugunku maclara don"
+                className="flex shrink-0 items-center gap-1.5 rounded border border-border bg-background-tertiary px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:border-primary"
+                title="Bugünkü maçlara git"
               >
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-status-success" />
-                <span>Bugune Don</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
+                <span>Bugün</span>
               </button>
             )}
           </div>
@@ -698,7 +760,7 @@ export default function FixturesTab({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Takim / arena ara..."
-                  className="w-full rounded-xl border border-border bg-background-tertiary py-1.5 pl-8 pr-7 text-xs font-medium text-text-primary placeholder:text-text-muted outline-none transition-all focus:border-border-focus focus:bg-background-primary"
+                  className="w-full rounded border border-border bg-background-tertiary py-1.5 pl-8 pr-7 text-xs font-medium text-text-primary placeholder:text-text-muted outline-none transition-all focus:border-border-focus focus:bg-background-primary"
                 />
                 {search && (
                   <button
@@ -715,13 +777,13 @@ export default function FixturesTab({
 
             {/* View Mode Toggle: List <-> Cards */}
             {activeView === "fixtures" && (
-              <div className="flex items-center rounded-xl border border-border bg-background-tertiary p-0.5 shrink-0">
+              <div className="flex items-center rounded border border-border bg-background-tertiary p-0.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleDisplayModeChange("list")}
-                  className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-bold transition-all ${
                     displayMode === "list"
-                      ? "bg-primary text-white shadow-xs"
+                      ? "bg-primary text-white "
                       : "text-text-secondary hover:text-text-primary"
                   }`}
                   title="Kompakt Liste"
@@ -732,9 +794,9 @@ export default function FixturesTab({
                 <button
                   type="button"
                   onClick={() => handleDisplayModeChange("cards")}
-                  className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-bold transition-all ${
                     displayMode === "cards"
-                      ? "bg-primary text-white shadow-xs"
+                      ? "bg-primary text-white "
                       : "text-text-secondary hover:text-text-primary"
                   }`}
                   title="Detayli Kartlar"
@@ -757,7 +819,7 @@ export default function FixturesTab({
                   setSelectedSeason(e.target.value);
                   setSelectedGameId(null);
                 }}
-                className="appearance-none rounded-xl border border-border bg-background-tertiary py-1.5 pl-2.5 pr-7 text-xs font-bold text-text-primary hover:bg-background-tertiary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                className="appearance-none rounded border border-border bg-background-tertiary py-1.5 pl-2.5 pr-7 text-xs font-bold text-text-primary hover:bg-background-tertiary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
               >
                 {seasonsList.map((season) => (
                   <option key={season} value={season}>
@@ -784,9 +846,9 @@ export default function FixturesTab({
                 key={filter.id}
                 onClick={() => setSeasonTypeFilter(filter.id)}
                 disabled={count === 0}
-                className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-bold transition-colors disabled:opacity-30 ${
+                className={`inline-flex items-center gap-1 rounded border px-2.5 py-1 text-xs font-bold transition-colors disabled:opacity-30 ${
                   isSelected
-                    ? "border-primary bg-primary text-white shadow-xs"
+                    ? "border-primary bg-primary text-white "
                     : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
                 }`}
               >
@@ -802,7 +864,7 @@ export default function FixturesTab({
 
       {/* Error alert if any */}
       {error && (
-        <div className="rounded-xl border border-status-error/30 bg-background-primary p-4 text-center shadow-xs">
+        <div className="rounded border border-status-error/30 bg-background-primary p-4 text-center ">
           <AlertTriangle size={20} className="mx-auto mb-1.5 text-status-error" />
           <p className="text-xs font-bold text-status-error">{error}</p>
         </div>

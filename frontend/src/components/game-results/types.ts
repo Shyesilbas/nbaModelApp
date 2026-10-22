@@ -16,6 +16,8 @@ export interface TeamBoxScore {
   FT_PCT: number | null;
   REB: number | null;
   AST: number | null;
+  STL?: number | null;
+  BLK?: number | null;
   TOV: number | null;
   PLUS_MINUS: number | null;
 }

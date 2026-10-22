@@ -1,4 +1,4 @@
-import { NBA_TEAMS } from "./nbaTeams";
+import { NBA_TEAMS, getTeamLogoUrl } from "./nbaTeams";
 
 interface ExportPredictionReportArgs {
   result: any;
@@ -421,7 +421,7 @@ const aInfo = getTeamInfo(resData.away_team || fallbackAway);
 
         <div class="matchup-hero">
           <div class="team-row away">
-            <img class="team-logo" src="https://a.espncdn.com/i/teamlogos/nba/500/${aInfo.abbr.toLowerCase()}.png" alt="${aInfo.name}" />
+            <img class="team-logo" src="${getTeamLogoUrl(aInfo.abbr)}" alt="${aInfo.name}" />
             <div class="team-meta">
               <div class="team-name">${aInfo.name}</div>
               <div class="team-sub">Away · ${(resData.win_probability?.away_win_probability * 100).toFixed(1)}% Win Prob</div>
@@ -439,7 +439,7 @@ const aInfo = getTeamInfo(resData.away_team || fallbackAway);
               <div class="team-name">${hInfo.name}</div>
               <div class="team-sub">Home · ${(resData.win_probability?.home_win_probability * 100).toFixed(1)}% Win Prob</div>
             </div>
-            <img class="team-logo" src="https://a.espncdn.com/i/teamlogos/nba/500/${hInfo.abbr.toLowerCase()}.png" alt="${hInfo.name}" />
+            <img class="team-logo" src="${getTeamLogoUrl(hInfo.abbr)}" alt="${hInfo.name}" />
           </div>
 
           <div class="win-banner">

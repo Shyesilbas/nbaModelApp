@@ -39,6 +39,48 @@ export const TEAM_NAME_BY_ABBR: Record<NbaTeamAbbr, string> = {
   WAS: "Washington Wizards",
 };
 
+export const TEAM_SHORT_NAME_BY_ABBR: Record<NbaTeamAbbr, string> = {
+  ATL: "Hawks",
+  BOS: "Celtics",
+  BKN: "Nets",
+  CHA: "Hornets",
+  CHI: "Bulls",
+  CLE: "Cavaliers",
+  DAL: "Mavericks",
+  DEN: "Nuggets",
+  DET: "Pistons",
+  GSW: "Warriors",
+  HOU: "Rockets",
+  IND: "Pacers",
+  LAC: "Clippers",
+  LAL: "Lakers",
+  MEM: "Grizzlies",
+  MIA: "Heat",
+  MIL: "Bucks",
+  MIN: "Timberwolves",
+  NOP: "Pelicans",
+  NYK: "Knicks",
+  OKC: "Thunder",
+  ORL: "Magic",
+  PHI: "76ers",
+  PHX: "Suns",
+  POR: "Trail Blazers",
+  SAC: "Kings",
+  SAS: "Spurs",
+  TOR: "Raptors",
+  UTA: "Jazz",
+  WAS: "Wizards",
+};
+
+export const getTeamShortName = (abbr?: string | null, fallback?: string | null): string => {
+  if (!abbr) return fallback ?? "";
+  const upper = abbr.toUpperCase();
+  if (isKnownTeamAbbr(upper)) {
+    return TEAM_SHORT_NAME_BY_ABBR[upper];
+  }
+  return fallback ?? abbr;
+};
+
 export interface TeamTheme {
   primary: string;
   secondary: string;
@@ -98,14 +140,21 @@ export const getTeamTheme = (abbr?: string | null): TeamTheme => {
 export const NBA_TEAMS = NBA_TEAM_ABBRS.map((abbr) => ({
   abbr,
   name: TEAM_NAME_BY_ABBR[abbr],
+  shortName: TEAM_SHORT_NAME_BY_ABBR[abbr],
   color: TEAM_THEME_BY_ABBR[abbr].primary,
   secondaryColor: TEAM_THEME_BY_ABBR[abbr].secondary,
 }));
 
-export const getTeamLogoUrl = (abbr: string) =>
-  abbr.toUpperCase() === "UTA"
-    ? "https://cdn.nba.com/logos/nba/1610612762/primary/L/logo.svg"
-    : `https://a.espncdn.com/i/teamlogos/nba/500/${abbr.toLowerCase()}.png`;
+export const getTeamLogoUrl = (abbr: string) => {
+  const upper = abbr.toUpperCase();
+  if (upper === "UTA") {
+    return "https://cdn.nba.com/logos/nba/1610612762/primary/L/logo.svg";
+  }
+  if (upper === "NOP") {
+    return "https://a.espncdn.com/i/teamlogos/nba/500/no.png";
+  }
+  return `https://a.espncdn.com/i/teamlogos/nba/500/${abbr.toLowerCase()}.png`;
+};
 export const getPlayerHeadshotUrl = (playerId: number | string) =>
   `https://ak-static.cms.nba.com/wp-content/uploads/headshots/nba/latest/260x190/${playerId}.png`;
 

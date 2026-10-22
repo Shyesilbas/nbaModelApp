@@ -453,7 +453,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                     onClick={() => { setMode(m); setResult(null); setError(null); }}
                     className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
                       mode === m
-                        ? "bg-background-primary text-text-primary border border-border shadow-xs"
+                        ? "bg-background-primary text-text-primary border border-border "
                         : "text-text-secondary hover:text-text-primary"
                     }`}
                   >

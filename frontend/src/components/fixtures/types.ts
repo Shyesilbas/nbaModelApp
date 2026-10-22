@@ -8,6 +8,7 @@ export interface TeamStanding {
   rank: number;
   abbr: string;
   name: string;
+  fullName?: string;
   conference: "East" | "West";
   gp: number;
   w: number;

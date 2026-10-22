@@ -30,7 +30,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
 }) => {
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border bg-background-primary py-20 text-center shadow-xs">
+      <div className="rounded border border-border bg-background-primary py-20 text-center ">
         <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <p className="text-xs font-bold text-text-secondary">Fikstur ve mac verileri yukleniyor...</p>
       </div>
@@ -39,7 +39,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
 
   if (dayGroups.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-background-primary py-16 text-center shadow-xs">
+      <div className="rounded border border-border bg-background-primary py-16 text-center ">
         <p className="text-sm font-bold text-text-primary">Aramayla eslesen mac bulunamadi.</p>
         <p className="mt-1 text-xs text-text-secondary">Filtreleri veya arama kriterini degistirip tekrar deneyin.</p>
       </div>
@@ -63,7 +63,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
 
           {/* Matches List or Grid for that Day */}
           {displayMode === "list" ? (
-            <div className="overflow-hidden rounded-xl border border-border bg-background-primary divide-y divide-border shadow-xs">
+            <div className="overflow-hidden rounded border border-border bg-background-primary divide-y divide-border ">
               {dayGroup.games.map((game) => (
                 <FixtureMatchRow
                   key={game.GAME_ID}

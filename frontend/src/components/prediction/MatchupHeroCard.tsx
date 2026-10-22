@@ -1,4 +1,4 @@
-import { Award, Calendar, Cpu, Download, RefreshCw, Sparkles, TrendingUp, Trophy, Zap } from "lucide-react";
+import { Award, Calendar, Cpu, Download, RefreshCw, TrendingUp, Trophy, Zap } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { TeamInfo } from "./types";
 import { exportPredictionAsPDF } from "../../lib/predictionReport";
@@ -117,7 +117,7 @@ export function MatchupHeroCard({
               <TeamLogo abbr={awayInfo.abbr} name={awayInfo.name} size={48} />
               {!isHomeWinner && (
                 <span
-                  className="absolute -top-1.5 -right-1.5 p-1 bg-background-primary border border-border rounded-full text-status-warning shadow-xs"
+                  className="absolute -top-1.5 -right-1.5 p-1 bg-background-primary border border-border rounded-full text-status-warning "
                   title="Galibiyet Favorisi"
                 >
                   <Trophy size={13} />
@@ -164,7 +164,6 @@ export function MatchupHeroCard({
         <div className="flex flex-col items-center justify-center gap-3 px-2 py-2 w-full max-w-xs mx-auto">
           {/* Matchup Conviction */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-sm border border-border bg-background-secondary text-xs font-medium text-text-primary text-center">
-            <Sparkles size={13} className="text-primary shrink-0" />
             <span>
               {isHighConfidence
                 ? "Yüksek Güvenilirlik"
@@ -220,7 +219,7 @@ export function MatchupHeroCard({
               <TeamLogo abbr={homeInfo.abbr} name={homeInfo.name} size={48} />
               {isHomeWinner && (
                 <span
-                  className="absolute -top-1.5 -right-1.5 p-1 bg-background-primary border border-border rounded-full text-status-warning shadow-xs"
+                  className="absolute -top-1.5 -right-1.5 p-1 bg-background-primary border border-border rounded-full text-status-warning "
                   title="Galibiyet Favorisi"
                 >
                   <Trophy size={13} />
@@ -265,7 +264,7 @@ export function MatchupHeroCard({
       </div>
 
       {/* Bottom KPI Metric Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-border-light">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-border-light">
         <div className="p-3 rounded border border-border bg-background-secondary">
           <div className="flex items-center gap-1.5 text-text-secondary mb-1">
             <TrendingUp size={14} />
@@ -306,21 +305,6 @@ export function MatchupHeroCard({
           </p>
           <p className="text-xs text-text-secondary mt-0.5">
             {parseFloat(pace) > 100 ? "Yüksek Tempolu Hücum" : "Kontrollü Set Oyunu"}
-          </p>
-        </div>
-
-        <div className="p-3 rounded border border-border bg-background-secondary">
-          <div className="flex items-center gap-1.5 text-text-secondary mb-1">
-            <Sparkles size={14} />
-            <span className="text-xs font-medium text-text-secondary">
-              Model Güveni
-            </span>
-          </div>
-          <p className="text-base sm:text-lg font-semibold tabular-nums text-text-primary">
-            {confidence}
-          </p>
-          <p className="text-xs text-text-secondary mt-0.5">
-            Kalibre Edilmiş ML + Simülasyon
           </p>
         </div>
       </div>

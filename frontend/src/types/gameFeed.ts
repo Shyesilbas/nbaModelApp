@@ -20,6 +20,7 @@ export interface GameDetail {
     team_city?: string | null;
     score?: number | null;
     quarter_scores?: number[] | null;
+    players?: Record<string, unknown>[] | null;
   };
   away_team?: {
     team_id?: string | null;
@@ -27,9 +28,10 @@ export interface GameDetail {
     team_city?: string | null;
     score?: number | null;
     quarter_scores?: number[] | null;
+    players?: Record<string, unknown>[] | null;
   };
-  team_stats?: any[];
-  player_stats?: any[];
+  team_stats?: Record<string, unknown>[];
+  player_stats?: Record<string, unknown>[];
   game_leaders?: {
     points?: TeamLeader | null;
     rebounds?: TeamLeader | null;

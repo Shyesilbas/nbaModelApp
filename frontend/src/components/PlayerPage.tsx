@@ -5,14 +5,22 @@ import {
   Check,
   ArrowLeft,
   Calendar,
-  AlertCircle,
   ArrowRightLeft,
   X,
+  User,
 } from "lucide-react";
 import { loadPrivateApi } from "../lib/dataCache";
+import { updateUrlRoute, parseUrlRoute } from "../lib/router";
 import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
-import GameDetailPanel from "./GameDetailPanel";
+import {
+  Card,
+  Button,
+  Badge,
+  Skeleton,
+  EmptyState,
+  InlineError,
+} from "./common";
 
 /* ─────────── Types ─────────── */
 interface PlayerProfile {
@@ -147,7 +155,7 @@ function SeasonSelector({
     return (
       <>
         {team && <TeamLogo abbr={team} name="" size={20} />}
-        <span className="tabular-nums">{s}</span>
+        <span className="tabular-nums font-medium">{s}</span>
         {team && <span className="text-text-secondary">{team}</span>}
       </>
     );
@@ -160,7 +168,7 @@ function SeasonSelector({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex h-10 items-center gap-2 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary hover:border-card-border-hover focus-visible:border-border-focus focus-visible:outline-none cursor-pointer"
+        className="inline-flex h-9 items-center gap-2 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary hover:border-card-border-hover focus-visible:ring-1 focus-visible:ring-border-focus focus-visible:outline-none transition-colors cursor-pointer"
       >
         {label(selected)}
         <ChevronDown size={16} strokeWidth={1.5} className="text-text-muted" />
@@ -168,17 +176,22 @@ function SeasonSelector({
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 z-50 mt-1 max-h-72 min-w-full overflow-y-auto rounded border border-border bg-background-primary py-1 shadow-sm"
+          className="absolute right-0 z-50 mt-1 max-h-72 min-w-full overflow-y-auto rounded border border-border bg-background-primary py-1 shadow-md"
         >
           {[...seasons].reverse().map((sn) => (
             <li key={sn} role="option" aria-selected={sn === selected}>
               <button
                 type="button"
-                onClick={() => { onChange(sn); setOpen(false); }}
-                className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm text-text-primary hover:bg-background-tertiary cursor-pointer"
+                onClick={() => {
+                  onChange(sn);
+                  setOpen(false);
+                }}
+                className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-text-primary hover:bg-background-tertiary transition-colors cursor-pointer"
               >
                 {label(sn)}
-                {sn === selected && <Check size={16} strokeWidth={1.5} className="ml-auto text-text-muted" />}
+                {sn === selected && (
+                  <Check size={16} strokeWidth={1.5} className="ml-auto text-text-muted" />
+                )}
               </button>
             </li>
           ))}
@@ -193,9 +206,9 @@ function AveragesGrid({ avgs }: { avgs: SeasonAverages }) {
     { label: "Sayı (PPG)", short: "PPG", value: fmtStat(avgs.PTS) },
     { label: "Ribaund (RPG)", short: "RPG", value: fmtStat(avgs.REB) },
     { label: "Asist (APG)", short: "APG", value: fmtStat(avgs.AST) },
+    { label: "Süre (MIN)", short: "MIN", value: fmtStat(avgs.MIN) },
   ];
   const supporting = [
-    { label: "MIN", value: fmtStat(avgs.MIN) },
     { label: "STL", value: fmtStat(avgs.STL) },
     { label: "BLK", value: fmtStat(avgs.BLK) },
     { label: "TOV", value: fmtStat(avgs.TOV) },
@@ -207,44 +220,93 @@ function AveragesGrid({ avgs }: { avgs: SeasonAverages }) {
     {
       label: "FG%",
       value: fmtPct(avgs.FG_PCT),
-      sub: avgs.FGM != null && avgs.FGA != null ? `${fmtStat(avgs.FGM)} / ${fmtStat(avgs.FGA)}` : undefined,
+      sub:
+        avgs.FGM != null && avgs.FGA != null
+          ? `${fmtStat(avgs.FGM)}/${fmtStat(avgs.FGA)}`
+          : undefined,
     },
     {
       label: "3P%",
       value: fmtPct(avgs.FG3_PCT),
-      sub: avgs.FG3M != null && avgs.FG3A != null ? `${fmtStat(avgs.FG3M)} / ${fmtStat(avgs.FG3A)}` : undefined,
+      sub:
+        avgs.FG3M != null && avgs.FG3A != null
+          ? `${fmtStat(avgs.FG3M)}/${fmtStat(avgs.FG3A)}`
+          : undefined,
     },
     {
       label: "FT%",
       value: fmtPct(avgs.FT_PCT),
-      sub: avgs.FTM != null && avgs.FTA != null ? `${fmtStat(avgs.FTM)} / ${fmtStat(avgs.FTA)}` : undefined,
+      sub:
+        avgs.FTM != null && avgs.FTA != null
+          ? `${fmtStat(avgs.FTM)}/${fmtStat(avgs.FTA)}`
+          : undefined,
     },
   ];
 
-  const stat = (label: string, value: string, sub?: string, big = false) => (
-    <div key={label}>
-      <p className="text-xs text-text-secondary">{label}</p>
-      <p className={`tabular-nums text-text-primary ${big ? "text-xl font-semibold" : "text-sm font-medium"}`}>
-        {value}
-        {sub && <span className="ml-1 text-xs font-normal text-text-muted">({sub})</span>}
-      </p>
-    </div>
-  );
-
   return (
-    <div className="flex flex-wrap gap-x-8 gap-y-3">
-      {headline.map((h) => stat(h.short, h.value, undefined, true))}
-      <span className="hidden sm:block w-px self-stretch bg-border-light" />
-      {supporting.map((i) => stat(i.label, i.value))}
-      <span className="hidden sm:block w-px self-stretch bg-border-light" />
-      {shooting.map((i) => stat(i.label, i.value, i.sub))}
+    <div className="space-y-4">
+      {/* Primary key metric cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {headline.map((h) => (
+          <div
+            key={h.short}
+            className="rounded border border-border bg-background-secondary/60 px-3.5 py-2.5 transition-colors"
+          >
+            <p className="text-xs font-medium text-text-secondary">{h.short}</p>
+            <p className="mt-0.5 tabular-nums text-2xl font-semibold text-text-primary">
+              {h.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Secondary & shooting metrics strip */}
+      <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-6 rounded border border-border-light bg-background-primary px-3.5 py-2.5 text-xs">
+        {/* Supporting stats */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          {supporting.map((i) => (
+            <div key={i.label} className="flex items-baseline gap-1.5">
+              <span className="font-normal text-text-muted">{i.label}</span>
+              <span className="tabular-nums font-semibold text-text-primary">
+                {i.value}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Divider for larger screens */}
+        <span className="hidden lg:block h-4 w-px bg-border-light" aria-hidden="true" />
+
+        {/* Shooting splits */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          {shooting.map((s) => (
+            <div key={s.label} className="flex items-baseline gap-1.5">
+              <span className="font-normal text-text-muted">{s.label}</span>
+              <span className="tabular-nums font-semibold text-text-primary">
+                {s.value}
+              </span>
+              {s.sub && (
+                <span className="text-[11px] font-normal text-text-muted tabular-nums">
+                  ({s.sub})
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
 type RenderItem =
   | { type: "game"; data: GameRow }
-  | { type: "trade"; from: string; to: string; dateBefore: string | null; dateAfter: string | null };
+  | {
+      type: "trade";
+      from: string;
+      to: string;
+      dateBefore: string | null;
+      dateAfter: string | null;
+    };
 
 function GameLogTable({
   games,
@@ -288,7 +350,7 @@ function GameLogTable({
     if (wl === "W") {
       return (
         <span
-          className="inline-flex h-4 w-4 items-center justify-center rounded-full text-xs font-semibold text-white bg-status-success"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-xs font-semibold text-status-success bg-status-success/10 border border-status-success/30"
           title="Galibiyet"
         >
           G
@@ -298,7 +360,7 @@ function GameLogTable({
     if (wl === "L") {
       return (
         <span
-          className="inline-flex h-4 w-4 items-center justify-center rounded-full text-xs font-semibold text-white bg-status-error"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-xs font-semibold text-status-error bg-status-error/10 border border-status-error/30"
           title="Maglubiyet"
         >
           M
@@ -320,9 +382,11 @@ function GameLogTable({
       <div className="overflow-x-auto rounded border border-border bg-background-primary">
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-background-tertiary/60 border-b border-border text-xs font-semibold text-text-muted">
-              <th className="sticky left-0 bg-background-tertiary px-3 py-2.5 text-left min-w-[120px]">Tarih</th>
-              <th className="px-2 py-2.5 text-left min-w-[130px]">Eşleşme</th>
+            <tr className="bg-background-tertiary border-b border-border text-xs font-semibold text-text-secondary">
+              <th className="sticky left-0 bg-background-tertiary px-3 py-2.5 text-left w-28">
+                Tarih
+              </th>
+              <th className="px-2 py-2.5 text-left w-36">Eşleşme</th>
               <th className="px-2 py-2.5 text-center">G/M</th>
               <th className="px-2 py-2.5 text-right">Skor</th>
               <th className="px-2 py-2.5 text-right">MIN</th>
@@ -339,27 +403,30 @@ function GameLogTable({
               <th className="px-2 py-2.5 text-center">Tür</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border-light">
             {visible.map((item, idx) => {
               if (item.type === "trade") {
                 return (
-                  <tr key={`trade-${idx}`} className="bg-background-tertiary/70 border-t border-b border-border">
+                  <tr
+                    key={`trade-${idx}`}
+                    className="bg-background-tertiary border-y border-border-light"
+                  >
                     <td colSpan={16} className="px-3 py-2.5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
-                          <span className="flex items-center gap-1.5 bg-background-primary border border-border text-text-primary px-2 py-0.5 rounded text-xs font-semibold">
-                            <ArrowRightLeft size={12} />
+                          <Badge variant="neutral" size="sm">
+                            <ArrowRightLeft size={12} className="mr-1 inline-block" />
                             Takas / Transfer
-                          </span>
-                          <div className="flex items-center gap-2 font-semibold text-text-primary text-xs">
+                          </Badge>
+                          <div className="flex items-center gap-2 font-medium text-text-primary text-xs">
                             <TeamLogo abbr={item.from} name="" size={18} />
                             <span className="text-text-secondary">{item.from}</span>
-                            <ArrowRightLeft size={12} className="text-text-muted mx-1" />
+                            <ArrowRightLeft size={12} className="text-text-muted mx-0.5" />
                             <TeamLogo abbr={item.to} name="" size={18} />
                             <span className="text-text-primary font-semibold">{item.to}</span>
                           </div>
                         </div>
-                        <p className="text-xs text-text-muted">
+                        <p className="text-xs text-text-muted tabular-nums">
                           Geçiş: {fmtDate(item.dateBefore)} → {fmtDate(item.dateAfter)}
                         </p>
                       </div>
@@ -380,14 +447,18 @@ function GameLogTable({
                 <tr
                   key={`${g.GAME_ID}-${idx}`}
                   onClick={clickable ? () => onGameClick!(g) : undefined}
-                  className={`transition-colors ${
-                    isDnp ? "bg-background-tertiary/40 opacity-70" : "hover:bg-background-tertiary/70"
+                  className={`transition-colors duration-150 ${
+                    isDnp
+                      ? "bg-background-tertiary/40 opacity-70"
+                      : "hover:bg-background-tertiary"
                   } ${clickable ? "cursor-pointer group" : ""}`}
                 >
-                  <td className="sticky left-0 bg-background-primary px-3 py-2">
-                    <p className="text-xs font-semibold text-text-primary tabular-nums">{fmtDate(g.GAME_DATE)}</p>
+                  <td className="sticky left-0 bg-background-primary px-3 py-2 group-hover:bg-background-tertiary transition-colors">
+                    <p className="text-xs font-medium text-text-primary tabular-nums">
+                      {fmtDate(g.GAME_DATE)}
+                    </p>
                     {clickable && (
-                      <p className="text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                         Kutu skorunu gör
                       </p>
                     )}
@@ -396,19 +467,25 @@ function GameLogTable({
                     <div className="flex items-center gap-1.5">
                       {g.HOME_TEAM_ABBREVIATION && (
                         <TeamLogo
-                          abbr={g.MATCHUP?.includes("vs.") ? g.AWAY_TEAM_ABBREVIATION ?? "" : g.HOME_TEAM_ABBREVIATION ?? ""}
+                          abbr={
+                            g.MATCHUP?.includes("vs.")
+                              ? g.AWAY_TEAM_ABBREVIATION ?? ""
+                              : g.HOME_TEAM_ABBREVIATION ?? ""
+                          }
                           name=""
                           size={16}
                         />
                       )}
-                      <span className="text-xs font-semibold text-text-primary whitespace-nowrap">
+                      <span className="text-xs font-medium text-text-primary whitespace-nowrap">
                         {g.MATCHUP ?? "—"}
                       </span>
                     </div>
                   </td>
                   <td className="px-2 py-2 text-center">
                     {isDnp ? (
-                      <span className="rounded-sm bg-background-tertiary border border-border px-1.5 py-0.5 text-xs font-semibold text-text-muted">DNP</span>
+                      <Badge variant="neutral" size="sm">
+                        DNP
+                      </Badge>
                     ) : (
                       wlBadge(g.WL)
                     )}
@@ -417,36 +494,64 @@ function GameLogTable({
                     {isDnp ? (
                       <span className="text-xs text-text-muted">Oynamadı</span>
                     ) : (
-                      <span className="text-xs font-semibold text-text-secondary tabular-nums">{score}</span>
+                      <span className="text-xs font-medium text-text-secondary tabular-nums">
+                        {score}
+                      </span>
                     )}
                   </td>
                   {isDnp ? (
                     <>
                       {Array.from({ length: 11 }).map((_, i) => (
-                        <td key={i} className="px-2 py-2 text-right text-text-muted">—</td>
+                        <td key={i} className="px-2 py-2 text-right text-text-muted">
+                          —
+                        </td>
                       ))}
                     </>
                   ) : (
                     <>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{g.MIN != null ? Math.round(g.MIN) : "—"}</td>
-                      <td className="px-2 py-2 text-right font-semibold text-text-primary tabular-nums">{g.PTS ?? "—"}</td>
-                      <td className="px-2 py-2 text-right font-semibold text-text-secondary tabular-nums">{g.REB ?? "—"}</td>
-                      <td className="px-2 py-2 text-right font-semibold text-text-secondary tabular-nums">{g.AST ?? "—"}</td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{g.STL ?? "—"}</td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{g.BLK ?? "—"}</td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{g.TOV ?? "—"}</td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{fmtPct(g.FG_PCT)}</td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{fmtPct(g.FG3_PCT)}</td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">{fmtPct(g.FT_PCT)}</td>
-                      <td className={`px-2 py-2 text-right tabular-nums ${pmColor(g.PLUS_MINUS)}`}>
-                        {g.PLUS_MINUS != null ? `${g.PLUS_MINUS > 0 ? "+" : ""}${g.PLUS_MINUS}` : "—"}
+                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                        {g.MIN != null ? Math.round(g.MIN) : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right font-semibold text-text-primary tabular-nums">
+                        {g.PTS ?? "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right font-medium text-text-secondary tabular-nums">
+                        {g.REB ?? "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right font-medium text-text-secondary tabular-nums">
+                        {g.AST ?? "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                        {g.STL ?? "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                        {g.BLK ?? "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                        {g.TOV ?? "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                        {fmtPct(g.FG_PCT)}
+                      </td>
+                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                        {fmtPct(g.FG3_PCT)}
+                      </td>
+                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                        {fmtPct(g.FT_PCT)}
+                      </td>
+                      <td
+                        className={`px-2 py-2 text-right tabular-nums ${pmColor(g.PLUS_MINUS)}`}
+                      >
+                        {g.PLUS_MINUS != null
+                          ? `${g.PLUS_MINUS > 0 ? "+" : ""}${g.PLUS_MINUS}`
+                          : "—"}
                       </td>
                     </>
                   )}
                   <td className="px-2 py-2 text-center">
-                    <span className="rounded-sm  px-1.5 py-0.5 text-xs font-semibold bg-background-tertiary border border-border text-text-secondary">
+                    <Badge variant={g.IS_PLAYOFF ? "primary" : "neutral"} size="sm">
                       {g.IS_PLAYOFF ? "PO" : "RS"}
-                    </span>
+                    </Badge>
                   </td>
                 </tr>
               );
@@ -457,18 +562,18 @@ function GameLogTable({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-1">
-          <p className="text-xs font-medium text-text-secondary">
+          <p className="text-xs font-normal text-text-secondary tabular-nums">
             {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, games.length)} / {games.length} maç
           </p>
           <div className="flex gap-1.5">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="h-8 rounded border border-border bg-background-primary px-3 text-xs font-semibold text-text-primary hover:bg-background-tertiary disabled:opacity-30 transition-all cursor-pointer"
             >
               Önceki
-            </button>
+            </Button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const pg = Math.max(0, Math.min(page - 2, totalPages - 5)) + i;
               return (
@@ -476,7 +581,7 @@ function GameLogTable({
                   key={pg}
                   type="button"
                   onClick={() => setPage(pg)}
-                  className={`h-8 w-8 rounded text-xs font-semibold transition-all cursor-pointer ${
+                  className={`h-8 w-8 rounded text-xs font-medium tabular-nums transition-colors cursor-pointer ${
                     pg === page
                       ? "bg-primary text-white"
                       : "border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
@@ -486,14 +591,14 @@ function GameLogTable({
                 </button>
               );
             })}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              className="h-8 rounded border border-border bg-background-primary px-3 text-xs font-semibold text-text-primary hover:bg-background-tertiary disabled:opacity-30 transition-all cursor-pointer"
             >
               Sonraki
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -535,8 +640,12 @@ function DiscoveryGrid({
   const defaultSeason = useMemo(
     () =>
       seasonsDesc.find((sn) =>
-        profiles.some((p) => (averagesData[String(p.PLAYER_ID)]?.[sn]?.games_played ?? 0) >= 15)
-      ) ?? seasonsDesc[0] ?? "",
+        profiles.some(
+          (p) => (averagesData[String(p.PLAYER_ID)]?.[sn]?.games_played ?? 0) >= 15
+        )
+      ) ??
+      seasonsDesc[0] ??
+      "",
     [profiles, averagesData, seasonsDesc]
   );
   const [season, setSeason] = useState(defaultSeason);
@@ -554,45 +663,87 @@ function DiscoveryGrid({
       }),
     [profiles, averagesData, season]
   );
-  const teams = useMemo(() => [...new Set(rows.map((r) => r.team).filter(Boolean) as string[])].sort(), [rows]);
+  const teams = useMemo(
+    () => [...new Set(rows.map((r) => r.team).filter(Boolean) as string[])].sort(),
+    [rows]
+  );
   const list = useMemo(
     () =>
       rows
-        .filter((r) => (team === "all" || r.team === team) && (position === "all" || r.p.POSITION_GROUP === position))
+        .filter(
+          (r) =>
+            (team === "all" || r.team === team) &&
+            (position === "all" || r.p.POSITION_GROUP === position)
+        )
         .sort((x, y) => (y.a[sortKey] ?? -1) - (x.a[sortKey] ?? -1)),
     [rows, team, position, sortKey]
   );
   const reset = () => setShown(PAGE_SIZE);
 
   const selectCls =
-    "h-10 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary focus:border-border-focus focus:outline-none";
+    "h-9 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary focus:border-border-focus focus:ring-1 focus:ring-border-focus focus:outline-none transition-colors";
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Lig liderleri</h2>
-          <p className="text-sm text-text-secondary">
-            Maç başına ortalamalar · en az 10 maç · <span className="tabular-nums">{list.length}</span> oyuncu
+          <p className="text-xs sm:text-sm text-text-secondary">
+            Maç başına ortalamalar · en az 10 maç ·{" "}
+            <span className="tabular-nums font-medium text-text-primary">{list.length}</span> oyuncu
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select aria-label="Sezon" value={season} onChange={(e) => { setSeason(e.target.value); setTeam("all"); reset(); }} className={`${selectCls} tabular-nums`}>
-            {seasonsDesc.map((sn) => <option key={sn} value={sn}>{sn}</option>)}
+          <select
+            aria-label="Sezon"
+            value={season}
+            onChange={(e) => {
+              setSeason(e.target.value);
+              setTeam("all");
+              reset();
+            }}
+            className={`${selectCls} tabular-nums`}
+          >
+            {seasonsDesc.map((sn) => (
+              <option key={sn} value={sn}>
+                {sn}
+              </option>
+            ))}
           </select>
-          <select aria-label="Takım" value={team} onChange={(e) => { setTeam(e.target.value); reset(); }} className={selectCls}>
+          <select
+            aria-label="Takım"
+            value={team}
+            onChange={(e) => {
+              setTeam(e.target.value);
+              reset();
+            }}
+            className={selectCls}
+          >
             <option value="all">Tüm takımlar</option>
-            {teams.map((t) => <option key={t} value={t}>{t}</option>)}
+            {teams.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
           </select>
-          <div role="group" aria-label="Pozisyon" className="inline-flex rounded border border-border bg-background-tertiary p-0.5">
+          <div
+            role="group"
+            aria-label="Pozisyon"
+            className="inline-flex rounded border border-border bg-background-tertiary p-0.5"
+          >
             {POSITION_GROUPS.map((g) => (
               <button
                 key={g.id}
                 type="button"
                 aria-pressed={position === g.id}
-                onClick={() => { setPosition(g.id); reset(); }}
-                className={`h-9 rounded-sm px-3 text-sm font-medium cursor-pointer ${
-                  position === g.id ? "bg-background-primary text-text-primary" : "text-text-secondary hover:text-text-primary"
+                onClick={() => {
+                  setPosition(g.id);
+                  reset();
+                }}
+                className={`h-8 rounded-sm px-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                  position === g.id
+                    ? "bg-background-primary text-text-primary shadow-sm"
+                    : "text-text-secondary hover:text-text-primary"
                 }`}
               >
                 {g.label}
@@ -602,62 +753,86 @@ function DiscoveryGrid({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded border border-border">
-        <table className="w-full min-w-[640px] text-sm">
+      <div className="overflow-x-auto rounded border border-border bg-background-primary">
+        <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-background-tertiary text-left text-text-secondary">
-              <th className="w-10 px-3 py-2 font-medium">#</th>
-              <th className="px-3 py-2 font-medium">Oyuncu</th>
-              <th className="px-3 py-2 font-medium">Takım</th>
-              <th className="px-3 py-2 text-right font-medium">GP</th>
+            <tr className="border-b border-border bg-background-tertiary text-left text-xs font-semibold text-text-secondary">
+              <th className="w-10 px-3 py-2.5">#</th>
+              <th className="px-3 py-2.5">Oyuncu</th>
+              <th className="px-3 py-2.5">Takım</th>
+              <th className="px-3 py-2.5 text-right">GP</th>
               {LEADER_COLS.map((c) => (
-                <th key={c.key} className="px-1 py-1 text-right font-medium">
+                <th key={c.key} className="px-2 py-1 text-right">
                   <button
                     type="button"
-                    onClick={() => { setSortKey(c.key); reset(); }}
+                    onClick={() => {
+                      setSortKey(c.key);
+                      reset();
+                    }}
                     aria-sort={sortKey === c.key ? "descending" : "none"}
-                    className={`rounded px-2 py-1 cursor-pointer hover:text-text-primary ${
+                    className={`rounded px-1.5 py-1 transition-colors cursor-pointer hover:text-text-primary ${
                       sortKey === c.key ? "text-text-primary font-semibold" : ""
                     }`}
                   >
-                    {c.label}{sortKey === c.key ? " ↓" : ""}
+                    {c.label}
+                    {sortKey === c.key ? " ↓" : ""}
                   </button>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border-light">
             {list.slice(0, shown).map(({ p, a, team: t }, i) => (
               <tr
                 key={p.PLAYER_ID}
                 onClick={() => onSelect(p)}
-                className="cursor-pointer border-b border-border-light last:border-b-0 hover:bg-background-tertiary"
+                className="cursor-pointer hover:bg-background-tertiary transition-colors"
               >
-                <td className="px-3 py-2 tabular-nums text-text-secondary">{i + 1}</td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2.5 tabular-nums text-text-secondary text-xs">{i + 1}</td>
+                <td className="px-3 py-2.5">
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); onSelect(p); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(p);
+                    }}
                     className="flex items-center gap-3 text-left cursor-pointer"
                   >
-                    <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME ?? ""} size={32} />
-                    <span className="font-medium text-text-primary">{p.PLAYER_NAME}</span>
-                    {p.OFFICIAL_POSITION && <span className="text-xs text-text-secondary">{p.OFFICIAL_POSITION}</span>}
+                    <PlayerPhoto
+                      playerId={p.PLAYER_ID}
+                      name={p.PLAYER_NAME ?? ""}
+                      size={32}
+                      className="rounded-full border border-border"
+                    />
+                    <div>
+                      <span className="font-medium text-text-primary">{p.PLAYER_NAME}</span>
+                      {p.OFFICIAL_POSITION && (
+                        <span className="ml-2 text-xs text-text-secondary font-normal">
+                          {p.OFFICIAL_POSITION}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2.5">
                   {t && (
-                    <span className="flex items-center gap-2 text-text-secondary">
+                    <span className="flex items-center gap-2 text-text-secondary text-xs font-medium">
                       <TeamLogo abbr={t} name="" size={20} />
                       {t}
                     </span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-text-secondary">{a.games_played}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums text-text-secondary text-xs">
+                  {a.games_played}
+                </td>
                 {LEADER_COLS.map((c) => (
                   <td
                     key={c.key}
-                    className={`px-3 py-2 text-right tabular-nums ${sortKey === c.key ? "font-semibold text-text-primary" : "text-text-secondary"}`}
+                    className={`px-3 py-2.5 text-right tabular-nums text-xs ${
+                      sortKey === c.key
+                        ? "font-semibold text-text-primary"
+                        : "text-text-secondary font-normal"
+                    }`}
                   >
                     {c.pct ? fmtPct(a[c.key]) : fmtStat(a[c.key])}
                   </td>
@@ -666,8 +841,18 @@ function DiscoveryGrid({
             ))}
             {list.length === 0 && (
               <tr>
-                <td colSpan={4 + LEADER_COLS.length} className="px-3 py-10 text-center text-text-secondary">
-                  Bu filtrelerle eşleşen oyuncu yok.
+                <td colSpan={4 + LEADER_COLS.length} className="px-4 py-8">
+                  <EmptyState
+                    icon={<User size={28} strokeWidth={1.5} />}
+                    title="Oyuncu bulunamadı"
+                    description="Seçilen filtre kriterlerine uygun oyuncu kaydı mevcut değil."
+                    actionLabel="Filtreleri sıfırla"
+                    onAction={() => {
+                      setTeam("all");
+                      setPosition("all");
+                      reset();
+                    }}
+                  />
                 </td>
               </tr>
             )}
@@ -676,14 +861,78 @@ function DiscoveryGrid({
       </div>
 
       {shown < list.length && (
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={() => setShown((n) => n + PAGE_SIZE)}
-            className="h-10 rounded border border-border px-4 text-sm font-medium text-text-primary hover:border-card-border-hover cursor-pointer"
-          >
+        <div className="flex justify-center pt-2">
+          <Button variant="secondary" size="md" onClick={() => setShown((n) => n + PAGE_SIZE)}>
             Daha fazla göster
-          </button>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlayerPageSkeleton({ initialPlayer }: { initialPlayer?: boolean }) {
+  return (
+    <div className="space-y-6">
+      {/* Search Bar Skeleton */}
+      <Skeleton className="h-10 w-full rounded" />
+
+      {initialPlayer ? (
+        <div className="space-y-5">
+          {/* Back button skeleton */}
+          <Skeleton className="h-8 w-36 rounded" />
+
+          {/* Hero Card Skeleton */}
+          <Card padding="md" className="space-y-4">
+            <div className="flex items-start gap-4">
+              <Skeleton variant="circular" width={64} height={64} className="shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-6 w-48 rounded" />
+                <Skeleton className="h-4 w-72 rounded" />
+              </div>
+              <Skeleton className="h-9 w-28 rounded" />
+            </div>
+            <div className="border-t border-border-light pt-4 flex gap-6">
+              <Skeleton className="h-12 w-20 rounded" />
+              <Skeleton className="h-12 w-20 rounded" />
+              <Skeleton className="h-12 w-20 rounded" />
+              <Skeleton className="h-12 w-32 rounded" />
+            </div>
+          </Card>
+
+          {/* Table Skeleton */}
+          <Card padding="md" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Skeleton className="h-5 w-40 rounded" />
+              <Skeleton className="h-7 w-24 rounded" />
+            </div>
+            <div className="space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-9 w-full rounded" />
+              ))}
+            </div>
+          </Card>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div className="space-y-1">
+              <Skeleton className="h-5 w-32 rounded" />
+              <Skeleton className="h-4 w-48 rounded" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-24 rounded" />
+              <Skeleton className="h-9 w-32 rounded" />
+              <Skeleton className="h-9 w-40 rounded" />
+            </div>
+          </div>
+          <Card padding="none" className="overflow-hidden">
+            <div className="space-y-1 p-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full rounded" />
+              ))}
+            </div>
+          </Card>
         </div>
       )}
     </div>
@@ -691,52 +940,70 @@ function DiscoveryGrid({
 }
 
 /* ─────────── Main Component ─────────── */
-export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId?: number | null }) {
-  const [seasonsList, setSeasonsList] = useState<string[]>(["2022-23", "2023-24", "2024-25", "2025-26", "2026-27"]);
+export default function PlayerPage({
+  initialPlayerId = null,
+  onSelectGame,
+}: {
+  initialPlayerId?: number | null;
+  onSelectGame?: (gameId: string) => void;
+}) {
+  const [seasonsList, setSeasonsList] = useState<string[]>([
+    "2022-23",
+    "2023-24",
+    "2024-25",
+    "2025-26",
+    "2026-27",
+  ]);
   const [profiles, setProfiles] = useState<PlayerProfile[]>([]);
   const [gamesData, setGamesData] = useState<Record<string, Record<string, GameRow[]>>>({});
   const [averagesData, setAveragesData] = useState<Record<string, Record<string, SeasonAverages>>>({});
   const [loading, setLoading] = useState(true);
+  const [playerLoading, setPlayerLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerProfile | null>(null);
   const [selectedSeason, setSelectedSeason] = useState("2026-27");
-  const [selectedGame, setSelectedGame] = useState<GameRow | null>(null);
   const [opponentSearch, setOpponentSearch] = useState("");
 
-  useEffect(() => {
-    // Start the opened player's history now instead of after the profile list arrives;
-    // handleSelectPlayer reuses this request.
-    if (initialPlayerId != null) {
-      loadPrivateApi(`/frontend-data-api/players/${encodeURIComponent(String(initialPlayerId))}`).catch(() => {});
-    }
-    const load = async () => {
-      try {
-        loadPrivateApi<string[]>("/frontend-data-api/seasons")
-          .then((data) => {
-            if (Array.isArray(data) && data.length > 0) {
-              const asc = [...data].sort((a, b) => a.localeCompare(b));
-              setSeasonsList(asc);
-            }
-          })
-          .catch(() => {});
-
-        const [prof, avgs] = await Promise.all([
-          loadPrivateApi<PlayerProfile[]>("/frontend-data-api/player-profiles"),
-          loadPrivateApi<Record<string, Record<string, SeasonAverages>>>("/frontend-data-api/player-season-averages"),
-        ]);
-        setProfiles(prof);
-        setAveragesData(avgs);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (initialPlayerId != null) {
+        loadPrivateApi(
+          `/frontend-data-api/players/${encodeURIComponent(String(initialPlayerId))}`
+        ).catch(() => {});
       }
-    };
-    load();
-  }, []);
+
+      loadPrivateApi<string[]>("/frontend-data-api/seasons")
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            const asc = [...data].sort((a, b) => a.localeCompare(b));
+            setSeasonsList(asc);
+          }
+        })
+        .catch(() => {});
+
+      const [prof, avgs] = await Promise.all([
+        loadPrivateApi<PlayerProfile[]>("/frontend-data-api/player-profiles"),
+        loadPrivateApi<Record<string, Record<string, SeasonAverages>>>(
+          "/frontend-data-api/player-season-averages"
+        ),
+      ]);
+      setProfiles(prof);
+      setAveragesData(avgs);
+    } catch (e: any) {
+      setError(e.message || "Oyuncu verileri yüklenirken bir hata oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  }, [initialPlayerId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const filteredProfiles = useMemo(() => {
     if (!search.trim()) return profiles.slice(0, 20);
@@ -744,24 +1011,16 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
     return profiles.filter((p) => p.PLAYER_NAME?.toLowerCase().includes(q)).slice(0, 20);
   }, [profiles, search]);
 
-  useEffect(() => {
-    if (!selectedPlayer) return;
-    const playerId = String(selectedPlayer.PLAYER_ID);
-    const pGames = gamesData[playerId] ?? {};
-    const pAvgs = averagesData[playerId] ?? {};
-    const available = seasonsList.filter((s) => (pGames[s]?.length > 0) || (pAvgs[s] != null) || s === "2026-27");
-    if (available.length > 0 && !available.includes(selectedSeason)) {
-      setSelectedSeason(available[available.length - 1]);
-    }
-  }, [selectedPlayer, gamesData, averagesData, seasonsList, selectedSeason]);
-
-  const handleSelectPlayer = useCallback((p: PlayerProfile) => {
+  const handleSelectPlayer = useCallback((p: PlayerProfile, targetSeason?: string) => {
     setSelectedPlayer(p);
-    setSelectedGame(null);
     setOpponentSearch("");
     setSearch("");
     setShowDropdown(false);
+    updateUrlRoute({ playerId: p.PLAYER_ID });
     const playerId = String(p.PLAYER_ID);
+
+    setPlayerLoading(true);
+
     loadPrivateApi<{
       player_id: string;
       games: Record<string, GameRow[]>;
@@ -770,25 +1029,64 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
       .then((payload) => {
         setGamesData((prev) => ({ ...prev, [payload.player_id]: payload.games }));
         setAveragesData((prev) => ({ ...prev, [payload.player_id]: payload.averages }));
-      })
-      .catch((e) => setError(e.message));
-  }, []);
 
+        // Pick best available season for this player
+        const games = payload.games ?? {};
+        const avgs = payload.averages ?? {};
+        const available = seasonsList.filter(
+          (s) => games[s]?.length > 0 || avgs[s] != null || s === "2026-27"
+        );
+        if (targetSeason && available.includes(targetSeason)) {
+          setSelectedSeason(targetSeason);
+        } else if (available.length > 0) {
+          setSelectedSeason(available[available.length - 1]);
+        }
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setPlayerLoading(false));
+  }, [seasonsList]);
+
+  // Initial load or URL prop sync
   useEffect(() => {
     if (initialPlayerId == null || loading) return;
     const target = profiles.find((profile) => profile.PLAYER_ID === initialPlayerId);
-    if (target) handleSelectPlayer(target);
-  }, [handleSelectPlayer, initialPlayerId, loading, profiles]);
+    if (target && selectedPlayer?.PLAYER_ID !== target.PLAYER_ID) {
+      handleSelectPlayer(target);
+    }
+  }, [handleSelectPlayer, initialPlayerId, loading, profiles, selectedPlayer?.PLAYER_ID]);
+
+  // Listen to browser popstate (back/forward)
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parseUrlRoute();
+      if (route.tab === "player-profile") {
+        if (route.playerId == null) {
+          setSelectedPlayer(null);
+        } else if (profiles.length > 0) {
+          const target = profiles.find((profile) => profile.PLAYER_ID === route.playerId);
+          if (target && target.PLAYER_ID !== selectedPlayer?.PLAYER_ID) {
+            handleSelectPlayer(target);
+          }
+        }
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [handleSelectPlayer, profiles, selectedPlayer?.PLAYER_ID]);
 
   const pid = selectedPlayer ? String(selectedPlayer.PLAYER_ID) : null;
-  const playerGames = useMemo(() => (pid ? (gamesData[pid] ?? {}) : {}), [pid, gamesData]);
-  const playerAvgs = useMemo(() => (pid ? (averagesData[pid] ?? {}) : {}), [pid, averagesData]);
+  const playerGames = useMemo(() => (pid ? gamesData[pid] ?? {} : {}), [pid, gamesData]);
+  const playerAvgs = useMemo(() => (pid ? averagesData[pid] ?? {} : {}), [pid, averagesData]);
   const availableSeasons = useMemo(() => {
-    return seasonsList.filter((s) => (playerGames[s]?.length > 0) || (playerAvgs[s] != null) || s === "2026-27");
+    return seasonsList.filter(
+      (s) => playerGames[s]?.length > 0 || playerAvgs[s] != null || s === "2026-27"
+    );
   }, [seasonsList, playerGames, playerAvgs]);
   const currentAvgs = playerAvgs[selectedSeason] ?? null;
   const teamForSeason = (s: string) =>
-    playerAvgs[s]?.teams?.at(-1) ?? playerGames[s]?.[0]?.TEAM_ABBREVIATION ?? (s === "2026-27" ? selectedPlayer?.CURRENT_TEAM ?? null : null);
+    playerAvgs[s]?.teams?.at(-1) ??
+    playerGames[s]?.[0]?.TEAM_ABBREVIATION ??
+    (s === "2026-27" ? selectedPlayer?.CURRENT_TEAM ?? null : null);
 
   const currentGames = useMemo(() => {
     const games = playerGames[selectedSeason] ?? [];
@@ -812,9 +1110,11 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
       const oppAbbr = (teamAbbr === home ? away : home).toLowerCase();
       const oppName = (teamAbbr === home ? awayName : homeName).toLowerCase();
 
-      return oppAbbr.includes(query) ||
-             oppName.includes(query) ||
-             matchup.toLowerCase().includes(query);
+      return (
+        oppAbbr.includes(query) ||
+        oppName.includes(query) ||
+        matchup.toLowerCase().includes(query)
+      );
     });
   }, [playerGames, selectedSeason, opponentSearch]);
 
@@ -826,28 +1126,17 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
   };
 
   if (loading) {
-    return (
-      <div className="flex h-72 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-text-secondary">
-          Oyuncu verileri yükleniyor
-        </p>
-      </div>
-    );
+    return <PlayerPageSkeleton initialPlayer={initialPlayerId != null} />;
   }
 
   if (error) {
     return (
-      <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-3 rounded border border-status-error/20 bg-background-primary p-6 text-center">
-        <div className="rounded p-2 text-status-error">
-          <AlertCircle size={24} />
-        </div>
-        <div>
-          <h2 className="text-base font-semibold text-text-primary">Veri bulunamadı</h2>
-          <p className="mt-1 text-xs text-text-secondary">{error}</p>
-        </div>
-        <p className="rounded border border-border bg-background-secondary px-3 py-1.5 text-xs text-text-secondary">
-          PYTHONPATH=. python3 scripts/build_frontend_store.py
-        </p>
+      <div className="py-8">
+        <InlineError
+          title="Oyuncu verileri yüklenemedi"
+          message={error}
+          onRetry={loadData}
+        />
       </div>
     );
   }
@@ -856,7 +1145,11 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
     <div className="space-y-6">
       {/* Search bar */}
       <div className="relative w-full">
-        <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+        <Search
+          size={16}
+          strokeWidth={1.5}
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
+        />
         <input
           id="player-profile-search"
           type="text"
@@ -876,7 +1169,7 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
               setShowDropdown(false);
             }
           }}
-          className="w-full h-11 rounded-xl border border-border bg-background-primary pl-10 pr-9 text-xs sm:text-sm font-medium text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-border-focus shadow-xs"
+          className="w-full h-10 rounded border border-border bg-background-primary pl-10 pr-9 text-xs sm:text-sm font-medium text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-border-focus focus:ring-1 focus:ring-border-focus"
         />
         {search && (
           <button
@@ -887,13 +1180,14 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
             }}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-text-primary rounded transition-colors cursor-pointer"
             title="Aramayı temizle"
+            aria-label="Aramayı temizle"
           >
             <X size={15} />
           </button>
         )}
 
         {showDropdown && search.trim().length > 0 && (
-          <div className="absolute left-0 right-0 z-50 mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-border bg-background-primary shadow-xl divide-y divide-border">
+          <div className="absolute left-0 right-0 z-50 mt-1.5 max-h-72 overflow-y-auto rounded border border-border bg-background-primary shadow-md divide-y divide-border-light">
             {filteredProfiles.length > 0 ? (
               filteredProfiles.map((p) => (
                 <button
@@ -905,10 +1199,15 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
                   }}
                   className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-background-tertiary cursor-pointer"
                 >
-                  <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME ?? ""} size={32} />
+                  <PlayerPhoto
+                    playerId={p.PLAYER_ID}
+                    name={p.PLAYER_NAME ?? ""}
+                    size={32}
+                    className="rounded-full border border-border"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-text-primary">{p.PLAYER_NAME}</p>
-                    <p className="text-[11px] text-text-muted truncate">
+                    <p className="text-xs text-text-muted truncate">
                       {[
                         p.OFFICIAL_POSITION,
                         p.CURRENT_TEAM,
@@ -929,169 +1228,231 @@ export default function PlayerPage({ initialPlayerId = null }: { initialPlayerId
         )}
       </div>
 
-      {/* Player Profile (when selected) */}
+      {/* Player Profile View */}
       {selectedPlayer && (
         <div className="space-y-5">
-          <button
-            type="button"
-            onClick={() => { setSelectedPlayer(null); setSearch(""); setSelectedGame(null); }}
-            className="inline-flex h-9 items-center gap-1.5 rounded px-2 -ml-2 text-sm font-medium text-text-secondary hover:text-text-primary cursor-pointer"
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedPlayer(null);
+              setSearch("");
+              updateUrlRoute({ playerId: null });
+            }}
+            leftIcon={<ArrowLeft size={16} strokeWidth={1.5} />}
           >
-            <ArrowLeft size={16} strokeWidth={1.5} />
             Oyuncu profilleri
-          </button>
-          {/* Hero Card */}
-          {(() => {
-            return (
-              <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
-                <div className="flex items-start gap-4">
-                  <PlayerPhoto
-                    playerId={selectedPlayer.PLAYER_ID}
-                    name={selectedPlayer.PLAYER_NAME ?? ""}
-                    size={64}
-                    className="shrink-0 rounded border border-border"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-2xl font-semibold text-text-primary">{selectedPlayer.PLAYER_NAME}</h2>
-                    <p className="mt-0.5 text-sm text-text-secondary">
-                      {[
-                        [selectedPlayer.OFFICIAL_POSITION, selectedPlayer.POSITION_GROUP].filter(Boolean).join(" · "),
-                        currentAvgs?.teams && currentAvgs.teams.length > 1 ? currentAvgs.teams.join(" → ") : null,
-                        selectedPlayer.HEIGHT,
-                        selectedPlayer.WEIGHT ? `${selectedPlayer.WEIGHT} lbs` : null,
-                        selectedPlayer.COUNTRY,
-                        selectedPlayer.COLLEGE,
-                        draftStr(selectedPlayer),
-                      ].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                  {availableSeasons.length > 0 && (
-                    <SeasonSelector
-                      seasons={availableSeasons}
-                      selected={selectedSeason}
-                      onChange={setSelectedSeason}
-                      teamFor={teamForSeason}
-                    />
-                  )}
-                </div>
+          </Button>
 
-                {availableSeasons.length > 0 && (
-                  <div className="mt-4 border-t border-border pt-4">
-                    {currentAvgs && currentAvgs.games_total > 0 ? (
-                      <>
-                        <AveragesGrid avgs={currentAvgs} />
-                        <p className="mt-3 text-xs tabular-nums text-text-secondary">
-                          {currentAvgs.games_played} / {currentAvgs.games_total} maç · maç başına ortalamalar
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-sm text-text-secondary">{selectedSeason} sezonu için ortalama verisi bulunamadı.</p>
+          {/* Player Hero Card */}
+          <Card padding="md">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="flex items-start gap-4 min-w-0">
+                <PlayerPhoto
+                  playerId={selectedPlayer.PLAYER_ID}
+                  name={selectedPlayer.PLAYER_NAME ?? ""}
+                  size={64}
+                  className="shrink-0 rounded-full border border-border ring-1 ring-border"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-2xl font-semibold text-text-primary">
+                      {selectedPlayer.PLAYER_NAME}
+                    </h1>
+                    {selectedPlayer.OFFICIAL_POSITION && (
+                      <Badge variant="neutral" size="sm">
+                        {selectedPlayer.OFFICIAL_POSITION}
+                      </Badge>
                     )}
                   </div>
+                  <p className="mt-1 text-xs sm:text-sm text-text-secondary">
+                    {[
+                      selectedPlayer.POSITION_GROUP,
+                      currentAvgs?.teams && currentAvgs.teams.length > 1
+                        ? currentAvgs.teams.join(" → ")
+                        : selectedPlayer.CURRENT_TEAM,
+                      selectedPlayer.HEIGHT,
+                      selectedPlayer.WEIGHT ? `${selectedPlayer.WEIGHT} lbs` : null,
+                      selectedPlayer.COUNTRY,
+                      selectedPlayer.COLLEGE,
+                      draftStr(selectedPlayer),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </div>
+              </div>
+
+              {availableSeasons.length > 0 && (
+                <SeasonSelector
+                  seasons={availableSeasons}
+                  selected={selectedSeason}
+                  onChange={setSelectedSeason}
+                  teamFor={teamForSeason}
+                />
+              )}
+            </div>
+
+            {/* Averages Section */}
+            {availableSeasons.length > 0 && (
+              <div className="mt-5 border-t border-border-light pt-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                      {selectedSeason} Sezon Ortalamaları
+                    </span>
+                    {currentAvgs && currentAvgs.games_total > 0 && (
+                      <Badge variant="neutral" size="sm">
+                        <span className="tabular-nums font-medium">
+                          {currentAvgs.games_played} / {currentAvgs.games_total}
+                        </span>{" "}
+                        maç
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-text-muted">
+                    Maç başına ortalamalar
+                  </span>
+                </div>
+
+                {playerLoading ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-1">
+                    <Skeleton className="h-16 w-full rounded" />
+                    <Skeleton className="h-16 w-full rounded" />
+                    <Skeleton className="h-16 w-full rounded" />
+                    <Skeleton className="h-16 w-full rounded" />
+                  </div>
+                ) : currentAvgs && currentAvgs.games_total > 0 ? (
+                  <AveragesGrid avgs={currentAvgs} />
+                ) : (
+                  <p className="text-xs sm:text-sm text-text-secondary py-2">
+                    {selectedSeason} sezonu için ortalama verisi bulunamadı.
+                  </p>
                 )}
               </div>
-            );
-          })()}
+            )}
+          </Card>
 
           {availableSeasons.length === 0 ? (
-            <div className="rounded border border-border bg-background-primary p-6 text-center">
-              <AlertCircle size={22} className="mx-auto mb-2 text-text-secondary" />
-              <p className="text-xs font-semibold text-text-secondary">Bu oyuncu için veritabanında maç kaydı bulunamadı.</p>
-            </div>
+            <EmptyState
+              icon={<User size={28} strokeWidth={1.5} />}
+              title="Maç kaydı bulunamadı"
+              description="Bu oyuncu için veritabanında henüz maç kaydı bulunmuyor."
+            />
           ) : (
             <>
-              {/* Game Log */}
-              <div className="rounded border border-border bg-background-primary p-5 sm:p-6 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+              {/* Game Log Section */}
+              <Card padding="md" className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-light pb-4">
                   <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-primary" />
+                    <Calendar size={18} strokeWidth={1.5} className="text-primary" />
                     <div>
                       <h2 className="text-base font-semibold text-text-primary">
                         {selectedSeason} Maç Günlüğü
                       </h2>
-                      <p className="text-xs text-text-muted">
+                      <p className="text-xs text-text-secondary tabular-nums">
                         Toplam {currentGames.length} karşılaşma
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-sm bg-background-tertiary border border-border px-2 py-0.5 text-xs font-semibold text-text-secondary">
-                      {currentGames.length} maç
-                    </span>
-                    <span className="rounded-sm bg-status-warning/10 border border-status-warning/20 px-2 py-0.5 text-xs font-semibold text-status-warning">
-                      {currentGames.filter((g) => g.DID_NOT_PLAY).length} DNP
-                    </span>
-                    <span className="rounded-sm bg-background-tertiary border border-border px-2 py-0.5 text-xs font-semibold text-text-secondary">
-                      {currentGames.filter((g) => g.IS_PLAYOFF).length} playoff
-                    </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="neutral" size="sm">
+                      <span className="tabular-nums">{currentGames.length}</span> maç
+                    </Badge>
+                    <Badge variant="warning" size="sm">
+                      <span className="tabular-nums">
+                        {currentGames.filter((g) => g.DID_NOT_PLAY).length}
+                      </span>{" "}
+                      DNP
+                    </Badge>
+                    <Badge variant="info" size="sm">
+                      <span className="tabular-nums">
+                        {currentGames.filter((g) => g.IS_PLAYOFF).length}
+                      </span>{" "}
+                      playoff
+                    </Badge>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  {!selectedGame && (playerGames[selectedSeason] ?? []).length > 0 && (
+                  {(playerGames[selectedSeason] ?? []).length > 0 && (
                     <div className="relative flex-1 max-w-sm">
-                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                      <Search
+                        size={14}
+                        strokeWidth={1.5}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+                      />
                       <input
                         type="text"
                         placeholder="Rakip takıma göre filtrele (örn. GSW)..."
                         value={opponentSearch}
                         onChange={(e) => setOpponentSearch(e.target.value)}
-                        className="w-full h-9 rounded border border-border bg-background-tertiary pl-9 pr-4 text-xs font-medium text-text-primary placeholder:text-text-muted focus:border-border-focus focus:bg-background-primary focus:outline-none transition-all"
+                        className="w-full h-9 rounded border border-border bg-background-primary pl-9 pr-8 text-xs font-medium text-text-primary placeholder:text-text-muted focus:border-border-focus focus:ring-1 focus:ring-border-focus outline-none transition-colors"
                       />
+                      {opponentSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setOpponentSearch("")}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                          aria-label="Filtreyi temizle"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
                     </div>
                   )}
 
                   <div className="flex items-center gap-3 text-xs text-text-muted ml-auto font-medium">
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-status-warning/60" />
+                      <span className="h-2 w-2 rounded-full bg-status-warning" aria-hidden="true" />
                       DNP = Oynamadı
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="rounded-sm  bg-background-tertiary border border-border px-1.5 py-0.5 text-xs font-semibold text-text-primary">PO</span>
+                      <Badge variant="primary" size="sm">PO</Badge>
                       Playoff
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="rounded-sm  bg-background-tertiary border border-border px-1.5 py-0.5 text-xs font-semibold text-text-secondary">RS</span>
+                      <Badge variant="neutral" size="sm">RS</Badge>
                       Normal Sezon
                     </span>
                   </div>
                 </div>
 
-                {selectedGame ? (
-                  <GameDetailPanel
-                    game={selectedGame as any}
-                    season={selectedSeason}
-                    highlightPlayerId={selectedPlayer?.PLAYER_ID}
-                    onBack={() => setSelectedGame(null)}
-                  />
-                ) : (playerGames[selectedSeason] ?? []).length > 0 ? (
+                {(playerGames[selectedSeason] ?? []).length > 0 ? (
                   currentGames.length > 0 ? (
                     <GameLogTable
                       games={currentGames}
-                      onGameClick={(g) => setSelectedGame(g)}
+                      onGameClick={(g) => {
+                        if (onSelectGame) {
+                          onSelectGame(g.GAME_ID);
+                        } else {
+                          updateUrlRoute({ tab: "game-results", gameId: g.GAME_ID });
+                        }
+                      }}
                     />
                   ) : (
-                    <div className="py-8 text-center space-y-2">
-                      <p className="text-xs text-text-secondary">&quot;{opponentSearch}&quot; ile eşleşen maç bulunamadı.</p>
-                      <button
-                        type="button"
-                        onClick={() => setOpponentSearch("")}
-                        className="h-8 rounded border border-border bg-background-primary px-3 text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
-                      >
-                        Aramayı Temizle
-                      </button>
-                    </div>
+                    <EmptyState
+                      title="Eşleşen maç bulunamadı"
+                      description={`"${opponentSearch}" aramasıyla eşleşen karşılaşma kaydı bulunmuyor.`}
+                      actionLabel="Filtreyi temizle"
+                      onAction={() => setOpponentSearch("")}
+                    />
                   )
                 ) : selectedSeason === "2026-27" ? (
-                  <div className="py-8 text-center">
-                    <p className="text-sm font-medium text-text-primary">Henüz maç oynanmadı</p>
-                    <p className="mt-1 text-sm text-text-secondary">Maç kayıtları sezon başladığında burada görünecek.</p>
-                  </div>
+                  <EmptyState
+                    icon={<Calendar size={28} strokeWidth={1.5} />}
+                    title="Henüz maç oynanmadı"
+                    description="Maç kayıtları sezon başladığında burada görüntülenecektir."
+                  />
                 ) : (
-                  <div className="py-8 text-center text-xs text-text-muted">{selectedSeason} için maç kaydı bulunamadı.</div>
+                  <EmptyState
+                    icon={<Calendar size={28} strokeWidth={1.5} />}
+                    title="Maç kaydı bulunamadı"
+                    description={`${selectedSeason} sezonu için kayıtlı maç bulunmuyor.`}
+                  />
                 )}
-              </div>
+              </Card>
             </>
           )}
         </div>

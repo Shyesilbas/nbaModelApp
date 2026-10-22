@@ -2,6 +2,7 @@ import { Sparkles, ChevronRight, Calendar, Clock, RefreshCw, Shield } from "luci
 import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { fmtDate, fmtTipoffTR, isGameEligibleForRefresh, parseOfficials } from "./utils";
+import { getTeamShortName } from "../../lib/nbaTeams";
 
 export function GameCard({
   game,
@@ -72,23 +73,26 @@ export function GameCard({
           <div className="flex min-w-0 items-center gap-2.5">
             <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={36} />
             <div className="min-w-0">
-              <p className={`truncate text-xs font-semibold ${awayWon ? "text-text-primary" : "text-text-secondary"}`}>
-                {game.AWAY_TEAM_ABBREVIATION}
+              <p
+                className={`truncate text-xs font-semibold ${awayWon ? "text-text-primary" : "text-text-secondary"}`}
+                title={game.AWAY_TEAM_NAME || game.AWAY_TEAM_ABBREVIATION}
+              >
+                {getTeamShortName(game.AWAY_TEAM_ABBREVIATION, game.AWAY_TEAM_NAME)}
               </p>
               <p className="text-xs text-text-muted">Away</p>
             </div>
           </div>
 
           {/* Central Scores / VS */}
-          <div className="min-w-[5.5rem] rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
+          <div className="min-w-[5.5rem] px-2 py-1 text-center">
             {isCompleted ? (
               <div>
-                <div className="flex items-baseline justify-center gap-1">
-                  <span className={`text-base tabular-nums ${awayWon ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
+                <div className="flex items-baseline justify-center gap-1.5">
+                  <span className={`text-lg tabular-nums ${awayWon ? "font-bold text-text-primary" : "text-text-secondary"}`}>
                     {game.AWAY_SCORE ?? "-"}
                   </span>
                   <span className="text-xs text-text-muted">:</span>
-                  <span className={`text-base tabular-nums ${homeWon ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
+                  <span className={`text-lg tabular-nums ${homeWon ? "font-bold text-text-primary" : "text-text-secondary"}`}>
                     {game.HOME_SCORE ?? "-"}
                   </span>
                 </div>
@@ -104,8 +108,11 @@ export function GameCard({
           {/* Home Team */}
           <div className="flex min-w-0 items-center justify-end gap-2.5 text-right">
             <div className="min-w-0">
-              <p className={`truncate text-xs font-semibold ${homeWon ? "text-text-primary" : "text-text-secondary"}`}>
-                {game.HOME_TEAM_ABBREVIATION}
+              <p
+                className={`truncate text-xs font-semibold ${homeWon ? "text-text-primary" : "text-text-secondary"}`}
+                title={game.HOME_TEAM_NAME || game.HOME_TEAM_ABBREVIATION}
+              >
+                {getTeamShortName(game.HOME_TEAM_ABBREVIATION, game.HOME_TEAM_NAME)}
               </p>
               <p className="text-xs text-text-muted">Home</p>
             </div>

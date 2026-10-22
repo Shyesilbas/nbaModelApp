@@ -1,29 +1,53 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Sparkles,
-  Trophy,
   Clock,
   RefreshCw,
-  Shield,
   MapPin,
-  ChevronDown,
-  ChevronUp,
   LayoutGrid,
   Users,
-  ListOrdered,
+  Flame,
+  ArrowLeft,
+  Calendar,
 } from "lucide-react";
 import TeamLogo from "../TeamLogo";
-import PlayerPhoto from "../PlayerPhoto";
-import type { GameFeedRow } from "../../types/gameFeed";
+import type { GameFeedRow, GameDetail } from "../../types/gameFeed";
 import type { TeamBoxScore, PlayerBoxScore } from "./types";
-import { fmtDate, fmtInt, fmtTipoffTR, teamFull, teamCity, parseOfficials, sortPlayersByMinutes } from "./utils";
+import {
+  fmtDate,
+  fmtInt,
+  fmtTipoffTR,
+  teamFull,
+  teamCity,
+  parseOfficials,
+  sortPlayersByMinutes,
+} from "./utils";
 import { loadArchivedPlayByPlay } from "../../lib/archiveData";
 import { QuarterScores } from "./QuarterScores";
 import { TeamComparisonBars } from "./TeamComparisonBars";
 import { ShootingSummary } from "./ShootingSummary";
 import { TopPerformers } from "./TopPerformers";
-import { GameLeaders } from "./GameLeaders";
 import { PlayerBoxTable } from "./PlayerBoxTable";
+import { Button, Badge, Card } from "../common";
+
+export interface GameCardDetailProps {
+  game: GameFeedRow;
+  gameDetail?: GameDetail | null;
+  homeBS?: TeamBoxScore | null;
+  awayBS?: TeamBoxScore | null;
+  homePlayers?: PlayerBoxScore[];
+  awayPlayers?: PlayerBoxScore[];
+  initialTab?: "game" | "home" | "away" | "highlights" | "pbp" | string;
+  onPredict?: () => void;
+  onRefresh?: () => void;
+  canRefresh?: boolean;
+  refreshState?: string;
+  refreshDone?: boolean;
+  refreshError?: string | null;
+  freshPlayByPlay?: PbpData | null;
+  season?: string;
+  onBack?: () => void;
+}
 
 export function GameCardDetail({
   game,
@@ -41,25 +65,12 @@ export function GameCardDetail({
   refreshError,
   freshPlayByPlay,
   season,
-}: {
-  game: GameFeedRow;
-  gameDetail: any;
-  homeBS?: TeamBoxScore | null;
-  awayBS?: TeamBoxScore | null;
-  homePlayers?: PlayerBoxScore[];
-  awayPlayers?: PlayerBoxScore[];
-  initialTab?: "game" | "home" | "away" | "pbp" | string;
-  onPredict?: () => void;
-  onRefresh?: () => void;
-  canRefresh?: boolean;
-  refreshState?: string;
-  refreshDone?: boolean;
-  refreshError?: string | null;
-  freshPlayByPlay?: PbpData | null;
-  season?: string;
-}) {
-  const [activeTab, setActiveTab] = useState<"game" | "home" | "away" | "pbp">(
-    initialTab === "home" || initialTab === "away" || initialTab === "pbp" ? initialTab : "game"
+  onBack,
+}: GameCardDetailProps) {
+  const [activeTab, setActiveTab] = useState<"game" | "home" | "away" | "highlights">(
+    initialTab === "home" || initialTab === "away" || initialTab === "highlights" || initialTab === "pbp"
+      ? (initialTab === "pbp" ? "highlights" : (initialTab as any))
+      : "game"
   );
 
   const isCompleted =
@@ -70,343 +81,524 @@ export function GameCardDetail({
 
   const homeScore = game.HOME_SCORE ?? gameDetail?.home_team?.score ?? null;
   const awayScore = game.AWAY_SCORE ?? gameDetail?.away_team?.score ?? null;
-  const margin    = isCompleted && homeScore != null && awayScore != null ? Math.abs(Number(homeScore) - Number(awayScore)) : 0;
+  const margin =
+    isCompleted && homeScore != null && awayScore != null
+      ? Math.abs(Number(homeScore) - Number(awayScore))
+      : 0;
 
-  const homeBS = initialHomeBS ?? (gameDetail?.team_stats ?? []).find((t: any) => t.TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION || t.team_abbreviation === game.HOME_TEAM_ABBREVIATION) ?? null;
-  const awayBS = initialAwayBS ?? (gameDetail?.team_stats ?? []).find((t: any) => t.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION || t.team_abbreviation === game.AWAY_TEAM_ABBREVIATION) ?? null;
+  type TeamStatRecord = {
+    TEAM_ABBREVIATION?: string;
+    team_abbreviation?: string;
+  };
+  const teamStatsList =
+    (gameDetail?.team_stats as TeamStatRecord[] | undefined) ?? [];
+  const homeBS =
+    initialHomeBS ??
+    ((teamStatsList.find(
+      (t) =>
+        t.TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION ||
+        t.team_abbreviation === game.HOME_TEAM_ABBREVIATION
+    ) as TeamBoxScore | null) ??
+      null);
+  const awayBS =
+    initialAwayBS ??
+    ((teamStatsList.find(
+      (t) =>
+        t.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION ||
+        t.team_abbreviation === game.AWAY_TEAM_ABBREVIATION
+    ) as TeamBoxScore | null) ??
+      null);
 
   const topHome: PlayerBoxScore[] = sortPlayersByMinutes(
-    initialHomePlayers && initialHomePlayers.length > 0 ? initialHomePlayers : (gameDetail?.home_team?.players ?? [])
+    initialHomePlayers && initialHomePlayers.length > 0
+      ? initialHomePlayers
+      : ((gameDetail?.home_team?.players as unknown as
+          | PlayerBoxScore[]
+          | undefined) ?? [])
   );
   const topAway: PlayerBoxScore[] = sortPlayersByMinutes(
-    initialAwayPlayers && initialAwayPlayers.length > 0 ? initialAwayPlayers : (gameDetail?.away_team?.players ?? [])
+    initialAwayPlayers && initialAwayPlayers.length > 0
+      ? initialAwayPlayers
+      : ((gameDetail?.away_team?.players as unknown as
+          | PlayerBoxScore[]
+          | undefined) ?? [])
   );
-  const topGame = [...topHome, ...topAway].sort((a, b) => ((b.PTS ?? (b as any).pts) ?? 0) - ((a.PTS ?? (a as any).pts) ?? 0));
+  const topGame = [...topHome, ...topAway].sort(
+    (a, b) =>
+      ((b.PTS ?? (b as { pts?: number | null }).pts) ?? 0) -
+      ((a.PTS ?? (a as { pts?: number | null }).pts) ?? 0)
+  );
 
   const officials = parseOfficials(game.OFFICIALS);
-  const arenaName  = gameDetail?.arena?.name || (game as { ARENA?: string })?.ARENA;
-  const arenaCity  = [gameDetail?.arena?.city, gameDetail?.arena?.state].filter(Boolean).join(", ") || (game as { LOCATION?: string })?.LOCATION;
-  const teamStatHome = (gameDetail?.team_stats ?? []).find((t: any) => t.TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION || t.team_abbreviation === game.HOME_TEAM_ABBREVIATION) ?? homeBS;
-  const teamStatAway = (gameDetail?.team_stats ?? []).find((t: any) => t.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION || t.team_abbreviation === game.AWAY_TEAM_ABBREVIATION) ?? awayBS;
+  const arenaName =
+    gameDetail?.arena?.name || (game as { ARENA?: string })?.ARENA;
+  const arenaCity =
+    [gameDetail?.arena?.city, gameDetail?.arena?.state]
+      .filter(Boolean)
+      .join(", ") || (game as { LOCATION?: string })?.LOCATION;
 
-  const winnerAbbr = game.WINNER_TEAM_ABBREVIATION ?? (isCompleted && Number(homeScore) !== Number(awayScore)
-    ? Number(homeScore) > Number(awayScore) ? game.HOME_TEAM_ABBREVIATION : game.AWAY_TEAM_ABBREVIATION
-    : null);
-  const homeWon   = isCompleted && winnerAbbr === game.HOME_TEAM_ABBREVIATION;
-  const awayWon   = isCompleted && winnerAbbr === game.AWAY_TEAM_ABBREVIATION;
-  const seasonLabel = game.PLAYOFF_ROUND ?? game.SEASON_TYPE ?? "NBA";
+  const teamStatHome =
+    (gameDetail?.team_stats ?? []).find(
+      (t: { TEAM_ABBREVIATION?: string; team_abbreviation?: string }) =>
+        t.TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION ||
+        t.team_abbreviation === game.HOME_TEAM_ABBREVIATION
+    ) ?? homeBS;
+  const teamStatAway =
+    (gameDetail?.team_stats ?? []).find(
+      (t: { TEAM_ABBREVIATION?: string; team_abbreviation?: string }) =>
+        t.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION ||
+        t.team_abbreviation === game.AWAY_TEAM_ABBREVIATION
+    ) ?? awayBS;
+
+  const winnerAbbr =
+    game.WINNER_TEAM_ABBREVIATION ??
+    (isCompleted && Number(homeScore) !== Number(awayScore)
+      ? Number(homeScore) > Number(awayScore)
+        ? game.HOME_TEAM_ABBREVIATION
+        : game.AWAY_TEAM_ABBREVIATION
+      : null);
+
+  const homeWon = isCompleted && winnerAbbr === game.HOME_TEAM_ABBREVIATION;
+  const awayWon = isCompleted && winnerAbbr === game.AWAY_TEAM_ABBREVIATION;
+  const seasonLabel = game.PLAYOFF_ROUND ?? game.SEASON_TYPE ?? "NBA Regular Season";
   const homeQS = gameDetail?.home_team?.quarter_scores;
   const awayQS = gameDetail?.away_team?.quarter_scores;
 
+  const tabs = [
+    {
+      id: "game",
+      label: isCompleted ? "Recap & Stats" : "Matchup Preview",
+      icon: <LayoutGrid size={14} />,
+    },
+    {
+      id: "away",
+      label: `${game.AWAY_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Roster"}`,
+      icon: <Users size={14} />,
+    },
+    {
+      id: "home",
+      label: `${game.HOME_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Roster"}`,
+      icon: <Users size={14} />,
+    },
+    ...(isCompleted
+      ? [{ id: "highlights", label: "Highlights", icon: <Flame size={14} /> }]
+      : []),
+  ] as const;
+
   return (
     <div className="space-y-4">
-      {/* ── Matchup Hero Card ── */}
-      <section className="rounded border border-border bg-background-primary p-4 sm:p-5">
-        {/* Top bar: competition + date */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light pb-3 text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-text-secondary">
-              {seasonLabel}
-            </span>
-            {game.SERIES_GAME_NUMBER != null && (
-              <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs text-text-secondary">
-                Game {game.SERIES_GAME_NUMBER}
-              </span>
-            )}
-            {game.IS_ELIMINATION_GAME && (
-              <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-status-error">
-                Elimination Match
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-text-secondary">
-            {isCompleted ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary">
-                <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
-                {game.GAME_STATUS || "Final"}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary">
-                <Clock size={12} className="text-text-muted" />
-                {fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Scheduled")}
-              </span>
-            )}
-            <span>•</span>
-            <span className="font-medium text-text-primary">{fmtDate(game.GAME_DATE)}</span>
-          </div>
+      {/* ── TOP ACTION BAR & NAVIGATION ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {onBack && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onBack}
+              leftIcon={<ArrowLeft size={14} />}
+            >
+              Back
+            </Button>
+          )}
+          <Badge variant="neutral">{seasonLabel}</Badge>
+          {game.SERIES_GAME_NUMBER != null && (
+            <Badge variant="neutral">Game {game.SERIES_GAME_NUMBER}</Badge>
+          )}
+          {game.IS_ELIMINATION_GAME && (
+            <Badge variant="error">Elimination Match</Badge>
+          )}
         </div>
 
-        {/* Main score area */}
-        <div className="py-4">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-6">
+        <div className="flex items-center gap-2">
+          {canRefresh && (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={refreshState === "running" || refreshDone}
+              onClick={onRefresh}
+              isLoading={refreshState === "running"}
+              leftIcon={!refreshState || refreshState !== "running" ? <RefreshCw size={13} /> : undefined}
+            >
+              {refreshDone
+                ? "Data Loaded"
+                : refreshState === "failed"
+                ? "Retry Data"
+                : "Fetch Box Score"}
+            </Button>
+          )}
+          {!isCompleted && onPredict && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onPredict}
+              leftIcon={<Sparkles size={13} />}
+            >
+              Model Prediction
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {refreshError && (
+        <div
+          role="alert"
+          className="rounded border border-status-error/30 bg-status-error/5 p-3 text-xs text-status-error"
+        >
+          {refreshError}
+        </div>
+      )}
+
+      {/* ── SCOREBOARD HERO CARD ── */}
+      <Card padding="none" className="overflow-hidden">
+        {/* Meta Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light bg-background-tertiary px-4 py-2 text-xs text-text-secondary">
+          <div className="flex items-center gap-2">
+            <Calendar size={13} className="text-text-muted" />
+            <span className="font-medium text-text-primary">
+              {fmtDate(game.GAME_DATE)}
+            </span>
+            <span className="text-text-muted">•</span>
+            {isCompleted ? (
+              <Badge variant="success" size="sm" dot>
+                {game.GAME_STATUS || "Final"}
+              </Badge>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-text-secondary">
+                <Clock size={12} className="text-text-muted" />
+                {fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Upcoming")}
+              </span>
+            )}
+          </div>
+
+          {arenaName && (
+            <div className="hidden sm:flex items-center gap-1.5 text-text-muted">
+              <MapPin size={12} />
+              <span className="truncate max-w-sm">
+                {[arenaName, arenaCity].filter(Boolean).join(" · ")}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Primary Matchup Board */}
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-8">
             {/* Away Team */}
-            <div className={`flex flex-col items-center gap-1 text-center ${awayWon ? "" : isCompleted ? "opacity-75" : ""}`}>
-              <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={48} />
-              <div>
-                <p className="text-xs text-text-muted">{teamCity(game.AWAY_TEAM_ABBREVIATION)}</p>
-                <p className="text-sm font-semibold text-text-primary sm:text-base">
+            <div
+              className={`flex items-center gap-3 sm:gap-4 ${
+                awayWon ? "" : isCompleted ? "opacity-75" : ""
+              }`}
+            >
+              <TeamLogo
+                abbr={game.AWAY_TEAM_ABBREVIATION}
+                name={game.AWAY_TEAM_NAME}
+                size={44}
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-base sm:text-lg font-semibold ${
+                      awayWon ? "text-text-primary" : "text-text-secondary"
+                    }`}
+                  >
+                    {game.AWAY_TEAM_ABBREVIATION}
+                  </span>
+                  <Badge variant="neutral" size="sm">
+                    Away
+                  </Badge>
+                  {awayWon && (
+                    <Badge variant="success" size="sm">
+                      Win
+                    </Badge>
+                  )}
+                </div>
+                <p
+                  className="truncate text-xs text-text-muted mt-0.5"
+                  title={game.AWAY_TEAM_NAME ?? ""}
+                >
                   {teamFull(game.AWAY_TEAM_ABBREVIATION, game.AWAY_TEAM_NAME)}
                 </p>
-                <span className="text-xs text-text-muted">Away</span>
               </div>
-              {awayWon && (
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-status-success">
-                  <Trophy size={11} /> Winner
-                </span>
-              )}
             </div>
 
-            {/* Score / Status block */}
-            <div className="flex min-w-[120px] flex-col items-center gap-1 rounded border border-border bg-background-tertiary px-4 py-3 text-center sm:min-w-[160px]">
+            {/* Score / Center Display */}
+            <div className="flex flex-col items-center justify-center min-w-[90px] sm:min-w-[130px] text-center">
               {isCompleted ? (
-                <>
-                  <div className="flex items-baseline justify-center gap-2">
-                    <span className={`text-2xl font-semibold tabular-nums sm:text-3xl ${awayWon ? "text-text-primary" : "text-text-secondary"}`}>
+                <div>
+                  <div className="flex items-baseline justify-center gap-2 text-2xl sm:text-3xl font-semibold tabular-nums">
+                    <span
+                      className={
+                        awayWon ? "text-text-primary font-bold" : "text-text-secondary"
+                      }
+                    >
                       {awayScore ?? "—"}
                     </span>
-                    <span className="text-xs text-text-muted">:</span>
-                    <span className={`text-2xl font-semibold tabular-nums sm:text-3xl ${homeWon ? "text-text-primary" : "text-text-secondary"}`}>
+                    <span className="text-text-muted font-normal text-lg sm:text-xl">
+                      :
+                    </span>
+                    <span
+                      className={
+                        homeWon ? "text-text-primary font-bold" : "text-text-secondary"
+                      }
+                    >
                       {homeScore ?? "—"}
                     </span>
                   </div>
-                  {fmtTipoffTR(game.GAME_START_UTC) && (
-                    <p className="text-[11px] tabular-nums text-text-muted">{fmtTipoffTR(game.GAME_START_UTC)}</p>
-                  )}
-                  {winnerAbbr && (
-                    <p className="text-xs tabular-nums text-text-secondary">
-                      <span className="font-semibold text-text-primary">{winnerAbbr}</span> by {margin} pts
+                  {margin > 0 && winnerAbbr && (
+                    <p className="mt-1 text-[11px] font-medium text-text-muted">
+                      {winnerAbbr} +{margin}
                     </p>
                   )}
-                </>
+                </div>
               ) : (
-                <div className="flex flex-col items-center justify-center">
-                  <span className="text-sm font-semibold text-text-secondary">vs</span>
-                  <span className="mt-0.5 text-xs text-text-secondary">Upcoming</span>
+                <div className="flex flex-col items-center">
+                  <span className="text-sm font-semibold text-text-secondary">
+                    VS
+                  </span>
                   {fmtTipoffTR(game.GAME_START_UTC) && (
-                    <span className="text-xs font-semibold tabular-nums text-text-primary">{fmtTipoffTR(game.GAME_START_UTC)}</span>
+                    <span className="mt-1 text-xs font-medium tabular-nums text-text-primary">
+                      {fmtTipoffTR(game.GAME_START_UTC)}
+                    </span>
                   )}
                 </div>
-              )}
-              {!isCompleted && onPredict && (
-                <button
-                  type="button"
-                  onClick={onPredict}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
-                >
-                  <Sparkles size={12} />
-                  Predict
-                </button>
               )}
             </div>
 
             {/* Home Team */}
-            <div className={`flex flex-col items-center gap-1 text-center ${homeWon ? "" : isCompleted ? "opacity-75" : ""}`}>
-              <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={48} />
-              <div>
-                <p className="text-xs text-text-muted">{teamCity(game.HOME_TEAM_ABBREVIATION)}</p>
-                <p className="text-sm font-semibold text-text-primary sm:text-base">
+            <div
+              className={`flex items-center justify-end gap-3 sm:gap-4 text-right ${
+                homeWon ? "" : isCompleted ? "opacity-75" : ""
+              }`}
+            >
+              <div className="min-w-0">
+                <div className="flex items-center justify-end gap-2">
+                  {homeWon && (
+                    <Badge variant="success" size="sm">
+                      Win
+                    </Badge>
+                  )}
+                  <Badge variant="neutral" size="sm">
+                    Home
+                  </Badge>
+                  <span
+                    className={`text-base sm:text-lg font-semibold ${
+                      homeWon ? "text-text-primary" : "text-text-secondary"
+                    }`}
+                  >
+                    {game.HOME_TEAM_ABBREVIATION}
+                  </span>
+                </div>
+                <p
+                  className="truncate text-xs text-text-muted mt-0.5"
+                  title={game.HOME_TEAM_NAME ?? ""}
+                >
                   {teamFull(game.HOME_TEAM_ABBREVIATION, game.HOME_TEAM_NAME)}
                 </p>
-                <span className="text-xs text-text-muted">Home</span>
               </div>
-              {homeWon && (
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-status-success">
-                  <Trophy size={11} /> Winner
-                </span>
-              )}
+              <TeamLogo
+                abbr={game.HOME_TEAM_ABBREVIATION}
+                name={game.HOME_TEAM_NAME}
+                size={44}
+              />
             </div>
           </div>
-
-          {/* Venue & officials footer */}
-          {(arenaName || officials.length > 0) && (
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-border-light pt-3 text-xs text-text-muted">
-              {arenaName && (
-                <span className="inline-flex items-center gap-1">
-                  <MapPin size={12} />
-                  <span>{[arenaName, arenaCity].filter(Boolean).join(" · ")}</span>
-                </span>
-              )}
-              {officials.length > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Shield size={12} />
-                  <span>Referees: {officials.map((o) => o.cleanName).join(", ")}</span>
-                </span>
-              )}
-            </div>
-          )}
         </div>
-      </section>
 
-      {/* Action Banner for Fetching/Refreshing Game Data */}
-      {canRefresh && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-background-primary p-4">
-          <div className="flex items-center gap-3">
-            <RefreshCw size={16} className={`text-text-secondary ${refreshState === "running" ? "animate-spin" : ""}`} />
-            <div>
-              <p className="text-xs font-semibold text-text-primary">
-                Fetch Latest Game & Box Score Data
-              </p>
-              <p className="text-xs text-text-secondary">
-                Downloads completed box score and play-by-play logs from the official NBA feed.
-              </p>
-            </div>
+        {/* Referees Bar (if available) */}
+        {officials.length > 0 && (
+          <div className="border-t border-border-light bg-background-tertiary/50 px-4 py-2 text-center text-xs text-text-secondary">
+            <span>
+              Officials:{" "}
+              <span className="text-text-primary font-medium">
+                {officials.map((o) => o.cleanName).join(", ")}
+              </span>
+            </span>
           </div>
-          <button
-            type="button"
-            disabled={refreshState === "running" || refreshDone}
-            onClick={onRefresh}
-            className="inline-flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-          >
-            <RefreshCw size={12} className={refreshState === "running" ? "animate-spin" : ""} />
-            {refreshState === "running" ? "Fetching…" : refreshDone ? "Data Loaded" : refreshState === "failed" ? "Retry" : "Fetch Data"}
-          </button>
-          {refreshError && <p role="alert" className="w-full text-xs text-status-error">{refreshError}</p>}
-        </div>
-      )}
+        )}
 
-      {/* ── Tab Navigation ── */}
-      <nav aria-label="Game detail sections" role="tablist" className="flex gap-1 border-b border-border bg-background-primary pb-px">
-        {([
-          { id: "game", label: isCompleted ? "Recap" : "Preview", icon: <LayoutGrid size={13} /> },
-          { id: "away", label: `${game.AWAY_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Info"}`, icon: <Users size={13} /> },
-          { id: "home", label: `${game.HOME_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Info"}`, icon: <Users size={13} /> },
-          ...(isCompleted ? [{ id: "pbp", label: "Play-by-Play", icon: <ListOrdered size={13} /> }] : []),
-        ] as const).map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === t.id}
-            onClick={() => setActiveTab(t.id as "game" | "home" | "away" | "pbp")}
-            className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-medium transition-colors ${
-              activeTab === t.id
-                ? "border-primary text-text-primary"
-                : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
-            }`}
-          >
-            {t.icon}
-            {t.label}
-          </button>
-        ))}
-      </nav>
+        {/* Tab Navigation attached seamlessly to the card */}
+        <nav
+          aria-label="Game detail sections"
+          role="tablist"
+          className="flex border-t border-border bg-background-primary px-3 sm:px-4"
+        >
+          {tabs.map((t) => {
+            const isTabActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={isTabActive}
+                onClick={() =>
+                  setActiveTab(t.id as "game" | "home" | "away" | "highlights")
+                }
+                className={`inline-flex items-center gap-2 border-b-2 px-3 py-3 text-xs sm:text-sm font-medium transition-colors ${
+                  isTabActive
+                    ? "border-primary text-text-primary font-semibold"
+                    : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
+                }`}
+              >
+                {t.icon}
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </Card>
 
-      {/* ── Tab Panels ── */}
+      {/* ── TAB PANELS ── */}
       {activeTab === "game" && (
         <div role="tabpanel" className="space-y-4">
           {isCompleted ? (
             <>
-              <section className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-base font-semibold text-text-primary">Game summary</h3>
-                    <p className="mt-0.5 text-xs text-text-secondary">Final recap and key metrics</p>
-                  </div>
-                  {winnerAbbr && (
-                    <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-text-secondary">
-                      {winnerAbbr} won by {margin} pts
-                    </span>
-                  )}
-                </div>
-                <QuarterScores
-                  homeAbbr={game.HOME_TEAM_ABBREVIATION}
-                  awayAbbr={game.AWAY_TEAM_ABBREVIATION}
-                  homeQS={homeQS}
-                  awayQS={awayQS}
+              {/* Quarter Line Scores */}
+              <QuarterScores
+                awayAbbr={game.AWAY_TEAM_ABBREVIATION}
+                homeAbbr={game.HOME_TEAM_ABBREVIATION}
+                awayName={game.AWAY_TEAM_NAME}
+                homeName={game.HOME_TEAM_NAME}
+                awayQS={awayQS}
+                homeQS={homeQS}
+                awayScore={Number(awayScore)}
+                homeScore={Number(homeScore)}
+                winnerAbbr={winnerAbbr}
+                margin={margin}
+              />
+
+              {/* Game Leaders and Key Contributors */}
+              <TopPerformers
+                topGame={topGame}
+                leaders={gameDetail?.game_leaders}
+              />
+
+              {/* Symmetrical Team Stats & Shooting Summary */}
+              <div className="grid items-stretch gap-4 lg:grid-cols-2">
+                <TeamComparisonBars
+                  away={awayBS}
+                  home={homeBS}
+                  awayPlayers={topAway}
+                  homePlayers={topHome}
                 />
-              </section>
-
-              <section className="space-y-3">
-                <div className="grid items-start gap-4 xl:grid-cols-2">
-                  <TeamComparisonBars home={homeBS} away={awayBS} />
-                  <ShootingSummary home={teamStatHome as TeamBoxScore | null} away={teamStatAway as TeamBoxScore | null} />
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <TopPerformers topGame={topGame} />
-                <GameLeaders leaders={gameDetail?.game_leaders} />
-              </section>
+                <ShootingSummary
+                  away={teamStatAway as TeamBoxScore | null}
+                  home={teamStatHome as TeamBoxScore | null}
+                />
+              </div>
             </>
           ) : (
             <div className="space-y-4">
-              <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
+              <Card>
                 <div className="mb-3">
                   <h3 className="text-sm font-semibold text-text-primary">
-                    {game.AWAY_TEAM_NAME} @ {game.HOME_TEAM_NAME}
+                    {game.AWAY_TEAM_NAME || game.AWAY_TEAM_ABBREVIATION} at{" "}
+                    {game.HOME_TEAM_NAME || game.HOME_TEAM_ABBREVIATION}
                   </h3>
-                  <p className="mt-0.5 text-xs text-text-secondary">Matchup schedule</p>
+                  <p className="mt-0.5 text-xs text-text-secondary">
+                    Matchup details and venue context
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                   <div className="rounded border border-border bg-background-tertiary p-3">
-                    <p className="text-xs font-medium text-text-muted">Date & Schedule</p>
-                    <p className="mt-1 text-xs font-semibold text-text-primary">{fmtDate(game.GAME_DATE)}</p>
+                    <p className="text-xs font-medium text-text-muted">
+                      Date & Season
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-text-primary">
+                      {fmtDate(game.GAME_DATE)}
+                    </p>
                     <p className="text-xs text-text-secondary">{seasonLabel}</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary p-3">
                     <p className="text-xs font-medium text-text-muted">Venue</p>
-                    <p className="mt-1 text-xs font-semibold text-text-primary">{arenaName || "NBA Arena"}</p>
-                    <p className="text-xs text-text-secondary">{arenaCity || teamCity(game.HOME_TEAM_ABBREVIATION)}</p>
-                  </div>
-                  <div className="rounded border border-border bg-background-tertiary p-3">
-                    <p className="text-xs font-medium text-text-muted">Status</p>
-                    <p className="mt-1 text-xs font-semibold text-text-primary">{fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Upcoming / Scheduled")}</p>
-                    <p className="text-xs text-text-secondary">Box scores recorded post-game</p>
-                  </div>
-                </div>
-              </div>
-
-              {onPredict && (
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4 rounded border border-border bg-background-primary p-4 sm:p-5">
-                  <div className="max-w-xl">
-                    <h4 className="text-sm font-semibold text-text-primary">
-                      Simulate & Predict This Matchup
-                    </h4>
-                    <p className="mt-1 text-xs text-text-secondary leading-relaxed">
-                      View full multi-stage ML projections for this game including calibrated win probabilities, expected team scores, spread margins, and player performance projections.
+                    <p className="mt-1 text-xs font-semibold text-text-primary">
+                      {arenaName || "NBA Arena"}
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      {arenaCity || teamCity(game.HOME_TEAM_ABBREVIATION)}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={onPredict}
-                    className="shrink-0 inline-flex items-center gap-1.5 rounded bg-primary px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
-                  >
-                    <Sparkles size={13} />
-                    Run Prediction
-                  </button>
+                  <div className="rounded border border-border bg-background-tertiary p-3">
+                    <p className="text-xs font-medium text-text-muted">
+                      Tip-Off Time
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-text-primary">
+                      {fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Scheduled")}
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      Official box scores recorded post-game
+                    </p>
+                  </div>
                 </div>
+              </Card>
+
+              {onPredict && (
+                <Card className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="max-w-xl">
+                    <h4 className="text-sm font-semibold text-text-primary">
+                      Predict This Matchup with NBA Machine Learning Models
+                    </h4>
+                    <p className="mt-1 text-xs text-text-secondary leading-relaxed">
+                      Evaluate multi-stage ML projections including win
+                      probabilities, pace, offensive ratings, expected margins,
+                      and individual player stat forecasts.
+                    </p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={onPredict}
+                    leftIcon={<Sparkles size={14} />}
+                    className="shrink-0"
+                  >
+                    Simulate Matchup
+                  </Button>
+                </Card>
               )}
             </div>
           )}
         </div>
       )}
 
+      {/* ── HOME TEAM TAB ── */}
       {activeTab === "home" && (
         <div role="tabpanel" className="space-y-4">
-          <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
-            <div className="mb-4 flex items-center justify-between">
+          <Card>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-text-primary">
-                  {gameDetail?.home_team?.team_name || game.HOME_TEAM_NAME || game.HOME_TEAM_ABBREVIATION}
+                  {gameDetail?.home_team?.team_name ||
+                    game.HOME_TEAM_NAME ||
+                    game.HOME_TEAM_ABBREVIATION}
                 </h3>
-                <p className="mt-0.5 text-xs text-text-secondary">{game.HOME_TEAM_ABBREVIATION} · Home</p>
+                <p className="mt-0.5 text-xs text-text-secondary">
+                  {game.HOME_TEAM_ABBREVIATION} · Home Team
+                </p>
               </div>
               {isCompleted && (
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">{homeScore ?? "—"}</p>
-                    <p className="text-xs font-medium text-text-muted">PTS</p>
+                    <p className="text-base font-semibold tabular-nums text-text-primary">
+                      {homeScore ?? "—"}
+                    </p>
+                    <p className="text-[11px] font-medium text-text-muted">PTS</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">{fmtInt(homeBS?.REB ?? null)}</p>
-                    <p className="text-xs font-medium text-text-muted">REB</p>
+                    <p className="text-base font-semibold tabular-nums text-text-primary">
+                      {fmtInt(homeBS?.REB ?? null)}
+                    </p>
+                    <p className="text-[11px] font-medium text-text-muted">REB</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">{fmtInt(homeBS?.AST ?? null)}</p>
-                    <p className="text-xs font-medium text-text-muted">AST</p>
+                    <p className="text-base font-semibold tabular-nums text-text-primary">
+                      {fmtInt(homeBS?.AST ?? null)}
+                    </p>
+                    <p className="text-[11px] font-medium text-text-muted">AST</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">{fmtInt(homeBS?.TOV ?? null)}</p>
-                    <p className="text-xs font-medium text-text-muted">TOV</p>
+                    <p className="text-base font-semibold tabular-nums text-text-primary">
+                      {fmtInt(homeBS?.TOV ?? null)}
+                    </p>
+                    <p className="text-[11px] font-medium text-text-muted">TOV</p>
                   </div>
                 </div>
               )}
@@ -415,41 +607,58 @@ export function GameCardDetail({
               <PlayerBoxTable players={topHome} />
             ) : (
               <div className="rounded border border-border bg-background-tertiary p-6 text-center">
-                <p className="text-xs font-medium text-text-primary">Player statistics are not available yet.</p>
-                <p className="mt-1 text-xs text-text-secondary">Official box scores will be loaded once the game concludes.</p>
+                <p className="text-xs font-medium text-text-primary">
+                  Player statistics are not available yet.
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Official box scores will be loaded once the game concludes.
+                </p>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       )}
 
+      {/* ── AWAY TEAM TAB ── */}
       {activeTab === "away" && (
         <div role="tabpanel" className="space-y-4">
-          <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
-            <div className="mb-4 flex items-center justify-between">
+          <Card>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-text-primary">
-                  {gameDetail?.away_team?.team_name || game.AWAY_TEAM_NAME || game.AWAY_TEAM_ABBREVIATION}
+                  {gameDetail?.away_team?.team_name ||
+                    game.AWAY_TEAM_NAME ||
+                    game.AWAY_TEAM_ABBREVIATION}
                 </h3>
-                <p className="mt-0.5 text-xs text-text-secondary">{game.AWAY_TEAM_ABBREVIATION} · Away</p>
+                <p className="mt-0.5 text-xs text-text-secondary">
+                  {game.AWAY_TEAM_ABBREVIATION} · Away Team
+                </p>
               </div>
               {isCompleted && (
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">{awayScore ?? "—"}</p>
-                    <p className="text-xs font-medium text-text-muted">PTS</p>
+                    <p className="text-base font-semibold tabular-nums text-text-primary">
+                      {awayScore ?? "—"}
+                    </p>
+                    <p className="text-[11px] font-medium text-text-muted">PTS</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">{fmtInt(awayBS?.REB ?? null)}</p>
-                    <p className="text-xs font-medium text-text-muted">REB</p>
+                    <p className="text-base font-semibold tabular-nums text-text-primary">
+                      {fmtInt(awayBS?.REB ?? null)}
+                    </p>
+                    <p className="text-[11px] font-medium text-text-muted">REB</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">{fmtInt(awayBS?.AST ?? null)}</p>
-                    <p className="text-xs font-medium text-text-muted">AST</p>
+                    <p className="text-base font-semibold tabular-nums text-text-primary">
+                      {fmtInt(awayBS?.AST ?? null)}
+                    </p>
+                    <p className="text-[11px] font-medium text-text-muted">AST</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">{fmtInt(awayBS?.TOV ?? null)}</p>
-                    <p className="text-xs font-medium text-text-muted">TOV</p>
+                    <p className="text-base font-semibold tabular-nums text-text-primary">
+                      {fmtInt(awayBS?.TOV ?? null)}
+                    </p>
+                    <p className="text-[11px] font-medium text-text-muted">TOV</p>
                   </div>
                 </div>
               )}
@@ -458,22 +667,50 @@ export function GameCardDetail({
               <PlayerBoxTable players={topAway} />
             ) : (
               <div className="rounded border border-border bg-background-tertiary p-6 text-center">
-                <p className="text-xs font-medium text-text-primary">Player statistics are not available yet.</p>
-                <p className="mt-1 text-xs text-text-secondary">Official box scores will be loaded once the game concludes.</p>
+                <p className="text-xs font-medium text-text-primary">
+                  Player statistics are not available yet.
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Official box scores will be loaded once the game concludes.
+                </p>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       )}
 
-      {activeTab === "pbp" && (
-        <div role="tabpanel" aria-label="Play-by-play">
-          <PlayByPlayTab gameId={game.GAME_ID} season={season ?? game.SEASON ?? gameDetail?.season ?? undefined} initialData={freshPlayByPlay} />
+      {/* ── HIGHLIGHTS TAB ── */}
+      {activeTab === "highlights" && (
+        <div role="tabpanel" aria-label="Highlights">
+          <HighlightsTab
+            gameId={game.GAME_ID}
+            season={season ?? game.SEASON ?? gameDetail?.season ?? undefined}
+            initialData={freshPlayByPlay}
+          />
         </div>
       )}
     </div>
   );
 }
+
+/* ── HIGHLIGHTS SUB-COMPONENTS ── */
+
+const KEY_MOMENT_REASONS = new Set([
+  "badge",
+  "clutch",
+  "lead_change",
+  "team_run",
+  "back_to_back_3",
+  "player_3_run",
+  "30_pt_game",
+  "20_pt_game",
+  "double_double",
+  "triple_double",
+  "10_ast",
+  "15_reb",
+  "5_stl",
+  "5_blk",
+]);
 
 interface PbpEvent {
   period: number;
@@ -487,29 +724,8 @@ interface PbpEvent {
   score_home: number;
   score_away: number;
   points_scored: number;
-  player_stats_before?: PbpPlayerStats | null;
-  player_stats_after?: PbpPlayerStats | null;
-  assist_player_name?: string | null;
-  assist_total?: number | null;
-  quarter_player_points?: number;
-  quarter_team_points?: number;
   badges?: string[];
-}
-
-interface PbpPlayerStats {
-  pts: number;
-  fgm: number;
-  fga: number;
-  fg3m: number;
-  fg3a: number;
-  ftm: number;
-  fta: number;
-  reb: number;
-  ast: number;
-  stl: number;
-  blk: number;
-  pf: number;
-  tov: number;
+  moment_reasons?: string[];
 }
 
 interface PbpData {
@@ -530,28 +746,24 @@ function normalizePbpGameId(gameId: string) {
   return String(gameId).replace(/\D/g, "").padStart(10, "0");
 }
 
-function periodFromLabel(label: string, index: number) {
-  const value = label.trim().toUpperCase();
-  const number = Number(value.match(/\d+/)?.[0]);
-  if (value.startsWith("OT")) return 4 + (number > 0 ? number : Math.max(1, index - 3));
-  return number > 0 ? number : index + 1;
-}
-
 function periodName(period: number) {
   return period <= 4 ? `Q${period}` : `OT${period - 4}`;
 }
 
-function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season?: string; initialData?: PbpData | null }) {
+function HighlightsTab({
+  gameId,
+  season,
+  initialData,
+}: {
+  gameId: string;
+  season?: string;
+  initialData?: PbpData | null;
+}) {
   const [data, setData] = useState<PbpData | null>(initialData ?? null);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "scoring" | number>("all");
-  const [openQuarter, setOpenQuarter] = useState<number>(1);
 
-  useEffect(() => {
-    if (initialData) {
-      return;
-    }
+  if (loading && !data) {
     const normGameId = normalizePbpGameId(gameId);
     loadArchivedPlayByPlay(normGameId, season)
       .then((pbp: PbpData) => {
@@ -559,155 +771,103 @@ function PlayByPlayTab({ gameId, season, initialData }: { gameId: string; season
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message || "Failed to load play-by-play.");
+        setError(err.message || "Failed to load highlights.");
         setLoading(false);
       });
-  }, [gameId, season, initialData]);
 
-  if (loading) {
     return (
       <div className="flex h-32 items-center justify-center gap-2 rounded border border-border bg-background-primary">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <span className="text-xs text-text-secondary">Loading game events...</span>
+        <span className="text-xs text-text-secondary">Loading highlights...</span>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="rounded border border-border bg-background-primary p-6 text-center">
+      <Card className="p-8 text-center">
         <Clock size={20} className="mx-auto mb-2 text-text-muted" />
         <p className="text-xs text-text-secondary">
-          Play-by-play logs are not available for this game.
+          Highlights are not available for this game.
         </p>
-      </div>
+      </Card>
     );
   }
 
-  const periods = Array.from(new Set([
-    ...data.events.map((event) => event.period),
-    ...data.quarter_scores.map((score, index) => periodFromLabel(score.quarter, index)),
-  ])).sort((a, b) => a - b);
-  const periodLabel = periodName;
-  const filteredEvents = data.events.filter((e) => {
-    if (filter === "scoring") return e.points_scored > 0;
-    if (typeof filter === "number") return e.period === filter;
-    return true;
-  });
-  const eventsByQuarter = periods.map((period) => ({
-    period,
-    events: filteredEvents.filter((e) => e.period === period),
-    score: data.quarter_scores.find((qs, index) => periodFromLabel(qs.quarter, index) === period),
-  }));
-  const filterLabels = ["All plays", ...periods.map(periodLabel), "Scoring plays"];
+  const rawEvents = data.events ?? [];
+  const highlights = rawEvents.filter((e) =>
+    (e.badges?.length ?? 0) > 0 || e.moment_reasons?.some((r) => KEY_MOMENT_REASONS.has(r))
+  );
+  const displayEvents = highlights.length > 0 ? highlights : rawEvents.filter((e) => e.points_scored > 0);
 
   return (
-    <div className="space-y-4 rounded border border-border bg-background-primary p-4 sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border-light pb-3">
+    <Card className="space-y-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between border-b border-border-light pb-3">
         <div>
-          <h3 className="text-base font-semibold text-text-primary">
-            {data.away_team} at {data.home_team}
+          <h3 className="text-sm font-semibold text-text-primary">
+            Key game highlights & moments
           </h3>
-          <p className="mt-0.5 text-xs text-text-secondary">Game flow · Play-by-play</p>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            Lead changes, scoring runs, and clutch plays
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium tabular-nums text-text-secondary">
-            {data.events.length} plays
-          </span>
-        </div>
+        <Badge variant="neutral">{displayEvents.length} Highlights Logged</Badge>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        {(["all", ...periods, "scoring"] as const).map((f, index) => (
-          <button
-            key={String(f)}
-            onClick={() => setFilter(f as "all" | "scoring" | number)}
-            aria-pressed={filter === f}
-            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-              filter === f
-                ? "bg-primary text-white"
-                : "border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
-            }`}
-          >
-            {filterLabels[index]}
-          </button>
-        ))}
-      </div>
+      <div className="max-h-[600px] overflow-y-auto divide-y divide-border-light">
+        {displayEvents.map((e, idx) => {
+          const reasons = [
+            ...(e.badges ?? []),
+            ...(e.moment_reasons ?? []).filter((r) => KEY_MOMENT_REASONS.has(r) && r !== "badge"),
+          ];
 
-      <div className="space-y-2">
-        {eventsByQuarter.map(({ period, events, score }) => (
-          <div key={period} className="rounded border border-border bg-background-primary">
-            <button
-              onClick={() => setOpenQuarter((current) => current === period ? 0 : period)}
-              aria-expanded={openQuarter === period}
-              className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-xs font-semibold text-text-primary transition-colors hover:bg-background-tertiary"
+          return (
+            <div
+              key={`hl-${e.period}-${e.clock}-${idx}`}
+              className="grid grid-cols-[68px_1fr_auto] items-center gap-3 px-2 py-2.5 text-xs first:pt-1 last:pb-1 transition-colors hover:bg-background-tertiary/40"
             >
-              <div className="flex items-center gap-2">
-                <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs font-semibold text-text-primary">
-                  {periodLabel(period)}
-                </span>
-                <span>
-                  {data.away_team} {score?.away ?? "-"} – {score?.home ?? "-"} {data.home_team}
-                </span>
+              <div className="text-xs font-medium tabular-nums text-text-muted">
+                {periodName(e.period)} · {e.clock}
               </div>
-              <div className="flex items-center gap-2 text-xs font-normal text-text-secondary">
-                <span className="tabular-nums">{events.length} plays</span>
-                {openQuarter === period ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              </div>
-            </button>
 
-            {openQuarter === period && (
-              <div className="max-h-[600px] space-y-1.5 overflow-y-auto border-t border-border-light p-3">
-                {events.map((e, idx) => (
-                  <PbpEventCard key={`${e.period}-${e.clock}-${idx}`} event={e} />
-                ))}
-                {events.length === 0 && (
-                  <p className="py-6 text-center text-xs text-text-muted">No events match the selected filter.</p>
+              <div className="min-w-0">
+                <p className="m-0 text-xs text-text-primary">
+                  {e.player_name && <span className="font-semibold">{e.player_name} · </span>}
+                  {e.team && <span className="text-text-muted">{e.team} · </span>}
+                  {e.description || e.action_type}
+                </p>
+                {reasons.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {reasons.slice(0, 3).map((r) => (
+                      <span
+                        key={r}
+                        className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-secondary capitalize"
+                      >
+                        {r.replaceAll("_", " ")}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
-function PbpEventCard({ event: e }: { event: PbpEvent }) {
-  const isScoring = e.points_scored > 0;
-  const playerName = e.player_name || e.team || "Game event";
+              <div className="whitespace-nowrap text-right text-xs font-semibold tabular-nums text-text-primary">
+                {e.score_away} - {e.score_home}
+                {e.points_scored > 0 && (
+                  <span className="ml-1 text-xs font-medium text-status-success">
+                    +{e.points_scored}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
 
-  return (
-    <div className={`flex items-center justify-between gap-3 rounded border border-border-light bg-background-primary p-2.5 transition-colors hover:border-card-border-hover ${isScoring ? "border-l-2 border-l-status-success" : ""}`}>
-      <div className="flex min-w-0 items-center gap-2.5">
-        {e.player_id ? (
-          <PlayerPhoto playerId={e.player_id} name={playerName} size={28} />
-        ) : (
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-background-tertiary text-text-muted">
-            <Clock size={12} />
+        {displayEvents.length === 0 && (
+          <div className="py-8 text-center text-xs text-text-muted">
+            No highlight moments found for this game.
           </div>
         )}
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="truncate text-xs font-medium text-text-primary">{playerName}</span>
-            <span className="text-xs tabular-nums text-text-muted">
-              {periodName(e.period)} · {e.clock}
-            </span>
-          </div>
-          <p className="truncate text-xs text-text-secondary">{e.description || e.action_type}</p>
-        </div>
       </div>
-
-      <div className="shrink-0 text-right">
-        <p className="text-xs font-semibold tabular-nums text-text-primary">
-          {e.score_away} – {e.score_home}
-        </p>
-        {isScoring && (
-          <span className="text-xs font-medium tabular-nums text-status-success">
-            +{e.points_scored} PTS
-          </span>
-        )}
-      </div>
-    </div>
+    </Card>
   );
 }

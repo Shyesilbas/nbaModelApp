@@ -3,7 +3,7 @@ import { Trophy } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { ConferenceFilter, TeamStanding } from "./types";
 import type { GameFeedRow } from "../../types/gameFeed";
-import { NBA_TEAM_ABBRS, TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../../lib/nbaTeams";
+import { NBA_TEAM_ABBRS, TEAM_NAME_BY_ABBR, getTeamShortName, isKnownTeamAbbr } from "../../lib/nbaTeams";
 
 const EAST_TEAMS = new Set([
   "ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DET", "IND",
@@ -131,7 +131,8 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
       allList.push({
         rank: 0,
         abbr,
-        name: isKnownTeamAbbr(abbr) ? TEAM_NAME_BY_ABBR[abbr] : abbr,
+        fullName: isKnownTeamAbbr(abbr) ? TEAM_NAME_BY_ABBR[abbr] : abbr,
+        name: getTeamShortName(abbr, isKnownTeamAbbr(abbr) ? TEAM_NAME_BY_ABBR[abbr] : abbr),
         conference: EAST_TEAMS.has(abbr) ? "East" : "West",
         gp,
         w: s.w,
@@ -184,11 +185,11 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
   }, [standings, conferenceFilter]);
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border bg-background-primary p-4 sm:p-5 shadow-xs">
+    <div className="space-y-4 rounded border border-border bg-background-primary p-4 sm:p-5 ">
       {/* Header: Title + Conference Toggle */}
       <div className="flex flex-col items-start justify-between gap-3 border-b border-border pb-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+          <div className="flex h-9 w-9 items-center justify-center rounded bg-amber-500/10 text-amber-500">
             <Trophy className="h-5 w-5" />
           </div>
           <div>
@@ -202,13 +203,13 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
         </div>
 
         {/* Conference Tabs */}
-        <div className="flex items-center rounded-xl border border-border bg-background-tertiary p-1 gap-1 self-stretch sm:self-auto justify-center">
+        <div className="flex items-center rounded border border-border bg-background-tertiary p-1 gap-1 self-stretch sm:self-auto justify-center">
           <button
             type="button"
             onClick={() => setConferenceFilter("all")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${
               conferenceFilter === "all"
-                ? "bg-primary text-white shadow-xs"
+                ? "bg-primary text-white "
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
@@ -217,9 +218,9 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           <button
             type="button"
             onClick={() => setConferenceFilter("east")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${
               conferenceFilter === "east"
-                ? "bg-primary text-white shadow-xs"
+                ? "bg-primary text-white "
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
@@ -228,9 +229,9 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           <button
             type="button"
             onClick={() => setConferenceFilter("west")}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${
               conferenceFilter === "west"
-                ? "bg-primary text-white shadow-xs"
+                ? "bg-primary text-white "
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
@@ -249,7 +250,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
               <th className="py-2.5 px-2 text-center w-10" title="Oynanan Mac">O</th>
               <th className="py-2.5 px-2 text-center w-10" title="Galibiyet">G</th>
               <th className="py-2.5 px-2 text-center w-10" title="Maglubiyet">M</th>
-              <th className="py-2.5 px-2 text-center w-12 font-black text-text-primary" title="Galibiyet Yuzdesi">%</th>
+              <th className="py-2.5 px-2 text-center w-12 font-semibold text-text-primary" title="Galibiyet Yuzdesi">%</th>
               <th className="py-2.5 px-2 text-center w-12" title="Liderle Galibiyet Farki">Fark</th>
               <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title="Mac Basina Atilan Sayi">Sayi</th>
               <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title="Mac Basina Yenilen Sayi">Y.Sayi</th>
@@ -296,7 +297,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                         type="button"
                         onClick={() => onSelectTeam?.(t.abbr)}
                         className="truncate text-left font-bold text-text-primary transition-colors hover:underline hover:text-primary"
-                        title={t.name}
+                        title={t.fullName || t.name}
                       >
                         <span className="hidden md:inline">{t.name}</span>
                         <span className="inline md:hidden">{t.abbr}</span>
@@ -331,7 +332,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                       {t.form.map((res, i) => (
                         <span
                           key={i}
-                          className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-black text-white ${
+                          className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold text-white ${
                             res === "W" ? "bg-status-success" : "bg-status-error"
                           }`}
                           title={res === "W" ? "Galibiyet" : "Maglubiyet"}

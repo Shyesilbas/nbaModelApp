@@ -353,7 +353,7 @@ export function ModelExplanationSection({
             onClick={() => setActiveTab("win")}
             className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
               activeTab === "win"
-                ? "bg-background-primary text-text-primary border border-border shadow-xs"
+                ? "bg-background-primary text-text-primary border border-border "
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
@@ -369,7 +369,7 @@ export function ModelExplanationSection({
               onClick={() => setActiveTab("score")}
               className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                 activeTab === "score"
-                  ? "bg-background-primary text-text-primary border border-border shadow-xs"
+                  ? "bg-background-primary text-text-primary border border-border "
                   : "text-text-secondary hover:text-text-primary"
               }`}
             >

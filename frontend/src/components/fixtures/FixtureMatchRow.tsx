@@ -3,7 +3,7 @@ import { ChevronRight, Clock, Sparkles } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { fmtTipoffTR } from "../game-results/utils";
-import { TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../../lib/nbaTeams";
+import { TEAM_NAME_BY_ABBR, getTeamShortName, isKnownTeamAbbr } from "../../lib/nbaTeams";
 
 interface FixtureMatchRowProps {
   game: GameFeedRow;
@@ -26,8 +26,10 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
 
   const awayAbbr = game.AWAY_TEAM_ABBREVIATION ?? "AWAY";
   const homeAbbr = game.HOME_TEAM_ABBREVIATION ?? "HOME";
-  const awayName = (isKnownTeamAbbr(awayAbbr) ? TEAM_NAME_BY_ABBR[awayAbbr] : null) || game.AWAY_TEAM_NAME || awayAbbr;
-  const homeName = (isKnownTeamAbbr(homeAbbr) ? TEAM_NAME_BY_ABBR[homeAbbr] : null) || game.HOME_TEAM_NAME || homeAbbr;
+  const awayFullName = (isKnownTeamAbbr(awayAbbr) ? TEAM_NAME_BY_ABBR[awayAbbr] : null) || game.AWAY_TEAM_NAME || awayAbbr;
+  const homeFullName = (isKnownTeamAbbr(homeAbbr) ? TEAM_NAME_BY_ABBR[homeAbbr] : null) || game.HOME_TEAM_NAME || homeAbbr;
+  const awayName = getTeamShortName(awayAbbr, awayFullName);
+  const homeName = getTeamShortName(homeAbbr, homeFullName);
 
   const awayWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === awayAbbr;
   const homeWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === homeAbbr;
@@ -64,9 +66,9 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
               onSelectTeam?.(awayAbbr);
             }}
             className={`truncate text-xs font-bold transition-colors hover:underline sm:text-sm ${
-              awayWon ? "text-text-primary font-black" : "text-text-secondary hover:text-text-primary"
+              awayWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
             }`}
-            title={awayName}
+            title={awayFullName}
           >
             <span className="hidden md:inline">{awayName}</span>
             <span className="inline md:hidden">{awayAbbr}</span>
@@ -74,16 +76,16 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
           <TeamLogo abbr={awayAbbr} name={awayName} size={24} className="shrink-0" />
         </div>
 
-        {/* Score / VS Badge */}
+        {/* Score / VS Display (Clean text, no box for VS) */}
         <div className="flex shrink-0 min-w-[58px] items-center justify-center sm:min-w-[70px]">
           {isCompleted ? (
-            <div className="rounded-lg bg-primary px-2.5 py-1 text-center font-mono text-xs font-bold text-white shadow-xs sm:text-sm">
+            <div className="rounded bg-primary px-2.5 py-1 text-center font-mono text-xs font-bold text-white sm:text-sm">
               <span>{game.AWAY_SCORE}</span>
               <span className="mx-1 text-white/70">-</span>
               <span>{game.HOME_SCORE}</span>
             </div>
           ) : (
-            <span className="rounded-lg border border-border bg-background-tertiary px-2.5 py-1 font-mono text-xs font-bold text-text-secondary">
+            <span className="text-xs font-medium text-text-muted">
               VS
             </span>
           )}
@@ -99,9 +101,9 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
               onSelectTeam?.(homeAbbr);
             }}
             className={`truncate text-xs font-bold transition-colors hover:underline sm:text-sm ${
-              homeWon ? "text-text-primary font-black" : "text-text-secondary hover:text-text-primary"
+              homeWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
             }`}
-            title={homeName}
+            title={homeFullName}
           >
             <span className="hidden md:inline">{homeName}</span>
             <span className="inline md:hidden">{homeAbbr}</span>
@@ -143,7 +145,7 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
           </button>
         ) : null}
 
-        <span className="flex items-center rounded-lg border border-border/80 bg-background-primary p-1 text-text-secondary transition-all group-hover:bg-background-tertiary group-hover:text-text-primary group-hover:translate-x-0.5">
+        <span className="flex items-center rounded border border-border/80 bg-background-primary p-1 text-text-secondary transition-all group-hover:bg-background-tertiary group-hover:text-text-primary group-hover:translate-x-0.5">
           <ChevronRight className="h-3.5 w-3.5" />
         </span>
       </div>

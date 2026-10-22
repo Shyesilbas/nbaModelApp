@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -7,32 +8,35 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#0f172a', hover: '#1e293b' },
+        primary: {
+          DEFAULT: 'var(--color-primary)',
+          hover: 'var(--color-primary-hover)',
+        },
         background: {
-          primary: '#ffffff',
-          secondary: '#f8fafc',
-          tertiary: '#f1f5f9',
+          primary: 'var(--color-bg-primary)',
+          secondary: 'var(--color-bg-secondary)',
+          tertiary: 'var(--color-bg-tertiary)',
         },
         text: {
-          primary: '#0f172a',
-          secondary: '#475569',
-          tertiary: '#64748b',
-          muted: '#94a3b8',
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
+          tertiary: 'var(--color-text-tertiary)',
+          muted: 'var(--color-text-muted)',
         },
         border: {
-          DEFAULT: '#e2e8f0',
-          light: '#f1f5f9',
-          focus: '#0f172a',
+          DEFAULT: 'var(--color-border)',
+          light: 'var(--color-border-light)',
+          focus: 'var(--color-border-focus)',
         },
-        'card-border-hover': '#cbd5e1',
+        'card-border-hover': 'var(--color-border-hover)',
         status: {
-          success: '#047857',
-          error: '#b91c1c',
-          warning: '#b45309',
-          info: '#1d4ed8',
+          success: 'var(--color-status-success)',
+          error: 'var(--color-status-error)',
+          warning: 'var(--color-status-warning)',
+          info: 'var(--color-status-info)',
         },
-        price: '#0f172a',
-        highlight: '#0f172a',
+        price: 'var(--color-text-primary)',
+        highlight: 'var(--color-text-primary)',
       },
       borderRadius: {
         sm: '6px',

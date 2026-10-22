@@ -1,51 +1,141 @@
+import TeamLogo from "../TeamLogo";
+
+export interface QuarterScoresProps {
+  homeAbbr: string;
+  awayAbbr: string;
+  homeName?: string | null;
+  awayName?: string | null;
+  homeQS?: number[] | null;
+  awayQS?: number[] | null;
+  homeScore?: number | null;
+  awayScore?: number | null;
+  winnerAbbr?: string | null;
+  margin?: number | null;
+}
+
 export function QuarterScores({
   homeAbbr,
   awayAbbr,
+  homeName,
+  awayName,
   homeQS,
   awayQS,
-}: {
-  homeAbbr: string;
-  awayAbbr: string;
-  homeQS: number[] | null | undefined;
-  awayQS: number[] | null | undefined;
-}) {
-  if (!Array.isArray(homeQS) || !Array.isArray(awayQS) || (homeQS.length === 0 && awayQS.length === 0)) return null;
+  homeScore,
+  awayScore,
+  winnerAbbr,
+  margin,
+}: QuarterScoresProps) {
+  const hasQS =
+    (Array.isArray(awayQS) && awayQS.length > 0) ||
+    (Array.isArray(homeQS) && homeQS.length > 0);
 
-  const quarters = Math.max(homeQS.length, awayQS.length);
+  if (!hasQS) return null;
+
+  const quarters = Math.max(awayQS?.length ?? 0, homeQS?.length ?? 0);
   const cols = Array.from({ length: quarters }, (_, i) => i);
 
+  const awayTotal = awayScore ?? awayQS?.reduce((a, b) => a + b, 0) ?? 0;
+  const homeTotal = homeScore ?? homeQS?.reduce((a, b) => a + b, 0) ?? 0;
+  const awayWon = winnerAbbr ? winnerAbbr === awayAbbr : awayTotal > homeTotal;
+  const homeWon = winnerAbbr ? winnerAbbr === homeAbbr : homeTotal > awayTotal;
+
   return (
-    <div className="rounded border border-border bg-background-primary p-4">
-      <div className="mb-3">
-        <h3 className="text-sm font-semibold text-text-primary">Quarter scores</h3>
+    <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
+      <div className="mb-3 flex items-center justify-between border-b border-border-light pb-3">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary">Periyot Skorlari</h3>
+          <p className="mt-0.5 text-xs text-text-secondary">Ceyrek ve uzatma bazinda skor dagilimi</p>
+        </div>
+        {winnerAbbr && margin != null && margin > 0 && (
+          <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-text-secondary">
+            {winnerAbbr} +{margin} farkla kazandi
+          </span>
+        )}
       </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-border-light">
-              <th className="pb-2 text-left text-xs font-medium text-text-secondary w-16">Team</th>
-              {cols.map((i) => (
-                <th key={i} className="pb-2 text-center text-xs font-medium text-text-secondary">
-                  Q{i + 1}
-                </th>
-              ))}
-              <th className="pb-2 text-center text-xs font-semibold text-text-primary">Total</th>
+            <tr className="border-b border-border-light text-text-secondary">
+              <th className="pb-2 text-left text-xs font-medium min-w-[140px]">Takim</th>
+              {cols.map((i) => {
+                const label = i < 4 ? `Q${i + 1}` : quarters === 5 ? "OT" : `OT${i - 3}`;
+                return (
+                  <th key={i} className="pb-2 text-center text-xs font-medium w-12 sm:w-16">
+                    {label}
+                  </th>
+                );
+              })}
+              <th className="pb-2 text-center text-xs font-semibold text-text-primary w-14 sm:w-18">
+                Toplam
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light">
+            {/* Away Team (First Row) */}
             <tr>
-              <td className="py-2 text-left text-xs font-semibold text-text-primary">{homeAbbr}</td>
-              {cols.map((i) => (
-                <td key={i} className="py-2 text-center text-xs tabular-nums text-text-secondary">{homeQS[i] ?? "-"}</td>
-              ))}
-              <td className="py-2 text-center text-xs font-semibold tabular-nums text-text-primary">{homeQS.reduce((a, b) => a + b, 0)}</td>
+              <td className="py-2.5 text-left">
+                <div className="flex items-center gap-2">
+                  <TeamLogo abbr={awayAbbr} name={awayName} size={20} />
+                  <span className={`text-xs font-semibold ${awayWon ? "text-text-primary" : "text-text-secondary"}`}>
+                    {awayAbbr}
+                  </span>
+                  <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-muted">
+                    Dep
+                  </span>
+                </div>
+              </td>
+              {cols.map((i) => {
+                const aVal = awayQS?.[i] ?? null;
+                const hVal = homeQS?.[i] ?? null;
+                const isHigh = aVal != null && hVal != null && aVal > hVal;
+                return (
+                  <td
+                    key={i}
+                    className={`py-2.5 text-center text-xs tabular-nums ${
+                      isHigh ? "font-semibold text-text-primary" : "text-text-secondary"
+                    }`}
+                  >
+                    {aVal ?? "-"}
+                  </td>
+                );
+              })}
+              <td className={`py-2.5 text-center text-xs font-semibold tabular-nums ${awayWon ? "text-text-primary" : "text-text-secondary"}`}>
+                {awayTotal}
+              </td>
             </tr>
+
+            {/* Home Team (Second Row) */}
             <tr>
-              <td className="py-2 text-left text-xs font-semibold text-text-primary">{awayAbbr}</td>
-              {cols.map((i) => (
-                <td key={i} className="py-2 text-center text-xs tabular-nums text-text-secondary">{awayQS[i] ?? "-"}</td>
-              ))}
-              <td className="py-2 text-center text-xs font-semibold tabular-nums text-text-primary">{awayQS.reduce((a, b) => a + b, 0)}</td>
+              <td className="py-2.5 text-left">
+                <div className="flex items-center gap-2">
+                  <TeamLogo abbr={homeAbbr} name={homeName} size={20} />
+                  <span className={`text-xs font-semibold ${homeWon ? "text-text-primary" : "text-text-secondary"}`}>
+                    {homeAbbr}
+                  </span>
+                  <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-muted">
+                    Ev
+                  </span>
+                </div>
+              </td>
+              {cols.map((i) => {
+                const aVal = awayQS?.[i] ?? null;
+                const hVal = homeQS?.[i] ?? null;
+                const isHigh = hVal != null && aVal != null && hVal > aVal;
+                return (
+                  <td
+                    key={i}
+                    className={`py-2.5 text-center text-xs tabular-nums ${
+                      isHigh ? "font-semibold text-text-primary" : "text-text-secondary"
+                    }`}
+                  >
+                    {hVal ?? "-"}
+                  </td>
+                );
+              })}
+              <td className={`py-2.5 text-center text-xs font-semibold tabular-nums ${homeWon ? "text-text-primary" : "text-text-secondary"}`}>
+                {homeTotal}
+              </td>
             </tr>
           </tbody>
         </table>
