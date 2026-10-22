@@ -32,6 +32,10 @@ type PaperGame = {
   total_line_close?: number;
   over_odds_close?: number;
   under_odds_close?: number;
+  over_min_line?: number;
+  over_min_odds?: number;
+  under_max_line?: number;
+  under_max_odds?: number;
   total_lean?: "over" | "under" | null;
   total_lean_hit?: boolean | null;
   total_line_result?: "over" | "under" | "push";
@@ -101,6 +105,7 @@ export default function PaperTrading() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"over-under" | "moneyline">("over-under");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -242,7 +247,7 @@ export default function PaperTrading() {
           <Stat
             label="Total reached model number"
             value={pct(s.total_lean_hit_rate)}
-            hint={`${s.total_leans} games. Over: actual at or above model total. Under: at or below`}
+            hint={`${s.total_leans} games. Over: model and game clear the lowest Over line. Under: both below the highest Under line`}
           />
           <Stat
             label="Total bet vs closing line"
@@ -421,6 +426,13 @@ export default function PaperTrading() {
                       <p className="text-xs text-text-secondary">
                         Over {decimalOdds(g.over_odds_close)} / Under {decimalOdds(g.under_odds_close)}
                       </p>
+                      {g.over_min_line != null && g.under_max_line != null && (
+                        <p className="text-xs text-text-secondary">
+                          {g.total_lean === "under"
+                            ? `Highest Under ${g.under_max_line.toFixed(1)} at ${decimalOdds(g.under_max_odds)}`
+                            : `Lowest Over ${g.over_min_line.toFixed(1)} at ${decimalOdds(g.over_min_odds)}`}
+                        </p>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2">
                       {g.status === "final" ? (

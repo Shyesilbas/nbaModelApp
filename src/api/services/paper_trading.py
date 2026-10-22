@@ -139,6 +139,13 @@ def load_closing_odds(season: str) -> Dict[str, Dict[str, Any]]:
                 over_odds_close=int(r.over_odds_close),
                 under_odds_close=int(r.under_odds_close),
             )
+            if "over_min_line" in df.columns and pd.notna(r.over_min_line):
+                entry.update(
+                    over_min_line=float(r.over_min_line),
+                    over_min_odds=int(r.over_min_odds),
+                    under_max_line=float(r.under_max_line),
+                    under_max_odds=int(r.under_max_odds),
+                )
         odds[str(r.game_id).zfill(10)] = entry
     return odds
 
@@ -146,9 +153,10 @@ def load_closing_odds(season: str) -> Dict[str, Dict[str, Any]]:
 def _total_outcome(row: Dict[str, Any]) -> Dict[str, Any]:
     """Over/under grading against the model's own total and against the closing line.
 
-    The model leans Over when its total is above the line, Under when below. `total_lean_hit`
-    asks whether the game reached the model's number in that direction (actual >= predicted for
-    Over, actual <= predicted for Under). `line_bet_won` is the plain bet result at the line.
+    The model leans Over when its total is above the main line, Under when below. For an Over
+    lean `total_lean_hit` is true when the model total and the final total both clear the lowest
+    Over line any bookmaker offered; for an Under lean, when both are below the highest Under line.
+    `line_bet_won` is the plain bet result at the main line.
     """
     line = row.get("total_line_close")
     if line is None:
@@ -158,8 +166,12 @@ def _total_outcome(row: Dict[str, Any]) -> Dict[str, Any]:
     line_result = "over" if actual > line else "under" if actual < line else "push"
     out: Dict[str, Any] = {"total_lean": lean, "total_line_result": line_result,
                            "total_lean_hit": None, "line_bet_won": None}
+    if lean and row.get("over_min_line") is not None:
+        if lean == "over":
+            out["total_lean_hit"] = pred > row["over_min_line"] and actual > row["over_min_line"]
+        else:
+            out["total_lean_hit"] = pred < row["under_max_line"] and actual < row["under_max_line"]
     if lean:
-        out["total_lean_hit"] = actual >= pred if lean == "over" else actual <= pred
         out["line_bet_won"] = None if line_result == "push" else lean == line_result
     return out
 
