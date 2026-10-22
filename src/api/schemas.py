@@ -203,6 +203,7 @@ class GameFullResponse(BaseModel):
     explanation: Optional[GameExplanationSub] = None
     is_preseason: Optional[bool] = False
     season_type: Optional[str] = "Regular Season"
+    injury_report: Optional[dict] = Field(None, description="Official injury report applied to this prediction, if any")
 
 
 class ShapFactor(BaseModel):

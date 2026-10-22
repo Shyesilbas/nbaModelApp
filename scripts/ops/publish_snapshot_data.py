@@ -17,10 +17,10 @@ if str(ROOT) not in sys.path:
 from src.core.season_utils import get_default_season, normalize_season
 
 CURRENT_SEASON_FILES = (
-    "raw/team_games.csv", "raw/player_games.csv", "raw/schedule.csv", "features/team_features.csv",
+    "raw/team_games.csv", "raw/player_games.csv", "raw/player_starters.csv", "raw/schedule.csv", "features/team_features.csv",
     "analysis/*.csv", "analysis/*.json", "processed/game_results.csv", "processed/schedule_combined.csv",
 )
-PREVIOUS_SEASON_FILES = ("raw/team_games.csv", "raw/player_games.csv", "features/team_features.csv", "analysis/*.csv")
+PREVIOUS_SEASON_FILES = ("raw/team_games.csv", "raw/player_games.csv", "raw/player_starters.csv", "features/team_features.csv", "analysis/*.csv")
 ALL_SEASONS_FILES = ("processed/game_results.csv",)
 
 
@@ -36,6 +36,7 @@ def previous_season(season: str) -> str:
 def whitelist(season: str) -> list:
     data = ROOT / "data"
     paths = set(data.glob("reference/*.csv"))
+    paths.update(data.glob("training/pbp_situational_features.csv"))
     for pattern in CURRENT_SEASON_FILES:
         paths.update(data.glob(f"season={season}/{pattern}"))
     for pattern in PREVIOUS_SEASON_FILES:

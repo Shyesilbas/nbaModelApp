@@ -59,16 +59,6 @@ export async function predictGameFull(request: GameFullRequest) {
   return parseJsonResponse<any>(res);
 }
 
-export async function getRostersPreview(home: string, away: string, date: string) {
-  const params = new URLSearchParams({
-    home_team: home,
-    away_team: away,
-    prediction_date: date,
-  });
-  const res = await fetch(`${API_BASE_URL}/predict/rosters-preview?${params.toString()}`);
-  return parseJsonResponse<any>(res);
-}
-
 export function normalizeGameFullPrediction(data: any, home: string, away: string, predictionDate: string) {
   return {
     home_team: home,
@@ -94,6 +84,7 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
       model_version: data.score_prediction.model_version,
       confidence_warning: data.score_prediction.confidence_warning,
     },
+    injury_report: data.injury_report ?? null,
     final_display_recommendation: {
       primary_winner_signal: "WIN_PROB",
     },

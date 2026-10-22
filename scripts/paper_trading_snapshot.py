@@ -29,6 +29,7 @@ from src.api.services.score_prediction import predict_score
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import get_default_season, normalize_season
 from src.features.build_matchup_features import build_features
+from src.api.services.auto_status import build_overrides
 from src.ingestion import nba_injury_report as inj
 
 
@@ -59,18 +60,11 @@ def fetch_injuries(season: str):
 
 def game_injuries(report, season: str, game_date: str, away: str, home: str):
     """Overrides for the model and the frozen summary for the ledger, for one game."""
-    if report is None:
-        return None, None
-    mm_dd_yyyy = datetime.strptime(game_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-    entries = [e for e in report.for_matchup(away, home) if e["game_date"] == mm_dd_yyyy]
-    overrides, unmatched = inj.to_overrides(entries, season)
-    summary = {
-        "published_et": report.published_et,
-        "submitted": {away: report.submitted(away, home, away), home: report.submitted(away, home, home)},
-        "players": [{k: e[k] for k in ("team", "player_name", "status", "reason")} for e in entries],
-    }
-    if unmatched:
-        print(f"  no player id for: {', '.join(unmatched)}")
+    overrides, summary = build_overrides(report, season, game_date, away, home)
+    if summary and summary["unmatched"]:
+        print(f"  no player id for: {', '.join(summary['unmatched'])}")
+    if summary:
+        summary.pop("unmatched")
     return overrides, summary
 
 

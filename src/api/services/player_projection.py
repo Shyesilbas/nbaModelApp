@@ -645,12 +645,6 @@ def _roster_frames(home_team, away_team, prediction_date, is_preseason=None, rol
     return home_X, away_X, is_preseason
 
 
-def get_roster_preview(home_team, away_team, prediction_date) -> pd.DataFrame:
-    """Rosters only: the lineup screen needs names and form, not player projections."""
-    home_X, away_X, _ = _roster_frames(home_team, away_team, prediction_date, roll_forward=False)
-    return pd.concat([home_X, away_X], ignore_index=True)
-
-
 _ROLE_SEASONS = ["2022-23", "2023-24", "2024-25", "2025-26", "2026-27"]
 _role_model_cache = {}
 

@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from .schemas import (
+    PlayerStatusOverride,
     GameFullRequest,
     GameFullResponse,
     ModelStatusResponse,
@@ -113,6 +114,23 @@ def game_data_refresh_status(game_id: str, request: Request):
     return _run_endpoint(_status)
 
 
+def _with_injury_report(req, home: str, away: str):
+    """Fill missing player status overrides from the official injury report (today and tomorrow only).
+    Returns the report summary that was applied, or None. Overrides the caller sent are never replaced."""
+    if getattr(req, "player_status_overrides", None):
+        return None
+    from .services.auto_status import auto_overrides
+
+    from datetime import datetime
+    from src.ingestion.nba_injury_report import ET
+
+    game_date = str(req.prediction_date or datetime.now(ET).date())
+    overrides, summary = auto_overrides(home, away, game_date)
+    if overrides:
+        req.player_status_overrides = [PlayerStatusOverride(**o) for o in overrides]
+    return summary
+
+
 def _run_endpoint(handler: Callable):
     try:
         return handler()
@@ -129,12 +147,20 @@ def _run_endpoint(handler: Callable):
 
 @router.post("/predict/win-probability", response_model=WinProbResponse)
 def predict_endpoint(req: WinProbRequest):
-    return _run_endpoint(lambda: predict(req))
+    def _predict():
+        _with_injury_report(req, req.home_team, req.away_team)
+        return predict(req)
+
+    return _run_endpoint(_predict)
 
 
 @router.post("/predict/score", response_model=ScorePredictionResponse)
 def predict_score_endpoint(req: ScorePredictionRequest):
-    return _run_endpoint(lambda: predict_score(req))
+    def _predict():
+        _with_injury_report(req, req.home_team, req.away_team)
+        return predict_score(req)
+
+    return _run_endpoint(_predict)
 
 
 @router.get("/health")
@@ -276,7 +302,11 @@ def snapshot_publish_status(request: Request):
 
 @router.post("/predict/players", response_model=PlayerPredictionResponse)
 def predict_players_endpoint(req: ScorePredictionRequest):
-    return _run_endpoint(lambda: predict_players(req))
+    def _predict():
+        _with_injury_report(req, req.home_team, req.away_team)
+        return predict_players(req)
+
+    return _run_endpoint(_predict)
 
 
 @router.get("/model-status", response_model=ModelStatusResponse)
@@ -286,51 +316,19 @@ def model_status():
 
 @router.post("/predict/game_full", response_model=GameFullResponse)
 def predict_game_full_endpoint(req: GameFullRequest):
-    return _run_endpoint(lambda: predict_game_full(req))
+    def _predict():
+        summary = _with_injury_report(req, req.home_team_id, req.away_team_id)
+        response = predict_game_full(req)
+        response.injury_report = summary
+        return response
 
-
-@router.get("/predict/rosters-preview")
-def rosters_preview_endpoint(home_team: str, away_team: str, prediction_date: str):
-    """Rosters and importance only. No player model runs here; projections come with the prediction."""
-    def _preview():
-        from .services import win_prediction as svc
-        from .services.player_projection import get_roster_preview
-        from .services.availability import assumed_out_ids, importance_score
-        import pandas as pd
-
-        home, away = home_team.upper(), away_team.upper()
-        df_players = get_roster_preview(home, away, prediction_date)
-
-        def to_list(df, team):
-            flagged = assumed_out_ids(team, prediction_date)
-            out = []
-            for _, r in df.iterrows():
-                pid = int(r["PLAYER_ID"]) if pd.notna(r.get("PLAYER_ID")) else None
-                out.append({
-                    "player_id": pid,
-                    "player_name": str(r.get("PLAYER_NAME", f"Player {pid}")),
-                    "position_group": svc.CANONICAL_POSITIONS.get(pid, str(r.get("PLAYER_POSITION_GROUP", "UNKNOWN"))),
-                    "status": "ACTIVE",
-                    "importance": importance_score(r),
-                    "assumed_out": pid in flagged,
-                })
-            out.sort(key=lambda x: x["importance"], reverse=True)
-            return out
-
-        return {
-            "home_team": home,
-            "away_team": away,
-            "prediction_date": prediction_date,
-            "home_players": to_list(df_players[df_players["IS_HOME"] == 1], home),
-            "away_players": to_list(df_players[df_players["IS_HOME"] == 0], away),
-        }
-
-    return _run_endpoint(_preview)
+    return _run_endpoint(_predict)
 
 
 @router.post("/predict/explain", response_model=ShapExplanationResponse)
 def explain_game_endpoint(req: ShapExplanationRequest):
     def _explain():
+        _with_injury_report(req, req.home_team, req.away_team)
         pred_date_str = req.prediction_date.isoformat() if hasattr(req.prediction_date, 'isoformat') else str(req.prediction_date)
         feats = build_features(
             req.home_team.upper(),
