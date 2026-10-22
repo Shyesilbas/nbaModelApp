@@ -59,7 +59,8 @@ type Report = { season: string; summary: Summary; games: PaperGame[] };
 
 const pct = (v: number | null, digits = 1) => (v == null ? "-" : `${(v * 100).toFixed(digits)}%`);
 const num = (v: number | null | undefined, digits = 2) => (v == null ? "-" : v.toFixed(digits));
-const ml = (v: number | undefined) => (v == null ? "-" : v > 0 ? `+${v}` : `${v}`);
+const decimalOdds = (v: number | undefined) =>
+  v == null ? "-" : (v > 0 ? 1 + v / 100 : 1 + 100 / -v).toFixed(2);
 const signed = (v: number) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1));
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
@@ -262,23 +263,23 @@ export default function PaperTrading() {
           </caption>
           <thead className="bg-background-tertiary text-xs text-text-muted">
             <tr>
-              <th className="px-4 py-2 font-medium">Date</th>
               <th className="px-4 py-2 font-medium">Game</th>
-              <th className="px-4 py-2 font-medium">Model pick</th>
-              <th className="px-4 py-2 font-medium">Closing ML (away / home)</th>
-              <th className="px-4 py-2 font-medium">Model vs market</th>
-              <th className="px-4 py-2 font-medium">Predicted score</th>
-              <th className="px-4 py-2 font-medium">Final score</th>
-              <th className="px-4 py-2 font-medium">Margin err.</th>
+              <th className="px-4 py-2 font-medium">Model</th>
+              <th className="px-4 py-2 font-medium">Market (closing odds)</th>
+              <th className="px-4 py-2 font-medium">Final</th>
               <th className="px-4 py-2 font-medium">Result</th>
             </tr>
           </thead>
           <tbody>
             {dayGames.map((g) => {
               const conf = Math.max(g.home_win_probability, 1 - g.home_win_probability);
+              const hasOdds = g.market_home_probability != null;
+              const marketPickHome = hasOdds && (g.market_home_probability as number) >= 0.5;
+              const marketConf = hasOdds
+                ? Math.max(g.market_home_probability as number, 1 - (g.market_home_probability as number))
+                : 0;
               return (
-                <tr key={g.game_id} className="border-t border-border-light">
-                  <td className="whitespace-nowrap px-4 py-2 text-text-secondary">{g.game_date}</td>
+                <tr key={g.game_id} className="border-t border-border-light align-top">
                   <td className="whitespace-nowrap px-4 py-2">
                     <span className="inline-flex items-center gap-2">
                       <TeamCell abbr={g.away_team} bold={g.status === "final" && g.actual_winner === g.away_team} />
@@ -286,27 +287,42 @@ export default function PaperTrading() {
                       <TeamCell abbr={g.home_team} bold={g.status === "final" && g.actual_winner === g.home_team} />
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-text-primary">
-                    {g.predicted_winner} <span className="text-text-muted">{pct(conf, 0)}</span>
+                  <td className="whitespace-nowrap px-4 py-2">
+                    <p className="text-text-primary">
+                      {g.predicted_winner} <span className="text-text-muted">{pct(conf, 0)}</span>
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      Score {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
+                    </p>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-text-secondary">
-                    {g.market_home_probability == null ? "-" : `${ml(g.away_ml_close)} / ${ml(g.home_ml_close)}`}
+                  <td className="whitespace-nowrap px-4 py-2">
+                    {hasOdds ? (
+                      <>
+                        <p className="text-text-primary">
+                          {marketPickHome ? g.home_team : g.away_team}{" "}
+                          <span className="text-text-muted">{pct(marketConf, 0)}</span>
+                        </p>
+                        <p className="text-xs text-text-secondary">
+                          {g.away_team} {decimalOdds(g.away_ml_close)} / {g.home_team} {decimalOdds(g.home_ml_close)}
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-text-muted">-</span>
+                    )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-text-secondary">
-                    {g.market_home_probability == null
-                      ? "-"
-                      : `${signed((g.home_win_probability - g.market_home_probability) * 100)} pts home`}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-text-secondary">
-                    {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-text-primary">
-                    {g.status === "final" ? `${g.actual_away_score} - ${g.actual_home_score}` : "-"}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-text-secondary">
-                    {g.status === "final" && g.predicted_margin != null && g.actual_margin != null
-                      ? signed(g.predicted_margin - g.actual_margin)
-                      : "-"}
+                  <td className="whitespace-nowrap px-4 py-2">
+                    {g.status === "final" ? (
+                      <>
+                        <p className="text-text-primary">{g.actual_away_score} - {g.actual_home_score}</p>
+                        {g.predicted_margin != null && g.actual_margin != null && (
+                          <p className="text-xs text-text-secondary">
+                            Margin error {signed(g.predicted_margin - g.actual_margin)}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-text-muted">-</span>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2">
                     {!g.valid ? (
