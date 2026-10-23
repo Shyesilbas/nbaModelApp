@@ -123,20 +123,6 @@ export const TEAM_THEME_BY_ABBR: Record<NbaTeamAbbr, TeamTheme> = {
   WAS: { primary: "#0C2340", secondary: "#E31837", accent: "#E31837", badgeBg: "rgba(227, 24, 55, 0.12)", badgeText: "#E31837", glow: "rgba(227, 24, 55, 0.35)" },
 };
 
-export const getTeamTheme = (abbr?: string | null): TeamTheme => {
-  const upper = abbr?.toUpperCase() as NbaTeamAbbr;
-  return (
-    TEAM_THEME_BY_ABBR[upper] || {
-      primary: "#1D428A",
-      secondary: "#64748B",
-      accent: "#1D428A",
-      badgeBg: "rgba(29, 66, 138, 0.12)",
-      badgeText: "#1D428A",
-      glow: "rgba(29, 66, 138, 0.30)",
-    }
-  );
-};
-
 export const NBA_TEAMS = NBA_TEAM_ABBRS.map((abbr) => ({
   abbr,
   name: TEAM_NAME_BY_ABBR[abbr],

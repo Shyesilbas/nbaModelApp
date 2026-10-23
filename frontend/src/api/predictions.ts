@@ -20,13 +20,6 @@ export type GameFullRequest = {
   player_status_overrides?: PlayerStatusOverride[];
 };
 
-export type WinProbabilityRequest = {
-  home_team: string;
-  away_team: string;
-  prediction_date: string;
-  player_status_overrides?: PlayerStatusOverride[];
-};
-
 async function parseJsonResponse<T>(res: Response): Promise<T> {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -34,20 +27,6 @@ async function parseJsonResponse<T>(res: Response): Promise<T> {
     throw new Error(message);
   }
   return body as T;
-}
-
-export async function getModelStatus() {
-  const res = await fetch(`${API_BASE_URL}/model-status`);
-  return parseJsonResponse<any>(res);
-}
-
-export async function predictWinProbability(request: WinProbabilityRequest) {
-  const res = await fetch(`${API_BASE_URL}/predict/win-probability`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
-  });
-  return parseJsonResponse<any>(res);
 }
 
 export async function predictGameFull(request: GameFullRequest) {

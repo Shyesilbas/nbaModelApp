@@ -1,4 +1,5 @@
 import { NBA_TEAMS, getTeamLogoUrl } from "./nbaTeams";
+import { reportStampText } from "./injuryTime";
 
 interface ExportPredictionReportArgs {
   result: any;
@@ -9,33 +10,6 @@ interface ExportPredictionReportArgs {
 
 const getTeamInfo = (abbr: string) =>
   NBA_TEAMS.find((t) => t.abbr === abbr) || { abbr, name: abbr, color: "#1e293b" };
-
-function formatPublishedTSI(publishedEt?: string | null): string {
-  if (!publishedEt) return "";
-  const m = publishedEt.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})\s+([AP]M)/i);
-  if (!m) return publishedEt;
-  const [, mon, day, yr, hh, mm, ap] = m;
-  const fullYear = yr.length === 2 ? `20${yr}` : yr;
-  let h = parseInt(hh, 10);
-  if (ap.toUpperCase() === "PM" && h < 12) h += 12;
-  if (ap.toUpperCase() === "AM" && h === 12) h = 0;
-  // NBA Eastern time is typically UTC-4 (EDT) or UTC-5 (EST)
-  // Converting via US Eastern timezone offset
-  try {
-    const iso = `${fullYear}-${mon.padStart(2, "0")}-${day.padStart(2, "0")}T${String(h).padStart(2, "0")}:${mm}:00-04:00`;
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return publishedEt;
-    const fmt = new Intl.DateTimeFormat("tr-TR", {
-      timeZone: "Europe/Istanbul",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    return `${fmt.format(d)} TSİ`;
-  } catch {
-    return publishedEt;
-  }
-}
 
 export function exportPredictionAsPDF({
   result: resData,
@@ -409,7 +383,7 @@ export function exportPredictionAsPDF({
         <!-- Section: Injury Report (Sakatlık Raporu) -->
         <div class="section-title">
           <span>Resmi Sakatlık Raporu</span>
-          ${injuryReport?.published_et ? `<span style="font-size: 8px; font-weight: 600; color: #475569; margin-left: 6px;">(Rapor Saati: ${formatPublishedTSI(injuryReport.published_et)})</span>` : ""}
+          ${injuryReport?.published_et ? `<span style="font-size: 8px; font-weight: 600; color: #475569; margin-left: 6px;">(Rapor Saati: ${reportStampText(injuryReport.published_et)})</span>` : ""}
         </div>
         <div class="columns-2">
           <!-- Away Injuries -->

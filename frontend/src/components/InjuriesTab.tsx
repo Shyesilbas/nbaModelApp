@@ -17,6 +17,7 @@ import PlayerPhoto from "./PlayerPhoto";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
 import { fmtDate } from "./game-results/utils";
+import { reportStampText } from "../lib/injuryTime";
 
 type InjuredPlayer = {
   team: string;
@@ -70,31 +71,6 @@ const STATUS_VARIANT: Record<string, "error" | "warning" | "neutral" | "success"
 };
 
 const todayEt = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-
-function formatPublishedTSI(publishedEt?: string | null): string {
-  if (!publishedEt) return "";
-  const m = publishedEt.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})\s+([AP]M)/i);
-  if (!m) return publishedEt;
-  const [, mon, day, yr, hh, mm, ap] = m;
-  const fullYear = yr.length === 2 ? `20${yr}` : yr;
-  let h = parseInt(hh, 10);
-  if (ap.toUpperCase() === "PM" && h < 12) h += 12;
-  if (ap.toUpperCase() === "AM" && h === 12) h = 0;
-  try {
-    const iso = `${fullYear}-${mon.padStart(2, "0")}-${day.padStart(2, "0")}T${String(h).padStart(2, "0")}:${mm}:00-04:00`;
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return publishedEt;
-    const fmt = new Intl.DateTimeFormat("tr-TR", {
-      timeZone: "Europe/Istanbul",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    return `${fmt.format(d)} TSİ`;
-  } catch {
-    return publishedEt;
-  }
-}
 
 function StatusBadge({ status }: { status: string | null }) {
   if (!status) return <Badge variant="neutral" size="sm">Belirtilmedi</Badge>;
@@ -186,7 +162,7 @@ export default function InjuriesTab() {
             <div className="flex items-center gap-1.5 rounded border border-border bg-background-primary px-3 py-1.5 text-xs text-text-secondary">
               <span className="h-2 w-2 rounded-full bg-status-success animate-pulse" />
               <span className="font-medium text-text-primary">
-                Bülten: {formatPublishedTSI(data.published_et)}
+                Bülten: {(data.published_et ? reportStampText(data.published_et) : "")}
               </span>
             </div>
           )}

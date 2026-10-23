@@ -4,7 +4,6 @@
  */
 
 export const CURRENT_SEASON = "2026-27";
-export const DEFAULT_HISTORICAL_SEASON = "2025-26";
 export const MIN_PREDICTION_DATE = "2026-10-01";
 
 export const API_BASE_URL = (

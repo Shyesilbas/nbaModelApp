@@ -40,7 +40,3 @@ export async function postPrivateApi<T>(path: string, body?: unknown): Promise<T
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
-
-export function clearDataCache() {
-  apiCache.clear();
-}

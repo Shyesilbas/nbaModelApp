@@ -92,43 +92,9 @@ const TEAM_FULL: Record<string, string> = {
   WAS: "Wizards",
 };
 
-const TEAM_CITY: Record<string, string> = {
-  ATL: "Atlanta",
-  BOS: "Boston",
-  BKN: "Brooklyn",
-  CHA: "Charlotte",
-  CHI: "Chicago",
-  CLE: "Cleveland",
-  DAL: "Dallas",
-  DEN: "Denver",
-  DET: "Detroit",
-  GSW: "Golden State",
-  HOU: "Houston",
-  IND: "Indiana",
-  LAC: "LA",
-  LAL: "Los Angeles",
-  MEM: "Memphis",
-  MIA: "Miami",
-  MIL: "Milwaukee",
-  MIN: "Minnesota",
-  NOP: "New Orleans",
-  NYK: "New York",
-  OKC: "Oklahoma City",
-  ORL: "Orlando",
-  PHI: "Philadelphia",
-  PHX: "Phoenix",
-  POR: "Portland",
-  SAC: "Sacramento",
-  SAS: "San Antonio",
-  TOR: "Toronto",
-  UTA: "Utah",
-  WAS: "Washington",
-};
 
 export const teamFull = (abbr: string, fallback?: string | null) =>
   TEAM_FULL[abbr] ?? fallback ?? abbr;
-
-export const teamCity = (abbr: string) => TEAM_CITY[abbr] ?? abbr;
 
 export interface ParsedOfficial {
   name: string;
