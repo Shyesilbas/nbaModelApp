@@ -1,6 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { X, TrendingUp, TrendingDown, Minus, Shield, Trophy, Users, Clock, Flame, BarChart2, Info } from "lucide-react";
 import PlayerPhoto from "../PlayerPhoto";
+import { Badge, Button, EmptyState, InlineError, Skeleton } from "../common";
 import { loadPrivateApi } from "../../lib/dataCache";
 import type { TeamInfo } from "./types";
 
@@ -55,6 +56,8 @@ interface SeasonAverages {
   GAMES_PLAYED?: number;
 }
 
+const EMPTY_GAMES: GameRow[] = [];
+
 export function PlayerMatchupModal({
   player,
   teamInfo,
@@ -63,28 +66,60 @@ export function PlayerMatchupModal({
   season = "2025-26",
   onClose,
 }: PlayerMatchupModalProps) {
-  const [games, setGames] = useState<GameRow[]>([]);
-  const [seasonAverages, setSeasonAverages] = useState<SeasonAverages | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{
+    key: string;
+    games: GameRow[];
+    seasonAverages: SeasonAverages | null;
+    error: string | null;
+  } | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const requestKey = player ? `${player.player_id}|${season}|${reloadKey}` : "";
+  const loading = player != null && result?.key !== requestKey;
+  const games = result?.key === requestKey ? result.games : EMPTY_GAMES;
+  const seasonAverages = result?.key === requestKey ? result.seasonAverages : null;
+  const error = result?.key === requestKey ? result.error : null;
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const isOpen = player != null;
 
-  // Close on Escape key
+  // Escape closes, Tab stays inside the dialog, focus returns to the opener on close
   useEffect(() => {
+    if (!isOpen) return;
+    const opener = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      opener?.focus?.();
+    };
+  }, [isOpen, onClose]);
 
   // Fetch player game logs and season averages
   useEffect(() => {
     if (!player) return;
 
     let isMounted = true;
-    setLoading(true);
-    setError(null);
-
     const playerId = String(player.player_id);
 
     const fetchPlayerData = async () => {
@@ -97,26 +132,26 @@ export function PlayerMatchupModal({
 
         if (!isMounted) return;
 
-        const gamesBySeason = payload.games || {};
-        const availableSeasons = Object.keys(gamesBySeason).sort();
-        const latestSeason = availableSeasons.length > 0 ? availableSeasons[availableSeasons.length - 1] : "";
-        const targetSeason = gamesBySeason[season]?.length ? season : latestSeason;
-
         // Recent form comes from the current season only; preseason games stay out, as in the model inputs
-        const allPlayedGames = (gamesBySeason[season] ?? []).filter(
+        const playedGames = (payload.games?.[season] ?? []).filter(
           (g) => !g.DID_NOT_PLAY && g.SEASON_TYPE !== "Pre Season"
         );
-        allPlayedGames.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
+        playedGames.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
 
-        const seasonAvg = payload.averages?.[targetSeason] || payload.averages?.[latestSeason] || null;
-
-        setGames(allPlayedGames);
-        setSeasonAverages(seasonAvg);
-        setLoading(false);
-      } catch (err: any) {
+        setResult({
+          key: requestKey,
+          games: playedGames,
+          seasonAverages: payload.averages?.[season] ?? null,
+          error: null,
+        });
+      } catch (err) {
         if (!isMounted) return;
-        setError(err.message || "Oyuncu verisi yüklenemedi.");
-        setLoading(false);
+        setResult({
+          key: requestKey,
+          games: [],
+          seasonAverages: null,
+          error: err instanceof Error && err.message ? err.message : "Oyuncu verisi yüklenemedi.",
+        });
       }
     };
 
@@ -125,7 +160,7 @@ export function PlayerMatchupModal({
     return () => {
       isMounted = false;
     };
-  }, [player, season]);
+  }, [player, season, requestKey]);
 
   // Filter games before the target gameDate if supplied, otherwise take latest
   const recentGames = useMemo(() => {
@@ -161,7 +196,7 @@ export function PlayerMatchupModal({
     const ptsSeason = seasonAverages?.PTS || 0;
 
     // 1. Scoring & recent trend analysis
-    if (stats5 && stats5.count >= 3) {
+    if (stats5 && stats5.count >= 1) {
       const diffPct = ptsSeason > 0 ? ((ptsProj - ptsSeason) / ptsSeason) * 100 : 0;
       const formDiff = ((stats5.pts - ptsSeason) / Math.max(ptsSeason, 1)) * 100;
 
@@ -170,7 +205,7 @@ export function PlayerMatchupModal({
       else if (formDiff < -10) trendWord = "son dönemde hafif bir düşüş grafiğinde";
 
       parts.push(
-        `Son 5 maçında ortalama ${stats5.pts.toFixed(1)} sayı, ${stats5.reb.toFixed(1)} ribaund ve ${stats5.ast.toFixed(1)} asist (` +
+        `Son ${stats5.count} maçında ortalama ${stats5.pts.toFixed(1)} sayı, ${stats5.reb.toFixed(1)} ribaund ve ${stats5.ast.toFixed(1)} asist (` +
         `${stats5.min.toFixed(1)} dk, %${((stats5.fgPct || 0) * 100).toFixed(0)} FG) ile ${trendWord} oynuyor. Sezon ortalaması ise ${ptsSeason.toFixed(1)} PTS.`
       );
 
@@ -185,6 +220,8 @@ export function PlayerMatchupModal({
           `Modelin ${ptsProj.toFixed(1)} sayı tahmini, oyuncunun temel sezon standartlarıyla dengeli bir uyum göstermektedir.`
         );
       }
+    } else if (!seasonAverages) {
+      parts.push("Bu sezon için henüz oynanmış maç verisi yok; projeksiyon önceki sezonlardaki role ve güncel kadro bağlamına dayanır.");
     } else {
       parts.push(
         `Sezon genelinde ${ptsSeason.toFixed(1)} sayı, ${seasonAverages?.REB?.toFixed(1) || 0} ribaund ve ${seasonAverages?.AST?.toFixed(1) || 0} asist ortalamasına sahip.`
@@ -212,175 +249,169 @@ export function PlayerMatchupModal({
 
   if (!player) return null;
 
+  const kpis = [
+    { label: "Öngörülen sayı", val: player.predicted_pts, unit: "PTS", icon: <Trophy size={16} strokeWidth={1.5} /> },
+    { label: "Öngörülen ribaund", val: player.predicted_reb, unit: "REB", icon: <Shield size={16} strokeWidth={1.5} /> },
+    { label: "Öngörülen asist", val: player.predicted_ast, unit: "AST", icon: <Users size={16} strokeWidth={1.5} /> },
+    { label: "Toplam PRA", val: player.predicted_pra, unit: "PRA", icon: <Flame size={16} strokeWidth={1.5} /> },
+  ];
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-background-primary rounded-md shadow-md border border-border overflow-hidden text-text-primary"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="player-matchup-title"
+        className="relative flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-md border border-border bg-background-primary text-text-primary shadow-md"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-border-light flex items-center justify-between bg-background-secondary">
-          <div className="flex items-center gap-4">
+        <div className="flex items-start justify-between gap-4 border-b border-border-light bg-background-secondary px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-4">
             <PlayerPhoto
               playerId={player.player_id}
               name={player.player_name}
               size={52}
-              className="rounded-full border border-border"
+              className="shrink-0 rounded-full border border-border"
             />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium px-2 py-0.5 rounded-sm bg-background-primary border border-border text-text-secondary">
-                  {player.position_group}
-                </span>
-                <span className="text-xs font-medium text-text-secondary uppercase">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="neutral">{player.position_group}</Badge>
+                <span className="text-xs font-medium text-text-secondary">
                   {teamInfo.abbr} vs {opponentInfo.abbr}
                 </span>
               </div>
-              <h3 className="text-lg font-semibold text-text-primary mt-0.5 leading-tight">
+              <h2 id="player-matchup-title" className="mt-1 truncate text-lg font-semibold leading-tight text-text-primary">
                 {player.player_name}
-              </h3>
-              <p className="text-xs text-text-secondary">
-                Veriye Dayalı Maç Raporu ve Projeksiyon Detayı
-              </p>
+              </h2>
+              <p className="text-xs text-text-secondary">Maç raporu ve projeksiyon detayı</p>
             </div>
           </div>
 
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded border border-border bg-background-primary hover:bg-background-secondary text-text-secondary hover:text-text-primary flex items-center justify-center transition-colors cursor-pointer"
-            title="Kapat (ESC)"
+            aria-label="Kapat"
+            title="Kapat (Esc)"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
           >
-            <X size={16} />
+            <X size={16} strokeWidth={1.5} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-4 gap-3">
-            {[
-              { label: "Öngörülen Sayı", val: player.predicted_pts, unit: "PTS", icon: <Trophy size={14} /> },
-              { label: "Öngörülen Ribaund", val: player.predicted_reb, unit: "REB", icon: <Shield size={14} /> },
-              { label: "Öngörülen Asist", val: player.predicted_ast, unit: "AST", icon: <Users size={14} /> },
-              { label: "Toplam PRA", val: player.predicted_pra, unit: "PRA", icon: <Flame size={14} /> },
-            ].map((kpi, i) => (
-              <div key={i} className="p-3 rounded border border-border bg-background-secondary flex flex-col items-center justify-center text-center">
-                <div className="flex items-center gap-1 text-text-secondary mb-1">
+        <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
+          {/* KPI cards */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {kpis.map((kpi) => (
+              <div
+                key={kpi.unit}
+                className="flex flex-col items-center justify-center rounded border border-border bg-background-secondary p-3 text-center"
+              >
+                <div className="mb-1 flex items-center gap-1 text-text-secondary">
                   {kpi.icon}
-                  <span className="text-xs font-medium text-text-secondary">{kpi.unit}</span>
+                  <span className="text-xs font-medium">{kpi.unit}</span>
                 </div>
-                <p className="text-2xl font-semibold tabular-nums text-text-primary leading-none">
+                <p className="text-2xl font-semibold leading-none tabular-nums text-text-primary">
                   {kpi.val?.toFixed(1)}
                 </p>
-                <span className="text-xs text-text-secondary mt-1">{kpi.label}</span>
+                <span className="mt-1 text-xs text-text-secondary">{kpi.label}</span>
               </div>
             ))}
           </div>
 
-          {/* Narrative Scouting Report */}
-          <div className="rounded border border-border bg-background-secondary p-4 space-y-2">
-            <div className="flex items-center gap-2 text-text-primary">
-              <Info size={16} className="text-primary" />
-              <h4 className="text-xs font-semibold text-text-primary">
-                Veriye Dayalı Maç ve Form Analizi
-              </h4>
+          {/* Narrative */}
+          <section className="space-y-2 rounded border border-border bg-background-secondary p-4" aria-label="Maç ve form analizi">
+            <div className="flex items-center gap-2">
+              <Info size={16} strokeWidth={1.5} className="text-primary" />
+              <h3 className="text-sm font-semibold text-text-primary">Maç ve form analizi</h3>
             </div>
-            <div className="space-y-1.5 text-xs text-text-secondary leading-relaxed">
-              {narrative.map((paragraph, i) => (
-                <p key={i} className="m-0">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-          </div>
-
-          {/* Stat Comparison Matrix */}
-          {stats5 && (
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-text-primary">
-                  <BarChart2 size={16} />
-                  <h4 className="text-xs font-semibold text-text-primary">
-                    İstatistiksel Karşılaştırma ve Trend
-                  </h4>
-                </div>
-                <span className="text-xs text-text-secondary">
-                  Son 5 Maç vs Sezon Ort. vs Model
-                </span>
+            {loading ? (
+              <div className="space-y-2" aria-busy="true">
+                <Skeleton variant="text" />
+                <Skeleton variant="text" />
+                <Skeleton variant="text" className="w-2/3" />
               </div>
+            ) : (
+              <div className="space-y-1.5 text-xs leading-relaxed text-text-secondary">
+                {narrative.map((paragraph, i) => (
+                  <p key={i} className="m-0">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            )}
+          </section>
 
-              <div className="overflow-hidden rounded border border-border bg-background-primary">
+          {/* Stat comparison */}
+          <section className="space-y-3" aria-label="İstatistiksel karşılaştırma">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <BarChart2 size={16} strokeWidth={1.5} className="text-text-primary" />
+                <h3 className="text-sm font-semibold text-text-primary">İstatistiksel karşılaştırma</h3>
+              </div>
+              <span className="text-xs text-text-secondary">Son maçlar, sezon ortalaması ve model</span>
+            </div>
+
+            {loading ? (
+              <Skeleton className="h-32 w-full" />
+            ) : stats5 ? (
+              <div className="overflow-x-auto rounded border border-border bg-background-primary">
                 <table className="w-full text-xs">
-                  <thead className="bg-background-secondary text-xs font-medium text-text-secondary border-b border-border">
+                  <thead className="whitespace-nowrap border-b border-border bg-background-tertiary text-xs font-medium text-text-secondary">
                     <tr>
-                      <th className="px-3 py-2 text-left">Metrik</th>
-                      <th className="px-3 py-2 text-right">Sezon Ort.</th>
-                      <th className="px-3 py-2 text-right">Son 5 Maç</th>
-                      <th className="px-3 py-2 text-right text-primary">Model Tahmini</th>
-                      <th className="px-3 py-2 text-right">Fark / Trend</th>
+                      <th scope="col" className="px-3 py-2 text-left">Metrik</th>
+                      <th scope="col" className="px-3 py-2 text-right">Sezon ort.</th>
+                      <th scope="col" className="px-3 py-2 text-right">Son {stats5.count} maç</th>
+                      <th scope="col" className="px-3 py-2 text-right text-primary">Model</th>
+                      <th scope="col" className="px-3 py-2 text-right">Fark</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
                     {[
-                      {
-                        metric: "Sayı (PTS)",
-                        season: seasonAverages?.PTS,
-                        l5: stats5.pts,
-                        model: player.predicted_pts,
-                      },
-                      {
-                        metric: "Ribaund (REB)",
-                        season: seasonAverages?.REB,
-                        l5: stats5.reb,
-                        model: player.predicted_reb,
-                      },
-                      {
-                        metric: "Asist (AST)",
-                        season: seasonAverages?.AST,
-                        l5: stats5.ast,
-                        model: player.predicted_ast,
-                      },
+                      { metric: "Sayı (PTS)", season: seasonAverages?.PTS, l5: stats5.pts, model: player.predicted_pts },
+                      { metric: "Ribaund (REB)", season: seasonAverages?.REB, l5: stats5.reb, model: player.predicted_reb },
+                      { metric: "Asist (AST)", season: seasonAverages?.AST, l5: stats5.ast, model: player.predicted_ast },
                       {
                         metric: "Toplam PRA",
                         season: (seasonAverages?.PTS || 0) + (seasonAverages?.REB || 0) + (seasonAverages?.AST || 0),
                         l5: stats5.pra,
                         model: player.predicted_pra,
                       },
-                    ].map((row, idx) => {
+                    ].map((row) => {
                       const base = row.season ?? row.l5;
                       const diff = base ? row.model - base : 0;
                       const isUp = diff > 0.5;
                       const isDown = diff < -0.5;
 
                       return (
-                        <tr key={idx} className="hover:bg-background-secondary/60 transition-colors">
-                          <td className="px-3 py-2 text-text-primary font-medium">{row.metric}</td>
-                          <td className="px-3 py-2 text-right text-text-secondary tabular-nums">
+                        <tr key={row.metric} className="hover:bg-background-secondary">
+                          <th scope="row" className="px-3 py-2 text-left font-medium text-text-primary">{row.metric}</th>
+                          <td className="px-3 py-2 text-right tabular-nums text-text-secondary">
                             {row.season != null ? row.season.toFixed(1) : "-"}
                           </td>
-                          <td className="px-3 py-2 text-right text-text-primary font-medium tabular-nums">
+                          <td className="px-3 py-2 text-right font-medium tabular-nums text-text-primary">
                             {row.l5.toFixed(1)}
                           </td>
-                          <td className="px-3 py-2 text-right text-primary font-semibold tabular-nums">
+                          <td className="px-3 py-2 text-right font-semibold tabular-nums text-primary">
                             {row.model.toFixed(1)}
                           </td>
                           <td className="px-3 py-2 text-right tabular-nums">
-                            <span
-                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm text-xs font-medium ${
-                                isUp
-                                  ? "text-status-success bg-status-success/10"
-                                  : isDown
-                                  ? "text-status-error bg-status-error/10"
-                                  : "text-text-secondary bg-background-secondary"
-                              }`}
-                            >
-                              {isUp ? <TrendingUp size={12} /> : isDown ? <TrendingDown size={12} /> : <Minus size={12} />}
+                            <Badge variant={isUp ? "success" : isDown ? "error" : "neutral"}>
+                              {isUp ? (
+                                <TrendingUp size={16} strokeWidth={1.5} aria-hidden="true" />
+                              ) : isDown ? (
+                                <TrendingDown size={16} strokeWidth={1.5} aria-hidden="true" />
+                              ) : (
+                                <Minus size={16} strokeWidth={1.5} aria-hidden="true" />
+                              )}
                               {diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1)}
-                            </span>
+                            </Badge>
                           </td>
                         </tr>
                       );
@@ -388,97 +419,81 @@ export function PlayerMatchupModal({
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
+            ) : null}
+          </section>
 
-          {/* Recent Games Log */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-text-primary">
-                <Clock size={16} />
-                <h4 className="text-xs font-semibold text-text-primary">
-                  Son Maç Performansları ({recentGames.length} Maç)
-                </h4>
+          {/* Recent games */}
+          <section className="space-y-3" aria-label="Son maç performansları">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Clock size={16} strokeWidth={1.5} className="text-text-primary" />
+                <h3 className="text-sm font-semibold text-text-primary">
+                  Son maç performansları{!loading && !error ? ` (${recentGames.length} maç)` : ""}
+                </h3>
               </div>
-              <span className="text-xs text-text-secondary">
-                Tarih Sıralı Gerçekleşen İstatistikler
-              </span>
+              <span className="text-xs text-text-secondary">Bu sezonun gerçekleşen istatistikleri</span>
             </div>
 
             {loading ? (
-              <div className="p-8 text-center text-xs text-text-secondary">
-                Maç geçmişi yükleniyor
+              <div className="space-y-2" aria-busy="true">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
               </div>
             ) : error ? (
-              <div className="p-4 rounded border border-status-warning/20 bg-status-warning/10 text-status-warning text-xs font-medium">
-                {error}
-              </div>
+              <InlineError
+                title="Oyuncu verisi yüklenemedi"
+                message={error}
+                onRetry={() => setReloadKey((k) => k + 1)}
+              />
             ) : recentGames.length === 0 ? (
-              <div className="p-4 rounded border border-border bg-background-secondary text-text-secondary text-xs text-center">
-                Bu sezon için oynanmış maç kaydı bulunamadı.
-              </div>
+              <EmptyState
+                title="Maç kaydı yok"
+                description="Bu sezon için oynanmış maç kaydı bulunamadı."
+                icon={<Clock size={32} strokeWidth={1.5} />}
+                className="p-6 sm:p-6"
+              />
             ) : (
-              <div className="overflow-hidden rounded border border-border bg-background-primary">
+              <div className="overflow-x-auto rounded border border-border bg-background-primary">
                 <table className="w-full text-xs">
-                  <thead className="bg-background-secondary text-xs font-medium text-text-secondary border-b border-border">
+                  <thead className="whitespace-nowrap border-b border-border bg-background-tertiary text-xs font-medium text-text-secondary">
                     <tr>
-                      <th className="px-2.5 py-2 text-left">Tarih</th>
-                      <th className="px-2.5 py-2 text-left">Eşleşme</th>
-                      <th className="px-2 py-2 text-center">Sonuç</th>
-                      <th className="px-2 py-2 text-right">Dk</th>
-                      <th className="px-2.5 py-2 text-right text-text-primary">PTS</th>
-                      <th className="px-2 py-2 text-right">REB</th>
-                      <th className="px-2 py-2 text-right">AST</th>
-                      <th className="px-2 py-2 text-right text-primary">PRA</th>
-                      <th className="px-2 py-2 text-right">FG%</th>
-                      <th className="px-2 py-2 text-right">+/-</th>
+                      <th scope="col" className="px-3 py-2 text-left">Tarih</th>
+                      <th scope="col" className="px-3 py-2 text-left">Eşleşme</th>
+                      <th scope="col" className="px-2 py-2 text-center">Sonuç</th>
+                      <th scope="col" className="px-2 py-2 text-right">Dk</th>
+                      <th scope="col" className="px-3 py-2 text-right text-text-primary">PTS</th>
+                      <th scope="col" className="px-2 py-2 text-right">REB</th>
+                      <th scope="col" className="px-2 py-2 text-right">AST</th>
+                      <th scope="col" className="px-2 py-2 text-right text-primary">PRA</th>
+                      <th scope="col" className="px-2 py-2 text-right">FG%</th>
+                      <th scope="col" className="px-2 py-2 text-right">+/-</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
-                    {recentGames.map((g, idx) => {
-                      const isWin = g.WL === "W";
+                    {recentGames.map((g) => {
                       const fgPctText = g.FG_PCT != null ? `%${(g.FG_PCT * 100).toFixed(0)}` : "-";
                       const praVal = (g.PTS ?? 0) + (g.REB ?? 0) + (g.AST ?? 0);
 
                       return (
-                        <tr key={idx} className="hover:bg-background-secondary/60 transition-colors">
-                          <td className="px-2.5 py-2 text-text-secondary tabular-nums whitespace-nowrap">
-                            {g.GAME_DATE}
-                          </td>
-                          <td className="px-2.5 py-2 font-medium text-text-primary whitespace-nowrap">
-                            {g.MATCHUP || "-"}
-                          </td>
+                        <tr key={g.GAME_ID ?? g.GAME_DATE} className="hover:bg-background-secondary">
+                          <td className="whitespace-nowrap px-3 py-2 tabular-nums text-text-secondary">{g.GAME_DATE}</td>
+                          <td className="whitespace-nowrap px-3 py-2 font-medium text-text-primary">{g.MATCHUP || "-"}</td>
                           <td className="px-2 py-2 text-center">
                             {g.WL ? (
-                              <span
-                                className={`px-1.5 py-0.5 rounded-sm text-xs font-semibold uppercase ${
-                                  isWin ? "bg-status-success/10 text-status-success" : "bg-status-error/10 text-status-error"
-                                }`}
-                              >
+                              <Badge variant={g.WL === "W" ? "success" : "error"} size="sm">
                                 {g.WL}
-                              </span>
+                              </Badge>
                             ) : (
                               "-"
                             )}
                           </td>
-                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
-                            {g.MIN ?? "-"}
-                          </td>
-                          <td className="px-2.5 py-2 text-right font-semibold tabular-nums text-text-primary">
-                            {g.PTS ?? "-"}
-                          </td>
-                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
-                            {g.REB ?? "-"}
-                          </td>
-                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
-                            {g.AST ?? "-"}
-                          </td>
-                          <td className="px-2 py-2 text-right font-semibold tabular-nums text-primary">
-                            {praVal}
-                          </td>
-                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
-                            {fgPctText}
-                          </td>
+                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">{g.MIN ?? "-"}</td>
+                          <td className="px-3 py-2 text-right font-semibold tabular-nums text-text-primary">{g.PTS ?? "-"}</td>
+                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">{g.REB ?? "-"}</td>
+                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">{g.AST ?? "-"}</td>
+                          <td className="px-2 py-2 text-right font-semibold tabular-nums text-primary">{praVal}</td>
+                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">{fgPctText}</td>
                           <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
                             {g.PLUS_MINUS != null ? (g.PLUS_MINUS > 0 ? `+${g.PLUS_MINUS}` : g.PLUS_MINUS) : "-"}
                           </td>
@@ -489,19 +504,17 @@ export function PlayerMatchupModal({
                 </table>
               </div>
             )}
-          </div>
+          </section>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-background-secondary border-t border-border-light flex items-center justify-between text-xs text-text-secondary">
-          <span>Veriler resmi NBA maç kayıtları ve LightGBM model tahminlerine dayanır.</span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-8 px-4 rounded border border-border bg-background-primary hover:bg-background-secondary text-text-primary font-medium text-xs transition-colors cursor-pointer"
-          >
+        <div className="flex items-center justify-between gap-3 border-t border-border-light bg-background-secondary px-4 py-3 sm:px-6">
+          <span className="text-xs text-text-secondary">
+            Veriler resmi NBA maç kayıtları ve LightGBM model tahminlerine dayanır.
+          </span>
+          <Button variant="secondary" size="sm" onClick={onClose} className="shrink-0">
             Kapat
-          </button>
+          </Button>
         </div>
       </div>
     </div>
