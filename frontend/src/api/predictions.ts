@@ -29,16 +29,71 @@ async function parseJsonResponse<T>(res: Response): Promise<T> {
   return body as T;
 }
 
-export async function predictGameFull(request: GameFullRequest) {
+export async function predictGameFull(request: GameFullRequest): Promise<GameFullResponse> {
   const res = await fetch(`${API_BASE_URL}/predict/game_full`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
   });
-  return parseJsonResponse<any>(res);
+  return parseJsonResponse<GameFullResponse>(res);
 }
 
-export function normalizeGameFullPrediction(data: any, home: string, away: string, predictionDate: string) {
+type RawPlayerProjection = {
+  player_id?: number | string | null;
+  player_name: string;
+  position_group?: string;
+  proj_pts?: number;
+  proj_reb?: number;
+  proj_ast?: number;
+  proj_pra?: number;
+  proj_min?: number;
+  status?: string;
+  assumed_out?: boolean;
+  importance?: number;
+};
+
+type RawScoreRange = [number, number] | number[] | null | undefined;
+
+export type GameFullResponse = {
+  win_probability: { home_win_prob: number; away_win_prob: number; model_version?: string };
+  score_prediction: {
+    home: number;
+    away: number;
+    total: number;
+    margin: number;
+    home_range?: RawScoreRange;
+    away_range?: RawScoreRange;
+    total_range?: RawScoreRange;
+    margin_range?: RawScoreRange;
+    model_version?: string;
+    confidence_warning?: string | null;
+    predicted_pace?: number | null;
+    predicted_home_off_rtg?: number | null;
+    predicted_away_off_rtg?: number | null;
+  };
+  injury_report?: unknown;
+  home_players?: RawPlayerProjection[];
+  away_players?: RawPlayerProjection[];
+  explanation?: unknown;
+  is_preseason?: boolean;
+  season_type?: string;
+};
+
+const normalizePlayer = (p: RawPlayerProjection) => ({
+  player_id: p.player_id ?? p.player_name,
+  player_name: p.player_name,
+  position_group: p.position_group,
+  predicted_pts: p.proj_pts,
+  predicted_reb: p.proj_reb,
+  predicted_ast: p.proj_ast,
+  predicted_pra: p.proj_pra,
+  predicted_min: p.proj_min,
+  status: p.status || "ACTIVE",
+  assumed_out: Boolean(p.assumed_out),
+  importance: p.importance ?? 0,
+});
+
+export function normalizeGameFullPrediction(data: GameFullResponse, home: string, away: string, predictionDate: string) {
   return {
     home_team: home,
     away_team: away,
@@ -71,32 +126,8 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
       primary_winner_signal: "WIN_PROB",
     },
     player_predictions: {
-      home_players: (data.home_players || []).map((p: any) => ({
-        player_id: p.player_id ?? p.player_name,
-        player_name: p.player_name,
-        position_group: p.position_group,
-        predicted_pts: p.proj_pts,
-        predicted_reb: p.proj_reb,
-        predicted_ast: p.proj_ast,
-        predicted_pra: p.proj_pra,
-        predicted_min: p.proj_min,
-        status: p.status || "ACTIVE",
-        assumed_out: Boolean(p.assumed_out),
-        importance: p.importance ?? 0,
-      })),
-      away_players: (data.away_players || []).map((p: any) => ({
-        player_id: p.player_id ?? p.player_name,
-        player_name: p.player_name,
-        position_group: p.position_group,
-        predicted_pts: p.proj_pts,
-        predicted_reb: p.proj_reb,
-        predicted_ast: p.proj_ast,
-        predicted_pra: p.proj_pra,
-        predicted_min: p.proj_min,
-        status: p.status || "ACTIVE",
-        assumed_out: Boolean(p.assumed_out),
-        importance: p.importance ?? 0,
-      })),
+      home_players: (data.home_players || []).map(normalizePlayer),
+      away_players: (data.away_players || []).map(normalizePlayer),
     },
     explanation: data.explanation,
     is_preseason: Boolean(data.is_preseason),
