@@ -86,3 +86,16 @@ def test_departed_player_is_not_an_absence():
     assert assumed_out_players(history, "AAA", date, roster_ids={2, 3, 4, 5}) == set()
     assert live_absence_delta(history, "AAA", date, roster_ids={2, 3, 4, 5}) == 0.0
 
+
+
+def test_new_signing_is_not_a_returning_star_after_the_first_game_of_a_season():
+    # 14 games last season without player 9, then one game of the new season with him
+    old = _logs(n_games=14)
+    new = _logs(n_games=1)
+    new["Game_ID"] = "0022500001"
+    new["GAME_DATE"] = old["GAME_DATE"].max() + pd.Timedelta(days=5)
+    signing = new[new["Player_ID"] == 1].copy()
+    signing["Player_ID"], signing["PLAYER_NAME"], signing["PTS"] = 9, "Signing", 40
+    history = pd.concat([old, new, signing], ignore_index=True)
+    date = new["GAME_DATE"].max() + pd.Timedelta(days=2)
+    assert live_absence_delta(history, "AAA", date) == 0.0

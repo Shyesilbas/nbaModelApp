@@ -117,6 +117,10 @@ def _live_rotation(player_games: pd.DataFrame, team: str, pred_date, preseason: 
     # well (training rows carry 0 there) was worse: WIN Brier 0.2256 -> 0.2306 over 324 games of
     # 2021-22..2025-26, because who skipped the previous game is still informative.
     stale = (pd.to_datetime(pred_date) - order.iloc[-1]).days > STALE_DAYS
+    if not stale:
+        # Training never crosses a season; a window that reaches back over the offseason would
+        # treat every new signing as a player who was just out (presence 1/15 -> huge ABS_DELTA).
+        order = order[order.index.str[3:5] == order.index[-1][3:5]]
     hist_ids = list(order.index if stale else order.index[-WINDOW:])
     n = len(hist_ids)
     if n < MIN_HISTORY_GAMES:
