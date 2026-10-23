@@ -83,6 +83,9 @@ export function normalizeGameFullPrediction(data: any, home: string, away: strin
       score_model_winner: data.score_prediction.margin >= 0 ? home : away,
       model_version: data.score_prediction.model_version,
       confidence_warning: data.score_prediction.confidence_warning,
+      predicted_pace: data.score_prediction.predicted_pace,
+      predicted_home_off_rtg: data.score_prediction.predicted_home_off_rtg,
+      predicted_away_off_rtg: data.score_prediction.predicted_away_off_rtg,
     },
     injury_report: data.injury_report ?? null,
     final_display_recommendation: {

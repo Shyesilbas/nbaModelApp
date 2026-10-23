@@ -1,18 +1,12 @@
 import { useMemo, useState } from "react";
 import {
-  Activity,
   ArrowDownRight,
   ArrowUpRight,
-  Clock,
   Eye,
   EyeOff,
-  Home,
   Info,
   Lightbulb,
-  Scale,
-  Shield,
   Sparkles,
-  Target,
   Trophy,
   Zap,
 } from "lucide-react";
@@ -27,43 +21,6 @@ type FeatureImpact = {
   contribution: number;
   influence?: "FAVORS_HOME" | "FAVORS_AWAY" | "NEUTRAL" | string;
 };
-
-// Kategoriye gore uygun ve sade ikon secer
-function CategoryIcon({ type }: { type?: string }) {
-  switch (type) {
-    case "trophy":
-      return <Trophy size={14} className="text-status-warning" />;
-    case "zap":
-      return <Zap size={14} className="text-primary" />;
-    case "clock":
-      return <Clock size={14} className="text-status-success" />;
-    case "home":
-      return <Home size={14} className="text-primary" />;
-    case "target":
-      return <Target size={14} className="text-status-error" />;
-    case "shield":
-      return <Shield size={14} className="text-primary" />;
-    case "scale":
-      return <Scale size={14} className="text-primary" />;
-    default:
-      return <Activity size={14} className="text-text-secondary" />;
-  }
-}
-
-// Sıraya gore etki derecesi rozeti
-function RankBadge({ rank }: { rank: number }) {
-  let label = "Destekleyici Faktör";
-  if (rank === 1) label = "En Belirleyici Faktör";
-  else if (rank === 2) label = "Çok Yüksek Etki";
-  else if (rank === 3) label = "Yüksek Etki";
-  else if (rank === 4) label = "Önemli Katkı";
-
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-sm bg-background-secondary border border-border text-xs font-medium text-text-secondary">
-      {label}
-    </span>
-  );
-}
 
 // Takım lehine ibaresi
 function TeamAdvantageBadge({
@@ -81,21 +38,21 @@ function TeamAdvantageBadge({
 
   if (!team) {
     return (
-      <span className="inline-flex items-center rounded-sm bg-background-secondary border border-border px-2 py-0.5 text-xs font-medium text-text-secondary">
-        Dengeli / Nötr
+      <span className="text-xs font-medium text-text-muted">
+        Nötr
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium bg-background-secondary border border-border text-text-primary">
-      {isHome ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-text-primary">
+      {isHome ? <ArrowUpRight size={13} className="text-text-secondary" /> : <ArrowDownRight size={13} className="text-text-secondary" />}
       <span>{team.name} ({team.abbr}) Lehine</span>
     </span>
   );
 }
 
-// Tek bir sebebi gosteren sade kart
+// Tek bir sebebi gosteren sade ve ferah editoryal satir
 function ReasonCard({
   feature,
   rank,
@@ -121,77 +78,65 @@ function ReasonCard({
     awayInfo
   );
 
-  const team =
-    feature.influence === "FAVORS_HOME"
-      ? homeInfo
-      : feature.influence === "FAVORS_AWAY"
-      ? awayInfo
-      : null;
-
   const contributionAbs = Math.abs(feature.contribution);
-  const share = (contributionAbs / totalImpact) * 100;
-  const relativePercent = Math.max(12, Math.round((contributionAbs / maxImpact) * 100));
+  const share = Math.round((contributionAbs / totalImpact) * 100);
+  // 100 uzerinden normalize edilmis guc puani
+  const powerScore = Math.max(10, Math.min(100, Math.round((contributionAbs / maxImpact) * 100)));
 
   return (
-    <article className="relative bg-background-primary border border-border rounded p-4 space-y-3 hover:border-card-border-hover transition-colors">
-      {/* Kart Ust Baslik Alani */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-border-light">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-sm border border-border bg-background-secondary flex items-center justify-center text-xs font-semibold text-text-primary">
-            {rank}
-          </div>
-          <div className="flex items-center gap-1.5 rounded-sm bg-background-secondary border border-border px-2 py-0.5 text-xs font-medium text-text-secondary">
-            <CategoryIcon type={formatted.categoryIcon} />
-            <span>{formatted.category}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <RankBadge rank={rank} />
-          <TeamAdvantageBadge
-            influence={feature.influence}
-            homeInfo={homeInfo}
-            awayInfo={awayInfo}
-          />
-        </div>
-      </div>
-
-      {/* Aciklama Metni */}
-      <div>
-        <h4 className="text-sm font-semibold text-text-primary">
-          {formatted.title}
-        </h4>
-        <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-          {formatted.insight}
-        </p>
-      </div>
-
-      {/* Gorsel Etki Cubugu ve Ozet Veri */}
-      <div className="pt-2 border-t border-border-light">
-        <div className="flex items-center justify-between gap-2 text-xs text-text-secondary mb-1">
-          <span>Model Ağırlık Seviyesi</span>
-          <span className="font-medium text-text-primary tabular-nums">
-            {formatted.simpleValue ? `Ölçülen: ${formatted.simpleValue}` : `%${share.toFixed(0)} Model Payı`}
+    <article className="py-3 first:pt-1 last:pb-1">
+      {/* 1. Baslik, sira ve lehte olan takim */}
+      <div className="flex items-center justify-between gap-3 mb-1.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-bold tabular-nums text-text-muted">
+            {rank}.
+          </span>
+          <h4 className="text-xs font-semibold text-text-primary truncate">
+            {formatted.title}
+          </h4>
+          <span className="text-xs text-text-muted">·</span>
+          <span className="text-xs text-text-secondary">
+            {formatted.category}
           </span>
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-background-tertiary">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${relativePercent}%`,
-              backgroundColor: team?.color || "currentColor",
-            }}
-          />
-        </div>
+
+        <TeamAdvantageBadge
+          influence={feature.influence}
+          homeInfo={homeInfo}
+          awayInfo={awayInfo}
+        />
       </div>
 
-      {/* Teknik Detay Alani */}
+      {/* 2. Sade Aciklama Metni */}
+      <p className="text-xs leading-relaxed text-text-secondary pl-4">
+        {formatted.insight}
+      </p>
+
+      {/* 3. Bar yerine Guc Puani ve Olculen Deger Bilgisi */}
+      <div className="pl-4 pt-1.5 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2 text-text-muted">
+          <span>Güç Puanı:</span>
+          <span className="font-semibold text-text-primary tabular-nums">
+            {powerScore}/100
+          </span>
+          <span className="text-text-muted">·</span>
+          <span className="tabular-nums">Etki Payı: %{share}</span>
+        </div>
+
+        {formatted.simpleValue && (
+          <span className="text-text-secondary font-medium tabular-nums text-[11px]">
+            {formatted.simpleValue}
+          </span>
+        )}
+      </div>
+
+      {/* Opsiyonel Teknik Detay Alani */}
       {showTech && (
-        <div className="mt-2 rounded border border-border bg-background-secondary p-2.5 text-xs text-text-secondary flex flex-wrap items-center justify-between gap-2 font-mono">
+        <div className="ml-4 mt-2 rounded border border-border bg-background-tertiary/40 px-2.5 py-1.5 text-[11px] text-text-secondary flex flex-wrap items-center justify-between gap-2 font-mono">
           <span>Değişken: <strong>{feature.feature_name}</strong></span>
           <span>Ham Değer: <strong>{feature.value}</strong></span>
           <span>
-            SHAP Katkısı:{" "}
+            SHAP:{" "}
             <strong className={feature.contribution >= 0 ? "text-status-success" : "text-status-error"}>
               {feature.contribution >= 0 ? "+" : ""}
               {feature.contribution.toFixed(4)}
@@ -237,11 +182,15 @@ export function ModelExplanationSection({
 
   const explanation = result?.explanation;
 
+  // Yorgunluk bayragi 0 ise kimse yorgun degil; baseline kaymasindan gelen katki sebep olarak gosterilmez
+  const isInactiveRestFlag = (f: FeatureImpact) =>
+    (f.feature_name === "IS_B2B" || f.feature_name === "OPP_IS_B2B") && f.value === 0;
+
   // Kazanma olasiligi modelinin one cikan en onemli 5 sebebi
   const winTop5 = useMemo(() => {
     const list: FeatureImpact[] = explanation?.win_probability?.features ?? [];
     return [...list]
-      .filter((f) => Math.abs(f.contribution) > 0.0001)
+      .filter((f) => Math.abs(f.contribution) > 0.0001 && !isInactiveRestFlag(f))
       .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
       .slice(0, 5);
   }, [explanation]);
@@ -257,7 +206,7 @@ export function ModelExplanationSection({
       ...(score.away_rtg_features ?? []),
     ];
     return [...combined]
-      .filter((f) => Math.abs(f.contribution) > 0.0001)
+      .filter((f) => Math.abs(f.contribution) > 0.0001 && !isInactiveRestFlag(f))
       .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
       .slice(0, 5);
   }, [explanation]);
@@ -390,8 +339,8 @@ export function ModelExplanationSection({
         </button>
       </div>
 
-      {/* 3. Tam 5 Tane Öne Çıkan Sebep Kartı */}
-      <div className="space-y-3">
+      {/* 3. Tam 5 Tane Öne Çıkan Sebep (Çizgili Editoryal Liste) */}
+      <div className="rounded border border-border bg-background-primary divide-y divide-border-light px-4">
         {activeFeatures.map((feature, index) => (
           <ReasonCard
             key={`${feature.feature_name}-${index}`}

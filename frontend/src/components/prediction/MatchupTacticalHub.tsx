@@ -1,4 +1,4 @@
-import { Activity, Compass, Flame, Sparkles, TrendingUp, Zap } from "lucide-react";
+import { Activity, Flame, TrendingUp, Zap } from "lucide-react";
 import type { TeamInfo } from "./types";
 
 interface MatchupTacticalHubProps {
@@ -32,9 +32,9 @@ export function MatchupTacticalHub({
   const netRtgFeat = findFeature("NET_RTG");
   const threePtFeat = findFeature("3PT") || findFeature("THREE");
 
-  const paceVal = score?.predicted_pace ? score.predicted_pace.toFixed(1) : "99.8";
-  const homeOffRtg = score?.predicted_home_off_rtg ? score.predicted_home_off_rtg.toFixed(1) : "114.5";
-  const awayOffRtg = score?.predicted_away_off_rtg ? score.predicted_away_off_rtg.toFixed(1) : "110.2";
+  const paceVal = score?.predicted_pace ? score.predicted_pace.toFixed(1) : "--";
+  const homeOffRtg = score?.predicted_home_off_rtg ? score.predicted_home_off_rtg.toFixed(1) : "--";
+  const awayOffRtg = score?.predicted_away_off_rtg ? score.predicted_away_off_rtg.toFixed(1) : "--";
 
   const buildGameScript = () => {
     const paceDesc =
@@ -65,170 +65,135 @@ export function MatchupTacticalHub({
   const script = buildGameScript();
 
   return (
-    <div className="bg-background-primary border border-border rounded p-5 lg:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border-light">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded border border-border bg-background-secondary flex items-center justify-center text-primary shrink-0">
-            <Compass size={18} />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-text-primary">
-              Taktiksel Maç Senaryosu ve Saha Dinamikleri
-            </h3>
-            <p className="text-xs text-text-secondary">
-              Veriye dayalı maç akışı, tempo analizi ve takımların kilit saha üstünlükleri
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-sm bg-background-secondary border border-border text-text-primary text-xs font-semibold tabular-nums uppercase">
-            {winnerInfo.abbr} Favori · %{probPct}
-          </span>
-        </div>
-      </div>
-
-      {/* 2-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column: Game Script */}
-        <div className="lg:col-span-7 flex flex-col justify-between p-4 rounded border border-border bg-background-secondary space-y-4">
+    <div className="space-y-6">
+      {/* 2-Column Grid: Editorial Script + Matchup Pillars */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Game Script & Pace Insights */}
+        <div className="lg:col-span-7 flex flex-col justify-between space-y-5">
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Sparkles size={14} className="text-primary" />
-              <span className="text-xs font-semibold text-text-primary">
-                Model Simülasyon Akışı ve Taktik Raporu
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                Model Simülasyon Akışı & Taktik Raporu
+              </span>
+              <span className="text-xs font-semibold tabular-nums text-text-primary">
+                {winnerInfo.abbr} Favori · %{probPct}
               </span>
             </div>
 
-            <p className="text-xs text-text-secondary leading-relaxed font-normal">
-              Model tahminine göre karşılaşmada{" "}
-              <strong className="font-semibold text-text-primary">{script.tempo}</strong>{" "}
-              bekleniyor. {script.body}
+            <p className="text-xs text-text-primary leading-relaxed font-medium">
+              Model tahminine göre karşılaşmada <span className="underline decoration-border-focus underline-offset-2">{script.tempo}</span> bekleniyor. {script.body}
             </p>
 
-            <p className="text-xs text-text-secondary leading-relaxed font-normal">
-              {script.edge} Skor tahmininde geride görünen taraf:{" "}
-              <strong className="font-semibold text-text-primary">{scoreLoserInfo.name}</strong>.
+            <p className="text-xs text-text-secondary leading-relaxed">
+              {script.edge} Skor modelinde görece dezavantajlı görünen taraf: <span className="font-semibold text-text-primary">{scoreLoserInfo.name}</span>.
             </p>
           </div>
 
-          {/* Micro stats banner */}
-          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border-light">
-            <div className="text-center p-2.5 rounded border border-border bg-background-primary">
-              <span className="text-xs font-medium text-text-secondary uppercase block">
+          {/* Micro stats inline strip */}
+          <div className="grid grid-cols-3 gap-4 pt-3 border-t border-border-light tabular-nums">
+            <div>
+              <span className="text-[11px] font-medium text-text-muted uppercase block">
                 Öngörülen Tempo
               </span>
-              <span className="text-xs font-semibold text-text-primary tabular-nums mt-0.5 block">
-                {paceVal} Poss
+              <span className="text-sm font-bold text-text-primary mt-0.5 block">
+                {paceVal} <span className="text-[10px] font-normal text-text-muted">Poss</span>
               </span>
             </div>
-            <div className="text-center p-2.5 rounded border border-border bg-background-primary">
-              <span className="text-xs font-medium text-text-secondary uppercase block">
+            <div>
+              <span className="text-[11px] font-medium text-text-muted uppercase block">
                 {homeInfo.abbr} Hücum Rtg
               </span>
-              <span className="text-xs font-semibold text-text-primary tabular-nums mt-0.5 block">
+              <span className="text-sm font-bold text-text-primary mt-0.5 block">
                 {homeOffRtg}
               </span>
             </div>
-            <div className="text-center p-2.5 rounded border border-border bg-background-primary">
-              <span className="text-xs font-medium text-text-secondary uppercase block">
+            <div>
+              <span className="text-[11px] font-medium text-text-muted uppercase block">
                 {awayInfo.abbr} Hücum Rtg
               </span>
-              <span className="text-xs font-semibold text-text-primary tabular-nums mt-0.5 block">
+              <span className="text-sm font-bold text-text-primary mt-0.5 block">
                 {awayOffRtg}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Right Column: 4 Key Matchup Pillars */}
-        <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5">
-          {/* Pillar 1 */}
-          <div className="p-3 rounded border border-border bg-background-secondary flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded border border-border bg-background-primary flex items-center justify-center shrink-0 text-text-secondary">
-                <TrendingUp size={16} />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-text-secondary">
-                  Takım Formu ve Net Rating
-                </p>
-                <p className="text-xs font-semibold text-text-primary mt-0.5">
-                  {netRtgFeat
-                    ? netRtgFeat.contribution > 0
-                      ? `${homeInfo.abbr} Form Avantajı`
-                      : `${awayInfo.abbr} Form Avantajı`
-                    : `${winnerInfo.abbr} Üstün`}
-                </p>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 rounded-sm border border-border bg-background-primary text-xs font-semibold tabular-nums text-text-primary shrink-0">
-              +{isHomeWinner ? homeInfo.abbr : awayInfo.abbr}
-            </span>
-          </div>
+        {/* Right Column: 4 Matchup Pillars in Clean Divided List */}
+        <div className="lg:col-span-5 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-border-light pt-4 lg:pt-0 lg:pl-6">
+          <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-2 block">
+            Önemli Saha Üstünlükleri
+          </span>
 
-          {/* Pillar 2 */}
-          <div className="p-3 rounded border border-border bg-background-secondary flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded border border-border bg-background-primary flex items-center justify-center shrink-0 text-text-secondary">
-                <Activity size={16} />
+          <div className="divide-y divide-border-light flex-1 flex flex-col justify-around">
+            {/* Pillar 1 */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <TrendingUp size={15} className="text-text-muted shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-text-primary truncate">
+                    {netRtgFeat
+                      ? netRtgFeat.contribution > 0
+                        ? `${homeInfo.abbr} Form Avantajı`
+                        : `${awayInfo.abbr} Form Avantajı`
+                      : `${winnerInfo.abbr} Net Rating Üstünlüğü`}
+                  </p>
+                  <p className="text-[11px] text-text-muted">Takım formu ve net verimlilik</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-medium text-text-secondary">
-                  Saha Faktörü ve Seyirci
-                </p>
-                <p className="text-xs font-semibold text-text-primary mt-0.5">
-                  {isHomeWinner
-                    ? `${homeInfo.abbr} Ev Sahibi Avantajı`
-                    : `${awayInfo.abbr} Deplasman Direnci`}
-                </p>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 rounded-sm border border-border bg-background-primary text-xs font-semibold tabular-nums text-text-primary shrink-0">
-              {isHomeWinner ? "+3.5 Sayı" : "Deplasman"}
-            </span>
-          </div>
-
-          {/* Pillar 3 */}
-          <div className="p-3 rounded border border-border bg-background-secondary flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded border border-border bg-background-primary flex items-center justify-center shrink-0 text-text-secondary">
-                <Flame size={16} />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-text-secondary">
-                  Yay Gerisi (3PT) Etkinliği
-                </p>
-                <p className="text-xs font-semibold text-text-primary mt-0.5">
-                  {threePtFeat ? "Dış Şut Ağırlığı Etkili" : "Boyalı Alan ve Ceza Şutları"}
-                </p>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 rounded-sm border border-border bg-background-primary text-xs font-medium text-text-secondary shrink-0">
-              Şut Payı
-            </span>
-          </div>
-
-          {/* Pillar 4 */}
-          <div className="p-3 rounded border border-border bg-background-secondary flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded border border-border bg-background-primary flex items-center justify-center shrink-0 text-text-secondary">
-                <Zap size={16} />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-text-secondary">
-                  Tahmin Güvenilirlik Derecesi
-                </p>
-                <p className="text-xs font-semibold text-text-primary mt-0.5">
-                  {win?.confidence_bucket || "ORTA"} (%{probPct} Sinyal)
-                </p>
-              </div>
-            </div>
-            {win.model_version && (
-              <span className="px-2 py-0.5 rounded-sm border border-border bg-background-primary text-xs font-medium text-text-secondary shrink-0">
-                Model {win.model_version}
+              <span className="text-xs font-bold tabular-nums text-text-primary shrink-0">
+                +{isHomeWinner ? homeInfo.abbr : awayInfo.abbr}
               </span>
-            )}
+            </div>
+
+            {/* Pillar 2 */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Activity size={15} className="text-text-muted shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-text-primary truncate">
+                    {isHomeWinner
+                      ? `${homeInfo.abbr} Ev Sahibi Avantajı`
+                      : `${awayInfo.abbr} Deplasman Direnci`}
+                  </p>
+                  <p className="text-[11px] text-text-muted">Saha faktörü ve seyirci</p>
+                </div>
+              </div>
+              <span className="text-xs font-medium tabular-nums text-text-secondary shrink-0">
+                {isHomeWinner ? "+3.5 Pts" : "Deplasman"}
+              </span>
+            </div>
+
+            {/* Pillar 3 */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Flame size={15} className="text-text-muted shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-text-primary truncate">
+                    {threePtFeat ? "Dış Şut Etkinliği" : "Boyalı Alan Üstünlüğü"}
+                  </p>
+                  <p className="text-[11px] text-text-muted">Yay gerisi ve bitiricilik</p>
+                </div>
+              </div>
+              <span className="text-xs font-medium text-text-secondary shrink-0">
+                Şut Payı
+              </span>
+            </div>
+
+            {/* Pillar 4 */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Zap size={15} className="text-text-muted shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-text-primary truncate">
+                    Tahmin Güven Derecesi
+                  </p>
+                  <p className="text-[11px] text-text-muted">Model güven aralığı</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold tabular-nums text-text-primary shrink-0">
+                {win?.confidence_bucket || "ORTA"}
+              </span>
+            </div>
           </div>
         </div>
       </div>

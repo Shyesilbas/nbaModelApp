@@ -81,27 +81,27 @@ export function TopPerformers({
     return !leaderPlayerIds.has(pid);
   }).slice(0, 4);
 
-  // If after filtering we have fewer than 3, fallback to topGame slice
+  // If after filtering we have fewer than 2, fallback to topGame slice
   const contributors = distinctContributors.length >= 2 ? distinctContributors : topGame.slice(1, 5);
 
   return (
-    <section className="rounded border border-border bg-background-primary p-4 sm:p-5">
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
+    <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
+      {/* Section Header */}
+      <div className="mb-4 flex items-center justify-between border-b border-border-light pb-3">
         <div>
           <h3 className="text-sm font-semibold text-text-primary">Maçın Liderleri & Öne Çıkanlar</h3>
-          <p className="mt-0.5 text-xs text-text-secondary">Kategori liderleri ve bireysel performans istatistikleri</p>
+          <p className="mt-0.5 text-xs text-text-secondary">Kategori liderleri ve öne çıkan bireysel istatistikler</p>
         </div>
         {topGame.length > 0 && (
-          <span className="rounded border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium tabular-nums text-text-secondary">
-            {topGame.length} Oyuncu
+          <span className="text-xs font-medium tabular-nums text-text-muted">
+            {topGame.length} Oyuncu İncelendi
           </span>
         )}
       </div>
 
-      {/* Trio Category Leaders */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {trioLeaders.map((item) => {
+      {/* Trio Category Leaders: Clean Editorial Column Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-border-light">
+        {trioLeaders.map((item, idx) => {
           const p = item.player;
           const name = p?.PLAYER_NAME ?? p?.player_name ?? "—";
           const pid = p?.PLAYER_ID ?? p?.player_id ?? 0;
@@ -114,45 +114,45 @@ export function TopPerformers({
           return (
             <div
               key={item.category}
-              className="rounded border border-border bg-background-tertiary/40 p-3 flex flex-col justify-between transition-colors hover:border-border-focus"
+              className={`flex flex-col justify-between pt-3 md:pt-0 ${idx > 0 ? "md:pl-6" : ""}`}
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
                     {item.category}
                   </span>
                   {team && (
-                    <span className="rounded border border-border bg-background-primary px-1.5 py-0.5 text-[10px] font-semibold text-text-secondary">
+                    <span className="text-xs font-bold text-text-muted">
                       {team}
                     </span>
                   )}
                 </div>
 
-                <div className="mt-2.5 flex items-center gap-3">
-                  <PlayerPhoto playerId={pid} name={name} size={42} />
+                <div className="mt-3 flex items-center gap-3">
+                  <PlayerPhoto playerId={pid} name={name} size={44} className="ring-1 ring-border" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-text-primary" title={name}>
+                    <p className="truncate text-sm font-semibold text-text-primary" title={name}>
                       {name}
                     </p>
-                    <p className="text-[11px] text-text-muted tabular-nums">
-                      {min != null ? `${Math.round(Number(min))} dakika` : "—"}
+                    <p className="text-xs text-text-muted tabular-nums">
+                      {min != null ? `${Math.round(Number(min))} dk oynadı` : "—"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Big Stat Value + Full Line Summary */}
-              <div className="mt-3.5 pt-2.5 border-t border-border flex items-baseline justify-between">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold tabular-nums text-text-primary leading-none">
+              {/* Stat Value & Line Summary */}
+              <div className="mt-4 pt-3 border-t border-border-light flex items-baseline justify-between">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-bold tabular-nums text-text-primary leading-none">
                     {item.val}
                   </span>
-                  <span className="text-xs font-semibold text-text-secondary">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
                     {item.statKey}
                   </span>
                 </div>
                 <span className="text-xs font-medium tabular-nums text-text-muted">
-                  {pts}p · {reb}r · {ast}a
+                  {pts} PTS · {reb} REB · {ast} AST
                 </span>
               </div>
             </div>
@@ -160,13 +160,16 @@ export function TopPerformers({
         })}
       </div>
 
-      {/* Other Standout Contributors */}
+      {/* Standout Contributors: Editorial Strip / Table Style */}
       {contributors.length > 0 && (
-        <div className="mt-5 pt-4 border-t border-border">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-3">
-            Öne Çıkan Diğer Performanslar
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div className="mt-6 pt-4 border-t border-border-light">
+          <div className="mb-2.5 flex items-center justify-between">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              Öne Çıkan Diğer Performanslar
+            </h4>
+          </div>
+
+          <div className="divide-y divide-border-light">
             {contributors.map((p, idx) => {
               const name = p.PLAYER_NAME ?? p.player_name ?? "—";
               const team = p.TEAM_ABBREVIATION ?? p.team_abbreviation ?? "";
@@ -179,37 +182,47 @@ export function TopPerformers({
               return (
                 <div
                   key={`${pid}-${team}-${idx}`}
-                  className="flex items-center gap-3 rounded border border-border bg-background-primary px-3 py-2.5 transition-colors hover:border-border-focus"
+                  className="flex items-center justify-between py-2.5 px-1 transition-colors hover:bg-background-tertiary/30"
                 >
-                  <PlayerPhoto playerId={pid} name={name} size={32} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <p className="truncate text-xs font-semibold text-text-primary">{name}</p>
-                      {team && (
-                        <span className="text-[10px] font-semibold text-text-muted">
-                          {team}
+                  {/* Player & Team Info */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs font-semibold tabular-nums text-text-muted w-4">
+                      #{idx + 1}
+                    </span>
+                    <PlayerPhoto playerId={pid} name={name} size={34} className="ring-1 ring-border shrink-0" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-xs font-semibold text-text-primary">
+                          {name}
+                        </span>
+                        {team && (
+                          <span className="text-[10px] font-bold text-text-muted">
+                            {team}
+                          </span>
+                        )}
+                      </div>
+                      {min != null && (
+                        <span className="text-[11px] tabular-nums text-text-muted">
+                          {Math.round(Number(min))} dk
                         </span>
                       )}
                     </div>
-                    {min != null && (
-                      <p className="text-[11px] tabular-nums text-text-muted">
-                        {Math.round(Number(min))} dk
-                      </p>
-                    )}
                   </div>
 
-                  <div className="flex items-center gap-2 tabular-nums">
-                    <span className="text-xs font-semibold text-text-primary">
-                      {pts} <span className="text-[10px] font-normal text-text-muted">PTS</span>
-                    </span>
-                    <span className="text-text-muted text-[10px]">·</span>
-                    <span className="text-xs font-medium text-text-secondary">
-                      {reb} <span className="text-[10px] font-normal text-text-muted">REB</span>
-                    </span>
-                    <span className="text-text-muted text-[10px]">·</span>
-                    <span className="text-xs font-medium text-text-secondary">
-                      {ast} <span className="text-[10px] font-normal text-text-muted">AST</span>
-                    </span>
+                  {/* Clean Tabular Numbers */}
+                  <div className="flex items-center gap-4 tabular-nums text-right shrink-0">
+                    <div>
+                      <span className="text-xs font-bold text-text-primary">{pts}</span>
+                      <span className="ml-1 text-[10px] font-medium text-text-muted">PTS</span>
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold text-text-secondary">{reb}</span>
+                      <span className="ml-1 text-[10px] font-medium text-text-muted">REB</span>
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold text-text-secondary">{ast}</span>
+                      <span className="ml-1 text-[10px] font-medium text-text-muted">AST</span>
+                    </div>
                   </div>
                 </div>
               );
@@ -217,6 +230,6 @@ export function TopPerformers({
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }

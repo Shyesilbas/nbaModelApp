@@ -9,14 +9,12 @@ import {
   ChevronRight,
   Calendar,
   UsersRound,
-  Cpu,
   LayoutDashboard,
   HelpCircle,
 } from "lucide-react";
 
 import TeamLogo from "./TeamLogo";
 import {
-  getModelStatus,
   normalizeGameFullPrediction,
   predictGameFull,
 } from "../api/predictions";
@@ -29,7 +27,6 @@ import { fmtDate } from "./game-results/utils";
 import {
   MatchupHeroCard,
   MatchupTacticalHub,
-  ModelDiagnostics,
   ModelExplanationSection,
   PlayerSpotlight,
   InjuryReportPanel,
@@ -68,11 +65,10 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
   const [filterTeam1, setFilterTeam1] = useState("");
   const [filterTeam2, setFilterTeam2] = useState("");
-  const [modelStatus, setModelStatus] = useState<any>(null);
   const [injuryChanges, setInjuryChanges] = useState<InjuryChange[]>([]);
   const [latestReport, setLatestReport] = useState<InjuryReportSummary | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(!initialGame);
-  const [activeResultTab, setActiveResultTab] = useState<"overview" | "explanation" | "players" | "technical">("overview");
+  const [activeResultTab, setActiveResultTab] = useState<"overview" | "explanation" | "players">("overview");
 
   useEffect(() => {
     let active = true;
@@ -218,17 +214,6 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
       onClearInitialGame?.();
     }
   }, [initialGame, onClearInitialGame]);
-
-  useEffect(() => {
-    const fetchModelStatus = async () => {
-      try {
-        setModelStatus(await getModelStatus());
-      } catch (err) {
-        console.error("Error loading model status:", err);
-      }
-    };
-    fetchModelStatus();
-  }, []);
 
   const getTeamInfo = (abbr: string) =>
     NBA_TEAMS.find((t) => t.abbr === abbr) || { abbr, name: abbr, color: NBA_TEAMS[0]?.color || "" };
@@ -676,12 +661,11 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
           {/* Result Tabs Panel */}
           <section className="overflow-hidden rounded border border-border bg-background-primary">
-            <div role="tablist" aria-label="Tahmin raporu bölümleri" className="grid grid-cols-2 border-b border-border bg-background-secondary sm:grid-cols-4">
+            <div role="tablist" aria-label="Tahmin raporu bölümleri" className="grid grid-cols-3 border-b border-border bg-background-secondary">
               {([
                 { id: "overview", label: "Genel Bakış", icon: LayoutDashboard, detail: "Maç senaryosu" },
-                { id: "explanation", label: "Modelin Gerekçesi", icon: HelpCircle, detail: "Öne çıkan 5 neden" },
+                { id: "explanation", label: "Modelin Gerekçesi", icon: HelpCircle, detail: "Öne çıkan nedenler" },
                 { id: "players", label: "Oyuncular ve Kadro", icon: UsersRound, detail: "Rotasyonlar" },
-                { id: "technical", label: "Teknik Detaylar", icon: Cpu, detail: "Model bilgisi" },
               ] as const).map((tab) => {
                 const Icon = tab.icon;
                 const selected = activeResultTab === tab.id;
@@ -746,15 +730,6 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                     Bu tahminde oyuncu projeksiyonları oluşturulamadı.
                   </div>
                 )
-              )}
-
-              {activeResultTab === "technical" && (
-                <div className="space-y-5">
-                  <ModelDiagnostics modelStatus={modelStatus} result={result} />
-                  <div className="rounded border border-border bg-background-secondary p-3.5 text-xs leading-relaxed text-text-secondary">
-                    Kazanma olasılığı ve skor projeksiyonu ayrı modellerden gelir; yakın maçlarda favorileri farklı olabilir. SHAP açıklamaları model girdilerinin bu tek tahmine katkı yönünü gösterir, nedensellik veya garanti ifade etmez.
-                  </div>
-                </div>
               )}
             </div>
           </section>

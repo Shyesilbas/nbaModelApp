@@ -1,4 +1,4 @@
-import { Award, Calendar, Cpu, Download, RefreshCw, TrendingUp, Trophy, Zap } from "lucide-react";
+import { Award, Calendar, Cpu, Download, RefreshCw, Trophy } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { TeamInfo } from "./types";
 import { exportPredictionAsPDF } from "../../lib/predictionReport";
@@ -37,9 +37,7 @@ export function MatchupHeroCard({
 
   const margin = score.predicted_margin ? Math.abs(score.predicted_margin).toFixed(1) : "0.0";
   const scoreWinnerInfo = (score.predicted_margin ?? 0) >= 0 ? homeInfo : awayInfo;
-  const total = score.predicted_total_points ? score.predicted_total_points.toFixed(1) : "--";
-  const totalRange = score.total_points_range || [0, 0];
-  const pace = score.predicted_pace ? score.predicted_pace.toFixed(1) : "99.5";
+  const pace = score.predicted_pace ? score.predicted_pace.toFixed(1) : "--";
 
   const confidence = win.confidence_bucket || "MEDIUM";
   const isHighConfidence = confidence.toUpperCase().includes("STRONG");
@@ -202,12 +200,17 @@ export function MatchupHeroCard({
             </div>
           </div>
 
-          {/* Model Favorite Note */}
-          <div className="flex items-center gap-1.5 text-xs text-text-secondary text-center">
-            <Award size={14} className="text-status-warning shrink-0" />
-            <span>
-              Galibiyet favorisi:{" "}
-              <strong className="text-text-primary font-semibold">{winnerInfo.name}</strong>
+          {/* Model Favorite Note & Pace */}
+          <div className="flex flex-col items-center gap-1 text-center">
+            <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+              <Award size={14} className="text-status-warning shrink-0" />
+              <span>
+                Galibiyet favorisi:{" "}
+                <strong className="text-text-primary font-semibold">{winnerInfo.name}</strong>
+              </span>
+            </div>
+            <span className="text-[11px] font-medium tabular-nums text-text-muted">
+              Tempo (Pace): {pace} pos/48m · {parseFloat(pace) > 100 ? "Yüksek Tempo" : "Kontrollü Set"}
             </span>
           </div>
         </div>
@@ -260,52 +263,6 @@ export function MatchupHeroCard({
               </span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Bottom KPI Metric Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-border-light">
-        <div className="p-3 rounded border border-border bg-background-secondary">
-          <div className="flex items-center gap-1.5 text-text-secondary mb-1">
-            <TrendingUp size={14} />
-            <span className="text-xs font-medium text-text-secondary">
-              Beklenen Fark
-            </span>
-          </div>
-          <p className="text-base sm:text-lg font-semibold tabular-nums text-text-primary">
-            {winnerInfo.abbr} +{margin} Sayı
-          </p>
-          <p className="text-xs text-text-secondary mt-0.5">Öngörülen galibiyet marjı</p>
-        </div>
-
-        <div className="p-3 rounded border border-border bg-background-secondary">
-          <div className="flex items-center gap-1.5 text-text-secondary mb-1">
-            <Zap size={14} />
-            <span className="text-xs font-medium text-text-secondary">
-              Toplam Sayı
-            </span>
-          </div>
-          <p className="text-base sm:text-lg font-semibold tabular-nums text-text-primary">
-            {total} Sayı
-          </p>
-          <p className="text-xs text-text-secondary tabular-nums mt-0.5">
-            Aralık: {totalRange[0]}–{totalRange[1]}
-          </p>
-        </div>
-
-        <div className="p-3 rounded border border-border bg-background-secondary">
-          <div className="flex items-center gap-1.5 text-text-secondary mb-1">
-            <Cpu size={14} />
-            <span className="text-xs font-medium text-text-secondary">
-              Tempo (Pace)
-            </span>
-          </div>
-          <p className="text-base sm:text-lg font-semibold tabular-nums text-text-primary">
-            {pace} <span className="text-xs font-normal text-text-secondary">pos/48m</span>
-          </p>
-          <p className="text-xs text-text-secondary mt-0.5">
-            {parseFloat(pace) > 100 ? "Yüksek Tempolu Hücum" : "Kontrollü Set Oyunu"}
-          </p>
         </div>
       </div>
     </div>

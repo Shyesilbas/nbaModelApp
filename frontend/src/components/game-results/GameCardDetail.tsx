@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Clock,
   RefreshCw,
@@ -8,6 +8,11 @@ import {
   Flame,
   ArrowLeft,
   Calendar,
+  Zap,
+  ArrowRightLeft,
+  TrendingUp,
+  Award,
+  Sparkles,
 } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { GameFeedRow, GameDetail } from "../../types/gameFeed";
@@ -851,6 +856,91 @@ function periodName(period: number) {
   return period <= 4 ? `Q${period}` : `OT${period - 4}`;
 }
 
+function getMomentReasonMeta(reason: string) {
+  switch (reason) {
+    case "back_to_back_3":
+      return {
+        label: "Back-to-Back 3PT",
+        icon: Flame,
+        badgeClass: "bg-status-warning/10 text-status-warning border-status-warning/30",
+        highlightRow: true,
+      };
+    case "player_3_run":
+      return {
+        label: "3PT Heat Check",
+        icon: Flame,
+        badgeClass: "bg-status-warning/10 text-status-warning border-status-warning/30",
+        highlightRow: true,
+      };
+    case "lead_change":
+      return {
+        label: "Lead Change",
+        icon: ArrowRightLeft,
+        badgeClass: "bg-status-success/10 text-status-success border-status-success/30",
+        highlightRow: false,
+      };
+    case "clutch":
+      return {
+        label: "Clutch Moment",
+        icon: Zap,
+        badgeClass: "bg-status-error/10 text-status-error border-status-error/30",
+        highlightRow: true,
+      };
+    case "team_run":
+      return {
+        label: "Scoring Run",
+        icon: TrendingUp,
+        badgeClass: "bg-primary/10 text-primary border-primary/25",
+        highlightRow: false,
+      };
+    case "triple_double":
+      return {
+        label: "Triple-Double",
+        icon: Award,
+        badgeClass: "bg-status-info/10 text-status-info border-status-info/30",
+        highlightRow: true,
+      };
+    case "double_double":
+      return {
+        label: "Double-Double",
+        icon: Award,
+        badgeClass: "bg-status-info/10 text-status-info border-status-info/30",
+        highlightRow: false,
+      };
+    case "30_pt_game":
+      return {
+        label: "30+ PTS Game",
+        icon: Sparkles,
+        badgeClass: "bg-status-info/10 text-status-info border-status-info/30",
+        highlightRow: true,
+      };
+    case "20_pt_game":
+      return {
+        label: "20+ PTS",
+        icon: Sparkles,
+        badgeClass: "bg-background-tertiary text-text-secondary border-border",
+        highlightRow: false,
+      };
+    case "10_ast":
+    case "15_reb":
+    case "5_stl":
+    case "5_blk":
+      return {
+        label: reason.replaceAll("_", " ").toUpperCase(),
+        icon: Award,
+        badgeClass: "bg-background-tertiary text-text-secondary border-border",
+        highlightRow: false,
+      };
+    default:
+      return {
+        label: reason.replaceAll("_", " "),
+        icon: Sparkles,
+        badgeClass: "bg-background-tertiary text-text-secondary border-border",
+        highlightRow: false,
+      };
+  }
+}
+
 function HighlightsTab({
   gameId,
   season,
@@ -863,8 +953,14 @@ function HighlightsTab({
   const [data, setData] = useState<PbpData | null>(initialData ?? null);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<"all" | "threes" | "leads" | "clutch" | "runs">("all");
 
-  if (loading && !data) {
+  useEffect(() => {
+    if (initialData) {
+      setData(initialData);
+      setLoading(false);
+      return;
+    }
     const normGameId = normalizePbpGameId(gameId);
     loadArchivedPlayByPlay(normGameId, season)
       .then((pbp: PbpData) => {
@@ -875,9 +971,56 @@ function HighlightsTab({
         setError(err.message || "Failed to load highlights.");
         setLoading(false);
       });
+  }, [gameId, season, initialData]);
 
+  const rawEvents = data?.events ?? [];
+  const highlights = useMemo(() => {
+    return rawEvents.filter(
+      (e) => (e.badges?.length ?? 0) > 0 || e.moment_reasons?.some((r) => KEY_MOMENT_REASONS.has(r))
+    );
+  }, [rawEvents]);
+
+  const baseDisplayEvents = highlights.length > 0 ? highlights : rawEvents.filter((e) => e.points_scored > 0);
+
+  const filteredEvents = useMemo(() => {
+    if (filterType === "all") return baseDisplayEvents;
+    return baseDisplayEvents.filter((e) => {
+      const reasons = [...(e.moment_reasons ?? []), ...(e.badges ?? [])];
+      if (filterType === "threes") {
+        return reasons.some((r) => r === "back_to_back_3" || r === "player_3_run") || e.points_scored === 3;
+      }
+      if (filterType === "leads") {
+        return reasons.some((r) => r === "lead_change");
+      }
+      if (filterType === "clutch") {
+        return reasons.some((r) => r === "clutch");
+      }
+      if (filterType === "runs") {
+        return reasons.some((r) => r === "team_run");
+      }
+      return true;
+    });
+  }, [baseDisplayEvents, filterType]);
+
+  const filterCounts = useMemo(() => {
+    const threes = baseDisplayEvents.filter((e) =>
+      [...(e.moment_reasons ?? []), ...(e.badges ?? [])].some((r) => r === "back_to_back_3" || r === "player_3_run") || e.points_scored === 3
+    ).length;
+    const leads = baseDisplayEvents.filter((e) =>
+      [...(e.moment_reasons ?? []), ...(e.badges ?? [])].some((r) => r === "lead_change")
+    ).length;
+    const clutch = baseDisplayEvents.filter((e) =>
+      [...(e.moment_reasons ?? []), ...(e.badges ?? [])].some((r) => r === "clutch")
+    ).length;
+    const runs = baseDisplayEvents.filter((e) =>
+      [...(e.moment_reasons ?? []), ...(e.badges ?? [])].some((r) => r === "team_run")
+    ).length;
+    return { all: baseDisplayEvents.length, threes, leads, clutch, runs };
+  }, [baseDisplayEvents]);
+
+  if (loading && !data) {
     return (
-      <div className="flex h-32 items-center justify-center gap-2 rounded border border-border bg-background-primary">
+      <div className="flex h-40 items-center justify-center gap-2 rounded border border-border bg-background-primary">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <span className="text-xs text-text-secondary">Loading highlights...</span>
       </div>
@@ -895,77 +1038,191 @@ function HighlightsTab({
     );
   }
 
-  const rawEvents = data.events ?? [];
-  const highlights = rawEvents.filter((e) =>
-    (e.badges?.length ?? 0) > 0 || e.moment_reasons?.some((r) => KEY_MOMENT_REASONS.has(r))
-  );
-  const displayEvents = highlights.length > 0 ? highlights : rawEvents.filter((e) => e.points_scored > 0);
-
   return (
     <Card className="space-y-4">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between border-b border-border-light pb-3">
+      {/* Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-border-light pb-3">
         <div>
-          <h3 className="text-sm font-semibold text-text-primary">
-            Key game highlights & moments
-          </h3>
+          <div className="flex items-center gap-2">
+            <Flame size={16} className="text-status-warning" />
+            <h3 className="text-sm font-semibold text-text-primary">
+              Maçın Önemli Anları & Pozisyonlar
+            </h3>
+          </div>
           <p className="mt-0.5 text-xs text-text-secondary">
-            Lead changes, scoring runs, and clutch plays
+            Liderlik değişimleri, seri üçlükler, kritik clutch dakikalar ve dönüm noktaları
           </p>
         </div>
-        <Badge variant="neutral">{displayEvents.length} Highlights Logged</Badge>
+        <Badge variant="neutral">{filteredEvents.length} Pozisyon</Badge>
       </div>
 
-      <div className="max-h-[600px] overflow-y-auto divide-y divide-border-light">
-        {displayEvents.map((e, idx) => {
-          const reasons = [
-            ...(e.badges ?? []),
+      {/* Quick Filter Chips */}
+      <div className="flex flex-wrap items-center gap-1.5 pb-1">
+        <button
+          type="button"
+          onClick={() => setFilterType("all")}
+          className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors ${
+            filterType === "all"
+              ? "border-primary bg-primary text-text-inverse"
+              : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary"
+          }`}
+        >
+          <span>Tümü</span>
+          <span className="tabular-nums opacity-75">{filterCounts.all}</span>
+        </button>
+        {filterCounts.threes > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilterType("threes")}
+            className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors ${
+              filterType === "threes"
+                ? "border-status-warning bg-status-warning/15 text-status-warning font-semibold"
+                : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary"
+            }`}
+          >
+            <Flame size={13} className="text-status-warning" />
+            <span>Arka Arkaya 3'lükler</span>
+            <span className="tabular-nums opacity-75">{filterCounts.threes}</span>
+          </button>
+        )}
+        {filterCounts.leads > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilterType("leads")}
+            className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors ${
+              filterType === "leads"
+                ? "border-status-success bg-status-success/15 text-status-success font-semibold"
+                : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary"
+            }`}
+          >
+            <ArrowRightLeft size={13} className="text-status-success" />
+            <span>Liderlik Değişimi</span>
+            <span className="tabular-nums opacity-75">{filterCounts.leads}</span>
+          </button>
+        )}
+        {filterCounts.clutch > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilterType("clutch")}
+            className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors ${
+              filterType === "clutch"
+                ? "border-status-error bg-status-error/15 text-status-error font-semibold"
+                : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary"
+            }`}
+          >
+            <Zap size={13} className="text-status-error" />
+            <span>Clutch</span>
+            <span className="tabular-nums opacity-75">{filterCounts.clutch}</span>
+          </button>
+        )}
+        {filterCounts.runs > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilterType("runs")}
+            className={`flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors ${
+              filterType === "runs"
+                ? "border-primary bg-primary/10 text-primary font-semibold"
+                : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary"
+            }`}
+          >
+            <TrendingUp size={13} className="text-primary" />
+            <span>Seriler</span>
+            <span className="tabular-nums opacity-75">{filterCounts.runs}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Events Timeline List */}
+      <div className="max-h-[640px] overflow-y-auto divide-y divide-border-light pr-1">
+        {filteredEvents.map((e, idx) => {
+          const rawReasons = [
             ...(e.moment_reasons ?? []).filter((r) => KEY_MOMENT_REASONS.has(r) && r !== "badge"),
+            ...(e.badges ?? []),
           ];
+          const hasSpecialHighlight = rawReasons.some((r) => r === "back_to_back_3" || r === "player_3_run" || r === "clutch");
 
           return (
             <div
               key={`hl-${e.period}-${e.clock}-${idx}`}
-              className="grid grid-cols-[68px_1fr_auto] items-center gap-3 px-2 py-2.5 text-xs first:pt-1 last:pb-1 transition-colors hover:bg-background-tertiary/40"
+              className={`flex items-start gap-3 py-3 px-2 transition-colors first:pt-1 last:pb-1 hover:bg-background-tertiary/40 ${
+                hasSpecialHighlight ? "bg-status-warning/[0.03]" : ""
+              }`}
             >
-              <div className="text-xs font-medium tabular-nums text-text-muted">
-                {periodName(e.period)} · {e.clock}
-              </div>
-
-              <div className="min-w-0">
-                <p className="m-0 text-xs text-text-primary">
-                  {e.player_name && <span className="font-semibold">{e.player_name} · </span>}
-                  {e.team && <span className="text-text-muted">{e.team} · </span>}
-                  {e.description || e.action_type}
-                </p>
-                {reasons.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {reasons.slice(0, 3).map((r) => (
-                      <span
-                        key={r}
-                        className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-secondary capitalize"
-                      >
-                        {r.replaceAll("_", " ")}
-                      </span>
-                    ))}
+              {/* Player Photo or Team Logo */}
+              <div className="shrink-0 pt-0.5">
+                {e.player_id ? (
+                  <PlayerPhoto
+                    playerId={e.player_id}
+                    name={e.player_name || "NBA Player"}
+                    size={38}
+                    className="ring-1 ring-border"
+                  />
+                ) : e.team ? (
+                  <TeamLogo abbr={e.team} size={38} />
+                ) : (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background-tertiary text-text-muted">
+                    <Clock size={16} />
                   </div>
                 )}
               </div>
 
-              <div className="whitespace-nowrap text-right text-xs font-semibold tabular-nums text-text-primary">
-                {e.score_away} - {e.score_home}
-                {e.points_scored > 0 && (
-                  <span className="ml-1 text-xs font-medium text-status-success">
-                    +{e.points_scored}
+              {/* Main Info */}
+              <div className="min-w-0 flex-1">
+                {/* Time & Period Row */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold tabular-nums text-text-secondary">
+                    {periodName(e.period)} · {e.clock}
                   </span>
+                  {e.player_name && (
+                    <span className="text-xs font-semibold text-text-primary">
+                      {e.player_name}
+                    </span>
+                  )}
+                </div>
+
+                {/* Description */}
+                <p className="mt-1 text-xs text-text-secondary leading-snug">
+                  {e.description || e.action_type}
+                </p>
+
+                {/* Enhanced Reason Badges */}
+                {rawReasons.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {rawReasons.map((r) => {
+                      const meta = getMomentReasonMeta(r);
+                      const IconComponent = meta.icon;
+                      return (
+                        <span
+                          key={r}
+                          className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium tracking-tight ${meta.badgeClass}`}
+                        >
+                          <IconComponent size={12} className="shrink-0" />
+                          <span>{meta.label}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Score Table / Points */}
+              <div className="shrink-0 text-right pt-0.5">
+                <div className="text-xs font-semibold tabular-nums text-text-primary">
+                  {e.score_away} - {e.score_home}
+                </div>
+                {e.points_scored > 0 && (
+                  <div className="mt-0.5 inline-block rounded-sm bg-status-success/10 px-1.5 py-0.2 text-xs font-semibold tabular-nums text-status-success">
+                    +{e.points_scored} PTS
+                  </div>
                 )}
               </div>
             </div>
           );
         })}
 
-        {displayEvents.length === 0 && (
-          <div className="py-8 text-center text-xs text-text-muted">
-            No highlight moments found for this game.
+        {filteredEvents.length === 0 && (
+          <div className="py-12 text-center text-xs text-text-muted">
+            Seçili filtreye uygun maç anı bulunamadı.
           </div>
         )}
       </div>
