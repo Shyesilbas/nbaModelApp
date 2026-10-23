@@ -141,11 +141,17 @@ export default function PaperTrading() {
 
   if (games.length === 0) {
     return (
-      <EmptyState
-        icon={<ClipboardCheck size={32} strokeWidth={1.5} />}
-        title="No predictions logged yet"
-        description={`Pre-game predictions for ${report.season} are frozen by scripts/paper_trading_snapshot.py before tip-off and graded here once the game is final.`}
-      />
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-lg font-semibold text-text-primary">Paper Trading</h1>
+          <PublishSnapshotButton />
+        </div>
+        <EmptyState
+          icon={<ClipboardCheck size={32} strokeWidth={1.5} />}
+          title="No predictions logged yet"
+          description={`The cloud freezes each ${report.season} prediction shortly before tip-off and commits it to GitHub. Publish data to cloud also pulls the latest predictions; they are graded here once the game is final.`}
+        />
+      </div>
     );
   }
 
