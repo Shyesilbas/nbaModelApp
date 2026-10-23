@@ -132,13 +132,14 @@ def _plain(name: str) -> str:
 
 
 def _games(season: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """(team game dates, player appearances) for the season so far."""
+    """(team game dates, player appearances) for the season so far (Regular Season / Playoffs only)."""
     paths = get_data_paths(season)
     teams = pd.read_csv(paths.team_games_raw, usecols=["TEAM_ABBREVIATION", "GAME_ID", "GAME_DATE", "SEASON_TYPE"],
                         dtype={"GAME_ID": str})
-    players = pd.read_csv(paths.player_games_raw, usecols=["PLAYER_NAME", "Game_ID", "GAME_DATE", "MATCHUP", "MIN"],
+    players = pd.read_csv(paths.player_games_raw, usecols=["PLAYER_NAME", "Game_ID", "GAME_DATE", "MATCHUP", "MIN", "SEASON_TYPE"],
                           dtype={"Game_ID": str})
     teams = teams[teams["SEASON_TYPE"].isin(("Regular Season", "Playoffs", "PlayIn", "Play-In"))]
+    players = players[players["SEASON_TYPE"].isin(("Regular Season", "Playoffs", "PlayIn", "Play-In"))]
     players = players[players["MIN"] > 0].copy()
     players["team"] = players["MATCHUP"].str.split(" ").str[0]
     players["plain"] = players["PLAYER_NAME"].map(_plain)
@@ -306,10 +307,32 @@ def injuries_payload(season: Optional[str], day: Optional[str]) -> Dict[str, Any
         published = day_rows["report_time_et"].iloc[0] if len(day_rows) else None
     detailed = _player_state(season, listing, today if live else day, history, teams, players)
     detailed.sort(key=lambda p: (p["team"], not p["rotation"], p["player_name"]))
+
+    # Detect status changes: either intraday changes from today's reports, or transitions from previous report
+    changes = changes_for_day(season, day) if live and day == today else []
+    if not changes and history is not None and not history.empty:
+        prev_rows = history[history["game_date"] < day].sort_values("game_date")
+        if not prev_rows.empty:
+            prev_status = prev_rows.groupby("player_name")["status"].last().to_dict()
+            prev_report = prev_rows.groupby("player_name")["report_time_et"].last().to_dict()
+            for p in detailed:
+                p_name = p.get("player_name")
+                curr_status = p.get("status")
+                old_status = prev_status.get(p_name)
+                if old_status and curr_status and old_status != curr_status:
+                    changes.append({
+                        "team": p.get("team"),
+                        "player_name": p_name,
+                        "matchup": p.get("matchup", ""),
+                        "from": old_status,
+                        "to": curr_status,
+                        "since_report_et": prev_report.get(p_name, "")
+                    })
+
     return {
         "season": season, "date": day, "live": live, "published_et": published, "not_filed": not_filed,
         "players": detailed,
-        "changes": changes_for_day(season, day) if live and day == today else [],
+        "changes": changes,
         "recent_returns": recent_returns(season, today, history, teams, players),
         "stored_days": sorted(_read_raw(season)["game_date"].unique()),
     }
