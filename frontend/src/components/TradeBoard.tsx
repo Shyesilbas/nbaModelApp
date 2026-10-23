@@ -231,7 +231,7 @@ export default function TradeBoard() {
             min={dates[0]}
             max={latest}
             onChange={(e) => e.target.value && setDate(e.target.value)}
-            className="bg-transparent text-sm font-medium tabular-nums text-text-primary focus:outline-none"
+            className="rounded bg-transparent text-sm font-medium tabular-nums text-text-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
           />
         </label>
         <button type="button" className={stepBtn} disabled={byTier || !next} onClick={() => next && setDate(next)} aria-label="Sonraki gün">

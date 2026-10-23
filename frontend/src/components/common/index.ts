@@ -8,3 +8,4 @@ export * from "./EmptyState";
 export * from "./InlineError";
 export * from "./PageContainer";
 export * from "./Modal";
+export * from "./ErrorBoundary";

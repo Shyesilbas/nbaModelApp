@@ -285,7 +285,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-1.5 text-xs text-text-secondary">
-              <Search size={14} strokeWidth={1.5} />
+              <Search size={16} strokeWidth={1.5} />
               <span className="font-medium">Franchise deep lens</span>
             </div>
             <div className="mt-2 flex items-center gap-3">
@@ -329,7 +329,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                   ))}
                 </select>
                 <ChevronDown
-                  size={14}
+                  size={16}
                   className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted"
                 />
               </div>
@@ -354,7 +354,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                   ))}
                 </select>
                 <ChevronDown
-                  size={14}
+                  size={16}
                   className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted"
                 />
               </div>
@@ -434,7 +434,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                     >
                       {/* Left: Player Info */}
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xs font-bold tabular-nums text-text-muted w-4">
+                        <span className="text-xs font-semibold tabular-nums text-text-muted w-4">
                           #{idx + 1}
                         </span>
                         <PlayerPhoto
@@ -457,10 +457,10 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                       <div className="flex items-center gap-5 sm:gap-6 shrink-0 self-end sm:self-center">
                         {/* Model Score */}
                         <div className="text-right">
-                          <span className="text-sm font-bold tabular-nums text-text-primary">
+                          <span className="text-sm font-semibold tabular-nums text-text-primary">
                             {player.IMPORTANCE_SCORE.toFixed(1)}%
                           </span>
-                          <p className="text-[10px] uppercase tracking-wider text-text-muted">
+                          <p className="text-xs text-text-muted">
                             Model Etki
                           </p>
                         </div>
@@ -468,32 +468,32 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                         {/* Traditional Stats */}
                         <div className="flex items-center gap-3 sm:gap-4 border-l border-border-light pl-4 tabular-nums text-right">
                           <div>
-                            <span className="text-xs font-bold text-text-primary">
+                            <span className="text-xs font-semibold text-text-primary">
                               {player.AVG_PTS.toFixed(1)}
                             </span>
-                            <p className="text-[10px] text-text-muted">PTS</p>
+                            <p className="text-xs text-text-muted">PTS</p>
                           </div>
                           <div>
                             <span className="text-xs font-semibold text-text-secondary">
                               {player.AVG_REB.toFixed(1)}
                             </span>
-                            <p className="text-[10px] text-text-muted">REB</p>
+                            <p className="text-xs text-text-muted">REB</p>
                           </div>
                           <div>
                             <span className="text-xs font-semibold text-text-secondary">
                               {player.AVG_AST.toFixed(1)}
                             </span>
-                            <p className="text-[10px] text-text-muted">AST</p>
+                            <p className="text-xs text-text-muted">AST</p>
                           </div>
                           <div>
                             <span className="text-xs font-medium text-text-muted">
                               {player.AVG_MIN.toFixed(0)}m
                             </span>
-                            <p className="text-[10px] text-text-muted">MIN</p>
+                            <p className="text-xs text-text-muted">MIN</p>
                           </div>
                         </div>
 
-                        <ChevronRight size={15} className="text-text-muted group-hover:text-primary transition-colors hidden sm:block" />
+                        <ChevronRight size={16} className="text-text-muted group-hover:text-primary transition-colors hidden sm:block" />
                       </div>
                     </div>
                   );
@@ -528,7 +528,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                 return (
                   <div key={posKey} className="rounded border border-border bg-background-primary p-4 flex flex-col">
                     <div className="flex items-center justify-between border-b border-border-light pb-2.5 mb-3">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                      <span className="text-xs font-semibold text-text-secondary">
                         {title}
                       </span>
                       <span className="text-xs font-medium text-text-muted tabular-nums">
@@ -560,7 +560,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                                   <span className="truncate text-xs font-semibold text-text-primary group-hover:text-primary transition-colors block">
                                     {p.PLAYER_NAME}
                                   </span>
-                                  <p className="text-[11px] tabular-nums text-text-muted">
+                                  <p className="text-xs tabular-nums text-text-muted">
                                     {p.GP > 0 ? `${p.GP} maç · ${p.AVG_MIN.toFixed(0)} dk` : "Henüz oynamadı"}
                                   </p>
                                 </div>
@@ -568,22 +568,22 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
 
                               <div className="flex items-center gap-3 tabular-nums text-right shrink-0">
                                 <div>
-                                  <span className="text-xs font-bold text-text-primary">
+                                  <span className="text-xs font-semibold text-text-primary">
                                     {p.AVG_PTS.toFixed(1)}
                                   </span>
-                                  <span className="ml-1 text-[10px] text-text-muted">PTS</span>
+                                  <span className="ml-1 text-xs text-text-muted">PTS</span>
                                 </div>
                                 <div>
                                   <span className="text-xs font-medium text-text-secondary">
                                     {p.AVG_REB.toFixed(1)}
                                   </span>
-                                  <span className="ml-1 text-[10px] text-text-muted">REB</span>
+                                  <span className="ml-1 text-xs text-text-muted">REB</span>
                                 </div>
                                 <div>
                                   <span className="text-xs font-medium text-text-secondary">
                                     {p.AVG_AST.toFixed(1)}
                                   </span>
-                                  <span className="ml-1 text-[10px] text-text-muted">AST</span>
+                                  <span className="ml-1 text-xs text-text-muted">AST</span>
                                 </div>
                               </div>
                             </div>

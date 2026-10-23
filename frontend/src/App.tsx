@@ -15,6 +15,8 @@ import GameResults from "./components/GameResults";
 import { parseUrlRoute, updateUrlRoute } from "./lib/router";
 import { ThemeToggle } from "./components/common/ThemeToggle";
 import { CommandPalette } from "./components/common/CommandPalette";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import { Skeleton } from "./components/common/Skeleton";
 
 const TeamExplorer = lazy(() => import("./components/TeamExplorer"));
 const TradeBoard = lazy(() => import("./components/TradeBoard"));
@@ -147,6 +149,8 @@ export default function App() {
 
   useEffect(() => {
     sessionStorage.setItem("nba-intel-active-tab", activeTab);
+    const label = MENU.find((item) => item.id === activeTab)?.label;
+    document.title = label ? `${label} | NBA Intelligence Lab` : "NBA Intelligence Lab";
   }, [activeTab]);
 
   useEffect(() => {
@@ -204,7 +208,7 @@ export default function App() {
       <div className="flex min-h-screen">
         {/* ── Sidebar ── */}
         <aside
-          className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-background-primary text-text-primary transition-all duration-200 lg:flex ${
+          className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-background-primary text-text-primary lg:flex ${
             sidebarCollapsed ? "w-16" : "w-60"
           }`}
         >
@@ -213,8 +217,10 @@ export default function App() {
             <button
               type="button"
               onClick={toggleSidebar}
-              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className={`flex h-8 w-8 items-center justify-center rounded text-text-secondary hover:bg-background-tertiary hover:text-text-primary transition-colors ${
+              title={sidebarCollapsed ? "Kenar çubuğunu genişlet" : "Kenar çubuğunu daralt"}
+              aria-label={sidebarCollapsed ? "Kenar çubuğunu genişlet" : "Kenar çubuğunu daralt"}
+              aria-expanded={!sidebarCollapsed}
+              className={`flex h-8 w-8 items-center justify-center rounded text-text-secondary hover:bg-background-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
                 sidebarCollapsed ? "mx-auto" : "ml-auto"
               }`}
             >
@@ -227,7 +233,7 @@ export default function App() {
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 overflow-y-auto p-2">
+          <nav className="flex-1 overflow-y-auto p-2" aria-label="Ana gezinme">
             {MENU.map((item) => (
               <div key={item.id} className="mb-1">
                 {item.section && !sidebarCollapsed && (
@@ -238,7 +244,9 @@ export default function App() {
                 <button
                   onClick={() => handleTabChange(item.id)}
                   title={sidebarCollapsed ? item.label : undefined}
-                  className={`flex w-full items-center gap-3 rounded px-3 py-2 text-xs font-medium transition-colors ${
+                  aria-label={sidebarCollapsed ? item.label : undefined}
+                  aria-current={activeTab === item.id ? "page" : undefined}
+                  className={`flex w-full items-center gap-3 rounded px-3 py-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
                     activeTab === item.id
                       ? "bg-primary text-white"
                       : "text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
@@ -260,7 +268,7 @@ export default function App() {
           <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background-primary px-4 py-2.5 lg:px-8">
             <div className="flex items-center gap-2 lg:hidden">
               <div className="flex h-7 w-7 items-center justify-center rounded bg-primary text-white">
-                <BarChart2 size={15} strokeWidth={1.5} />
+                <BarChart2 size={16} strokeWidth={1.5} />
               </div>
               <span className="text-sm font-semibold text-text-primary">NBA Intel</span>
             </div>
@@ -270,13 +278,14 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setCommandPaletteOpen(true)}
-                className="flex w-full items-center justify-between rounded border border-border bg-background-secondary px-3 py-1.5 text-xs text-text-muted hover:border-border-hover hover:text-text-primary transition-colors"
+                aria-label="Hızlı arama (Ctrl veya Cmd + K)"
+                className="flex h-9 w-full items-center justify-between rounded border border-border bg-background-secondary px-3 text-xs text-text-muted hover:border-card-border-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
               >
                 <div className="flex items-center gap-2">
-                  <Search size={14} strokeWidth={1.5} />
-                  <span>Quick search players, teams...</span>
+                  <Search size={16} strokeWidth={1.5} />
+                  <span>Oyuncu veya takım ara</span>
                 </div>
-                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-background-tertiary px-1.5 py-0.5 font-mono text-[10px] uppercase text-text-secondary">
+                <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-secondary">
                   ⌘K
                 </kbd>
               </button>
@@ -290,15 +299,16 @@ export default function App() {
           {/* Mobile nav */}
           <nav
             className="flex gap-1 overflow-x-auto border-b border-border bg-background-primary px-3 py-2 lg:hidden"
-            aria-label="Main"
+            aria-label="Ana gezinme (mobil)"
           >
             {MENU.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleTabChange(item.id)}
+                aria-current={activeTab === item.id ? "page" : undefined}
                 className={`${
                   activeTab === item.id ? "nav-btn-active nav-btn" : "nav-btn"
-                } !w-auto shrink-0 whitespace-nowrap`}
+                } !w-auto shrink-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus`}
               >
                 {item.icon}
                 <span>{item.label}</span>
@@ -315,16 +325,17 @@ export default function App() {
                   </div>
                   <div>
                     <h2 className="text-base font-semibold text-text-primary">
-                      Failed to load data
+                      Veriler yüklenemedi
                     </h2>
                     <p className="mt-1 text-sm text-text-secondary">{error}</p>
                   </div>
-                  <p className="rounded border border-border bg-background-tertiary px-3 py-2 font-mono text-xs text-text-secondary">
+                  <p className="rounded border border-border bg-background-tertiary px-3 py-2 text-xs text-text-secondary">
                     PYTHONPATH=. python3 scripts/build_frontend_store.py
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
+                  <ErrorBoundary resetKey={activeTab}>
                   {activeTab === "game-results" && (
                     <GameResults
                       onNavigateToPrediction={(game) => {
@@ -351,8 +362,9 @@ export default function App() {
                   )}
                   <Suspense
                     fallback={
-                      <div className="flex h-64 flex-col items-center justify-center gap-3">
-                        <p className="text-sm text-text-secondary">Loading module...</p>
+                      <div className="space-y-4" aria-busy="true" aria-label="Ekran yükleniyor">
+                        <Skeleton className="h-10 w-1/3 rounded" />
+                        <Skeleton className="h-64 w-full rounded" />
                       </div>
                     }
                   >
@@ -409,6 +421,7 @@ export default function App() {
                       />
                     )}
                   </Suspense>
+                  </ErrorBoundary>
                 </div>
               )}
             </div>

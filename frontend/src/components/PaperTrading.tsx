@@ -234,7 +234,7 @@ export default function PaperTrading() {
         >
           Winner
           {s.games_graded > 0 && (
-            <span className="rounded-full bg-background-tertiary px-1.5 py-0.5 text-[10px] text-text-muted">
+            <span className="rounded-full bg-background-tertiary px-1.5 py-0.5 text-xs text-text-muted">
               {s.games_graded}
             </span>
           )}
@@ -260,16 +260,16 @@ export default function PaperTrading() {
             onClick={() => setIsDateMenuOpen((open) => !open)}
             className="flex items-center gap-2 rounded border border-border bg-background-primary px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-border-hover hover:bg-background-tertiary transition-colors"
           >
-            <Calendar size={14} strokeWidth={1.5} className="text-primary" />
+            <Calendar size={16} strokeWidth={1.5} className="text-primary" />
             <span>{activeDate ? fmtDate(activeDate) : "Tarih Seç"}</span>
-            <span className="text-[10px] text-text-muted font-mono">({activeDate})</span>
+            <span className="text-xs text-text-muted tabular-nums">({activeDate})</span>
             <ChevronDown className={`h-3.5 w-3.5 text-text-muted transition-transform ${isDateMenuOpen ? "rotate-180" : ""}`} />
           </button>
 
           {isDateMenuOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setIsDateMenuOpen(false)} />
-              <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-xl">
+              <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-md">
                 {[...dates].reverse().map((d) => {
                   const isSelected = activeDate === d;
                   const gamesOnDate = (report?.games ?? []).filter((g) => g.game_date === d).length;
@@ -281,7 +281,7 @@ export default function PaperTrading() {
                         setSelectedDate(d);
                         setIsDateMenuOpen(false);
                       }}
-                      className={`flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs transition-all ${
+                      className={`flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs transition-colors ${
                         isSelected
                           ? "bg-primary text-white font-semibold"
                           : "text-text-primary hover:bg-background-tertiary"
@@ -289,11 +289,11 @@ export default function PaperTrading() {
                     >
                       <div className="flex flex-col">
                         <span>{fmtDate(d)}</span>
-                        <span className={`text-[10px] font-mono ${isSelected ? "text-white/80" : "text-text-muted"}`}>
+                        <span className={`text-xs tabular-nums ${isSelected ? "text-white/80" : "text-text-muted"}`}>
                           {d}
                         </span>
                       </div>
-                      <span className={`text-[11px] tabular-nums ${isSelected ? "text-white/90" : "text-text-secondary"}`}>
+                      <span className={`text-xs tabular-nums ${isSelected ? "text-white/90" : "text-text-secondary"}`}>
                         {gamesOnDate} maç
                       </span>
                     </button>

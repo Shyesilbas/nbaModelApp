@@ -63,7 +63,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         id: String(p.PLAYER_ID),
         playerId: p.PLAYER_ID,
         title: p.PLAYER_NAME,
-        subtitle: `${p.CURRENT_TEAM_ABBREVIATION || "NBA"} · ${p.POSITION_GROUP || "Player"}`,
+        subtitle: `${p.CURRENT_TEAM_ABBREVIATION || "NBA"} · ${p.POSITION_GROUP || "Oyuncu"}`,
         teamAbbr: p.CURRENT_TEAM_ABBREVIATION,
       }));
       return [...topTeams, ...samplePlayers];
@@ -94,7 +94,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         id: String(p.PLAYER_ID),
         playerId: p.PLAYER_ID,
         title: p.PLAYER_NAME,
-        subtitle: `${p.CURRENT_TEAM_ABBREVIATION || "NBA"} · ${p.POSITION_GROUP || "Player"}`,
+        subtitle: `${p.CURRENT_TEAM_ABBREVIATION || "NBA"} · ${p.POSITION_GROUP || "Oyuncu"}`,
         teamAbbr: p.CURRENT_TEAM_ABBREVIATION,
       }));
 
@@ -136,46 +136,60 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   if (!isOpen) return null;
 
+  const optionId = (idx: number) => `command-palette-option-${idx}`;
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-16 sm:pt-24"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-16 sm:pt-24"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded border border-border bg-background-primary shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Hızlı arama"
+        className="w-full max-w-xl overflow-hidden rounded-md border border-border bg-background-primary shadow-md"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          if (e.key === "Tab") e.preventDefault();
+          handleKeyDown(e);
+        }}
       >
-        {/* Search Input Bar */}
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <Search size={18} strokeWidth={1.5} className="shrink-0 text-text-muted" />
+          <Search size={16} strokeWidth={1.5} className="shrink-0 text-text-muted" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="command-palette-list"
+            aria-activedescendant={results.length > 0 ? optionId(selectedIndex) : undefined}
+            aria-label="Oyuncu veya takım ara"
+            autoComplete="off"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search players (Luka, Curry, Jokić) or teams (BOS, LAL)..."
-            className="w-full bg-transparent text-sm font-medium text-text-primary placeholder:text-text-muted focus:outline-none"
+            placeholder="Oyuncu (Luka, Curry, Jokić) veya takım (BOS, LAL) ara"
+            className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
           />
           {query ? (
             <button
+              type="button"
               onClick={() => setQuery("")}
-              className="text-text-muted hover:text-text-primary"
+              aria-label="Aramayı temizle"
+              className="rounded p-1 text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
             >
               <X size={16} strokeWidth={1.5} />
             </button>
           ) : (
-            <kbd className="hidden rounded border border-border bg-background-tertiary px-1.5 py-0.5 font-mono text-[10px] uppercase text-text-secondary sm:inline-block">
-              ESC
+            <kbd className="hidden rounded border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-secondary sm:inline-block">
+              Esc
             </kbd>
           )}
         </div>
 
-        {/* Results List */}
-        <div ref={listRef} className="max-h-80 overflow-y-auto p-2">
+        <div ref={listRef} id="command-palette-list" role="listbox" aria-label="Sonuçlar" className="max-h-80 overflow-y-auto p-2">
           {results.length === 0 ? (
             <div className="py-8 text-center text-sm text-text-secondary">
-              No players or teams found matching &quot;{query}&quot;
+              &quot;{query}&quot; ile eşleşen oyuncu veya takım bulunamadı.
             </div>
           ) : (
             results.map((item, idx) => {
@@ -183,9 +197,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               return (
                 <div
                   key={`${item.type}-${item.id}`}
+                  id={optionId(idx)}
+                  role="option"
+                  aria-selected={isSelected}
                   onClick={() => handleSelect(item)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex cursor-pointer items-center justify-between rounded px-3 py-2.5 transition-colors duration-100 ${
+                  className={`flex cursor-pointer items-center justify-between rounded px-3 py-2.5 ${
                     isSelected
                       ? "bg-background-tertiary text-text-primary"
                       : "text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
@@ -193,22 +210,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 >
                   <div className="flex items-center gap-3">
                     {item.type === "player" && item.playerId ? (
-                      <PlayerPhoto
-                        playerId={item.playerId}
-                        name={item.title}
-                        size={28}
-                        className="shrink-0"
-                      />
+                      <PlayerPhoto playerId={item.playerId} name={item.title} size={28} className="shrink-0" />
                     ) : (
                       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-background-secondary">
                         {item.teamAbbr ? (
-                          <img
-                            src={getTeamLogoUrl(item.teamAbbr)}
-                            alt={item.title}
-                            className="h-5 w-5 object-contain"
-                          />
+                          <img src={getTeamLogoUrl(item.teamAbbr)} alt="" className="h-5 w-5 object-contain" />
                         ) : (
-                          <Shield size={14} strokeWidth={1.5} className="text-text-muted" />
+                          <Shield size={16} strokeWidth={1.5} className="text-text-muted" aria-hidden="true" />
                         )}
                       </div>
                     )}
@@ -218,14 +226,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                  <div className="flex items-center gap-2 text-xs text-text-muted">
                     {isSelected && (
-                      <span className="flex items-center gap-1 font-mono text-[11px] text-text-secondary">
-                        Select <CornerDownLeft size={12} strokeWidth={1.5} />
+                      <span className="flex items-center gap-1 text-text-secondary">
+                        Seç <CornerDownLeft size={16} strokeWidth={1.5} aria-hidden="true" />
                       </span>
                     )}
-                    <span className="rounded border border-border px-1.5 py-0.5 text-[10px] font-medium uppercase">
-                      {item.type}
+                    <span className="rounded-sm border border-border px-1.5 py-0.5 text-xs font-medium">
+                      {item.type === "player" ? "Oyuncu" : "Takım"}
                     </span>
                   </div>
                 </div>
@@ -234,28 +242,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           )}
         </div>
 
-        {/* Footer shortcuts */}
-        <div className="flex items-center justify-between border-t border-border bg-background-secondary px-4 py-2 text-[11px] text-text-muted">
+        <div className="flex items-center justify-between border-t border-border bg-background-secondary px-4 py-2 text-xs text-text-muted">
           <div className="flex items-center gap-3">
             <span>
-              <kbd className="rounded border border-border bg-background-primary px-1 py-0.5 font-mono text-[10px]">
-                ↑
-              </kbd>{" "}
-              <kbd className="rounded border border-border bg-background-primary px-1 py-0.5 font-mono text-[10px]">
-                ↓
-              </kbd>{" "}
-              navigate
+              <kbd className="rounded-sm border border-border bg-background-primary px-1 py-0.5 text-xs">↑</kbd>{" "}
+              <kbd className="rounded-sm border border-border bg-background-primary px-1 py-0.5 text-xs">↓</kbd>{" "}
+              gezin
             </span>
             <span>
-              <kbd className="rounded border border-border bg-background-primary px-1 py-0.5 font-mono text-[10px]">
-                ↵
-              </kbd>{" "}
-              select
+              <kbd className="rounded-sm border border-border bg-background-primary px-1 py-0.5 text-xs">↵</kbd> seç
             </span>
           </div>
-          <span>NBA Intelligence Global Search</span>
+          <span>Genel arama</span>
         </div>
       </div>
     </div>
   );
-};
+}
