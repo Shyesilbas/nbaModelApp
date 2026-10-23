@@ -667,7 +667,7 @@ function DiscoveryGrid({
     () =>
       seasonsDesc.find((sn) =>
         profiles.some(
-          (p) => (averagesData[String(p.PLAYER_ID)]?.[sn]?.games_played ?? 0) >= 15
+          (p) => (averagesData[String(p.PLAYER_ID)]?.[sn]?.games_played ?? 0) >= 1
         )
       ) ??
       seasonsDesc[0] ??
@@ -684,7 +684,7 @@ function DiscoveryGrid({
     () =>
       profiles.flatMap((p) => {
         const a = averagesData[String(p.PLAYER_ID)]?.[season];
-        if (!a || a.games_played < 10) return [];
+        if (!a || a.games_played < 1) return [];
         return [{ p, a, team: a.teams?.[a.teams.length - 1] ?? p.CURRENT_TEAM ?? null }];
       }),
     [profiles, averagesData, season]
@@ -715,7 +715,7 @@ function DiscoveryGrid({
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Lig liderleri</h2>
           <p className="text-xs sm:text-sm text-text-secondary">
-            Maç başına ortalamalar · en az 10 maç ·{" "}
+            Maç başına ortalamalar · en az 1 maç ·{" "}
             <span className="tabular-nums font-medium text-text-primary">{list.length}</span> oyuncu
           </p>
         </div>
