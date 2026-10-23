@@ -58,6 +58,9 @@ def _score_values_from_response(score_resp: ScorePredictionResponse) -> Dict[str
         "total_range": score_resp.total_points_range,
         "model_version": score_resp.model_version,
         "confidence_warning": getattr(score_resp, "confidence_warning", None),
+        "predicted_pace": score_resp.predicted_pace,
+        "predicted_home_off_rtg": score_resp.predicted_home_off_rtg,
+        "predicted_away_off_rtg": score_resp.predicted_away_off_rtg,
     }
 
 
@@ -316,7 +319,10 @@ def predict_game_full(request: GameFullRequest) -> GameFullResponse:
             total=round(score_values["total"], 1),
             total_range=score_values["total_range"],
             model_version=score_values["model_version"],
-            confidence_warning=conf_warning
+            confidence_warning=conf_warning,
+            predicted_pace=score_values.get("predicted_pace"),
+            predicted_home_off_rtg=score_values.get("predicted_home_off_rtg"),
+            predicted_away_off_rtg=score_values.get("predicted_away_off_rtg"),
         ),
         win_probability=WinProbabilitySub(
             home_win_prob=round(win_resp.home_win_probability, 4),

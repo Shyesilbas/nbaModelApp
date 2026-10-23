@@ -144,5 +144,8 @@ def predict_score(
         note="Score prediction has high natural variance. Use win probability model as primary winner signal.",
         model_version=svc.score_loader.get_version(),
         prediction_date=pred_date_str,
-        confidence_warning=confidence_warning
+        confidence_warning=confidence_warning,
+        predicted_pace=round(pred_pace, 1),
+        predicted_home_off_rtg=round(pred_home_rtg, 1),
+        predicted_away_off_rtg=round(pred_away_rtg, 1),
     )

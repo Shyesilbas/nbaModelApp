@@ -61,6 +61,9 @@ class ScorePredictionResponse(BaseModel):
     prediction_date: str
     error: Optional[str] = None
     confidence_warning: Optional[str] = None
+    predicted_pace: Optional[float] = None
+    predicted_home_off_rtg: Optional[float] = None
+    predicted_away_off_rtg: Optional[float] = None
 
 
 
@@ -137,6 +140,9 @@ class ScorePredictionSub(BaseModel):
     total_range: List[float]
     model_version: Optional[str] = None
     confidence_warning: Optional[str] = None
+    predicted_pace: Optional[float] = None
+    predicted_home_off_rtg: Optional[float] = None
+    predicted_away_off_rtg: Optional[float] = None
 
 
 
