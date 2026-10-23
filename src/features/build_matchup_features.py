@@ -186,6 +186,11 @@ EARLY_SEASON_BLEND_GAMES = 6
 SCORE_PRIOR_REGRESSION = 0.75
 SCORE_FORM_STATS = ("PACE", "OFF_RTG", "DEF_RTG")
 
+# Game metadata build_features derives from the schedule. Game-level fields are the same for
+# both teams; the series wins are per team (HOME_ = the team the row is built for).
+SCHEDULE_GAME_FIELDS = ("IS_PLAYOFF", "IS_PRESEASON", "SEASON_TYPE", "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES")
+SCHEDULE_TEAM_FIELDS = ("HOME_SERIES_WINS", "AWAY_SERIES_WINS")
+
 
 @lru_cache(maxsize=8)
 def _prior_season_team_form(season: str) -> dict:
@@ -416,7 +421,9 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
 
     is_preseason_val = False
     if scheduled_game_row is not None:
-        is_playoff_val = bool(scheduled_game_row.get("IS_PLAYOFF", False)) or (scheduled_game_row.get("SEASON_TYPE") in ["Playoffs", "PlayIn", "NBA Finals"])
+        # A missing IS_PLAYOFF must not count as True (bool(nan) is True); SEASON_TYPE decides then.
+        flag = scheduled_game_row.get("IS_PLAYOFF", False)
+        is_playoff_val = (pd.notna(flag) and bool(flag)) or (scheduled_game_row.get("SEASON_TYPE") in ["Playoffs", "PlayIn", "NBA Finals"])
         st_label = str(scheduled_game_row.get("SEASON_TYPE", "")).lower()
         gid_label = str(scheduled_game_row.get("GAME_ID", ""))
         is_preseason_val = ("pre" in st_label) or gid_label.startswith("001") or gid_label.startswith("126")
@@ -669,6 +676,16 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
             opp_k = k.replace("AWAY_", "OPP_", 1)
             if opp_k not in out:
                 res[opp_k] = v
+
+    # The pregame placeholder rows carry these columns too, but for a game that has not been
+    # played they hold regular-season defaults. The schedule-derived values above are the source
+    # of truth, so they replace the row values (and the OPP_ copies of the game-level ones).
+    for k in SCHEDULE_GAME_FIELDS:
+        res[k] = out[k]
+        if f"OPP_{k}" in res:
+            res[f"OPP_{k}"] = out[k]
+    for k in SCHEDULE_TEAM_FIELDS:
+        res[k] = out[k]
 
     # Manually map aliases to fix V3 score missing player gap feature names
     res["TEAM_CORE_TOP3_PTS_LAST_5_SUM"] = res.get("HOME_TOP3_EXPECTED_PTS_SUM", 0.0)

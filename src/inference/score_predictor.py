@@ -92,6 +92,9 @@ class ScorePredictor:
                 float(features.get("DAYS_REST", 0) > features.get("OPP_DAYS_REST", 0)),
                 float(features.get("OPP_DAYS_REST", 0) > features.get("DAYS_REST", 0)),
             ]], columns=["is_playoff", "home_b2b", "away_b2b", "home_rest_advantage", "away_rest_advantage"])
+            # Same total correction as the API (src/api/services/score_prediction.py).
+            # The margin correction is not applied here yet.
+            pred_total -= float(self.ridge_total_model.predict(X_ind)[0])
 
         pred_home = (pred_total + pred_margin) / 2.0
         pred_away = (pred_total - pred_margin) / 2.0
