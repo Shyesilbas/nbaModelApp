@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Search, Check } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeftRight, Check, Search, UserRound } from "lucide-react";
 import { loadPrivateApi } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
 import PlayerPhoto from "./PlayerPhoto";
+import { Badge, Button, Card, EmptyState, InlineError, Input, Select, Skeleton } from "./common";
 
 interface PlayerProfile {
   PLAYER_ID: number;
   PLAYER_NAME: string;
-  CURRENT_TEAM_ABBREVIATION?: string;
-  POSITION_GROUP?: string;
-  HEIGHT?: string;
-  WEIGHT?: string;
-  COLLEGE?: string;
+  CURRENT_TEAM_ABBREVIATION?: string | null;
+  POSITION_GROUP?: string | null;
+  HEIGHT?: string | null;
 }
 
 interface SeasonAverages {
@@ -30,6 +29,14 @@ interface SeasonAverages {
   FT_PCT: number | null;
 }
 
+type AveragesMap = Record<string, Record<string, SeasonAverages>>;
+
+interface CompareData {
+  profiles: PlayerProfile[];
+  averages: AveragesMap;
+  seasons: string[];
+}
+
 interface PlayerCompareProps {
   initialP1Id?: number | null;
   initialP2Id?: number | null;
@@ -37,361 +44,422 @@ interface PlayerCompareProps {
   onSelectGame?: (gameId: string) => void;
 }
 
+type MetricKey = Exclude<keyof SeasonAverages, "games_total">;
+
+interface Metric {
+  key: MetricKey;
+  label: string;
+  hint?: string;
+  higherIsBetter: boolean;
+  /** Informational rows show both values without picking a leader. */
+  informational?: boolean;
+  format: (v: number) => string;
+}
+
+const one = (v: number) => v.toFixed(1);
+const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+const signed = (v: number) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1));
+
+const METRICS: Metric[] = [
+  { key: "games_played", label: "Oynanan maç", higherIsBetter: true, informational: true, format: (v) => String(v) },
+  { key: "PTS", label: "Sayı", higherIsBetter: true, format: one },
+  { key: "REB", label: "Ribaund", higherIsBetter: true, format: one },
+  { key: "AST", label: "Asist", higherIsBetter: true, format: one },
+  { key: "MIN", label: "Dakika", higherIsBetter: true, informational: true, format: one },
+  { key: "STL", label: "Top çalma", higherIsBetter: true, format: one },
+  { key: "BLK", label: "Blok", higherIsBetter: true, format: one },
+  { key: "TOV", label: "Top kaybı", hint: "düşük olan iyi", higherIsBetter: false, format: one },
+  { key: "PLUS_MINUS", label: "Artı/eksi", higherIsBetter: true, format: signed },
+  { key: "FG_PCT", label: "Saha içi isabet", higherIsBetter: true, format: pct },
+  { key: "FG3_PCT", label: "3 sayılık isabet", higherIsBetter: true, format: pct },
+  { key: "FT_PCT", label: "Serbest atış isabet", higherIsBetter: true, format: pct },
+];
+
+const matchesQuery = (p: PlayerProfile, q: string) => p.PLAYER_NAME.toLowerCase().includes(q);
+
+/* ─────────── Player picker ─────────── */
+
+function PlayerPicker({
+  slot,
+  player,
+  profiles,
+  excludeId,
+  onPick,
+  onOpenProfile,
+}: {
+  slot: string;
+  player: PlayerProfile | undefined;
+  profiles: PlayerProfile[];
+  excludeId: number | undefined;
+  onPick: (id: number) => void;
+  onOpenProfile?: (id: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return profiles
+      .filter((p) => p.PLAYER_ID !== excludeId && (!q || matchesQuery(p, q)))
+      .slice(0, 12);
+  }, [profiles, query, excludeId]);
+
+  const meta = [player?.CURRENT_TEAM_ABBREVIATION, player?.POSITION_GROUP, player?.HEIGHT].filter(Boolean);
+
+  return (
+    <Card padding="md" className="relative" ref={ref} aria-label={slot}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          {player ? (
+            <PlayerPhoto playerId={player.PLAYER_ID} name={player.PLAYER_NAME} size={56} className="shrink-0" />
+          ) : (
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border bg-background-tertiary text-text-muted">
+              <UserRound size={20} strokeWidth={1.5} aria-hidden="true" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="text-xs text-text-muted">{slot}</p>
+            <h2 className="truncate text-lg font-semibold text-text-primary">
+              {player?.PLAYER_NAME ?? "Oyuncu seçilmedi"}
+            </h2>
+            {meta.length > 0 && <p className="truncate text-xs text-text-secondary">{meta.join(" · ")}</p>}
+          </div>
+        </div>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          leftIcon={<Search size={16} strokeWidth={1.5} />}
+        >
+          Değiştir
+        </Button>
+      </div>
+
+      {player && onOpenProfile && (
+        <div className="mt-4 border-t border-border-light pt-3">
+          <Button variant="ghost" size="sm" onClick={() => onOpenProfile(player.PLAYER_ID)}>
+            Profili aç
+          </Button>
+        </div>
+      )}
+
+      {open && (
+        <div className="absolute inset-x-3 top-full z-20 mt-1 rounded border border-border bg-background-primary p-2 shadow-md">
+          <Input
+            type="text"
+            autoFocus
+            autoComplete="off"
+            aria-label={`${slot} için oyuncu ara`}
+            placeholder="Oyuncu ara"
+            leftIcon={<Search size={16} strokeWidth={1.5} />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-9"
+          />
+          <ul className="mt-2 max-h-56 divide-y divide-border-light overflow-y-auto">
+            {results.length === 0 ? (
+              <li className="p-3 text-center text-xs text-text-muted">
+                &quot;{query}&quot; ile eşleşen oyuncu bulunamadı.
+              </li>
+            ) : (
+              results.map((p) => (
+                <li key={p.PLAYER_ID}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onPick(p.PLAYER_ID);
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                    className="flex h-10 w-full items-center justify-between gap-3 px-2 text-left text-sm text-text-primary hover:bg-background-tertiary focus-visible:bg-background-tertiary focus-visible:outline-none cursor-pointer"
+                  >
+                    <span className="truncate">{p.PLAYER_NAME}</span>
+                    <span className="shrink-0 text-xs text-text-muted">{p.CURRENT_TEAM_ABBREVIATION}</span>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/* ─────────── Comparison table ─────────── */
+
+function ValueCell({
+  value,
+  metric,
+  leads,
+  align,
+}: {
+  value: number | null | undefined;
+  metric: Metric;
+  leads: boolean;
+  align: "left" | "right";
+}) {
+  const alignClass = align === "left" ? "text-left" : "text-right";
+  const justify = align === "left" ? "justify-start" : "justify-end";
+  if (value == null) {
+    return <td className={`px-4 py-3 text-sm text-text-muted ${alignClass}`}>—</td>;
+  }
+  return (
+    <td className={`px-4 py-3 text-sm tabular-nums ${alignClass}`}>
+      <span
+        className={`inline-flex items-center gap-1.5 ${justify} ${
+          leads ? "font-semibold text-status-success" : "text-text-primary"
+        }`}
+      >
+        {leads && align === "right" && <Check size={16} strokeWidth={1.5} aria-hidden="true" />}
+        {metric.format(value)}
+        {leads && align === "left" && <Check size={16} strokeWidth={1.5} aria-hidden="true" />}
+        {leads && <span className="sr-only">(önde)</span>}
+      </span>
+    </td>
+  );
+}
+
+function leader(metric: Metric, a: number | null | undefined, b: number | null | undefined): 1 | 2 | null {
+  if (metric.informational || a == null || b == null || a === b) return null;
+  const firstWins = metric.higherIsBetter ? a > b : a < b;
+  return firstWins ? 1 : 2;
+}
+
+function CompareSkeleton() {
+  return (
+    <div className="space-y-6" aria-busy="true" aria-label="Karşılaştırma yükleniyor">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Skeleton className="h-28 w-full rounded" />
+        <Skeleton className="h-28 w-full rounded" />
+      </div>
+      <Skeleton className="h-96 w-full rounded" />
+    </div>
+  );
+}
+
+/* ─────────── Page ─────────── */
+
 export const PlayerCompare: React.FC<PlayerCompareProps> = ({
   initialP1Id,
   initialP2Id,
   onSelectPlayerProfile,
 }) => {
-  const [profiles, setProfiles] = useState<PlayerProfile[]>([]);
-  const [averagesMap, setAveragesMap] = useState<Record<string, Record<string, SeasonAverages>>>({});
-  const [seasons, setSeasons] = useState<string[]>([]);
-  const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
-
-  const [p1Id, setP1Id] = useState<number | null>(initialP1Id || null);
-  const [p2Id, setP2Id] = useState<number | null>(initialP2Id || null);
-
-  const [p1Search, setP1Search] = useState("");
-  const [p2Search, setP2Search] = useState("");
-  const [p1SearchOpen, setP1SearchOpen] = useState(false);
-  const [p2SearchOpen, setP2SearchOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [result, setResult] = useState<{ key: number; data?: CompareData; error?: string } | null>(null);
+  const [seasonChoice, setSeasonChoice] = useState<string | null>(null);
+  const [p1Choice, setP1Choice] = useState<number | null>(initialP1Id || null);
+  const [p2Choice, setP2Choice] = useState<number | null>(initialP2Id || null);
 
   useEffect(() => {
+    let cancelled = false;
     Promise.all([
       loadPrivateApi<PlayerProfile[]>("/frontend-data-api/player-profiles"),
-      loadPrivateApi<Record<string, Record<string, SeasonAverages>>>("/frontend-data-api/player-season-averages"),
+      loadPrivateApi<AveragesMap>("/frontend-data-api/player-season-averages"),
       loadPrivateApi<string[]>("/frontend-data-api/seasons"),
     ])
-      .then(([prof, avg, seas]) => {
-        setProfiles(prof || []);
-        setAveragesMap(avg || {});
-        if (seas && seas.length > 0) {
-          setSeasons(seas);
-          if (seas.includes(CURRENT_SEASON)) {
-            setSelectedSeason(CURRENT_SEASON);
-          } else {
-            setSelectedSeason(seas[seas.length - 1]);
-          }
-        }
+      .then(([profiles, averages, seasons]) => {
+        if (cancelled) return;
+        setResult({
+          key: reloadKey,
+          data: {
+            profiles: profiles ?? [],
+            averages: averages ?? {},
+            seasons: [...(seasons ?? [])].sort((a, b) => a.localeCompare(b)),
+          },
+        });
       })
-      .catch(() => {});
-  }, []);
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setResult({
+          key: reloadKey,
+          error: e instanceof Error && e.message ? e.message : "Oyuncu verileri yüklenemedi.",
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
-  // Set defaults if not provided
-  useEffect(() => {
-    if (profiles.length > 0) {
-      if (!p1Id) {
-        // e.g. Luka Doncic (1629029) or first player
-        const luka = profiles.find((p) => p.PLAYER_NAME.includes("Luka"));
-        setP1Id(luka ? luka.PLAYER_ID : profiles[0].PLAYER_ID);
-      }
-      if (!p2Id) {
-        // e.g. Shai Gilgeous-Alexander (1628983) or second player
-        const shai = profiles.find((p) => p.PLAYER_NAME.includes("Gilgeous"));
-        setP2Id(shai ? shai.PLAYER_ID : profiles[1]?.PLAYER_ID || profiles[0].PLAYER_ID);
-      }
+  const loading = result?.key !== reloadKey;
+  const data = result?.key === reloadKey ? result.data : undefined;
+  const error = result?.key === reloadKey ? result.error : undefined;
+
+  const profiles = useMemo(() => data?.profiles ?? [], [data]);
+  const seasons = useMemo(() => data?.seasons ?? [], [data]);
+
+  const season =
+    seasonChoice && seasons.includes(seasonChoice)
+      ? seasonChoice
+      : seasons.includes(CURRENT_SEASON)
+        ? CURRENT_SEASON
+        : (seasons.at(-1) ?? CURRENT_SEASON);
+
+  const byId = (id: number | null) => (id == null ? undefined : profiles.find((p) => p.PLAYER_ID === id));
+  const defaultP1 = profiles.find((p) => p.PLAYER_NAME.includes("Luka")) ?? profiles[0];
+  const defaultP2 =
+    profiles.find((p) => p.PLAYER_NAME.includes("Gilgeous")) ?? profiles.find((p) => p !== defaultP1);
+  const p1 = byId(p1Choice) ?? defaultP1;
+  const p2 = byId(p2Choice) ?? (defaultP2 !== p1 ? defaultP2 : profiles.find((p) => p !== p1));
+
+  const statsFor = (p: PlayerProfile | undefined): SeasonAverages | null =>
+    p ? (data?.averages[String(p.PLAYER_ID)]?.[season] ?? null) : null;
+  const s1 = statsFor(p1);
+  const s2 = statsFor(p2);
+
+  const lead = useMemo(() => {
+    let a = 0;
+    let b = 0;
+    for (const m of METRICS) {
+      const w = leader(m, s1?.[m.key], s2?.[m.key]);
+      if (w === 1) a += 1;
+      if (w === 2) b += 1;
     }
-  }, [profiles]);
-
-  const p1 = useMemo(() => profiles.find((p) => p.PLAYER_ID === p1Id), [profiles, p1Id]);
-  const p2 = useMemo(() => profiles.find((p) => p.PLAYER_ID === p2Id), [profiles, p2Id]);
-
-  const p1Stats = useMemo(() => {
-    if (!p1Id || !averagesMap[String(p1Id)]) return null;
-    return averagesMap[String(p1Id)][selectedSeason] || null;
-  }, [averagesMap, p1Id, selectedSeason]);
-
-  const p2Stats = useMemo(() => {
-    if (!p2Id || !averagesMap[String(p2Id)]) return null;
-    return averagesMap[String(p2Id)][selectedSeason] || null;
-  }, [averagesMap, p2Id, selectedSeason]);
-
-  const p1Filtered = useMemo(() => {
-    const q = p1Search.trim().toLowerCase();
-    if (!q) return profiles.slice(0, 10);
-    return profiles.filter((p) => p.PLAYER_NAME.toLowerCase().includes(q)).slice(0, 15);
-  }, [profiles, p1Search]);
-
-  const p2Filtered = useMemo(() => {
-    const q = p2Search.trim().toLowerCase();
-    if (!q) return profiles.slice(0, 10);
-    return profiles.filter((p) => p.PLAYER_NAME.toLowerCase().includes(q)).slice(0, 15);
-  }, [profiles, p2Search]);
-
-  const STAT_METRICS = [
-    { key: "PTS", label: "Points (PPG)", higherIsBetter: true, format: (v: number) => v.toFixed(1) },
-    { key: "REB", label: "Rebounds (RPG)", higherIsBetter: true, format: (v: number) => v.toFixed(1) },
-    { key: "AST", label: "Assists (APG)", higherIsBetter: true, format: (v: number) => v.toFixed(1) },
-    { key: "MIN", label: "Minutes (MPG)", higherIsBetter: true, format: (v: number) => v.toFixed(1) },
-    { key: "STL", label: "Steals (SPG)", higherIsBetter: true, format: (v: number) => v.toFixed(1) },
-    { key: "BLK", label: "Blocks (BPG)", higherIsBetter: true, format: (v: number) => v.toFixed(1) },
-    { key: "TOV", label: "Turnovers (TOPG)", higherIsBetter: false, format: (v: number) => v.toFixed(1) },
-    { key: "PLUS_MINUS", label: "+/- Per Game", higherIsBetter: true, format: (v: number) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1)) },
-    { key: "FG_PCT", label: "Field Goal %", higherIsBetter: true, format: (v: number) => `${(v * 100).toFixed(1)}%` },
-    { key: "FG3_PCT", label: "3-Point %", higherIsBetter: true, format: (v: number) => `${(v * 100).toFixed(1)}%` },
-    { key: "FT_PCT", label: "Free Throw %", higherIsBetter: true, format: (v: number) => `${(v * 100).toFixed(1)}%` },
-  ] as const;
+    return { a, b };
+  }, [s1, s2]);
 
   return (
     <div className="space-y-6">
-      {/* Header with Season Selector */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">Player Head-to-Head Comparison</h1>
-          <p className="text-xs text-text-secondary">
-            Official regular season & playoff statistical matchup (preseason games excluded)
+          <h1 className="text-2xl font-semibold text-text-primary">Oyuncu karşılaştırma</h1>
+          <p className="mt-1 text-xs text-text-secondary">
+            İki oyuncunun sezon ortalamaları; normal sezon ve playoff maçları, hazırlık maçları hariç.
           </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-text-secondary">Season:</label>
-          <select
-            value={selectedSeason}
-            onChange={(e) => setSelectedSeason(e.target.value)}
-            className="rounded border border-border bg-background-primary px-3 py-1.5 text-xs font-medium text-text-primary focus:outline-none"
-          >
-            {seasons.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
+        {seasons.length > 0 && (
+          <div className="w-full sm:w-40">
+            <Select label="Sezon" value={season} onChange={(e) => setSeasonChoice(e.target.value)} className="h-10">
+              {[...seasons].reverse().map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
       </div>
 
-      {/* Players Selection Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Player 1 Card */}
-        <div className="surface-card relative flex flex-col justify-between">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              {p1 ? (
-                <PlayerPhoto playerId={p1.PLAYER_ID} name={p1.PLAYER_NAME} size={56} />
-              ) : null}
-              <div>
-                <h3 className="text-base font-semibold text-text-primary">
-                  {p1?.PLAYER_NAME || "Select Player 1"}
-                </h3>
-                <div className="mt-0.5 flex items-center gap-2 text-xs text-text-secondary">
-                  <span>{p1?.CURRENT_TEAM_ABBREVIATION || "NBA"}</span>
-                  <span>·</span>
-                  <span>{p1?.POSITION_GROUP || "Player"}</span>
-                  {p1?.HEIGHT && (
-                    <>
-                      <span>·</span>
-                      <span>{p1.HEIGHT}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setP1SearchOpen(!p1SearchOpen)}
-              className="inline-flex items-center gap-1.5 rounded border border-border bg-background-secondary px-2.5 py-1 text-xs font-medium text-text-primary hover:bg-background-tertiary"
-            >
-              <Search size={13} strokeWidth={1.5} />
-              <span>Change</span>
-            </button>
+      {loading ? (
+        <CompareSkeleton />
+      ) : error ? (
+        <InlineError
+          title="Oyuncu verileri yüklenemedi"
+          message={error}
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
+      ) : profiles.length === 0 ? (
+        <EmptyState
+          icon={<UserRound size={24} strokeWidth={1.5} />}
+          title="Oyuncu bulunamadı"
+          description="Karşılaştırma için kullanılabilir oyuncu profili yok."
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <PlayerPicker
+              slot="Oyuncu 1"
+              player={p1}
+              profiles={profiles}
+              excludeId={p2?.PLAYER_ID}
+              onPick={setP1Choice}
+              onOpenProfile={onSelectPlayerProfile}
+            />
+            <PlayerPicker
+              slot="Oyuncu 2"
+              player={p2}
+              profiles={profiles}
+              excludeId={p1?.PLAYER_ID}
+              onPick={setP2Choice}
+              onOpenProfile={onSelectPlayerProfile}
+            />
           </div>
 
-          {/* Search Dropdown for P1 */}
-          {p1SearchOpen && (
-            <div className="absolute left-0 right-0 top-16 z-20 m-2 rounded border border-border bg-background-primary p-2 shadow-lg">
-              <input
-                type="text"
-                value={p1Search}
-                onChange={(e) => setP1Search(e.target.value)}
-                placeholder="Search player..."
-                autoFocus
-                className="w-full rounded border border-border bg-background-secondary px-2.5 py-1.5 text-xs text-text-primary focus:outline-none"
-              />
-              <div className="mt-2 max-h-48 overflow-y-auto">
-                {p1Filtered.map((p) => (
-                  <div
-                    key={p.PLAYER_ID}
-                    onClick={() => {
-                      setP1Id(p.PLAYER_ID);
-                      setP1SearchOpen(false);
-                      setP1Search("");
-                    }}
-                    className="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 text-xs hover:bg-background-tertiary"
-                  >
-                    <span className="font-medium text-text-primary">{p.PLAYER_NAME}</span>
-                    <span className="text-text-muted">{p.CURRENT_TEAM_ABBREVIATION}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {p1 && onSelectPlayerProfile && (
-            <div className="mt-4 border-t border-border pt-3">
-              <button
-                onClick={() => onSelectPlayerProfile(p1.PLAYER_ID)}
-                className="text-xs font-medium text-primary hover:underline"
-              >
-                View full profile →
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Player 2 Card */}
-        <div className="surface-card relative flex flex-col justify-between">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              {p2 ? (
-                <PlayerPhoto playerId={p2.PLAYER_ID} name={p2.PLAYER_NAME} size={56} />
-              ) : null}
-              <div>
-                <h3 className="text-base font-semibold text-text-primary">
-                  {p2?.PLAYER_NAME || "Select Player 2"}
-                </h3>
-                <div className="mt-0.5 flex items-center gap-2 text-xs text-text-secondary">
-                  <span>{p2?.CURRENT_TEAM_ABBREVIATION || "NBA"}</span>
-                  <span>·</span>
-                  <span>{p2?.POSITION_GROUP || "Player"}</span>
-                  {p2?.HEIGHT && (
-                    <>
-                      <span>·</span>
-                      <span>{p2.HEIGHT}</span>
-                    </>
-                  )}
+          {s1 == null && s2 == null ? (
+            <EmptyState
+              icon={<ArrowLeftRight size={24} strokeWidth={1.5} />}
+              title="Bu sezon için veri yok"
+              description={`${season} sezonunda seçili oyunculardan hiçbirinin maç ortalaması bulunmuyor. Farklı bir sezon seç.`}
+            />
+          ) : (
+            <Card padding="none" className="overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light px-4 py-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-text-primary">
+                    <span className="tabular-nums">{season}</span> maç başına karşılaştırma
+                  </h2>
+                  <p className="text-xs text-text-secondary">Önde olan değer yeşil ve onay işaretiyle gösterilir.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="neutral" size="sm">
+                    <span className="max-w-24 truncate">{p1?.PLAYER_NAME}</span>{" "}
+                    <span className="tabular-nums">{lead.a}</span>
+                  </Badge>
+                  <Badge variant="neutral" size="sm">
+                    <span className="max-w-24 truncate">{p2?.PLAYER_NAME}</span>{" "}
+                    <span className="tabular-nums">{lead.b}</span>
+                  </Badge>
                 </div>
               </div>
-            </div>
 
-            <button
-              onClick={() => setP2SearchOpen(!p2SearchOpen)}
-              className="inline-flex items-center gap-1.5 rounded border border-border bg-background-secondary px-2.5 py-1 text-xs font-medium text-text-primary hover:bg-background-tertiary"
-            >
-              <Search size={13} strokeWidth={1.5} />
-              <span>Change</span>
-            </button>
-          </div>
-
-          {/* Search Dropdown for P2 */}
-          {p2SearchOpen && (
-            <div className="absolute left-0 right-0 top-16 z-20 m-2 rounded border border-border bg-background-primary p-2 shadow-lg">
-              <input
-                type="text"
-                value={p2Search}
-                onChange={(e) => setP2Search(e.target.value)}
-                placeholder="Search player..."
-                autoFocus
-                className="w-full rounded border border-border bg-background-secondary px-2.5 py-1.5 text-xs text-text-primary focus:outline-none"
-              />
-              <div className="mt-2 max-h-48 overflow-y-auto">
-                {p2Filtered.map((p) => (
-                  <div
-                    key={p.PLAYER_ID}
-                    onClick={() => {
-                      setP2Id(p.PLAYER_ID);
-                      setP2SearchOpen(false);
-                      setP2Search("");
-                    }}
-                    className="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 text-xs hover:bg-background-tertiary"
-                  >
-                    <span className="font-medium text-text-primary">{p.PLAYER_NAME}</span>
-                    <span className="text-text-muted">{p.CURRENT_TEAM_ABBREVIATION}</span>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full table-fixed border-collapse">
+                  <caption className="sr-only">
+                    {p1?.PLAYER_NAME} ve {p2?.PLAYER_NAME} için {season} sezonu maç başına istatistikler
+                  </caption>
+                  <thead>
+                    <tr className="bg-background-tertiary text-xs text-text-secondary">
+                      <th scope="col" className="w-1/3 px-4 py-2 text-left font-medium">
+                        {p1?.PLAYER_NAME}
+                      </th>
+                      <th scope="col" className="w-1/3 px-4 py-2 text-center font-medium">
+                        İstatistik
+                      </th>
+                      <th scope="col" className="w-1/3 px-4 py-2 text-right font-medium">
+                        {p2?.PLAYER_NAME}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-light">
+                    {METRICS.map((m) => {
+                      const v1 = s1?.[m.key];
+                      const v2 = s2?.[m.key];
+                      const w = leader(m, v1, v2);
+                      return (
+                        <tr key={m.key} className="hover:bg-background-secondary">
+                          <ValueCell value={v1} metric={m} leads={w === 1} align="left" />
+                          <th scope="row" className="px-4 py-3 text-center text-xs font-medium text-text-secondary">
+                            {m.label}
+                            {m.hint && <span className="block font-normal text-text-muted">{m.hint}</span>}
+                          </th>
+                          <ValueCell value={v2} metric={m} leads={w === 2} align="right" />
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            </Card>
           )}
-
-          {p2 && onSelectPlayerProfile && (
-            <div className="mt-4 border-t border-border pt-3">
-              <button
-                onClick={() => onSelectPlayerProfile(p2.PLAYER_ID)}
-                className="text-xs font-medium text-primary hover:underline"
-              >
-                View full profile →
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Head-to-Head Comparison Table */}
-      <div className="surface-card overflow-hidden !p-0">
-        <div className="border-b border-border bg-background-secondary px-4 py-3">
-          <h2 className="text-sm font-semibold text-text-primary">Per Game Statistical Breakdown</h2>
-          <p className="text-xs text-text-secondary">
-            Highlighted indicators signify the statistical advantage for season {selectedSeason}
-          </p>
-        </div>
-
-        <div className="divide-y divide-border">
-          {STAT_METRICS.map((metric) => {
-            const v1 = p1Stats ? (p1Stats as any)[metric.key] : null;
-            const v2 = p2Stats ? (p2Stats as any)[metric.key] : null;
-
-            let p1Wins = false;
-            let p2Wins = false;
-
-            if (v1 != null && v2 != null && v1 !== v2) {
-              if (metric.higherIsBetter) {
-                p1Wins = v1 > v2;
-                p2Wins = v2 > v1;
-              } else {
-                p1Wins = v1 < v2;
-                p2Wins = v2 < v1;
-              }
-            }
-
-            return (
-              <div
-                key={metric.key}
-                className="flex items-center justify-between px-4 py-3 text-sm transition-colors hover:bg-background-tertiary/40"
-              >
-                {/* P1 Value */}
-                <div className="w-1/3 text-left">
-                  {v1 != null ? (
-                    <span
-                      className={`font-semibold ${
-                        p1Wins
-                          ? "inline-flex items-center gap-1 rounded bg-status-success/10 px-2 py-0.5 text-status-success"
-                          : "text-text-secondary"
-                      }`}
-                    >
-                      {metric.format(v1)}
-                      {p1Wins && <Check size={12} strokeWidth={2.5} />}
-                    </span>
-                  ) : (
-                    <span className="text-text-muted">—</span>
-                  )}
-                </div>
-
-                {/* Metric Label */}
-                <div className="w-1/3 text-center">
-                  <span className="text-xs font-medium uppercase tracking-wider text-text-secondary">
-                    {metric.label}
-                  </span>
-                </div>
-
-                {/* P2 Value */}
-                <div className="w-1/3 text-right">
-                  {v2 != null ? (
-                    <span
-                      className={`font-semibold ${
-                        p2Wins
-                          ? "inline-flex items-center gap-1 rounded bg-status-success/10 px-2 py-0.5 text-status-success"
-                          : "text-text-secondary"
-                      }`}
-                    >
-                      {p2Wins && <Check size={12} strokeWidth={2.5} />}
-                      {metric.format(v2)}
-                    </span>
-                  ) : (
-                    <span className="text-text-muted">—</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 };
