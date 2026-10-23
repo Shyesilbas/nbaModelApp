@@ -25,6 +25,14 @@ from .services.win_prediction import (
     predict,
 )
 from .services.auto_status import auto_overrides
+from .services.game_data_refresh import (
+    get_batch_status,
+    get_completed_detail,
+    get_refresh_status,
+    missing_game_ids,
+    start_batch_refresh,
+    start_refresh,
+)
 from .services.game_full import predict_game_full
 from .services.injury_history import changes_for_game, injuries_payload
 from .services.injury_views import injury_changes_payload, injury_report_payload
@@ -58,6 +66,9 @@ def require_data_token(request: Request) -> None:
     _check_token(request)
 
 
+data_router = APIRouter(prefix="/frontend-data-api", dependencies=[Depends(require_data_token)])
+
+
 class GameDataRefreshRequest(BaseModel):
     season: str
 
@@ -67,64 +78,29 @@ class BatchRefreshRequest(BaseModel):
     game_ids: list[str]
 
 
-@router.post("/frontend-data-api/games/refresh-batch")
-def refresh_games_batch(req: BatchRefreshRequest, request: Request):
-    from .services.game_data_refresh import start_batch_refresh
-
-    def _start():
-        from .services.frontend_data import _check_token
-        _check_token(request)
-        return start_batch_refresh(req.game_ids, req.season)
-
-    return _run_endpoint(_start)
+@data_router.post("/games/refresh-batch")
+def refresh_games_batch(req: BatchRefreshRequest):
+    return _run_endpoint(lambda: start_batch_refresh(req.game_ids, req.season))
 
 
-@router.get("/frontend-data-api/games/refresh-batch/pending")
-def games_batch_pending(request: Request, season: str, ids: str):
-    from .services.game_data_refresh import missing_game_ids
-
-    def _pending():
-        from .services.frontend_data import _check_token
-        _check_token(request)
-        return {"missing": missing_game_ids([i for i in ids.split(",") if i], season)}
-
-    return _run_endpoint(_pending)
+@data_router.get("/games/refresh-batch/pending")
+def games_batch_pending(season: str, ids: str):
+    return _run_endpoint(lambda: {"missing": missing_game_ids([i for i in ids.split(",") if i], season)})
 
 
-@router.get("/frontend-data-api/games/refresh-batch")
-def games_batch_status(request: Request, ids: str):
-    from .services.game_data_refresh import get_batch_status
-
-    def _status():
-        from .services.frontend_data import _check_token
-        _check_token(request)
-        return get_batch_status([i for i in ids.split(",") if i])
-
-    return _run_endpoint(_status)
+@data_router.get("/games/refresh-batch")
+def games_batch_status(ids: str):
+    return _run_endpoint(lambda: get_batch_status([i for i in ids.split(",") if i]))
 
 
-@router.post("/frontend-data-api/games/{game_id}/refresh")
-def refresh_game_data(game_id: str, req: GameDataRefreshRequest, request: Request):
-    from .services.game_data_refresh import start_refresh
-
-    def _start():
-        from .services.frontend_data import _check_token
-        _check_token(request)
-        return start_refresh(game_id, req.season)
-
-    return _run_endpoint(_start)
+@data_router.post("/games/{game_id}/refresh")
+def refresh_game_data(game_id: str, req: GameDataRefreshRequest):
+    return _run_endpoint(lambda: start_refresh(game_id, req.season))
 
 
-@router.get("/frontend-data-api/games/{game_id}/refresh")
-def game_data_refresh_status(game_id: str, request: Request):
-    from .services.game_data_refresh import get_refresh_status
-
-    def _status():
-        from .services.frontend_data import _check_token
-        _check_token(request)
-        return get_refresh_status(game_id)
-
-    return _run_endpoint(_status)
+@data_router.get("/games/{game_id}/refresh")
+def game_data_refresh_status(game_id: str):
+    return _run_endpoint(lambda: get_refresh_status(game_id))
 
 
 def _with_injury_report(req, home: str, away: str):
@@ -176,110 +152,97 @@ def health():
     return {"status": "ok"}
 
 
-@router.get("/frontend-data-api/paper-trading")
-def frontend_paper_trading(request: Request, season: str = None):
-    def _report():
-        from .services.frontend_data import _check_token
-        from src.core.season_utils import get_default_season
-        _check_token(request)
-        return paper_trading_report(season or get_default_season())
-    return _run_endpoint(_report)
+@data_router.get("/paper-trading")
+def frontend_paper_trading(season: str = None):
+    return _run_endpoint(lambda: paper_trading_report(season or get_default_season()))
 
 
-@router.get("/frontend-data-api/seasons")
-def frontend_seasons(request: Request):
-    return _run_endpoint(lambda: get_seasons(request))
+@data_router.get("/seasons")
+def frontend_seasons():
+    return _run_endpoint(get_seasons)
 
 
-@router.get("/frontend-data-api/player-profiles")
-def frontend_player_profiles(request: Request):
-    return _run_endpoint(lambda: get_player_profiles(request))
+@data_router.get("/player-profiles")
+def frontend_player_profiles():
+    return _run_endpoint(get_player_profiles)
 
 
-@router.get("/frontend-data-api/player-season-averages")
-def frontend_player_season_averages(request: Request):
-    return _run_endpoint(lambda: get_player_season_averages(request))
+@data_router.get("/player-season-averages")
+def frontend_player_season_averages():
+    return _run_endpoint(get_player_season_averages)
 
 
-@router.get("/frontend-data-api/trades")
-def frontend_trades(request: Request):
-    return _run_endpoint(lambda: get_trades(request))
+@data_router.get("/trades")
+def frontend_trades():
+    return _run_endpoint(get_trades)
 
 
-@router.get("/frontend-data-api/multi-team-players")
-def frontend_multi_team_players(request: Request, season: str = None):
-    return _run_endpoint(lambda: get_multi_team_players(request, season))
+@data_router.get("/multi-team-players")
+def frontend_multi_team_players(season: str = None):
+    return _run_endpoint(lambda: get_multi_team_players(season))
 
 
-@router.get("/frontend-data-api/game-results")
-def frontend_game_results(request: Request, season: str = None):
-    return _run_endpoint(lambda: get_game_results(request, season))
+@data_router.get("/game-results")
+def frontend_game_results(season: str = None):
+    return _run_endpoint(lambda: get_game_results(season))
 
 
-@router.get("/frontend-data-api/games")
-def frontend_game_index(
-    request: Request,
-    season: str = None,
-    start_date: str = None,
-    end_date: str = None,
-):
-    return _run_endpoint(lambda: get_game_index(request, season, start_date, end_date))
+@data_router.get("/games")
+def frontend_game_index(season: str = None, start_date: str = None, end_date: str = None):
+    return _run_endpoint(lambda: get_game_index(season, start_date, end_date))
 
 
-@router.get("/frontend-data-api/weeks")
-def frontend_season_weeks(request: Request, season: str = None):
-    return _run_endpoint(lambda: get_season_weeks(request, season))
+@data_router.get("/weeks")
+def frontend_season_weeks(season: str = None):
+    return _run_endpoint(lambda: get_season_weeks(season))
 
 
-@router.get("/frontend-data-api/games/{game_id}")
-def frontend_game_detail(game_id: str, request: Request, season: str = None):
+@data_router.get("/games/{game_id}")
+def frontend_game_detail(game_id: str, season: str = None):
     def _detail():
-        from .services.game_data_refresh import get_completed_detail
-        from .services.frontend_data import _check_token
-        _check_token(request)
         refreshed = get_completed_detail(game_id)
-        return refreshed if refreshed is not None else get_game_detail(game_id, request, season)
+        return refreshed if refreshed is not None else get_game_detail(game_id, season)
 
     return _run_endpoint(_detail)
 
 
-@router.get("/frontend-data-api/play-by-play/{game_id}")
-def frontend_play_by_play(game_id: str, request: Request, season: str = None):
-    return _run_endpoint(lambda: get_play_by_play(game_id, request, season))
+@data_router.get("/play-by-play/{game_id}")
+def frontend_play_by_play(game_id: str, season: str = None):
+    return _run_endpoint(lambda: get_play_by_play(game_id, season))
 
 
-@router.get("/frontend-data-api/players/{player_id}")
-def frontend_player_history(player_id: str, request: Request):
-    return _run_endpoint(lambda: get_player_history(player_id, request))
+@data_router.get("/players/{player_id}")
+def frontend_player_history(player_id: str):
+    return _run_endpoint(lambda: get_player_history(player_id))
 
 
-@router.get("/frontend-data-api/team-rosters")
-def frontend_team_rosters(request: Request, season: str = None):
-    return _run_endpoint(lambda: get_team_rosters(request, season))
+@data_router.get("/team-rosters")
+def frontend_team_rosters(season: str = None):
+    return _run_endpoint(lambda: get_team_rosters(season))
 
 
-@router.get("/frontend-data-api/injury-report")
-def frontend_injury_report(season: str = None, date: str = None, _: None = Depends(require_data_token)):
+@data_router.get("/injury-report")
+def frontend_injury_report(season: str = None, date: str = None):
     return _run_endpoint(lambda: injury_report_payload(season, date))
 
 
-@router.get("/frontend-data-api/injury-changes")
-def frontend_injury_changes(home: str, away: str, date: str, season: str = None, _: None = Depends(require_data_token)):
+@data_router.get("/injury-changes")
+def frontend_injury_changes(home: str, away: str, date: str, season: str = None):
     return _run_endpoint(lambda: injury_changes_payload(season, home, away, date))
 
 
-@router.get("/frontend-data-api/injuries")
-def frontend_injuries(season: str = None, date: str = None, _: None = Depends(require_data_token)):
+@data_router.get("/injuries")
+def frontend_injuries(season: str = None, date: str = None):
     return _run_endpoint(lambda: injuries_payload(season, date))
 
 
-@router.post("/frontend-data-api/snapshot-publish")
-def start_snapshot_publish(_: None = Depends(require_data_token)):
+@data_router.post("/snapshot-publish")
+def start_snapshot_publish():
     return _run_endpoint(start_publish)
 
 
-@router.get("/frontend-data-api/snapshot-publish")
-def snapshot_publish_status(_: None = Depends(require_data_token)):
+@data_router.get("/snapshot-publish")
+def snapshot_publish_status():
     return _run_endpoint(snapshot_status)
 
 
@@ -334,3 +297,6 @@ def explain_game_endpoint(req: ShapExplanationRequest):
             score_model_explanation=score_exp
         )
     return _run_endpoint(_explain)
+
+
+router.include_router(data_router)

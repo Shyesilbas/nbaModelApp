@@ -97,48 +97,39 @@ def _global_doc(name: str) -> str | None:
     return _doc(str(path), name, _mtime(path))
 
 
-def get_seasons(request: Request) -> Response:
-    _check_token(request)
+def get_seasons() -> Response:
     return _doc_response(_global_doc("seasons"), stored_seasons())
 
 
-def get_player_profiles(request: Request) -> Response:
-    _check_token(request)
+def get_player_profiles() -> Response:
     return _doc_response(_global_doc("player_profiles"), [])
 
 
-def get_player_season_averages(request: Request) -> Response:
-    _check_token(request)
+def get_player_season_averages() -> Response:
     return _doc_response(_global_doc("player_season_averages"), {})
 
 
-def get_trades(request: Request) -> Response:
-    _check_token(request)
+def get_trades() -> Response:
     return _doc_response(_global_doc("trades"), [])
 
 
-def get_team_rosters(request: Request, season: str | None = None) -> Response:
-    _check_token(request)
+def get_team_rosters(season: str | None = None) -> Response:
     return _doc_response(_season_doc(season or DEFAULT_SEASON, "team_rosters"), [])
 
 
-def get_multi_team_players(request: Request, season: str | None = None) -> Response:
-    _check_token(request)
+def get_multi_team_players(season: str | None = None) -> Response:
     return _doc_response(_season_doc(season or DEFAULT_SEASON, "multi_team_players"), [])
 
 
-def get_game_results(request: Request, season: str | None = None) -> Response:
-    _check_token(request)
+def get_game_results(season: str | None = None) -> Response:
     return _doc_response(_season_doc(season or DEFAULT_SEASON, "game_results"), [])
 
 
 def get_game_index(
-    request: Request,
     season: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
 ) -> Response:
-    _check_token(request)
     conn = _season_conn(season or DEFAULT_SEASON)
     try:
         sql, params = "SELECT data_json FROM games WHERE 1=1", []
@@ -152,8 +143,7 @@ def get_game_index(
     return _json_response("[" + ",".join(r[0] for r in rows) + "]")
 
 
-def get_season_weeks(request: Request, season: str | None = None) -> list[dict[str, Any]]:
-    _check_token(request)
+def get_season_weeks(season: str | None = None) -> list[dict[str, Any]]:
     conn = _season_conn(season or DEFAULT_SEASON)
     try:
         dates = [r[0] for r in conn.execute("SELECT game_date FROM games WHERE game_date IS NOT NULL")]
@@ -183,8 +173,7 @@ def get_season_weeks(request: Request, season: str | None = None) -> list[dict[s
     return weeks
 
 
-def get_game_detail(game_id: str, request: Request, season: str | None = None) -> Any:
-    _check_token(request)
+def get_game_detail(game_id: str, season: str | None = None) -> Any:
     return game_detail_payload(game_id, season)
 
 
@@ -209,8 +198,7 @@ def game_detail_payload(game_id: str, season: str | None = None) -> dict[str, An
     }
 
 
-def get_play_by_play(game_id: str, request: Request, season: str | None = None) -> Any:
-    _check_token(request)
+def get_play_by_play(game_id: str, season: str | None = None) -> Any:
     gid = _norm_game_id(game_id)
     season_key = season or _season_from_game_id(gid)
     conn = connect_ro(season_db_path(season_key))
@@ -231,8 +219,7 @@ def get_play_by_play(game_id: str, request: Request, season: str | None = None) 
     return condense_payload(json.loads(path.read_text(encoding="utf-8")))
 
 
-def get_player_history(player_id: str, request: Request) -> Response:
-    _check_token(request)
+def get_player_history(player_id: str) -> Response:
     pid = str(player_id)
     games: list[str] = []
     averages: list[str] = []
