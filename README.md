@@ -10,7 +10,7 @@ Models are trained on six NBA seasons (2020-21 through 2025-26: 7,390 games, 165
 
 | Layer | Model | Walk-forward 2025-26 (trained on 2020-21..2024-25 only) | 3-season walk-forward (2023-24..2025-26, 3,772 games) |
 | :--- | :--- | :--- | :--- |
-| **WIN Probability (v11)** | Logistic regression on 7 features (Elo diff, home, clean net rating diff, win-rate diff, rest), early-season Elo blend | ROC-AUC `0.740`, Brier `0.204`, Log-loss `0.596`, Accuracy `68.4%` (1,257 games) | ROC-AUC `0.732`, Brier `0.208`, Accuracy `66.9%` |
+| **WIN Probability (v11)** | Logistic regression on 8 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs, roster availability ABS_DIFF), early-season Elo blend | ROC-AUC `0.740`, Brier `0.204`, Log-loss `0.596`, Accuracy `68.4%` (1,257 games) | ROC-AUC `0.732`, Brier `0.208`, Accuracy `66.9%` |
 | **SCORE Prediction (v11)** | Ridge pace / offensive-rating models (2 features each), Ridge margin on the WIN inputs, Ridge residual correction; actual-point targets | Total MAE `15.31`, Margin MAE `11.45`, Winner accuracy `68.1%` | Total MAE `14.97`, Margin MAE `11.14` |
 | **PLAYER Projection (v11)** | LightGBM per target (L1 for points), 21 features incl. opponent allowance to the player's position | MAE PTS `4.50`, REB `1.89`, AST `1.33` (28,698 rows) | MAE PTS `4.51`, REB `1.90`, AST `1.33` |
 
@@ -18,7 +18,7 @@ The walk-forward columns above score the raw model probability. The served proba
 
 Live replay of 2025-26 (every game predicted from the API code path with features as of that morning, models trained through 2024-25): blended probability, ROC-AUC `0.735`, Brier `0.206`, Total MAE `15.46`, Margin MAE `11.42`, 0 failed games out of 1,321. Run it with `NBA_MODEL_DIR=models/experimental/holdout_eval python -m scripts.backtest.live --season 2025-26 --out <path>` so the replay uses models that never saw 2025-26.
 
-Against simple pregame baselines over five walk-forward seasons (`reports/evaluation/multi_season_walk_forward_backtest.md`): WIN Brier `0.2141` vs `0.2157` for Elo + home court, SCORE total MAE `14.90` vs `14.95` and margin MAE `10.97` vs `11.41` for last-10 real points, PLAYER PTS MAE `4.54` vs `4.63` for EMA-10. The game-level models sit close to what pregame data allows; larger gains need new information (injuries, lineups, market lines).
+Against simple pregame baselines over five walk-forward seasons (`reports/evaluation/multi_season_walk_forward_backtest.md`): WIN Brier `0.2106` vs `0.2157` for Elo + home court, SCORE total MAE `14.90` vs `14.95` and margin MAE `10.83` vs `11.41` for last-10 real points, PLAYER PTS MAE `4.54` vs `4.63` for EMA-10. The game-level models sit close to what pregame data allows; larger gains need new information (injuries, lineups, market lines).
 
 > **Validation**: walk-forward means each test season is predicted by models fitted only on earlier seasons. The production models are then refit on every eligible row (`final_refit_scope: all_eligible_rows`). The 2026-10 model audit and the 2026-10-20 review (`reports/production/model_performance_and_architecture_report.md`, section 5) describe each fix.
 

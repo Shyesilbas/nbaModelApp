@@ -49,7 +49,7 @@ npm run dev
 ### Production & Governance
 - `GET /health`: Liveness and readiness probe.
 - `GET /model-status`: Returns metadata for active production models:
-  - **WIN Probability**: logistic regression, 7 features (2025-26 holdout ROC-AUC `0.745`, Brier `0.205`).
+  - **WIN Probability**: logistic regression, 8 features (metrics as stored in `models/production/win_metadata.json`; measured walk-forward numbers are in `README.md`).
   - **SCORE Model**: Ridge pace / rating / margin models + Ridge residual correction (2025-26 holdout total MAE `15.31`, margin MAE `11.45`).
   - **PLAYER Model**: LightGBM per target (2025-26 holdout MAE PTS `4.51`, REB `1.89`, AST `1.33`).
 

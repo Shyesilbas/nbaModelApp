@@ -112,7 +112,7 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 
 ## 5. Changes in the 2026-10-20 Review
 
-- WIN: 32 -> 7 features (two exact linear dependencies removed), early-season feature shrink removed from serving (it raised log loss in every bucket), training Elo aligned with live Elo (up to 13 points apart before).
+- WIN: 32 -> 7 features (two exact linear dependencies removed; ABS_DIFF roster availability was added afterwards, the shipped model has 8), early-season feature shrink removed from serving (it raised log loss in every bucket), training Elo aligned with live Elo (up to 13 points apart before).
 - SCORE: actual-point targets, 2-feature pace/rating models (collinear pairs cancelled in SHAP), margin on the WIN inputs, release model now includes the validation season.
 - PLAYER: explicit feature list, opponent position allowance and position flags, Ridge layer retired, F-G position mapping fixed, release model includes the validation season.
 - Serving: stale parquet copies are no longer read when the CSV is newer, the player dataset cache refreshes with the data, explanations work for the linear models.

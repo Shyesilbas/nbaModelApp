@@ -68,7 +68,7 @@ This document describes the end-to-end data flow, feature engineering, model dat
 ## 6. Model Inference & Serving Architecture
 
 1. **Active Production Models**:
-   - **WIN Probability (v11)**: Uncalibrated logistic regression on 7 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs) plus an early-season Elo blend.
+   - **WIN Probability (v11)**: Uncalibrated logistic regression on 8 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs, ABS_DIFF roster availability) plus an early-season Elo blend (`docs/early_season_transitions.md`).
    - **SCORE Prediction (v11)**: Ridge regressors for pace and each side's offensive rating (2 features each) and for the margin (WIN inputs), with a Ridge residual correction; trained on actual points.
    - **PLAYER Projection (v11)**: LightGBM regressors for PTS (L1), REB, AST on 21 features including position flags and the opponent's allowance to the player's position.
 2. **Serving**:
