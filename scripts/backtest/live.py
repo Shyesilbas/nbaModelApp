@@ -71,8 +71,12 @@ def run(season: str, out: Path, workers: int = 4, limit: int | None = None):
         (str(r.GAME_ID).zfill(10), str(r.GAME_DATE)[:10], r.HOME_TEAM_ABBREVIATION, r.AWAY_TEAM_ABBREVIATION, season)
         for r in games.itertuples()
     ]
+    rows = []
     with Pool(workers) as pool:
-        rows = pool.map(_predict_game, jobs, chunksize=8)
+        for i, row in enumerate(pool.imap(_predict_game, jobs, chunksize=8), start=1):
+            rows.append(row)
+            if i % 100 == 0 or i == len(jobs):
+                print(f"{i}/{len(jobs)} games", flush=True)
     res = pd.DataFrame(rows).merge(
         games.assign(GAME_ID=games["GAME_ID"].str.zfill(10))[["GAME_ID", "HOME_SCORE", "AWAY_SCORE", "SEASON_TYPE"]],
         on="GAME_ID", how="left",
