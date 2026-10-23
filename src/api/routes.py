@@ -1,9 +1,12 @@
-import traceback
+import logging
+from datetime import datetime
 from typing import Callable
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from src.core.season_utils import get_default_season
+from src.features.build_matchup_features import build_features
 from src.ingestion.nba_injury_report import ET
 from .schemas import (
     PlayerStatusOverride,
@@ -21,8 +24,13 @@ from .schemas import (
 from .services.win_prediction import (
     predict,
 )
+from .services.auto_status import auto_overrides
 from .services.game_full import predict_game_full
+from .services.injury_history import changes_for_game, injuries_payload
+from .services.injury_views import injury_changes_payload, injury_report_payload
+from .services.snapshot_publish import get_status as snapshot_status, start_publish
 from .services.frontend_data import (
+    _check_token,
     get_game_detail,
     get_game_index,
     get_game_results,
@@ -41,9 +49,13 @@ from .services.player_prediction import predict_players
 from .services.score_prediction import predict_score
 from .services.status import get_model_status
 from .services.shap_service import explain_win_probability, explain_score_prediction
-from src.features.build_matchup_features import build_features
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def require_data_token(request: Request) -> None:
+    _check_token(request)
 
 
 class GameDataRefreshRequest(BaseModel):
@@ -120,9 +132,6 @@ def _with_injury_report(req, home: str, away: str):
     Returns the report summary that was applied, or None. Overrides the caller sent are never replaced."""
     if getattr(req, "player_status_overrides", None):
         return None
-    from .services.auto_status import auto_overrides
-
-    from datetime import datetime
     game_date = str(req.prediction_date or datetime.now(ET).date())
     overrides, summary = auto_overrides(home, away, game_date)
     if overrides:
@@ -139,9 +148,9 @@ def _run_endpoint(handler: Callable):
         raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Unhandled error in endpoint")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/predict/win-probability", response_model=WinProbResponse)
@@ -250,108 +259,28 @@ def frontend_team_rosters(request: Request, season: str = None):
 
 
 @router.get("/frontend-data-api/injury-report")
-def frontend_injury_report(request: Request, season: str = None, date: str = None):
-    """Injury report entries for one game day: today and later from the latest live report,
-    earlier days from the stored history. `error` says why nothing could be read."""
-    def _injury():
-        from datetime import datetime
-        from .services.frontend_data import _check_token
-        from .services.auto_status import cached_report
-        from .services.injury_history import read_history
-        from src.core.season_utils import get_default_season, normalize_season
-
-        _check_token(request)
-        s = normalize_season(season or get_default_season())
-        today = datetime.now(ET).strftime("%Y-%m-%d")
-        d = date or today
-        if d < today:
-            rows = read_history(s)
-            rows = rows[rows["game_date"] == d]
-            entries = [{"team": r.team, "player_name": r.player_name, "status": r.status, "reason": r.reason}
-                       for r in rows.itertuples()]
-            return {"published_et": rows["report_time_et"].iloc[0] if len(rows) else None, "date": d,
-                    "entries": entries, "not_submitted": [], "error": None if entries else "No stored report for this day"}
-        report = cached_report(s, today)
-        if report is None:
-            return {"published_et": None, "date": d, "entries": [], "not_submitted": [],
-                    "error": "Official injury report could not be read"}
-        mmddyyyy = datetime.strptime(d, "%Y-%m-%d").strftime("%m/%d/%Y")
-        return {
-            "published_et": report.published_et,
-            "date": d,
-            "entries": [e for e in report.entries if e["game_date"] == mmddyyyy],
-            "not_submitted": [list(x) for x in report.not_submitted],
-            "error": None,
-        }
-
-    return _run_endpoint(_injury)
+def frontend_injury_report(season: str = None, date: str = None, _: None = Depends(require_data_token)):
+    return _run_endpoint(lambda: injury_report_payload(season, date))
 
 
 @router.get("/frontend-data-api/injury-changes")
-def frontend_injury_changes(request: Request, home: str, away: str, date: str, season: str = None):
-    """Status changes of the two teams' players across today's reports, for the prediction screen."""
-    def _changes():
-        from .services.frontend_data import _check_token
-        from .services.injury_history import changes_for_game
-        from src.core.season_utils import get_default_season, normalize_season
-
-        from .services.auto_status import cached_report
-        from datetime import datetime
-
-        _check_token(request)
-        season_key = normalize_season(season or get_default_season())
-        report = cached_report(season_key, datetime.now(ET).strftime("%Y-%m-%d"))
-        away_u, home_u = away.upper(), home.upper()
-        summary = None
-        if report:
-            mmddyyyy = datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            entries = [e for e in report.for_matchup(away_u, home_u) if e["game_date"] == mmddyyyy]
-            summary = {
-                "published_et": report.published_et,
-                "submitted": {away_u: report.submitted(away_u, home_u, away_u),
-                              home_u: report.submitted(away_u, home_u, home_u)},
-                "players": [{k: e[k] for k in ("team", "player_name", "status", "reason")} for e in entries],
-            }
-        return {"published_et": report.published_et if report else None, "report": summary,
-                "changes": changes_for_game(season_key, date, away_u, home_u)}
-
-    return _run_endpoint(_changes)
+def frontend_injury_changes(home: str, away: str, date: str, season: str = None, _: None = Depends(require_data_token)):
+    return _run_endpoint(lambda: injury_changes_payload(season, home, away, date))
 
 
 @router.get("/frontend-data-api/injuries")
-def frontend_injuries(request: Request, season: str = None, date: str = None):
-    def _injuries():
-        from .services.frontend_data import _check_token
-        from .services.injury_history import injuries_payload
-
-        _check_token(request)
-        return injuries_payload(season, date)
-
-    return _run_endpoint(_injuries)
+def frontend_injuries(season: str = None, date: str = None, _: None = Depends(require_data_token)):
+    return _run_endpoint(lambda: injuries_payload(season, date))
 
 
 @router.post("/frontend-data-api/snapshot-publish")
-def start_snapshot_publish(request: Request):
-    from .services.snapshot_publish import start_publish
-
-    def _start():
-        from .services.frontend_data import _check_token
-        _check_token(request)
-        return start_publish()
-
-    return _run_endpoint(_start)
+def start_snapshot_publish(_: None = Depends(require_data_token)):
+    return _run_endpoint(start_publish)
 
 
 @router.get("/frontend-data-api/snapshot-publish")
-def snapshot_publish_status(request: Request):
-    from .services.snapshot_publish import get_status
-
-    def _status():
-        from .services.frontend_data import _check_token
-        _check_token(request)
-        return get_status()
-
-    return _run_endpoint(_status)
+def snapshot_publish_status(_: None = Depends(require_data_token)):
+    return _run_endpoint(snapshot_status)
 
 
 @router.post("/predict/players", response_model=PlayerPredictionResponse)
@@ -374,11 +303,7 @@ def predict_game_full_endpoint(req: GameFullRequest):
         summary = _with_injury_report(req, req.home_team_id, req.away_team_id)
         response = predict_game_full(req)
         if summary is not None:
-            from datetime import datetime
-            from src.core.season_utils import get_default_season
-            from .services.injury_history import changes_for_game
-
-            day = str(req.prediction_date or datetime.now(ET).date())
+            day =str(req.prediction_date or datetime.now(ET).date())
             summary["changes"] = changes_for_game(get_default_season(), day, req.away_team_id.upper(), req.home_team_id.upper())
         response.injury_report = summary
         return response

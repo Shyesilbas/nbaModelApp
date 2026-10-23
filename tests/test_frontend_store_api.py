@@ -94,3 +94,16 @@ def test_private_token(client, monkeypatch):
     monkeypatch.setattr(frontend_data, "DATA_TOKEN", "secret")
     assert client.get("/frontend-data-api/seasons").status_code == 401
     assert client.get("/frontend-data-api/seasons", headers={"x-data-token": "secret"}).status_code == 200
+
+
+def test_injury_and_snapshot_routes_require_token(client, monkeypatch):
+    import src.api.services.frontend_data as frontend_data
+
+    monkeypatch.setattr(frontend_data, "DATA_TOKEN", "secret")
+    for path in (
+        "/frontend-data-api/injury-report",
+        "/frontend-data-api/injuries",
+        "/frontend-data-api/injury-changes?home=LAL&away=BOS&date=2026-10-23",
+        "/frontend-data-api/snapshot-publish",
+    ):
+        assert client.get(path).status_code == 401
