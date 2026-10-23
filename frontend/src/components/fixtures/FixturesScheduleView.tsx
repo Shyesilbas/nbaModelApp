@@ -32,7 +32,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
     return (
       <div className="rounded border border-border bg-background-primary py-20 text-center ">
         <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p className="text-xs font-semibold text-text-secondary">Fikstur ve mac verileri yukleniyor...</p>
+        <p className="text-xs font-semibold text-text-secondary">Fikstür ve maç verileri yükleniyor...</p>
       </div>
     );
   }
@@ -40,7 +40,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
   if (dayGroups.length === 0) {
     return (
       <div className="rounded border border-border bg-background-primary py-16 text-center ">
-        <p className="text-sm font-semibold text-text-primary">Aramayla eslesen mac bulunamadi.</p>
+        <p className="text-sm font-semibold text-text-primary">Aramayla eşleşen maç bulunamadı.</p>
         <p className="mt-1 text-xs text-text-secondary">Filtreleri veya arama kriterini degistirip tekrar deneyin.</p>
       </div>
     );

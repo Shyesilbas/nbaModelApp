@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, ClipboardCheck, ChevronDown, Calendar } from "lucide-react";
-import { Badge, Button, Card, EmptyState, InlineError, Skeleton } from "./common";
+import { ClipboardCheck } from "lucide-react";
+import { Badge, Card, DatePicker, EmptyState, InlineError, Skeleton } from "./common";
 import TeamLogo from "./TeamLogo";
 import PublishSnapshotButton from "./PublishSnapshotButton";
 import { loadPrivateApiFresh } from "../lib/dataCache";
@@ -94,7 +94,6 @@ export default function PaperTrading() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"score" | "winner">("score");
-  const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -116,7 +115,13 @@ export default function PaperTrading() {
     () => (report?.games ?? []).filter((g) => g.game_date === activeDate).sort((a, b) => a.game_id.localeCompare(b.game_id)),
     [report, activeDate]
   );
-  const dayIndex = activeDate ? dates.indexOf(activeDate) : -1;
+  const dateCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    (report?.games ?? []).forEach((g) => {
+      map[g.game_date] = (map[g.game_date] ?? 0) + 1;
+    });
+    return map;
+  }, [report]);
   const dayGraded = dayGames.filter((g) => g.status === "final" && g.valid);
   const dayCorrect = dayGraded.filter((g) => g.correct).length;
 
@@ -243,76 +248,13 @@ export default function PaperTrading() {
 
       {/* Date Navigation */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label="Previous day"
-          disabled={dayIndex <= 0}
-          onClick={() => setSelectedDate(dates[dayIndex - 1])}
-        >
-          <ChevronLeft size={16} strokeWidth={1.5} />
-        </Button>
-
-        {/* Date Dropdown Picker */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setIsDateMenuOpen((open) => !open)}
-            className="flex items-center gap-2 rounded border border-border bg-background-primary px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-border-hover hover:bg-background-tertiary transition-colors"
-          >
-            <Calendar size={16} strokeWidth={1.5} className="text-primary" />
-            <span>{activeDate ? fmtDate(activeDate) : "Tarih Seç"}</span>
-            <span className="text-xs text-text-muted tabular-nums">({activeDate})</span>
-            <ChevronDown className={`h-3.5 w-3.5 text-text-muted transition-transform ${isDateMenuOpen ? "rotate-180" : ""}`} />
-          </button>
-
-          {isDateMenuOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setIsDateMenuOpen(false)} />
-              <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-md">
-                {[...dates].reverse().map((d) => {
-                  const isSelected = activeDate === d;
-                  const gamesOnDate = (report?.games ?? []).filter((g) => g.game_date === d).length;
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDate(d);
-                        setIsDateMenuOpen(false);
-                      }}
-                      className={`flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs transition-colors ${
-                        isSelected
-                          ? "bg-primary text-white font-semibold"
-                          : "text-text-primary hover:bg-background-tertiary"
-                      }`}
-                    >
-                      <div className="flex flex-col">
-                        <span>{fmtDate(d)}</span>
-                        <span className={`text-xs tabular-nums ${isSelected ? "text-white/80" : "text-text-muted"}`}>
-                          {d}
-                        </span>
-                      </div>
-                      <span className={`text-xs tabular-nums ${isSelected ? "text-white/90" : "text-text-secondary"}`}>
-                        {gamesOnDate} maç
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
-
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label="Next day"
-          disabled={dayIndex < 0 || dayIndex >= dates.length - 1}
-          onClick={() => setSelectedDate(dates[dayIndex + 1])}
-        >
-          <ChevronRight size={16} strokeWidth={1.5} />
-        </Button>
+        <DatePicker
+          dates={dates}
+          value={activeDate}
+          onChange={setSelectedDate}
+          counts={dateCounts}
+          formatDate={fmtDate}
+        />
         <span className="text-xs text-text-secondary">
           {dayGames.length} games
           {activeTab === "winner" && dayGraded.length > 0 && `, ${dayCorrect} of ${dayGraded.length} picked correctly`}

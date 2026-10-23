@@ -16,7 +16,7 @@ export function TeamComparisonBars({
   if (!home || !away) {
     return (
       <div className="rounded border border-border bg-background-primary p-4 sm:p-5 text-xs text-text-secondary">
-        Takim istatistikleri bu mac icin bulunamadi.
+        Takım istatistikleri bu maç için bulunamadı.
       </div>
     );
   }

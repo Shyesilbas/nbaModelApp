@@ -194,10 +194,10 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-semibold text-text-primary">
-              NBA Puan Durumu & Siralama
+              NBA puan durumu ve sıralama
             </h3>
             <p className="text-xs text-text-muted">
-              {season} Normal Sezon (82 Mac) Siralamasi ve Sonuclari
+              {season} normal sezon (82 maç) sıralaması ve sonuçları
             </p>
           </div>
         </div>
@@ -246,20 +246,20 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           <thead>
             <tr className="border-b border-border text-xs font-semibold text-text-muted bg-background-tertiary/50">
               <th className="py-2.5 px-3 w-12 text-center">#</th>
-              <th className="py-2.5 px-3 min-w-[180px]">Takim</th>
-              <th className="py-2.5 px-2 text-center w-10" title="Oynanan Mac">O</th>
+              <th className="py-2.5 px-3 min-w-[180px]">Takım</th>
+              <th className="py-2.5 px-2 text-center w-10" title="Oynanan maç">O</th>
               <th className="py-2.5 px-2 text-center w-10" title="Galibiyet">G</th>
-              <th className="py-2.5 px-2 text-center w-10" title="Maglubiyet">M</th>
-              <th className="py-2.5 px-2 text-center w-12 font-semibold text-text-primary" title="Galibiyet Yuzdesi">%</th>
-              <th className="py-2.5 px-2 text-center w-12" title="Liderle Galibiyet Farki">Fark</th>
-              <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title="Mac Basina Atilan Sayi">Sayi</th>
-              <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title="Mac Basina Yenilen Sayi">Y.Sayi</th>
-              <th className="py-2.5 px-2 text-center w-12" title="Sayi Averaji">AV</th>
-              <th className="py-2.5 px-2 text-center w-16 hidden lg:table-cell" title="Ic Saha">Ic</th>
+              <th className="py-2.5 px-2 text-center w-10" title="Mağlubiyet">M</th>
+              <th className="py-2.5 px-2 text-center w-12 font-semibold text-text-primary" title="Galibiyet yüzdesi">%</th>
+              <th className="py-2.5 px-2 text-center w-12" title="Lider ile galibiyet farkı">Fark</th>
+              <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title="Maç başına atılan sayı">Sayı</th>
+              <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title="Maç başına yenilen sayı">Y.Sayı</th>
+              <th className="py-2.5 px-2 text-center w-12" title="Sayı averajı">AV</th>
+              <th className="py-2.5 px-2 text-center w-16 hidden lg:table-cell" title="İç saha">İç</th>
               <th className="py-2.5 px-2 text-center w-16 hidden lg:table-cell" title="Deplasman">Dep</th>
-              <th className="py-2.5 px-2 text-center w-14 hidden sm:table-cell" title="Son 10 Mac">S10</th>
-              <th className="py-2.5 px-2 text-center w-12 hidden sm:table-cell" title="Mevcut Seri">Seri</th>
-              <th className="py-2.5 px-3 text-center w-28 hidden sm:table-cell" title="Son 5 Mac">Form</th>
+              <th className="py-2.5 px-2 text-center w-14 hidden sm:table-cell" title="Son 10 maç">S10</th>
+              <th className="py-2.5 px-2 text-center w-12 hidden sm:table-cell" title="Mevcut seri">Seri</th>
+              <th className="py-2.5 px-3 text-center w-28 hidden sm:table-cell" title="Son 5 maç">Form</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -335,7 +335,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                           className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold text-white ${
                             res === "W" ? "bg-status-success" : "bg-status-error"
                           }`}
-                          title={res === "W" ? "Galibiyet" : "Maglubiyet"}
+                          title={res === "W" ? "Galibiyet" : "Mağlubiyet"}
                         >
                           {res === "W" ? "G" : "M"}
                         </span>
@@ -367,7 +367,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
         </div>
 
         <div className="tabular-nums text-xs text-text-muted">
-          O: Oynanan • G: Galibiyet • M: Maglubiyet • %: Yuzde • Fark: Galibiyet Farki • AV: Averaj
+          O: oynanan • G: galibiyet • M: mağlubiyet • %: yüzde • Fark: galibiyet farkı • AV: averaj
         </div>
       </div>
     </div>

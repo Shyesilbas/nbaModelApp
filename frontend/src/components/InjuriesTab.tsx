@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ChevronLeft, ChevronRight, Flame, Search, Stethoscope } from "lucide-react";
-import { Badge, Button, Card, EmptyState, InlineError, Input, Select, Skeleton } from "./common";
+import { ArrowRight, Flame, Search, Stethoscope } from "lucide-react";
+import { Badge, Button, Card, DatePicker, EmptyState, InlineError, Input, Select, Skeleton } from "./common";
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { loadPrivateApiFresh } from "../lib/dataCache";
@@ -132,7 +132,6 @@ export default function InjuriesTab() {
     () => Array.from(new Set([...(result?.data?.stored_days ?? []), todayEt(), date])).sort(),
     [result, date]
   );
-  const dayIndex = days.indexOf(date);
 
   const all = useMemo(() => data?.players ?? [], [data]);
   const outCount = all.filter((p) => p.status === "Out").length;
@@ -190,36 +189,13 @@ export default function InjuriesTab() {
               Bülten: {reportStampText(data.published_et)}
             </Badge>
           )}
-          <div className="flex items-end gap-2">
-            <Button
-              variant="secondary"
-              aria-label="Önceki gün"
-              disabled={dayIndex <= 0}
-              onClick={() => setDate(days[dayIndex - 1])}
-              className="h-10 w-10 p-0"
-            >
-              <ChevronLeft size={16} strokeWidth={1.5} />
-            </Button>
-            <div className="w-44">
-              <Select label="Tarih" value={date} onChange={(e) => setDate(e.target.value)} className="h-10">
-                {[...days].reverse().map((d) => (
-                  <option key={d} value={d}>
-                    {fmtDate(d)}
-                    {d === todayEt() ? " (bugün)" : ""}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <Button
-              variant="secondary"
-              aria-label="Sonraki gün"
-              disabled={dayIndex < 0 || dayIndex >= days.length - 1}
-              onClick={() => setDate(days[dayIndex + 1])}
-              className="h-10 w-10 p-0"
-            >
-              <ChevronRight size={16} strokeWidth={1.5} />
-            </Button>
-          </div>
+          <DatePicker
+            dates={days}
+            value={date}
+            onChange={setDate}
+            todayStr={todayEt()}
+            formatDate={fmtDate}
+          />
         </div>
       </div>
 

@@ -5,8 +5,6 @@ import {
   Activity,
   ChevronDown,
   ChevronUp,
-  ChevronLeft,
-  ChevronRight,
   Calendar,
   UsersRound,
   LayoutDashboard,
@@ -14,7 +12,7 @@ import {
 } from "lucide-react";
 
 import TeamLogo from "./TeamLogo";
-import { EmptyState, InlineError, Skeleton } from "./common";
+import { DatePicker, EmptyState, InlineError, Skeleton } from "./common";
 import {
   normalizeGameFullPrediction,
   predictGameFull,
@@ -60,7 +58,6 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
   const [seasonGames, setSeasonGames] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
 
@@ -167,7 +164,6 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
     };
   }, [home, away, date]);
 
-  const selectedDateIndex = uniqueDates.indexOf(selectedDate);
   const todayStr = new Date().toISOString().slice(0, 10);
 
   const submitGame = useCallback(
@@ -327,87 +323,15 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
             <div className="space-y-4">
               {/* Date Stepper Bar (Fixtures Tab Style) */}
               <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-background-secondary p-3">
-                <div className="flex items-center rounded border border-border bg-background-primary p-0.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedDate(uniqueDates[selectedDateIndex - 1] ?? selectedDate)}
-                    disabled={selectedDateIndex <= 0}
-                    className="rounded p-1 text-text-secondary transition-colors hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="Önceki Gün"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-
-                  {/* Date Dropdown Menu */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsDateMenuOpen((open) => !open)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 tabular-nums text-xs font-semibold text-text-primary transition-colors hover:text-primary"
-                    >
-                      <Calendar size={16} className="text-text-muted" />
-                      <span>{selectedDate ? fmtDate(selectedDate) : "Tarih seç"}</span>
-                      {selectedDate === todayStr && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-status-success" title="Bugün" />
-                      )}
-                      <ChevronDown className={`h-4 w-4 text-text-muted transition-transform ${isDateMenuOpen ? "rotate-180" : ""}`} />
-                    </button>
-
-                    {isDateMenuOpen && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setIsDateMenuOpen(false)} />
-                        <div className="absolute left-0 top-full z-50 mt-1.5 max-h-64 w-60 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-md scrollbar-thin">
-                          {uniqueDates.map((d) => {
-                            const isSelected = selectedDate === d;
-                            const isToday = d === todayStr;
-                            const gameCount = seasonGames.filter(
-                              (g) => g.GAME_DATE?.slice(0, 10) === d && (Number(g.HOME_SCORE) === 0 || isNaN(Number(g.HOME_SCORE)))
-                            ).length;
-                            return (
-                              <button
-                                key={d}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedDate(d);
-                                  setIsDateMenuOpen(false);
-                                }}
-                                className={`mt-0.5 flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs font-semibold transition-colors ${
-                                  isSelected ? "bg-primary text-white" : "text-text-primary hover:bg-background-tertiary"
-                                }`}
-                              >
-                                <span>{fmtDate(d)}</span>
-                                <div className="flex items-center gap-1.5">
-                                  {isToday && (
-                                    <span
-                                      className={`rounded px-1.5 py-0.5 text-xs font-sans font-semibold ${
-                                        isSelected ? "bg-status-success text-white" : "bg-status-success/20 text-status-success"
-                                      }`}
-                                    >
-                                      Bugün
-                                    </span>
-                                  )}
-                                  <span className={`text-xs tabular-nums ${isSelected ? "text-white/80" : "text-text-muted"}`}>
-                                    ({gameCount})
-                                  </span>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedDate(uniqueDates[selectedDateIndex + 1] ?? selectedDate)}
-                    disabled={selectedDateIndex >= uniqueDates.length - 1}
-                    className="rounded p-1 text-text-secondary transition-colors hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="Sonraki Gün"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+                <DatePicker
+                  dates={uniqueDates}
+                  value={selectedDate}
+                  onChange={setSelectedDate}
+                  todayStr={todayStr}
+                  formatDate={fmtDate}
+                  order="asc"
+                  className="shrink-0"
+                />
 
                 <div className="flex items-center gap-2 text-xs text-text-secondary">
                   <span className="text-xs text-text-secondary">

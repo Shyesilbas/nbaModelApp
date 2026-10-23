@@ -57,7 +57,7 @@ export function QuarterScores({
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border-light text-text-secondary">
-              <th className="pb-2 text-left text-xs font-medium min-w-[140px]">Takim</th>
+              <th className="pb-2 text-left text-xs font-medium min-w-[140px]">Takım</th>
               {cols.map((i) => {
                 const label = i < 4 ? `Q${i + 1}` : quarters === 5 ? "OT" : `OT${i - 3}`;
                 return (

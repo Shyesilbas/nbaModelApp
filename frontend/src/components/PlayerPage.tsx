@@ -141,7 +141,7 @@ function GameLogTable({
       return (
         <span
           className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-xs font-semibold text-status-error bg-status-error/10 border border-status-error/30"
-          title="Maglubiyet"
+          title="Mağlubiyet"
         >
           M
         </span>

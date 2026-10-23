@@ -4,8 +4,6 @@ import {
   AlertTriangle,
   Calendar,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   LayoutGrid,
   List,
   RefreshCw,
@@ -29,6 +27,7 @@ import {
 } from "./game-results";
 import { parseUrlRoute, updateUrlRoute } from "../lib/router";
 import type { ActiveView, DayGroup, DisplayMode } from "./fixtures/types";
+import { DatePicker } from "./common";
 import { FixturesScheduleView } from "./fixtures/FixturesScheduleView";
 import { FixturesStandingsView } from "./fixtures/FixturesStandingsView";
 
@@ -98,7 +97,6 @@ export default function FixturesTab({
   const [pickedDate, setSelectedDate] = useState<string>(
     () => sessionStorage.getItem("nba-results-date") ?? ""
   );
-  const [isDateMenuOpen, setIsDateMenuOpen] = useState<boolean>(false);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(() => {
     const urlRoute = parseUrlRoute();
     return urlRoute.gameId ?? sessionStorage.getItem("nba-results-game");
@@ -244,7 +242,13 @@ export default function FixturesTab({
     return uniqueDates.find((day) => day >= todayStr) ?? uniqueDates[uniqueDates.length - 1] ?? "";
   }, [uniqueDates, pickedDate, todayStr]);
 
-  const selectedDateIndex = uniqueDates.indexOf(selectedDate);
+  const dateCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    sortedResults.forEach((g) => {
+      if (g.GAME_DATE) map[g.GAME_DATE] = (map[g.GAME_DATE] ?? 0) + 1;
+    });
+    return map;
+  }, [sortedResults]);
 
   // Group games for the active view
   // If a single date is selected: show that date. If 'all', show all days in range.
@@ -422,11 +426,11 @@ export default function FixturesTab({
             setRefreshState("idle");
             return;
           }
-          if (status.status === "failed") throw new Error(status.error || "Mac verileri alinamadi.");
+          if (status.status === "failed") throw new Error(status.error || "Maç verileri alınamadı.");
         }
         throw new Error("Veri cekme islemi zaman asimina ugradi. Biraz sonra tekrar deneyin.");
       } catch (err) {
-        setRefreshError(err instanceof Error ? err.message : "Mac verileri alinamadi.");
+        setRefreshError(err instanceof Error ? err.message : "Maç verileri alınamadı.");
         setRefreshState("failed");
         setRefreshingGameId(null);
       }
@@ -529,7 +533,7 @@ export default function FixturesTab({
         {isCompletedGame && detailLoading ? (
           <div className="flex h-32 items-center justify-center gap-2 rounded border border-border bg-background-primary ">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span className="text-xs text-text-secondary">Kutu puanlari yukleniyor...</span>
+            <span className="text-xs text-text-secondary">Kutu puanları yükleniyor...</span>
           </div>
         ) : (
           <GameCardDetail
@@ -569,9 +573,9 @@ export default function FixturesTab({
       <div className="rounded border border-border bg-background-primary p-3 ">
         <div className="flex flex-col items-stretch justify-between gap-2.5 lg:flex-row lg:items-center">
           
-          {/* Left: View Tabs (Fikstur vs Puan Tablosu) + Date Stepper */}
+          {/* Left: View Tabs (Fikstür ve Puan Tablosu) + Date Stepper */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* View Mode Toggle: Fikstur vs Puan Tablosu */}
+            {/* View Mode Toggle: Fikstür ve Puan Tablosu */}
             <div className="flex items-center rounded border border-border bg-background-tertiary p-0.5 shrink-0">
               <button
                 type="button"
@@ -583,7 +587,7 @@ export default function FixturesTab({
                 }`}
               >
                 <Calendar className="h-3.5 w-3.5" />
-                <span>Fikstur</span>
+                <span>Fikstür</span>
               </button>
               <button
                 type="button"
@@ -599,86 +603,17 @@ export default function FixturesTab({
               </button>
             </div>
 
-            {/* Date Stepper (Only active in fixtures view) */}
             {activeView === "fixtures" && uniqueDates.length > 0 && (
-              <div className="flex items-center rounded border border-border bg-background-tertiary/70 p-0.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setSelectedDate(uniqueDates[selectedDateIndex - 1] ?? selectedDate)}
-                  disabled={selectedDateIndex <= 0}
-                  className="rounded p-1 text-text-secondary transition-all hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                  title="Onceki Gun"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-
-                {/* Date Dropdown Menu */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsDateMenuOpen((open) => !open)}
-                    className="flex items-center gap-1 px-2 py-0.5 tabular-nums text-xs font-semibold text-text-primary transition-colors hover:text-primary"
-                  >
-                    <span>{selectedDate ? fmtDate(selectedDate) : "Tarih Sec"}</span>
-                    {selectedDate === todayStr && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-status-success" title="Bugun" />
-                    )}
-                    <ChevronDown className={`h-3.5 w-3.5 text-text-muted transition-transform ${isDateMenuOpen ? "rotate-180" : ""}`} />
-                  </button>
-
-                  {isDateMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setIsDateMenuOpen(false)} />
-                      <div className="absolute left-0 top-full z-50 mt-1.5 max-h-64 w-60 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-md scrollbar-thin">
-                        {uniqueDates.map((d) => {
-                          const isSelected = selectedDate === d;
-                          const isToday = d === todayStr;
-                          const gameCount = sortedResults.filter((g) => g.GAME_DATE === d).length;
-                          return (
-                            <button
-                              key={d}
-                              type="button"
-                              onClick={() => {
-                                setSelectedDate(d);
-                                setIsDateMenuOpen(false);
-                              }}
-                              className={`mt-0.5 flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs font-semibold transition-all ${
-                                isSelected ? "bg-primary text-white" : "text-text-primary hover:bg-background-tertiary"
-                              }`}
-                            >
-                              <span>{fmtDate(d)}</span>
-                              <div className="flex items-center gap-1.5">
-                                {isToday && (
-                                  <span
-                                    className={`rounded px-1.5 py-0.5 text-xs font-sans font-semibold ${
-                                      isSelected ? "bg-status-success text-white" : "bg-status-success/20 text-status-success"
-                                    }`}
-                                  >
-                                    Bugun
-                                  </span>
-                                )}
-                                <span className={`text-xs tabular-nums ${isSelected ? "text-white/80" : "text-text-muted"}`}>
-                                  ({gameCount})
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedDate(uniqueDates[selectedDateIndex + 1] ?? selectedDate)}
-                  disabled={selectedDateIndex >= uniqueDates.length - 1}
-                  className="rounded p-1 text-text-secondary transition-all hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                  title="Sonraki Gun"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
+              <DatePicker
+                dates={uniqueDates}
+                value={selectedDate}
+                onChange={setSelectedDate}
+                todayStr={todayStr}
+                counts={dateCounts}
+                formatDate={fmtDate}
+                order="asc"
+                className="shrink-0"
+              />
             )}
 
             {/* Fetch every finished game of the day that has no data yet */}
@@ -749,7 +684,7 @@ export default function FixturesTab({
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Takim / arena ara..."
+                  placeholder="Takım veya arena ara"
                   className="w-full rounded border border-border bg-background-tertiary py-1.5 pl-8 pr-7 text-xs font-medium text-text-primary placeholder:text-text-muted outline-none transition-all focus:border-border-focus focus:bg-background-primary"
                 />
                 {search && (
@@ -776,7 +711,7 @@ export default function FixturesTab({
                       ? "bg-primary text-white "
                       : "text-text-secondary hover:text-text-primary"
                   }`}
-                  title="Kompakt Liste"
+                  title="Kompakt liste"
                 >
                   <List className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Liste</span>
@@ -789,7 +724,7 @@ export default function FixturesTab({
                       ? "bg-primary text-white "
                       : "text-text-secondary hover:text-text-primary"
                   }`}
-                  title="Detayli Kartlar"
+                  title="Ayrıntılı kartlar"
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Kart</span>
