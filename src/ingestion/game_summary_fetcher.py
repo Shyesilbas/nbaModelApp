@@ -6,7 +6,6 @@ Fetch game metadata (arena, officials) from BoxScoreSummaryV3 (with V2 fallback)
 
 import json
 import logging
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import pandas as pd

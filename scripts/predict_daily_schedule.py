@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-import os
 import sys
 import json
 import argparse
 import math
 from pathlib import Path
 import joblib
-import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]

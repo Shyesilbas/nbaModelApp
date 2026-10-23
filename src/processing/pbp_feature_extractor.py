@@ -1,6 +1,5 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import pandas as pd
-import numpy as np
 
 
 def extract_game_pbp_features(df_events: pd.DataFrame) -> Dict[str, Any]:

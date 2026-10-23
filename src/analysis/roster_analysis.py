@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-import numpy as np
 import unicodedata
 from typing import Tuple
 from src.processing.cleaning import clean_minutes_column

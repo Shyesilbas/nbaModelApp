@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-import os
 import sys
 import json
 import argparse
 import math
 from pathlib import Path
 import joblib
-import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, roc_auc_score, brier_score_loss, accuracy_score
 

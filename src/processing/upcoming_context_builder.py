@@ -19,7 +19,6 @@ import os
 from datetime import date
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from src.core.data_paths import get_data_paths

@@ -5,7 +5,7 @@ Uses active production V9 win model and feature schema.
 
 import json
 from pathlib import Path
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any, Optional
 import pandas as pd
 import joblib
 

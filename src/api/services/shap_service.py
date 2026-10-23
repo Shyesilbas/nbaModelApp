@@ -1,12 +1,6 @@
-import json
-import joblib
-import pandas as pd
-import numpy as np
 from pathlib import Path
-from sklearn.linear_model import LogisticRegression
 
 # Only import shap inside functions or handle globally to not break the service if shap fails
-import shap
 
 ROOT = Path(__file__).resolve().parents[3]
 

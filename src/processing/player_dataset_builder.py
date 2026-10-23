@@ -1,5 +1,4 @@
 import os
-import sys
 import pandas as pd
 from src.processing.cleaning import regulation_team_minutes
 from src.features.player_form import RAW_GAME_COLUMNS, add_player_form_features
@@ -7,7 +6,6 @@ import numpy as np
 from pathlib import Path
 
 from src.core.data_paths import get_data_paths
-from src.core.season_utils import season_to_file_token
 
 from src.features.continuous_elo import ContinuousEloEngine
 

@@ -17,7 +17,7 @@ It implements:
 
 import os
 import json
-from datetime import date, datetime
+from datetime import date
 from typing import Tuple, List, Dict, Any, Optional
 import pandas as pd
 

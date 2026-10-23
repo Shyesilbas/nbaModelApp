@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import os
 from datetime import date
-from typing import Dict, List
+from typing import Dict
 
-import pandas as pd
 
 
 def generate_sync_report(

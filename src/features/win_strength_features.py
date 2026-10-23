@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Mapping
 
 import numpy as np
@@ -8,7 +7,7 @@ import pandas as pd
 
 
 from src.processing.season_type_normalizer import drop_preseason
-from src.features.continuous_elo import ContinuousEloEngine, INITIAL_ELO, BASE_K_FACTOR, SEASON_REGRESSION, HOME_COURT_ADVANTAGE
+from src.features.continuous_elo import ContinuousEloEngine, INITIAL_ELO, BASE_K_FACTOR
 
 K_FACTOR = BASE_K_FACTOR
 
@@ -260,7 +259,6 @@ def season_opening_ratings(season: str) -> dict[str, float]:
 def compute_current_elo_state(team_games: pd.DataFrame, season: str = None) -> dict[str, float]:
     initial_ratings = None
     from pathlib import Path
-    import json
 
     root = Path(__file__).resolve().parents[2]
     team_games = drop_preseason(team_games)

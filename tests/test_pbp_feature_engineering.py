@@ -1,7 +1,5 @@
 import unittest
-import os
 import pandas as pd
-import numpy as np
 
 from src.processing.pbp_cleaner import parse_clock_to_seconds, clean_pbp_events
 from src.processing.pbp_feature_extractor import extract_game_pbp_features

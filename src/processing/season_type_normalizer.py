@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 import pandas as pd
-import numpy as np
 
 
 def parse_game_id_metadata(game_id: Any) -> Dict[str, Optional[Any]]:

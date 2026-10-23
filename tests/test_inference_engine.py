@@ -1,5 +1,4 @@
 import unittest
-import pandas as pd
 from src.inference import WinPredictor, ScorePredictor, PlayerPredictor
 from src.inference.shap_explainer import ShapExplainer
 

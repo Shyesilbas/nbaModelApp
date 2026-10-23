@@ -7,8 +7,7 @@ Fetch schedule and scoreboard data from the NBA API and update the local schedul
 import os
 import logging
 import pandas as pd
-from datetime import datetime
-from typing import Optional, Tuple
+from typing import Tuple
 
 from src.ingestion.nba_api_client import call_nba_api
 from src.core.season_utils import get_default_season

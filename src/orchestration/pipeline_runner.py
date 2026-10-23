@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
 from typing import Any, Dict, Optional, Tuple
 
 import os
@@ -9,13 +8,12 @@ import pandas as pd
 
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import get_default_season, normalize_season, season_to_file_token
-from src.features import build_opponent_features, build_team_features, validate_opponent_join
+from src.features import build_opponent_features, build_team_features
 from src.ingestion.boxscore_loader import run_boxscore_pipeline
 from src.ingestion.data_loader import load_player_games, load_team_games
 from src.ingestion.schedule_loader import load_combined_schedule
 from src.processing.cleaning import clean_dates, sort_player_games, sort_team_games
 from src.processing.model_dataset_builder import (
-    build_team_model_dataset,
     build_team_model_dataset_v2,
     build_team_model_dataset_v3,
 )

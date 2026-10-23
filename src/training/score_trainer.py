@@ -14,7 +14,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import RidgeCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.metrics import mean_absolute_error
 from src.training.feature_contract import load_feature_contract
 from src.training.training_manifest import manifest_release
 from src.training.feature_guards import check_feature_matrix

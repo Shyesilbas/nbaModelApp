@@ -12,7 +12,6 @@ conformal interval coverage on independent seasons.
 """
 from __future__ import annotations
 
-import argparse
 import json
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +20,7 @@ import numpy as np
 import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression, Ridge, RidgeCV
+from sklearn.linear_model import LogisticRegression, RidgeCV
 from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, mean_absolute_error, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler

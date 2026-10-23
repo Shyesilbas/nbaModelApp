@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 
 def generate_mock_team_games() -> pd.DataFrame:
+    rng = np.random.RandomState(0)
     """
     Generates a mock dataset of team game logs for the current season.
     Includes 2 teams, some back-to-back games, and playoff games.
@@ -30,7 +31,7 @@ def generate_mock_team_games() -> pd.DataFrame:
     for idx, dt in enumerate(dates_bos):
         is_playoff = "Playoffs" if dt.year == 2026 else "Regular Season"
         wl = "W" if idx % 3 != 0 else "L"
-        pts = 100 + (idx * 2) + np.random.randint(-10, 10)
+        pts = 100 + (idx * 2) + rng.randint(-10, 10)
         opp = "LAL" if idx % 2 == 0 else "MIA"
         matchup = f"BOS vs. {opp}" if idx % 2 == 0 else f"BOS @ {opp}"
         
@@ -70,7 +71,7 @@ def generate_mock_team_games() -> pd.DataFrame:
     for idx, dt in enumerate(dates_lal):
         is_playoff = "Playoffs" if dt.year == 2026 else "Regular Season"
         wl = "W" if idx % 2 == 0 else "L"
-        pts = 105 + idx + np.random.randint(-8, 8)
+        pts = 105 + idx + rng.randint(-8, 8)
         opp = "BOS" if idx % 2 == 0 else "GSW"
         matchup = f"LAL @ {opp}" if idx % 2 == 0 else f"LAL vs. {opp}"
         
@@ -109,6 +110,7 @@ def generate_mock_team_games() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 def generate_mock_player_games() -> pd.DataFrame:
+    rng = np.random.RandomState(0)
     """
     Generates a mock dataset of player game logs for the current season.
     Includes logs for 2 players (e.g. Jayson Tatum, LeBron James).
@@ -134,9 +136,9 @@ def generate_mock_player_games() -> pd.DataFrame:
     for idx, dt in enumerate(dates_tatum):
         is_playoff = "Playoffs" if dt.year == 2026 else "Regular Season"
         wl = "W" if idx % 3 != 0 else "L"
-        pts = 25 + idx + np.random.randint(-5, 5)
-        reb = 7 + np.random.randint(-3, 3)
-        ast = 4 + np.random.randint(-2, 2)
+        pts = 25 + idx + rng.randint(-5, 5)
+        reb = 7 + rng.randint(-3, 3)
+        ast = 4 + rng.randint(-2, 2)
         opp = "LAL" if idx % 2 == 0 else "MIA"
         matchup = f"BOS vs. {opp}" if idx % 2 == 0 else f"BOS @ {opp}"
         
@@ -176,9 +178,9 @@ def generate_mock_player_games() -> pd.DataFrame:
     for idx, dt in enumerate(dates_lebron):
         is_playoff = "Playoffs" if dt.year == 2026 else "Regular Season"
         wl = "W" if idx % 2 == 0 else "L"
-        pts = 22 + idx + np.random.randint(-4, 4)
-        reb = 6 + np.random.randint(-2, 3)
-        ast = 7 + np.random.randint(-3, 3)
+        pts = 22 + idx + rng.randint(-4, 4)
+        reb = 6 + rng.randint(-2, 3)
+        ast = 7 + rng.randint(-3, 3)
         opp = "BOS" if idx % 2 == 0 else "GSW"
         matchup = f"LAL @ {opp}" if idx % 2 == 0 else f"LAL vs. {opp}"
         

@@ -18,8 +18,6 @@ from src.training.training_manifest import manifest_release
 from src.training.validation_utils import chronological_train_test_split, season_holdout_train_test_split, expanding_window_date_splits
 from src.training.provenance import build_training_provenance
 
-from src.core.data_paths import get_data_paths
-from src.core.season_utils import get_default_season
 from src.features.win_strength_features import add_win_strength_features
 from src.training.feature_guards import check_feature_matrix, permutation_contribution
 
