@@ -25,7 +25,7 @@ are written by the trainer from its own locked 2025-26 holdout and are consisten
 | 2023-24 | 0.7350 | 0.2059 | 0.5980 | 66.6% | 14.69 | 10.96 |
 | 2024-25 | 0.7388 | 0.2048 | 0.5952 | 68.2% | 14.89 | 10.82 |
 | 2025-26 | 0.7485 | 0.2011 | 0.5866 | 68.9% | 15.29 | 11.25 |
-| Pooled | 0.7212 | 0.2102 | 0.6077 | 66.8% | 14.89 | 10.87 |
+| Pooled | 0.7212 | 0.2102 | 0.6077 | 66.8% | 14.87 | 10.87 |
 
 `reports/evaluation/multi_season_walk_forward_backtest.md` (generated 2026-10-20 by `scripts/walk_forward_benchmark.py`, which
 already reads `win_features.json` and so already included `ABS_DIFF`) gives Brier 0.2106 / AUC 0.7185 / accuracy 66.65%
