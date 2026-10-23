@@ -9,7 +9,6 @@ import pandas as pd
 from src.features import build_opponent_features, build_team_features, validate_opponent_join
 from src.ingestion.boxscore_loader import run_boxscore_pipeline
 from src.ingestion.data_loader import load_player_games, load_team_games
-from src.ingestion.update_data_service import UpdateDataService
 from src.orchestration.pipeline_reports import generate_sync_report, generate_update_reports
 from src.orchestration.pipeline_runner import PipelineRunner
 from src.processing.cleaning import clean_dates, sort_player_games, sort_team_games
@@ -159,7 +158,10 @@ def run_startup_check(args: Any) -> None:
 
 
 def run_update_data(args: Any) -> None:
-    svc = UpdateDataService(
+    # Imported here: update_data_service imports src.orchestration, which imports this module.
+    from src.ingestion.update_data_service import UpdateDataService
+
+    svc =UpdateDataService(
         fetch_workers=args.fetch_workers,
         skip_post_update_rebuilds=args.skip_post_update_rebuilds,
         season=args.season,
