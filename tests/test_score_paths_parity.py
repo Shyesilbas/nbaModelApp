@@ -1,9 +1,9 @@
-"""ScorePredictor and the API score service must give the same total from the same artifacts and features.
+"""ScorePredictor and the API score service must give the same total and margin from the same artifacts and features.
 
 Documented differences that stay as they are:
 - the API rounds every output to 0.1, ScorePredictor returns unrounded values;
 - a missing model feature raises ValueError in the API, ScorePredictor fills it with 0.0;
-- ScorePredictor does not apply the margin correction (the API does), so margins differ.
+- given a win probability, ScorePredictor flips the margin sign to agree with it (the API only warns).
 """
 import json
 import types
@@ -105,6 +105,12 @@ def test_same_correction_raw_and_total(artifacts, monkeypatch, case):
     # the API differs only by its documented rounding to 0.1
     assert api.predicted_total_points == round(corrected, 1)
     assert abs(api.predicted_total_points - sp["predicted_total"]) <= 0.05 + 1e-9
+
+    margin = models["margin"].predict(pd.DataFrame([[f[c] for c in MARGIN]], columns=MARGIN))[0] - models["ridge_margin"].predict(ind)[0]
+    assert abs(sp["predicted_margin"] - margin) < 1e-9
+    assert api.predicted_margin == round(margin, 1)
+    assert abs(sp["predicted_home_score"] - (corrected + margin) / 2.0) < 1e-9
+    assert api.predicted_home_score == round((corrected + margin) / 2.0, 1)
 
 
 def test_correction_is_skipped_by_both_when_ridge_models_are_missing(artifacts, monkeypatch):
