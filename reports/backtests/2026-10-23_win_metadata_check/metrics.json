@@ -1,0 +1,23 @@
+{
+  "2025-26": {
+    "win": {
+      "games": 1257,
+      "auc": 0.7485,
+      "brier": 0.2011,
+      "log_loss": 0.5866,
+      "accuracy": 0.6889
+    },
+    "score": {
+      "games": 1257,
+      "total_mae": 15.291,
+      "margin_mae": 11.245,
+      "winner_accuracy": 0.6826
+    },
+    "player": {
+      "rows": 28698,
+      "pts_mae": 4.5047,
+      "reb_mae": 1.8926,
+      "ast_mae": 1.3347
+    }
+  }
+}

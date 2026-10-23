@@ -1,0 +1,44 @@
+{
+  "2023-24": {
+    "win": {
+      "games": 1259,
+      "auc": 0.735,
+      "brier": 0.2059,
+      "log_loss": 0.598,
+      "accuracy": 0.6664
+    },
+    "score": {
+      "games": 1259,
+      "total_mae": 14.687,
+      "margin_mae": 10.958,
+      "winner_accuracy": 0.6775
+    },
+    "player": {
+      "rows": 28206,
+      "pts_mae": 4.4673,
+      "reb_mae": 1.8892,
+      "ast_mae": 1.3362
+    }
+  },
+  "2024-25": {
+    "win": {
+      "games": 1256,
+      "auc": 0.7388,
+      "brier": 0.2048,
+      "log_loss": 0.5952,
+      "accuracy": 0.6815
+    },
+    "score": {
+      "games": 1256,
+      "total_mae": 14.894,
+      "margin_mae": 10.824,
+      "winner_accuracy": 0.6879
+    },
+    "player": {
+      "rows": 28240,
+      "pts_mae": 4.5538,
+      "reb_mae": 1.9172,
+      "ast_mae": 1.3327
+    }
+  }
+}
