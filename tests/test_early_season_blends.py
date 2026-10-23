@@ -20,8 +20,8 @@ def test_score_form_starts_at_prior_and_hands_over_to_form(monkeypatch):
 
 
 def test_player_projection_leans_on_last_season_for_the_first_games(monkeypatch):
-    prev = pd.DataFrame({"Player_ID": [1, 1, 2], "GAME_DATE": pd.to_datetime(["2026-01-01"] * 3),
-                         "PTS": [20.0, 30.0, 10.0], "REB": [5.0, 5.0, 4.0], "AST": [5.0, 5.0, 2.0],
+    prev = pd.DataFrame({"Player_ID": [1] * 40 + [2], "GAME_DATE": pd.to_datetime(["2026-01-01"] * 41),
+                         "PTS": [20.0, 30.0] * 20 + [10.0], "REB": [5.0] * 40 + [4.0], "AST": [5.0] * 40 + [2.0],
                          "SEASON_TYPE": "Regular Season"})
     cur = pd.DataFrame({"Player_ID": [2, 2, 2], "GAME_DATE": pd.to_datetime(["2026-10-20", "2026-10-22", "2026-10-24"]),
                         "PTS": [0.0] * 3, "REB": [0.0] * 3, "AST": [0.0] * 3, "SEASON_TYPE": "Regular Season"})
@@ -29,7 +29,7 @@ def test_player_projection_leans_on_last_season_for_the_first_games(monkeypatch)
     X = pd.DataFrame({"PLAYER_ID": [1, 2, 3], "RAW_PROJ_PTS": [15.0, 12.0, 8.0],
                       "RAW_PROJ_REB": [5.0, 4.0, 3.0], "RAW_PROJ_AST": [5.0, 2.0, 1.0]})
     out = pp.blend_early_season_projection(X, pd.Timestamp("2026-10-26"))
-    assert out.loc[0, "RAW_PROJ_PTS"] == 0.6 * 15.0 + 0.4 * 25.0  # no games yet: full prior weight
+    assert out.loc[0, "RAW_PROJ_PTS"] == 0.6 * 15.0 + 0.4 * 25.0  # no games yet, 40 prior games: full prior weight
     assert out.loc[1, "RAW_PROJ_PTS"] == 12.0  # three games played: model only
     assert out.loc[2, "RAW_PROJ_PTS"] == 8.0  # no prior season: model only
 
@@ -61,3 +61,14 @@ def test_store_season_averages_skip_preseason_games():
     avg = compute_averages(games)
     assert avg["games_played"] == 1 and avg["PTS"] == 8 and avg["teams"] == ["GSW"]
     assert compute_averages(games[:1])["games_played"] == 0
+
+
+def test_prior_from_few_games_gets_less_weight(monkeypatch):
+    prev = pd.DataFrame({"Player_ID": [1] * 10, "GAME_DATE": pd.to_datetime(["2026-01-01"] * 10),
+                         "PTS": [25.0] * 10, "REB": [5.0] * 10, "AST": [5.0] * 10, "SEASON_TYPE": "Regular Season"})
+    cur = pd.DataFrame({"Player_ID": [9], "GAME_DATE": pd.to_datetime(["2026-10-20"]),
+                        "PTS": [0.0], "REB": [0.0], "AST": [0.0], "SEASON_TYPE": "Regular Season"})
+    monkeypatch.setattr(pp, "_season_logs", lambda season: cur if season == "2026-27" else prev)
+    X = pd.DataFrame({"PLAYER_ID": [1], "RAW_PROJ_PTS": [15.0], "RAW_PROJ_REB": [5.0], "RAW_PROJ_AST": [5.0]})
+    out = pp.blend_early_season_projection(X, pd.Timestamp("2026-10-26"))
+    assert abs(out.loc[0, "RAW_PROJ_PTS"] - (15.0 + 0.4 * 0.25 * 10.0)) < 1e-9  # 10 of 40 games: a quarter of the weight

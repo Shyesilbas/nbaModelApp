@@ -22,6 +22,8 @@ _player_df_cache = {}
 # REB 1.97 -> 1.94, AST 1.34 -> 1.32; unchanged from the third game on.
 PLAYER_PRIOR_GAMES = 3
 PLAYER_PRIOR_MAX_WEIGHT = 0.4
+# A prior built from few games (long injury, late return) is scaled down: full trust from this many games.
+PLAYER_PRIOR_FULL_TRUST_GAMES = 40
 
 
 @lru_cache(maxsize=8)
@@ -48,11 +50,15 @@ def blend_early_season_projection(full_X: pd.DataFrame, pred_dt) -> pd.DataFrame
     current = _season_logs(season)
     games = current[current["GAME_DATE"] < pred_dt].groupby("Player_ID").size()
     prev = _season_logs(previous_season(season))
-    prior = prev[prev["SEASON_TYPE"] == "Regular Season"].groupby("Player_ID")[["PTS", "REB", "AST"]].mean()
+    prev_reg = prev[prev["SEASON_TYPE"] == "Regular Season"]
+    prior = prev_reg.groupby("Player_ID")[["PTS", "REB", "AST"]].mean()
+    prior_games = prev_reg.groupby("Player_ID").size()
 
     pid = full_X["PLAYER_ID"].astype(int)
     n = pid.map(games).fillna(0).to_numpy(dtype=float)
     weight = np.where(n < PLAYER_PRIOR_GAMES, PLAYER_PRIOR_MAX_WEIGHT * (1.0 - n / PLAYER_PRIOR_GAMES), 0.0)
+    reliability = np.clip(pid.map(prior_games).fillna(0).to_numpy(dtype=float) / PLAYER_PRIOR_FULL_TRUST_GAMES, 0.0, 1.0)
+    weight = weight * reliability
     for stat in ("PTS", "REB", "AST"):
         col = f"RAW_PROJ_{stat}"
         base = pid.map(prior[stat]).to_numpy(dtype=float)
