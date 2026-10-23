@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Mapping, Sequence
+from typing import Any, Dict, List, Mapping, Sequence
 
 
 TEAM_STAT_KEYS = [
@@ -58,13 +58,6 @@ def _pick(row: Mapping[str, Any], keys: Sequence[tuple[str, str]]) -> Dict[str, 
         if src in row and row[src] is not None:
             out[dst] = row[src]
     return out
-
-
-def _first_nonempty(values: Iterable[Any]) -> Any:
-    for value in values:
-        if value not in (None, "", []):
-            return value
-    return None
 
 
 def compact_game_payload(game: Mapping[str, Any], *, top_players: int = 8) -> Dict[str, Any]:

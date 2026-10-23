@@ -55,34 +55,5 @@ def _names(clause: str) -> list[str]:
     return out
 
 
-def build_events(raw: pd.DataFrame, name_to_id: dict, team_ids: dict, team_lookup: dict) -> pd.DataFrame:
-    """One row per (player, transaction); FROM_ABBR is the trade partner when ESPN names an unambiguous team."""
-    events, unmatched = [], 0
-    for _, r in raw.iterrows():
-        abbr = ESPN_ABBR.get(r.team, r.team)
-        if abbr not in team_ids:
-            continue
-        for seg in re.split(rf"(?<=\.)\s+(?=(?:{VERBS})\b)", r.description):
-            m = re.match(rf"({VERBS}) (.*)", seg)
-            if not m or m.group(1) not in EVENT_TYPE:
-                continue
-            verb, rest = m.groups()
-            from_team = None
-            if verb == "Acquired":
-                fm = re.search(r" from (?:the )?(.+?)(?: in exchange| for |\.|$)", rest)
-                if fm:
-                    key = fm.group(1).strip().lower()
-                    from_team = next((a for k, a in team_lookup.items() if key == k), None)
-            for name in _names(rest):
-                pid = name_to_id.get(norm(name))
-                if pid is None:
-                    unmatched += verb == "Acquired"
-                    continue
-                events.append({"PLAYER_ID": pid, "TRANSACTION_DATE": r.date, "Transaction_Type": EVENT_TYPE[verb],
-                               "TEAM_ID": team_ids[abbr], "TRANSACTION_DESCRIPTION": seg, "FROM_ABBR": from_team})
-    print(f"ESPN events: {len(events)} matched, {unmatched} unmatched acquired names")
-    return pd.DataFrame(events)
-
-
 if __name__ == "__main__":
     fetch()

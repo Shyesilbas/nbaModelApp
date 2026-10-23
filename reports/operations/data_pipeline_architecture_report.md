@@ -108,7 +108,7 @@ Sistem bu sorunu şu şekilde çözer:
    - Bu stints (dönem) verileri `observed_affiliation_events_<season>.csv` dosyasına yazılır.
 
 3. **Günlük Roster Snapshots (kullanılmıyor)**:
-   - [scripts/ingest/roster_snapshot_generator.py](../../scripts/ingest/roster_snapshot_generator.py) stints pencerelerinden günlük roster matrisi üretebilir (`get_roster_as_of`), ancak 2026-10-21 itibarıyla hiçbir eğitim veya inference kodu bu modülü çağırmaz. Canlı roster çözümlemesi `roster_transactions.py` üzerinden yapılır; eğitim tarafında takım bağlantısı her maçın kendi box score'undan gelir.
+   - [scripts/ingest/roster_snapshot_generator.py](../../scripts/ingest/roster_snapshot_generator.py) stints pencerelerinden günlük roster matrisi üretebilir (`get_roster_as_of` 2026-10-23'te kullanılmadığı için silindi), ancak 2026-10-21 itibarıyla hiçbir eğitim veya inference kodu bu modülü çağırmaz. Canlı roster çözümlemesi `roster_transactions.py` üzerinden yapılır; eğitim tarafında takım bağlantısı her maçın kendi box score'undan gelir.
 
 ---
 

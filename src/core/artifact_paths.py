@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Any, Dict
@@ -76,8 +75,3 @@ def resolve_artifact_path(section: str, key: str, fallback: str) -> Path:
         if candidate.exists():
             return candidate
     return ROOT / fallback
-
-
-def load_json_path(preferred: Path, fallback: Path) -> Any:
-    path = preferred if preferred.exists() else fallback
-    return json.loads(path.read_text(encoding="utf-8"))

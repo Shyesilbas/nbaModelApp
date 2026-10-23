@@ -7,8 +7,8 @@ Fetch schedule and scoreboard data from the NBA API and update the local schedul
 import os
 import logging
 import pandas as pd
-from datetime import datetime, date
-from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime
+from typing import Optional, Tuple
 
 from src.ingestion.nba_api_client import call_nba_api
 from src.core.season_utils import get_default_season
@@ -114,78 +114,6 @@ def fetch_schedule_for_season(season: str = None) -> pd.DataFrame:
     mapped_df["LOCATION"] = arena_city.astype(str) + ", " + arena_state.astype(str)
     
     return mapped_df
-
-def fetch_scoreboard_by_date(game_date: date) -> List[Dict[str, Any]]:
-    """
-    Fetches game summaries for a specific date using ScoreboardV3.
-    """
-    from nba_api.stats.endpoints import scoreboardv3
-    date_str = game_date.strftime("%Y-%m-%d")
-    
-    try:
-        logger.info(f"Fetching scoreboard for date {date_str} using ScoreboardV3...")
-        sb = call_nba_api(scoreboardv3.ScoreboardV3, game_date=date_str)
-        dfs = sb.get_data_frames()
-    except Exception as e:
-        logger.error(f"Error fetching ScoreboardV3 for {date_str}: {e}")
-        return []
-        
-    if len(dfs) < 3 or dfs[1].empty:
-        return []
-        
-    df_games = dfs[1]
-    df_teams = dfs[2]
-    
-    games_list = []
-    for _, game_row in df_games.iterrows():
-        gid = game_row["gameId"]
-        game_code = game_row["gameCode"]  # YYYYMMDD/AWAYHOME
-        
-        # Parse home and away teams from gameCode
-        if "/" in game_code:
-            teams_part = game_code.split("/")[1]
-            away_tri = teams_part[:3]
-            home_tri = teams_part[3:]
-        else:
-            away_tri = None
-            home_tri = None
-            
-        game_teams = df_teams[df_teams["gameId"] == gid]
-        home_team_name = ""
-        away_team_name = ""
-        
-        for _, team_row in game_teams.iterrows():
-            tri = team_row["teamTricode"]
-            if tri == home_tri:
-                home_team_name = team_row["teamName"]
-            elif tri == away_tri:
-                away_team_name = team_row["teamName"]
-                
-        games_list.append({
-            "GAME_ID": gid,
-            "GAME_DATE": date_str,
-            "HOME_TEAM_ABBREVIATION": home_tri,
-            "AWAY_TEAM_ABBREVIATION": away_tri,
-            "HOME_TEAM_NAME": home_team_name,
-            "AWAY_TEAM_NAME": away_team_name,
-            "GAME_STATUS": "Final" if str(game_row["gameStatusText"]).lower() == "final" else "Scheduled",
-            "SEASON_TYPE": "NBA Finals" if gid.startswith("00425004") else "Playoffs" if gid.startswith("004") else "PlayIn" if gid.startswith("005") else "Regular Season"
-        })
-        
-    return games_list
-
-def fetch_upcoming_or_recent_games(date_range: Tuple[date, date], season: str = None) -> pd.DataFrame:
-    """
-    Retrieves schedule records within a specific date range from the full season schedule.
-    """
-    start_date, end_date = date_range
-    df_full = fetch_schedule_for_season(season=season)
-    if df_full.empty:
-        return pd.DataFrame()
-        
-    df_full["GAME_DATE_DT"] = pd.to_datetime(df_full["GAME_DATE"]).dt.date
-    df_filtered = df_full[(df_full["GAME_DATE_DT"] >= start_date) & (df_full["GAME_DATE_DT"] <= end_date)]
-    return df_filtered.drop(columns=["GAME_DATE_DT"])
 
 def update_schedule_files(season: str = None) -> Tuple[int, int]:
     """

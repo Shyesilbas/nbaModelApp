@@ -15,23 +15,6 @@ ROOT = Path(__file__).resolve().parents[2]
 from src.core.artifact_paths import resolve_artifact_path
 
 
-def _all_exist(paths):
-    return all(p.exists() for p in paths)
-
-
-def _score_paths(version: int):
-    base = ROOT / "models" / "production"
-    return {
-        "pace": base / f"score_model_v{version}_pace.pkl",
-        "home_rtg": base / f"score_model_v{version}_home_rtg.pkl",
-        "away_rtg": base / f"score_model_v{version}_away_rtg.pkl",
-        "margin": base / f"score_model_v{version}_margin.pkl",
-        "metadata": base / f"score_model_v{version}_metadata.json",
-        "ridge_total": base / f"score_model_v{version}_ridge_total.pkl",
-        "ridge_margin": base / f"score_model_v{version}_ridge_margin.pkl",
-    }
-
-
 def _patch_logistic_regression_compat(model):
     """Backfill attrs expected by older sklearn runtimes when loading newer pickles."""
     candidates = []

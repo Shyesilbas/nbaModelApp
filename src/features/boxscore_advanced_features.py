@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Mapping, Optional
+from typing import List, Optional
 import numpy as np
 import pandas as pd
 
@@ -125,49 +125,3 @@ def compute_team_boxscore_advanced_features(df_raw: pd.DataFrame) -> pd.DataFram
 
     keep_cols = ["GAME_ID", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION"] + feature_cols + [f"OPP_{c}" for c in feature_cols]
     return df[keep_cols].copy()
-
-
-def enrich_matchup_boxscore_features(
-    home_row: Mapping[str, object],
-    away_row: Mapping[str, object]
-) -> Dict[str, float]:
-    """
-    Computes advanced box score features for inference from home and away team historical rows.
-    """
-    res = {}
-    cols = [
-        "FG3_REGRESSION_DELTA", "AST_TO_TOV_LAST_5", "AST_TO_TOV_LAST_10",
-        "AST_TO_FGM_LAST_5", "AST_TO_FGM_LAST_10", "HAVOC_RATE_LAST_5",
-        "HAVOC_RATE_LAST_10", "FOUL_RATE_LAST_5", "FOUL_RATE_LAST_10",
-        "FT_MARGIN_LAST_5", "FT_MARGIN_LAST_10", "BLOCK_RATE_LAST_5", "BLOCK_RATE_LAST_10",
-        "PTS_SHARE_3PT_LAST_5", "PTS_SHARE_3PT_LAST_10", "PTS_SHARE_PAINT_LAST_5",
-        "PTS_SHARE_PAINT_LAST_10", "PTS_SHARE_FT_LAST_5", "PTS_SHARE_FT_LAST_10"
-    ]
-    defaults = {
-        "FG3_REGRESSION_DELTA": 0.0,
-        "AST_TO_TOV_LAST_5": 1.8,
-        "AST_TO_TOV_LAST_10": 1.8,
-        "AST_TO_FGM_LAST_5": 0.60,
-        "AST_TO_FGM_LAST_10": 0.60,
-        "HAVOC_RATE_LAST_5": 0.12,
-        "HAVOC_RATE_LAST_10": 0.12,
-        "FOUL_RATE_LAST_5": 0.19,
-        "FOUL_RATE_LAST_10": 0.19,
-        "FT_MARGIN_LAST_5": 0.0,
-        "FT_MARGIN_LAST_10": 0.0,
-        "BLOCK_RATE_LAST_5": 0.08,
-        "BLOCK_RATE_LAST_10": 0.08,
-        "PTS_SHARE_3PT_LAST_5": 0.35,
-        "PTS_SHARE_3PT_LAST_10": 0.35,
-        "PTS_SHARE_PAINT_LAST_5": 0.45,
-        "PTS_SHARE_PAINT_LAST_10": 0.45,
-        "PTS_SHARE_FT_LAST_5": 0.18,
-        "PTS_SHARE_FT_LAST_10": 0.18,
-    }
-    for c in cols:
-        def_val = defaults.get(c, 0.0)
-        h_val = float(home_row.get(c, def_val)) if pd.notna(home_row.get(c)) else def_val
-        a_val = float(away_row.get(c, def_val)) if pd.notna(away_row.get(c)) else def_val
-        res[c] = h_val
-        res[f"OPP_{c}"] = a_val
-    return res

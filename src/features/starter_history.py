@@ -98,23 +98,6 @@ def fit_role_model(starters: Optional[pd.DataFrame], player_games: Optional[pd.D
     return RoleMinutesModel(coef=_fit_lines(rec), rates=rates, n_train=len(rec))
 
 
-def evaluate_role_model(starters: pd.DataFrame, player_games: pd.DataFrame, holdout_frac: float = 0.2) -> dict:
-    """Out-of-time MAE of the role rule vs. the previous fixed floor/cap rule, on the latest games."""
-    rec = _training_frame(starters, player_games)
-    cut = int(len(rec) * (1 - holdout_frac))
-    tr, te = rec.iloc[:cut], rec.iloc[cut:]
-    coef = _fit_lines(tr)
-    truth = te["MIN"].to_numpy(float)
-    static = np.where(te["IS_STARTER"] == 1, np.maximum(te["BASE"], 26.0), np.minimum(te["BASE"], 22.0))
-    out = {"n_train": len(tr), "n_test": len(te),
-           "mae_baseline_only": float(np.abs(te["BASE"].to_numpy() - truth).mean()),
-           "mae_static_rule": float(np.abs(static - truth).mean())}
-    if coef is not None:
-        pred = _rule_minutes(coef, te["BASE"], te["IS_STARTER"], te["RATE"])
-        out.update(mae_role_rule=float(np.abs(pred - truth).mean()), coef=np.round(coef, 3).tolist())
-    return out
-
-
 def load_role_inputs(seasons: Sequence[str]):
     """(starters, player_games) concatenated over the seasons that have files."""
     from src.core.data_paths import get_data_paths
