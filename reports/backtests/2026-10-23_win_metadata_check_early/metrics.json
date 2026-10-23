@@ -1,0 +1,44 @@
+{
+  "2021-22": {
+    "win": {
+      "games": 1256,
+      "auc": 0.7094,
+      "brier": 0.2153,
+      "log_loss": 0.6198,
+      "accuracy": 0.6624
+    },
+    "score": {
+      "games": 1256,
+      "total_mae": 14.693,
+      "margin_mae": 11.153,
+      "winner_accuracy": 0.6465
+    },
+    "player": {
+      "rows": 28050,
+      "pts_mae": 4.5505,
+      "reb_mae": 1.9366,
+      "ast_mae": 1.3009
+    }
+  },
+  "2022-23": {
+    "win": {
+      "games": 1248,
+      "auc": 0.6689,
+      "brier": 0.224,
+      "log_loss": 0.6395,
+      "accuracy": 0.6386
+    },
+    "score": {
+      "games": 1248,
+      "total_mae": 14.797,
+      "margin_mae": 10.154,
+      "winner_accuracy": 0.6338
+    },
+    "player": {
+      "rows": 27740,
+      "pts_mae": 4.593,
+      "reb_mae": 1.9205,
+      "ast_mae": 1.3009
+    }
+  }
+}
