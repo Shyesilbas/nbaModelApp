@@ -66,12 +66,12 @@ export function MatchupHeroCard({
         <div className="flex flex-wrap items-center gap-2">
           {win.model_version && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-background-secondary border border-border text-text-secondary text-xs font-medium">
-              <Cpu size={14} className="text-primary" />
+              <Cpu size={16} className="text-primary" />
               <span>Model {win.model_version}</span>
             </span>
           )}
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-background-secondary border border-border text-text-secondary text-xs font-medium tabular-nums">
-            <Calendar size={13} />
+            <Calendar size={16} />
             <span>{formatDate(date)}</span>
           </span>
         </div>
@@ -84,7 +84,7 @@ export function MatchupHeroCard({
               disabled={isLoading}
               className="flex items-center gap-1.5 h-8 px-3 rounded border border-border bg-background-primary hover:bg-background-secondary text-text-primary text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
             >
-              <RefreshCw size={13} className={isLoading ? "animate-spin text-primary" : ""} />
+              <RefreshCw size={16} className={isLoading ? "animate-spin text-primary" : ""} />
               <span>Yenile</span>
             </button>
           )}
@@ -100,7 +100,7 @@ export function MatchupHeroCard({
             }
             className="flex items-center gap-1.5 h-8 px-3 rounded bg-primary hover:bg-primary/90 text-white text-xs font-medium transition-colors cursor-pointer"
           >
-            <Download size={13} />
+            <Download size={16} />
             <span>Raporu İndir (PDF)</span>
           </button>
         </div>
@@ -118,21 +118,21 @@ export function MatchupHeroCard({
                   className="absolute -top-1.5 -right-1.5 p-1 bg-background-primary border border-border rounded-full text-status-warning "
                   title="Galibiyet Favorisi"
                 >
-                  <Trophy size={13} />
+                  <Trophy size={16} />
                 </span>
               )}
             </div>
 
             <div>
               <div className="flex items-center gap-1.5 justify-center md:justify-start">
-                <span className="text-xs font-medium text-text-secondary uppercase">Deplasman</span>
+                <span className="text-xs font-medium text-text-secondary">Deplasman</span>
                 {!isHomeWinner && (
                   <span className="px-1.5 py-0.5 rounded-sm bg-status-success/10 text-status-success text-xs font-semibold">
                     Favori
                   </span>
                 )}
               </div>
-              <h2 className="text-xl sm:text-2xl font-semibold text-text-primary tracking-tight mt-0.5">
+              <h2 className="text-xl sm:text-2xl font-semibold text-text-primary mt-0.5">
                 {awayInfo.name}
               </h2>
               <p className="text-xs font-medium text-text-secondary">{awayInfo.abbr}</p>
@@ -183,14 +183,14 @@ export function MatchupHeroCard({
 
             <div className="relative h-2.5 w-full bg-background-tertiary rounded-full overflow-hidden flex">
               <div
-                className="h-full transition-all duration-500 ease-out"
+                className="h-full transition-colors duration-500 ease-out"
                 style={{
                   width: `${awayProb * 100}%`,
                   backgroundColor: awayInfo.color,
                 }}
               />
               <div
-                className="h-full transition-all duration-500 ease-out"
+                className="h-full transition-colors duration-500 ease-out"
                 style={{
                   width: `${homeProb * 100}%`,
                   backgroundColor: homeInfo.color,
@@ -203,13 +203,13 @@ export function MatchupHeroCard({
           {/* Model Favorite Note & Pace */}
           <div className="flex flex-col items-center gap-1 text-center">
             <div className="flex items-center gap-1.5 text-xs text-text-secondary">
-              <Award size={14} className="text-status-warning shrink-0" />
+              <Award size={16} className="text-status-warning shrink-0" />
               <span>
                 Galibiyet favorisi:{" "}
                 <strong className="text-text-primary font-semibold">{winnerInfo.name}</strong>
               </span>
             </div>
-            <span className="text-[11px] font-medium tabular-nums text-text-muted">
+            <span className="text-xs font-medium tabular-nums text-text-muted">
               Tempo (Pace): {pace} pos/48m · {parseFloat(pace) > 100 ? "Yüksek Tempo" : "Kontrollü Set"}
             </span>
           </div>
@@ -225,7 +225,7 @@ export function MatchupHeroCard({
                   className="absolute -top-1.5 -right-1.5 p-1 bg-background-primary border border-border rounded-full text-status-warning "
                   title="Galibiyet Favorisi"
                 >
-                  <Trophy size={13} />
+                  <Trophy size={16} />
                 </span>
               )}
             </div>
@@ -237,9 +237,9 @@ export function MatchupHeroCard({
                     Favori
                   </span>
                 )}
-                <span className="text-xs font-medium text-text-secondary uppercase">Ev Sahibi</span>
+                <span className="text-xs font-medium text-text-secondary">Ev Sahibi</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-semibold text-text-primary tracking-tight mt-0.5">
+              <h2 className="text-xl sm:text-2xl font-semibold text-text-primary mt-0.5">
                 {homeInfo.name}
               </h2>
               <p className="text-xs font-medium text-text-secondary">{homeInfo.abbr}</p>

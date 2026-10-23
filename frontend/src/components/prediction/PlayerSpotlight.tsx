@@ -33,9 +33,9 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
   const topAssister = [...all].sort((a, b) => b.predicted_ast - a.predicted_ast)[0];
 
   const spotlights = [
-    { player: topScorer, stat: topScorer?.predicted_pts, label: "En Skorer", unit: "PTS", icon: <Trophy size={14} /> },
-    { player: topRebounder, stat: topRebounder?.predicted_reb, label: "Ribaund Lideri", unit: "REB", icon: <Shield size={14} /> },
-    { player: topAssister, stat: topAssister?.predicted_ast, label: "Asist Lideri", unit: "AST", icon: <Users size={14} /> },
+    { player: topScorer, stat: topScorer?.predicted_pts, label: "En Skorer", unit: "PTS", icon: <Trophy size={16} /> },
+    { player: topRebounder, stat: topRebounder?.predicted_reb, label: "Ribaund Lideri", unit: "REB", icon: <Shield size={16} /> },
+    { player: topAssister, stat: topAssister?.predicted_ast, label: "Asist Lideri", unit: "AST", icon: <Users size={16} /> },
   ];
 
   const handleOpenPlayerModal = (p: PlayerMatchupData, isHome: boolean) => {
@@ -62,7 +62,7 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-1">
         <div className="flex items-center gap-2">
-          <Sparkles size={14} className="text-primary" />
+          <Sparkles size={16} className="text-primary" />
           <h4 className="text-sm font-semibold text-text-primary">
             Oyuncu Tahmin Projeksiyonları ve Liderler
           </h4>
@@ -87,7 +87,7 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                 <span className="text-xs font-medium text-text-secondary">{s.label}</span>
               </div>
               <span className="w-5 h-5 rounded-full bg-background-secondary flex items-center justify-center text-text-secondary group-hover:text-text-primary transition-colors">
-                <Info size={12} />
+                <Info size={16} />
               </span>
             </div>
 
@@ -101,17 +101,17 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                   {s.player?.player_name}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-sm bg-background-secondary border border-border text-text-secondary uppercase">
+                  <span className="text-xs font-medium px-1.5 py-0.5 rounded-sm bg-background-secondary border border-border text-text-secondary">
                     {s.player?.teamAbbr}
                   </span>
-                  <span className="text-xs text-text-secondary uppercase">{s.player?.position_group}</span>
+                  <span className="text-xs text-text-secondary">{s.player?.position_group}</span>
                   {s.player?.status === "OUT" && (
-                    <span className="text-xs font-medium px-1.5 py-0.2 rounded-sm bg-status-error/10 text-status-error uppercase">
+                    <span className="text-xs font-medium px-1.5 py-0.5 rounded-sm bg-status-error/10 text-status-error">
                       OUT
                     </span>
                   )}
                   {s.player?.status === "RESTRICTED" && (
-                    <span className="text-xs font-medium px-1.5 py-0.2 rounded-sm bg-status-warning/10 text-status-warning uppercase">
+                    <span className="text-xs font-medium px-1.5 py-0.5 rounded-sm bg-status-warning/10 text-status-warning">
                       Kısıtlı
                     </span>
                   )}
@@ -160,7 +160,7 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                   </h5>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium text-text-secondary bg-background-secondary border border-border px-2 py-0.5 rounded-sm uppercase">
+                  <span className="text-xs font-medium text-text-secondary bg-background-secondary border border-border px-2 py-0.5 rounded-sm">
                     {activePlayers.length} Rotasyon Oyuncusu
                   </span>
                   {outPlayers.length > 0 && (
@@ -212,20 +212,20 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                               </span>
                               {isOut && (
                                 <span
-                                  className="text-xs font-semibold uppercase px-1.5 py-0.5 rounded-sm bg-status-error/10 text-status-error"
+                                  className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-status-error/10 text-status-error"
                                   title="Bu maçta oynamayacak olarak işaretlendi"
                                 >
                                   OUT
                                 </span>
                               )}
                               {isRestricted && (
-                                <span className="text-xs font-semibold uppercase px-1.5 py-0.2 rounded-sm bg-status-warning/10 text-status-warning">
+                                <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-status-warning/10 text-status-warning">
                                   Kısıtlı
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="px-2 py-2 text-center text-xs uppercase text-text-secondary">
+                          <td className="px-2 py-2 text-center text-xs text-text-secondary">
                             {p.position_group}
                           </td>
                           <td className={`px-2 py-2 text-right tabular-nums ${isOut ? "text-text-secondary" : "font-semibold text-text-primary"}`}>
@@ -250,7 +250,7 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                               className="w-6 h-6 rounded bg-background-secondary group-hover:bg-primary/10 group-hover:text-primary text-text-secondary inline-flex items-center justify-center transition-colors cursor-pointer"
                               title={`${p.player_name} - Maç Raporu ve Son Maçlar`}
                             >
-                              <Info size={13} />
+                              <Info size={16} />
                             </button>
                           </td>
                         </tr>
@@ -274,7 +274,7 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                     </span>
                     <div className="flex items-center gap-1 text-xs text-text-secondary">
                       <span>{isDnpOpen ? "Gizle" : "Görüntüle"}</span>
-                      {isDnpOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      {isDnpOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </div>
                   </button>
 
@@ -292,12 +292,12 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                                 <div className="flex items-center gap-2">
                                   <PlayerPhoto playerId={p.player_id} name={p.player_name} size={22} />
                                   <span className="font-medium text-text-secondary">{p.player_name}</span>
-                                  <span className="text-xs font-semibold uppercase px-1.5 py-0.2 rounded-sm bg-background-tertiary text-text-muted">
+                                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-background-tertiary text-text-muted">
                                     DNP
                                   </span>
                                 </div>
                               </td>
-                              <td className="px-2 py-2 text-center text-xs uppercase text-text-secondary">
+                              <td className="px-2 py-2 text-center text-xs text-text-secondary">
                                 {p.position_group}
                               </td>
                               <td colSpan={4} className="px-2 py-2 text-right text-xs text-text-secondary">
@@ -313,7 +313,7 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                                   className="w-5 h-5 rounded bg-background-primary text-text-secondary hover:text-primary inline-flex items-center justify-center transition-colors cursor-pointer"
                                   title={`${p.player_name} - Oyuncu Bilgisi`}
                                 >
-                                  <Info size={12} />
+                                  <Info size={16} />
                                 </button>
                               </td>
                             </tr>

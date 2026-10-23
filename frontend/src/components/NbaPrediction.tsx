@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import TeamLogo from "./TeamLogo";
+import { EmptyState, InlineError, Skeleton } from "./common";
 import {
   normalizeGameFullPrediction,
   predictGameFull,
@@ -267,11 +268,9 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
   if (loadingData) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 bg-background-primary rounded border border-border p-8">
-        <RefreshCw size={24} className="animate-spin text-primary" />
-        <span className="text-xs font-medium text-text-secondary">
-          Tahmin motoru yükleniyor
-        </span>
+      <div className="space-y-5" aria-busy="true" aria-label="Tahmin motoru yükleniyor">
+        <Skeleton className="h-24 w-full rounded" />
+        <Skeleton className="h-64 w-full rounded" />
       </div>
     );
   }
@@ -333,7 +332,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                     type="button"
                     onClick={() => setSelectedDate(uniqueDates[selectedDateIndex - 1] ?? selectedDate)}
                     disabled={selectedDateIndex <= 0}
-                    className="rounded p-1 text-text-secondary transition-all hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="rounded p-1 text-text-secondary transition-colors hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
                     title="Önceki Gün"
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -344,20 +343,20 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                     <button
                       type="button"
                       onClick={() => setIsDateMenuOpen((open) => !open)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-xs font-semibold text-text-primary transition-colors hover:text-primary"
+                      className="flex items-center gap-1.5 px-2.5 py-1 tabular-nums text-xs font-semibold text-text-primary transition-colors hover:text-primary"
                     >
-                      <Calendar size={13} className="text-text-muted" />
-                      <span>{selectedDate ? fmtDate(selectedDate) : "Tarih Seç"}</span>
+                      <Calendar size={16} className="text-text-muted" />
+                      <span>{selectedDate ? fmtDate(selectedDate) : "Tarih seç"}</span>
                       {selectedDate === todayStr && (
                         <span className="h-1.5 w-1.5 rounded-full bg-status-success" title="Bugün" />
                       )}
-                      <ChevronDown className={`h-3.5 w-3.5 text-text-muted transition-transform ${isDateMenuOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`h-4 w-4 text-text-muted transition-transform ${isDateMenuOpen ? "rotate-180" : ""}`} />
                     </button>
 
                     {isDateMenuOpen && (
                       <>
                         <div className="fixed inset-0 z-40" onClick={() => setIsDateMenuOpen(false)} />
-                        <div className="absolute left-0 top-full z-50 mt-1.5 max-h-64 w-60 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-xl scrollbar-thin">
+                        <div className="absolute left-0 top-full z-50 mt-1.5 max-h-64 w-60 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-md scrollbar-thin">
                           {uniqueDates.map((d) => {
                             const isSelected = selectedDate === d;
                             const isToday = d === todayStr;
@@ -372,7 +371,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                                   setSelectedDate(d);
                                   setIsDateMenuOpen(false);
                                 }}
-                                className={`mt-0.5 flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs font-bold transition-all ${
+                                className={`mt-0.5 flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs font-semibold transition-colors ${
                                   isSelected ? "bg-primary text-white" : "text-text-primary hover:bg-background-tertiary"
                                 }`}
                               >
@@ -380,14 +379,14 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                                 <div className="flex items-center gap-1.5">
                                   {isToday && (
                                     <span
-                                      className={`rounded px-1.5 py-0.2 text-[9px] font-sans font-semibold uppercase ${
+                                      className={`rounded px-1.5 py-0.5 text-xs font-sans font-semibold ${
                                         isSelected ? "bg-status-success text-white" : "bg-status-success/20 text-status-success"
                                       }`}
                                     >
                                       Bugün
                                     </span>
                                   )}
-                                  <span className={`text-[10px] font-mono ${isSelected ? "text-white/80" : "text-text-muted"}`}>
+                                  <span className={`text-xs tabular-nums ${isSelected ? "text-white/80" : "text-text-muted"}`}>
                                     ({gameCount})
                                   </span>
                                 </div>
@@ -403,7 +402,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                     type="button"
                     onClick={() => setSelectedDate(uniqueDates[selectedDateIndex + 1] ?? selectedDate)}
                     disabled={selectedDateIndex >= uniqueDates.length - 1}
-                    className="rounded p-1 text-text-secondary transition-all hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="rounded p-1 text-text-secondary transition-colors hover:bg-background-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
                     title="Sonraki Gün"
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -453,7 +452,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                               <span className="text-xs font-semibold text-text-primary">
                                 {g.HOME_TEAM_ABBREVIATION} vs {g.AWAY_TEAM_ABBREVIATION}
                               </span>
-                              <span className="text-xs px-1.5 py-0.2 rounded-sm bg-background-secondary border border-border text-text-secondary">
+                              <span className="text-xs px-1.5 py-0.5 rounded-sm bg-background-secondary border border-border text-text-secondary">
                                 {g.SEASON_TYPE}
                               </span>
                             </div>
@@ -512,7 +511,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                               <span className="font-semibold text-text-primary">{g.HOME_TEAM_ABBREVIATION}</span>
                               <span className="text-text-muted">vs</span>
                               <span className="font-semibold text-text-primary">{g.AWAY_TEAM_ABBREVIATION}</span>
-                              <span className="text-xs px-1 py-0.2 rounded-sm bg-background-secondary border border-border text-text-secondary">
+                              <span className="text-xs px-1 py-0.5 rounded-sm bg-background-secondary border border-border text-text-secondary">
                                 {g.SEASON_TYPE === "NBA Finals" ? "Finals" : (g.SEASON_TYPE === "Pre Season" || g.SEASON_TYPE === "Preseason" ? "Preseason" : "Normal")}
                               </span>
                             </div>
@@ -547,7 +546,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                   id="run-prediction-main-btn"
                   className="flex items-center gap-2 h-9 px-5 rounded bg-primary hover:bg-primary/90 disabled:opacity-60 text-white text-xs font-medium transition-colors cursor-pointer"
                 >
-                  {loading && <RefreshCw size={13} className="animate-spin" />}
+                  {loading && <RefreshCw size={16} className="animate-spin" />}
                   <span>
                     {loading ? "Hesaplanıyor..." : "Tahmin Modelini Çalıştır"}
                   </span>
@@ -559,7 +558,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                     disabled={loading}
                     className="flex items-center gap-1.5 h-9 px-3.5 rounded border border-border bg-background-primary hover:bg-background-secondary text-text-primary text-xs font-medium transition-colors cursor-pointer"
                   >
-                    <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                    <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                     <span>Yenile</span>
                   </button>
                 )}
@@ -569,38 +568,28 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         )}
       </div>
 
-      {/* Error message */}
       {error && (
-        <div className="p-4 bg-status-error/10 text-status-error rounded border border-status-error/20 text-xs font-medium flex items-center gap-2">
-          <AlertTriangle size={15} />
-          <span>{error}</span>
-        </div>
+        <InlineError
+          title="Tahmin oluşturulamadı"
+          message={error}
+          onRetry={home && away && date ? submit : undefined}
+        />
       )}
 
-      {/* Loading state */}
       {loading && (
-        <div className="bg-background-primary border border-border rounded p-12 flex flex-col items-center justify-center gap-3">
-          <RefreshCw size={24} className="animate-spin text-primary" />
-          <p className="text-xs font-medium text-text-secondary">
-            Karşılaşma istatistikleri ve modeller analiz ediliyor
-          </p>
+        <div className="space-y-5" aria-busy="true" aria-label="Tahmin hazırlanıyor">
+          <Skeleton className="h-64 w-full rounded" />
+          <Skeleton className="h-96 w-full rounded" />
         </div>
       )}
 
-      {/* Empty state */}
-      {!home || !away || !date ? (
-        <div className="bg-background-primary border border-border rounded p-12 text-center flex flex-col items-center justify-center gap-3 min-h-[260px]">
-          <div className="w-12 h-12 rounded border border-border bg-background-secondary flex items-center justify-center text-text-secondary">
-            <Activity size={22} />
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-text-primary">Karşılaşma Seçin</h4>
-            <p className="text-xs text-text-secondary mt-1 max-w-sm mx-auto leading-relaxed">
-              Model simülasyonunu çalıştırmak için yukarıdaki fikstürden bir maç seçin veya özel takım eşleşmesi belirleyin.
-            </p>
-          </div>
-        </div>
-      ) : null}
+      {!loading && !error && (!home || !away || !date) && (
+        <EmptyState
+          icon={<Activity size={24} strokeWidth={1.5} />}
+          title="Karşılaşma seç"
+          description="Model simülasyonunu çalıştırmak için yukarıdaki fikstürden bir maç seç veya özel takım eşleşmesi belirle."
+        />
+      )}
 
       {/* RESULT SECTIONS */}
       {result && !loading && (
@@ -610,19 +599,19 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
             <div className="p-4 bg-status-warning/10 border border-status-warning/20 rounded text-xs text-status-warning font-medium space-y-1">
               {result.win_probability?.error && (
                 <p className="flex items-center gap-1.5 m-0">
-                  <AlertTriangle size={13} />
-                  Kazanma Olasılığı Modeli: {result.win_probability.error}
+                  <AlertTriangle size={16} />
+                  Kazanma olasılığı modeli: {result.win_probability.error}
                 </p>
               )}
               {result.score_prediction?.error && (
                 <p className="flex items-center gap-1.5 m-0">
-                  <AlertTriangle size={13} />
+                  <AlertTriangle size={16} />
                   Skor Tahmini Modeli: {result.score_prediction.error}
                 </p>
               )}
               {result.score_prediction?.confidence_warning && (
                 <p className="flex items-center gap-1.5 m-0">
-                  <AlertTriangle size={13} />
+                  <AlertTriangle size={16} />
                   Tahmin Uyarısı: {result.score_prediction.confidence_warning}
                 </p>
               )}

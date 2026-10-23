@@ -46,7 +46,7 @@ function TeamAdvantageBadge({
 
   return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-text-primary">
-      {isHome ? <ArrowUpRight size={13} className="text-text-secondary" /> : <ArrowDownRight size={13} className="text-text-secondary" />}
+      {isHome ? <ArrowUpRight size={16} className="text-text-secondary" /> : <ArrowDownRight size={16} className="text-text-secondary" />}
       <span>{team.name} ({team.abbr}) Lehine</span>
     </span>
   );
@@ -88,7 +88,7 @@ function ReasonCard({
       {/* 1. Baslik, sira ve lehte olan takim */}
       <div className="flex items-center justify-between gap-3 mb-1.5">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-bold tabular-nums text-text-muted">
+          <span className="text-xs font-semibold tabular-nums text-text-muted">
             {rank}.
           </span>
           <h4 className="text-xs font-semibold text-text-primary truncate">
@@ -124,7 +124,7 @@ function ReasonCard({
         </div>
 
         {formatted.simpleValue && (
-          <span className="text-text-secondary font-medium tabular-nums text-[11px]">
+          <span className="text-text-secondary font-medium tabular-nums text-xs">
             {formatted.simpleValue}
           </span>
         )}
@@ -132,7 +132,7 @@ function ReasonCard({
 
       {/* Opsiyonel Teknik Detay Alani */}
       {showTech && (
-        <div className="ml-4 mt-2 rounded border border-border bg-background-tertiary/40 px-2.5 py-1.5 text-[11px] text-text-secondary flex flex-wrap items-center justify-between gap-2 font-mono">
+        <div className="ml-4 mt-2 rounded border border-border bg-background-tertiary/40 px-2.5 py-1.5 text-xs text-text-secondary flex flex-wrap items-center justify-between gap-2 tabular-nums">
           <span>Değişken: <strong>{feature.feature_name}</strong></span>
           <span>Ham Değer: <strong>{feature.value}</strong></span>
           <span>
@@ -306,7 +306,7 @@ export function ModelExplanationSection({
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
-            <Trophy size={13} />
+            <Trophy size={16} />
             <span>Kazanma Tercihi (5 Sebep)</span>
           </button>
 
@@ -322,7 +322,7 @@ export function ModelExplanationSection({
                   : "text-text-secondary hover:text-text-primary"
               }`}
             >
-              <Zap size={13} />
+              <Zap size={16} />
               <span>Skor ve Sayı Beklentisi (5 Sebep)</span>
             </button>
           )}
@@ -334,7 +334,7 @@ export function ModelExplanationSection({
           onClick={() => setShowTechDetails((prev) => !prev)}
           className="inline-flex items-center gap-1.5 rounded border border-border bg-background-primary px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
         >
-          {showTechDetails ? <EyeOff size={13} /> : <Eye size={13} />}
+          {showTechDetails ? <EyeOff size={16} /> : <Eye size={16} />}
           <span>{showTechDetails ? "Teknik Değerleri Gizle" : "Teknik Verileri Göster"}</span>
         </button>
       </div>

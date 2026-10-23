@@ -72,7 +72,7 @@ export function MatchupTacticalHub({
         <div className="lg:col-span-7 flex flex-col justify-between space-y-5">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+              <span className="text-xs font-semibold text-text-secondary">
                 Model Simülasyon Akışı & Taktik Raporu
               </span>
               <span className="text-xs font-semibold tabular-nums text-text-primary">
@@ -92,26 +92,26 @@ export function MatchupTacticalHub({
           {/* Micro stats inline strip */}
           <div className="grid grid-cols-3 gap-4 pt-3 border-t border-border-light tabular-nums">
             <div>
-              <span className="text-[11px] font-medium text-text-muted uppercase block">
+              <span className="text-xs font-medium text-text-muted block">
                 Öngörülen Tempo
               </span>
-              <span className="text-sm font-bold text-text-primary mt-0.5 block">
-                {paceVal} <span className="text-[10px] font-normal text-text-muted">Poss</span>
+              <span className="text-sm font-semibold text-text-primary mt-0.5 block">
+                {paceVal} <span className="text-xs font-normal text-text-muted">Poss</span>
               </span>
             </div>
             <div>
-              <span className="text-[11px] font-medium text-text-muted uppercase block">
+              <span className="text-xs font-medium text-text-muted block">
                 {homeInfo.abbr} Hücum Rtg
               </span>
-              <span className="text-sm font-bold text-text-primary mt-0.5 block">
+              <span className="text-sm font-semibold text-text-primary mt-0.5 block">
                 {homeOffRtg}
               </span>
             </div>
             <div>
-              <span className="text-[11px] font-medium text-text-muted uppercase block">
+              <span className="text-xs font-medium text-text-muted block">
                 {awayInfo.abbr} Hücum Rtg
               </span>
-              <span className="text-sm font-bold text-text-primary mt-0.5 block">
+              <span className="text-sm font-semibold text-text-primary mt-0.5 block">
                 {awayOffRtg}
               </span>
             </div>
@@ -120,7 +120,7 @@ export function MatchupTacticalHub({
 
         {/* Right Column: 4 Matchup Pillars in Clean Divided List */}
         <div className="lg:col-span-5 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-border-light pt-4 lg:pt-0 lg:pl-6">
-          <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-2 block">
+          <span className="text-xs font-semibold text-text-secondary mb-2 block">
             Önemli Saha Üstünlükleri
           </span>
 
@@ -128,7 +128,7 @@ export function MatchupTacticalHub({
             {/* Pillar 1 */}
             <div className="py-2.5 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <TrendingUp size={15} className="text-text-muted shrink-0" />
+                <TrendingUp size={16} className="text-text-muted shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-text-primary truncate">
                     {netRtgFeat
@@ -137,10 +137,10 @@ export function MatchupTacticalHub({
                         : `${awayInfo.abbr} Form Avantajı`
                       : `${winnerInfo.abbr} Net Rating Üstünlüğü`}
                   </p>
-                  <p className="text-[11px] text-text-muted">Takım formu ve net verimlilik</p>
+                  <p className="text-xs text-text-muted">Takım formu ve net verimlilik</p>
                 </div>
               </div>
-              <span className="text-xs font-bold tabular-nums text-text-primary shrink-0">
+              <span className="text-xs font-semibold tabular-nums text-text-primary shrink-0">
                 +{isHomeWinner ? homeInfo.abbr : awayInfo.abbr}
               </span>
             </div>
@@ -148,14 +148,14 @@ export function MatchupTacticalHub({
             {/* Pillar 2 */}
             <div className="py-2.5 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <Activity size={15} className="text-text-muted shrink-0" />
+                <Activity size={16} className="text-text-muted shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-text-primary truncate">
                     {isHomeWinner
                       ? `${homeInfo.abbr} Ev Sahibi Avantajı`
                       : `${awayInfo.abbr} Deplasman Direnci`}
                   </p>
-                  <p className="text-[11px] text-text-muted">Saha faktörü ve seyirci</p>
+                  <p className="text-xs text-text-muted">Saha faktörü ve seyirci</p>
                 </div>
               </div>
               <span className="text-xs font-medium tabular-nums text-text-secondary shrink-0">
@@ -166,12 +166,12 @@ export function MatchupTacticalHub({
             {/* Pillar 3 */}
             <div className="py-2.5 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <Flame size={15} className="text-text-muted shrink-0" />
+                <Flame size={16} className="text-text-muted shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-text-primary truncate">
                     {threePtFeat ? "Dış Şut Etkinliği" : "Boyalı Alan Üstünlüğü"}
                   </p>
-                  <p className="text-[11px] text-text-muted">Yay gerisi ve bitiricilik</p>
+                  <p className="text-xs text-text-muted">Yay gerisi ve bitiricilik</p>
                 </div>
               </div>
               <span className="text-xs font-medium text-text-secondary shrink-0">
@@ -182,15 +182,15 @@ export function MatchupTacticalHub({
             {/* Pillar 4 */}
             <div className="py-2.5 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <Zap size={15} className="text-text-muted shrink-0" />
+                <Zap size={16} className="text-text-muted shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-text-primary truncate">
                     Tahmin Güven Derecesi
                   </p>
-                  <p className="text-[11px] text-text-muted">Model güven aralığı</p>
+                  <p className="text-xs text-text-muted">Model güven aralığı</p>
                 </div>
               </div>
-              <span className="text-xs font-bold tabular-nums text-text-primary shrink-0">
+              <span className="text-xs font-semibold tabular-nums text-text-primary shrink-0">
                 {win?.confidence_bucket || "ORTA"}
               </span>
             </div>

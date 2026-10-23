@@ -37,7 +37,7 @@ export function ModelDiagnostics({ modelStatus, result }: { modelStatus: any; re
             .filter((d) => d.value)
             .map((d, i) => (
               <div key={i} className="bg-background-secondary rounded border border-border p-3 text-center">
-                <p className="text-xs font-medium text-text-secondary uppercase">{d.label}</p>
+                <p className="text-xs font-medium text-text-secondary">{d.label}</p>
                 <p className="text-sm font-semibold tabular-nums text-text-primary mt-1">
                   {d.value}
                 </p>
