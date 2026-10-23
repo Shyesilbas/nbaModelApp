@@ -123,7 +123,7 @@ export function PlayerBoxTable({
               <div className="flex items-center gap-1">
                 <span className={sortCol === "Player" ? "font-semibold text-text-primary" : ""}>Player</span>
                 {sortCol === "Player" && (
-                  sortDir === "asc" ? <ChevronUp size={12} className="text-primary" /> : <ChevronDown size={12} className="text-primary" />
+                  sortDir === "asc" ? <ChevronUp size={16} className="text-primary" /> : <ChevronDown size={16} className="text-primary" />
                 )}
               </div>
             </th>
@@ -140,7 +140,7 @@ export function PlayerBoxTable({
                   <div className="inline-flex items-center justify-end gap-0.5">
                     <span>{label}</span>
                     {isActive && (
-                      sortDir === "asc" ? <ChevronUp size={12} className="text-primary" /> : <ChevronDown size={12} className="text-primary" />
+                      sortDir === "asc" ? <ChevronUp size={16} className="text-primary" /> : <ChevronDown size={16} className="text-primary" />
                     )}
                   </div>
                 </th>
@@ -164,7 +164,7 @@ export function PlayerBoxTable({
                           {p.IS_STARTER === 1 && (
                             <span
                               title="Starter"
-                              className="rounded bg-primary/15 px-1 text-[10px] font-semibold leading-4 text-primary"
+                              className="rounded bg-primary/15 px-1 text-xs font-semibold leading-4 text-primary"
                             >
                               S
                             </span>

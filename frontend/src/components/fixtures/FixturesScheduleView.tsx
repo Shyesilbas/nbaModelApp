@@ -32,7 +32,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
     return (
       <div className="rounded border border-border bg-background-primary py-20 text-center ">
         <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p className="text-xs font-bold text-text-secondary">Fikstur ve mac verileri yukleniyor...</p>
+        <p className="text-xs font-semibold text-text-secondary">Fikstur ve mac verileri yukleniyor...</p>
       </div>
     );
   }
@@ -40,7 +40,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
   if (dayGroups.length === 0) {
     return (
       <div className="rounded border border-border bg-background-primary py-16 text-center ">
-        <p className="text-sm font-bold text-text-primary">Aramayla eslesen mac bulunamadi.</p>
+        <p className="text-sm font-semibold text-text-primary">Aramayla eslesen mac bulunamadi.</p>
         <p className="mt-1 text-xs text-text-secondary">Filtreleri veya arama kriterini degistirip tekrar deneyin.</p>
       </div>
     );
@@ -52,11 +52,11 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
         <div key={dayGroup.date} className="space-y-2.5">
           {/* Day Subheader */}
           <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2 text-xs font-bold text-text-primary">
+            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary">
               <Calendar className="h-3.5 w-3.5 text-primary" />
               <span>{dayGroup.formattedDate}</span>
             </div>
-            <span className="rounded-full bg-background-tertiary px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+            <span className="rounded-full bg-background-tertiary px-2 py-0.5 text-xs font-semibold text-text-muted">
               {dayGroup.games.length} mac
             </span>
           </div>

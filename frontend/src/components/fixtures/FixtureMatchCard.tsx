@@ -55,28 +55,28 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
       {/* Top Meta Bar */}
       <div className="flex items-center justify-between border-b border-border-light pb-2 text-xs text-text-secondary">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="rounded-sm bg-background-tertiary border border-border px-1.5 py-0.5 text-[10px] font-medium text-text-secondary">
+          <span className="rounded-sm bg-background-tertiary border border-border px-1.5 py-0.5 text-xs font-medium text-text-secondary">
             {seasonLabel}
           </span>
           {isCompleted ? (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-status-success">
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-status-success">
               <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
               {game.GAME_STATUS || "Final"}
               {fmtTipoffTR(game.GAME_START_UTC) && <span className="font-normal text-text-muted">· {fmtTipoffTR(game.GAME_START_UTC)}</span>}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-text-muted">
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-text-muted">
               <Clock className="h-3 w-3" />
               <span>{fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Programda")}</span>
             </span>
           )}
           {game.SERIES_GAME_NUMBER != null && (
-            <span className="rounded-sm border border-border bg-background-tertiary px-1 py-0.5 text-[10px] text-text-secondary">
+            <span className="rounded-sm border border-border bg-background-tertiary px-1 py-0.5 text-xs text-text-secondary">
               Game {game.SERIES_GAME_NUMBER}
             </span>
           )}
           {game.IS_ELIMINATION_GAME && (
-            <span className="rounded-sm border border-status-error/30 bg-status-error/10 px-1 py-0.5 text-[10px] font-medium text-status-error">
+            <span className="rounded-sm border border-status-error/30 bg-status-error/10 px-1 py-0.5 text-xs font-medium text-status-error">
               Elimination
             </span>
           )}
@@ -102,13 +102,13 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
                   onSelectTeam?.(awayAbbr);
                 }}
                 className={`block truncate text-xs sm:text-sm font-semibold text-left transition-colors hover:underline ${
-                  awayWon ? "text-text-primary font-bold" : "text-text-secondary hover:text-text-primary"
+                  awayWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
                 }`}
                 title={awayFullName}
               >
                 {awayName}
               </button>
-              <span className="text-[10px] text-text-muted uppercase block">
+              <span className="text-xs text-text-muted block">
                 Deplasman
               </span>
             </div>
@@ -119,16 +119,16 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
             {isCompleted ? (
               <>
                 <div className="flex items-baseline justify-center gap-1.5 text-base sm:text-lg font-semibold tabular-nums text-text-primary">
-                  <span className={awayWon ? "text-text-primary font-bold" : "text-text-secondary"}>
+                  <span className={awayWon ? "text-text-primary font-semibold" : "text-text-secondary"}>
                     {game.AWAY_SCORE ?? "-"}
                   </span>
                   <span className="text-text-muted text-xs font-normal">:</span>
-                  <span className={homeWon ? "text-text-primary font-bold" : "text-text-secondary"}>
+                  <span className={homeWon ? "text-text-primary font-semibold" : "text-text-secondary"}>
                     {game.HOME_SCORE ?? "-"}
                   </span>
                 </div>
                 {margin > 0 && (
-                  <span className="text-[10px] font-medium text-text-muted tabular-nums">
+                  <span className="text-xs font-medium text-text-muted tabular-nums">
                     +{margin} sayı
                   </span>
                 )}
@@ -150,13 +150,13 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
                   onSelectTeam?.(homeAbbr);
                 }}
                 className={`block truncate text-xs sm:text-sm font-semibold text-right transition-colors hover:underline ml-auto ${
-                  homeWon ? "text-text-primary font-bold" : "text-text-secondary hover:text-text-primary"
+                  homeWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
                 }`}
                 title={homeFullName}
               >
                 {homeName}
               </button>
-              <span className="text-[10px] text-text-muted uppercase block text-right">
+              <span className="text-xs text-text-muted block text-right">
                 Ev Sahibi
               </span>
             </div>
@@ -172,7 +172,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
             {awayForm.map((res, i) => (
               <span
                 key={i}
-                className={`flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-semibold text-white ${
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold text-white ${
                   res === "W" ? "bg-status-success" : "bg-status-error"
                 }`}
                 title={res === "W" ? "Galibiyet" : "Mağlubiyet"}
@@ -181,14 +181,14 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
               </span>
             ))}
           </div>
-          <span className="shrink-0 font-medium text-[9px] text-text-muted">
+          <span className="shrink-0 font-medium text-xs text-text-muted">
             SON 5
           </span>
           <div className="flex items-center gap-1" title={`${homeName} son 5 maç formu`}>
             {homeForm.map((res, i) => (
               <span
                 key={i}
-                className={`flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-semibold text-white ${
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold text-white ${
                   res === "W" ? "bg-status-success" : "bg-status-error"
                 }`}
                 title={res === "W" ? "Galibiyet" : "Mağlubiyet"}
@@ -203,10 +203,10 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
       {/* Bottom Bar: Arena, Officials, Actions */}
       <div className="flex items-center justify-between gap-2 border-t border-border-light pt-2 text-xs text-text-secondary">
         {/* Left: Arena & Officials */}
-        <div className="flex items-center gap-2 min-w-0 text-text-muted text-[11px] truncate">
+        <div className="flex items-center gap-2 min-w-0 text-text-muted text-xs truncate">
           {game.ARENA && (
             <span className="flex items-center gap-1 truncate" title={game.ARENA}>
-              <MapPin size={11} className="shrink-0 text-text-muted" />
+              <MapPin size={16} className="shrink-0 text-text-muted" />
               <span className="truncate">{game.ARENA}</span>
             </span>
           )}
@@ -218,7 +218,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
                 className="inline-flex items-center gap-1 text-text-secondary shrink-0"
                 title={`Hakemler: ${officials.map((o) => o.cleanName).join(", ")}`}
               >
-                <Shield size={11} className="text-text-muted" />
+                <Shield size={16} className="text-text-muted" />
                 <span>{officials.map((o) => o.jerseyNum ? `#${o.jerseyNum}` : o.cleanName).slice(0, 2).join(" ")}</span>
               </span>
             </>
@@ -235,9 +235,9 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
                 event.stopPropagation();
                 onRefresh?.();
               }}
-              className="inline-flex items-center gap-1 rounded border border-border bg-background-primary px-2 py-0.5 text-[11px] font-medium text-text-primary transition-colors hover:bg-background-tertiary disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded border border-border bg-background-primary px-2 py-0.5 text-xs font-medium text-text-primary transition-colors hover:bg-background-tertiary disabled:opacity-50"
             >
-              <RefreshCw size={10} className={isRefreshing ? "animate-spin" : ""} />
+              <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
               <span>{isRefreshing ? "..." : "Yenile"}</span>
             </button>
           )}
@@ -251,7 +251,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
               }}
               className="inline-flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
             >
-              <Sparkles size={11} />
+              <Sparkles size={16} />
               <span>Tahmin</span>
             </button>
           )}

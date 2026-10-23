@@ -70,7 +70,7 @@ export function TopPerformers({
     },
   ];
 
-  // 2. Extract unique player IDs from trio leaders so "Öne Çıkan Diğer Performanslar" doesn't duplicate them
+  // 2. Extract unique player IDs from trio leaders so "Öne çıkan diğer performanslar" doesn't duplicate them
   const leaderPlayerIds = new Set(
     trioLeaders.map((item) => Number(item.player?.PLAYER_ID ?? item.player?.player_id ?? 0)).filter((id) => id > 0)
   );
@@ -118,11 +118,11 @@ export function TopPerformers({
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                  <span className="text-xs font-semibold text-text-secondary">
                     {item.category}
                   </span>
                   {team && (
-                    <span className="text-xs font-bold text-text-muted">
+                    <span className="text-xs font-semibold text-text-muted">
                       {team}
                     </span>
                   )}
@@ -144,10 +144,10 @@ export function TopPerformers({
               {/* Stat Value & Line Summary */}
               <div className="mt-4 pt-3 border-t border-border-light flex items-baseline justify-between">
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-bold tabular-nums text-text-primary leading-none">
+                  <span className="text-3xl font-semibold tabular-nums text-text-primary leading-none">
                     {item.val}
                   </span>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                  <span className="text-xs font-semibold text-text-secondary">
                     {item.statKey}
                   </span>
                 </div>
@@ -164,8 +164,8 @@ export function TopPerformers({
       {contributors.length > 0 && (
         <div className="mt-6 pt-4 border-t border-border-light">
           <div className="mb-2.5 flex items-center justify-between">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
-              Öne Çıkan Diğer Performanslar
+            <h4 className="text-xs font-semibold text-text-secondary">
+              Öne çıkan diğer performanslar
             </h4>
           </div>
 
@@ -196,13 +196,13 @@ export function TopPerformers({
                           {name}
                         </span>
                         {team && (
-                          <span className="text-[10px] font-bold text-text-muted">
+                          <span className="text-xs font-semibold text-text-muted">
                             {team}
                           </span>
                         )}
                       </div>
                       {min != null && (
-                        <span className="text-[11px] tabular-nums text-text-muted">
+                        <span className="text-xs tabular-nums text-text-muted">
                           {Math.round(Number(min))} dk
                         </span>
                       )}
@@ -212,16 +212,16 @@ export function TopPerformers({
                   {/* Clean Tabular Numbers */}
                   <div className="flex items-center gap-4 tabular-nums text-right shrink-0">
                     <div>
-                      <span className="text-xs font-bold text-text-primary">{pts}</span>
-                      <span className="ml-1 text-[10px] font-medium text-text-muted">PTS</span>
+                      <span className="text-xs font-semibold text-text-primary">{pts}</span>
+                      <span className="ml-1 text-xs font-medium text-text-muted">PTS</span>
                     </div>
                     <div>
                       <span className="text-xs font-semibold text-text-secondary">{reb}</span>
-                      <span className="ml-1 text-[10px] font-medium text-text-muted">REB</span>
+                      <span className="ml-1 text-xs font-medium text-text-muted">REB</span>
                     </div>
                     <div>
                       <span className="text-xs font-semibold text-text-secondary">{ast}</span>
-                      <span className="ml-1 text-[10px] font-medium text-text-muted">AST</span>
+                      <span className="ml-1 text-xs font-medium text-text-muted">AST</span>
                     </div>
                   </div>
                 </div>

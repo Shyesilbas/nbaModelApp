@@ -576,7 +576,7 @@ export default function FixturesTab({
               <button
                 type="button"
                 onClick={() => setActiveView("fixtures")}
-                className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition-all ${
                   activeView === "fixtures"
                     ? "bg-primary text-white "
                     : "text-text-secondary hover:text-text-primary"
@@ -588,7 +588,7 @@ export default function FixturesTab({
               <button
                 type="button"
                 onClick={() => setActiveView("table")}
-                className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition-all ${
                   activeView === "table"
                     ? "bg-primary text-white "
                     : "text-text-secondary hover:text-text-primary"
@@ -617,7 +617,7 @@ export default function FixturesTab({
                   <button
                     type="button"
                     onClick={() => setIsDateMenuOpen((open) => !open)}
-                    className="flex items-center gap-1 px-2 py-0.5 font-mono text-xs font-bold text-text-primary transition-colors hover:text-primary"
+                    className="flex items-center gap-1 px-2 py-0.5 tabular-nums text-xs font-semibold text-text-primary transition-colors hover:text-primary"
                   >
                     <span>{selectedDate ? fmtDate(selectedDate) : "Tarih Sec"}</span>
                     {selectedDate === todayStr && (
@@ -629,7 +629,7 @@ export default function FixturesTab({
                   {isDateMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsDateMenuOpen(false)} />
-                      <div className="absolute left-0 top-full z-50 mt-1.5 max-h-64 w-60 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-xl scrollbar-thin">
+                      <div className="absolute left-0 top-full z-50 mt-1.5 max-h-64 w-60 overflow-y-auto rounded border border-border bg-background-primary p-1.5 shadow-md scrollbar-thin">
                         {uniqueDates.map((d) => {
                           const isSelected = selectedDate === d;
                           const isToday = d === todayStr;
@@ -642,7 +642,7 @@ export default function FixturesTab({
                                 setSelectedDate(d);
                                 setIsDateMenuOpen(false);
                               }}
-                              className={`mt-0.5 flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs font-bold transition-all ${
+                              className={`mt-0.5 flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs font-semibold transition-all ${
                                 isSelected ? "bg-primary text-white" : "text-text-primary hover:bg-background-tertiary"
                               }`}
                             >
@@ -650,14 +650,14 @@ export default function FixturesTab({
                               <div className="flex items-center gap-1.5">
                                 {isToday && (
                                   <span
-                                    className={`rounded px-1.5 py-0.2 text-[9px] font-sans font-semibold uppercase ${
+                                    className={`rounded px-1.5 py-0.5 text-xs font-sans font-semibold ${
                                       isSelected ? "bg-status-success text-white" : "bg-status-success/20 text-status-success"
                                     }`}
                                   >
                                     Bugun
                                   </span>
                                 )}
-                                <span className={`text-[10px] font-mono ${isSelected ? "text-white/80" : "text-text-muted"}`}>
+                                <span className={`text-xs tabular-nums ${isSelected ? "text-white/80" : "text-text-muted"}`}>
                                   ({gameCount})
                                 </span>
                               </div>
@@ -691,9 +691,9 @@ export default function FixturesTab({
                   className="inline-flex items-center gap-1.5 rounded border border-border bg-background-tertiary px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:border-primary disabled:opacity-50"
                   title={`${pendingDateGames.length} tamamlanan maçın kutu puanını çek`}
                 >
-                  <RefreshCw size={12} className={batchRunning ? "animate-spin text-primary" : "text-text-muted"} />
+                  <RefreshCw size={16} className={batchRunning ? "animate-spin text-primary" : "text-text-muted"} />
                   <span>{batchRunning ? "Çekiliyor..." : "Yenile"}</span>
-                  <span className="rounded-sm border border-border bg-background-primary px-1 py-0.2 text-[10px] text-text-muted">
+                  <span className="rounded-sm border border-border bg-background-primary px-1 py-0.5 text-xs text-text-muted">
                     {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : pendingDateGames.length}
                   </span>
                 </button>
@@ -702,7 +702,7 @@ export default function FixturesTab({
                 {batchProgress && (
                   <div className="flex items-center gap-2 rounded border border-border bg-background-primary px-2 py-1">
                     <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center justify-between gap-3 text-[10px] font-medium text-text-secondary">
+                      <div className="flex items-center justify-between gap-3 text-xs font-medium text-text-secondary">
                         <span>{batchMsg || `${batchProgress.current}/${batchProgress.total}`}</span>
                         <span>{Math.round((batchProgress.current / (batchProgress.total || 1)) * 100)}%</span>
                       </div>
@@ -719,7 +719,7 @@ export default function FixturesTab({
                 )}
 
                 {!batchRunning && !batchProgress && batchMsg && (
-                  <span className="text-[11px] text-text-muted">{batchMsg}</span>
+                  <span className="text-xs text-text-muted">{batchMsg}</span>
                 )}
               </div>
             )}
@@ -756,7 +756,7 @@ export default function FixturesTab({
                   <button
                     type="button"
                     onClick={() => setSearch("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 px-1 text-xs font-bold text-text-muted hover:text-text-primary"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-1 text-xs font-semibold text-text-muted hover:text-text-primary"
                     title="Aramayi temizle"
                   >
                     x
@@ -771,7 +771,7 @@ export default function FixturesTab({
                 <button
                   type="button"
                   onClick={() => handleDisplayModeChange("list")}
-                  className={`flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-semibold transition-all ${
                     displayMode === "list"
                       ? "bg-primary text-white "
                       : "text-text-secondary hover:text-text-primary"
@@ -784,7 +784,7 @@ export default function FixturesTab({
                 <button
                   type="button"
                   onClick={() => handleDisplayModeChange("cards")}
-                  className={`flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-semibold transition-all ${
                     displayMode === "cards"
                       ? "bg-primary text-white "
                       : "text-text-secondary hover:text-text-primary"
@@ -809,7 +809,7 @@ export default function FixturesTab({
                   setSelectedSeason(e.target.value);
                   setSelectedGameId(null);
                 }}
-                className="appearance-none rounded border border-border bg-background-tertiary py-1.5 pl-2.5 pr-7 text-xs font-bold text-text-primary hover:bg-background-tertiary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                className="appearance-none rounded border border-border bg-background-tertiary py-1.5 pl-2.5 pr-7 text-xs font-semibold text-text-primary hover:bg-background-tertiary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
               >
                 {seasonsList.map((season) => (
                   <option key={season} value={season}>
@@ -836,14 +836,14 @@ export default function FixturesTab({
                 key={filter.id}
                 onClick={() => setSeasonTypeFilter(filter.id)}
                 disabled={count === 0}
-                className={`inline-flex items-center gap-1 rounded border px-2.5 py-1 text-xs font-bold transition-colors disabled:opacity-30 ${
+                className={`inline-flex items-center gap-1 rounded border px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-30 ${
                   isSelected
                     ? "border-primary bg-primary text-white "
                     : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
                 }`}
               >
                 <span>{filter.label}</span>
-                <span className={`text-[10px] font-mono ${isSelected ? "text-white/80" : "text-text-muted"}`}>
+                <span className={`text-xs tabular-nums ${isSelected ? "text-white/80" : "text-text-muted"}`}>
                   ({count})
                 </span>
               </button>
@@ -856,7 +856,7 @@ export default function FixturesTab({
       {error && (
         <div className="rounded border border-status-error/30 bg-background-primary p-4 text-center ">
           <AlertTriangle size={20} className="mx-auto mb-1.5 text-status-error" />
-          <p className="text-xs font-bold text-status-error">{error}</p>
+          <p className="text-xs font-semibold text-status-error">{error}</p>
         </div>
       )}
 

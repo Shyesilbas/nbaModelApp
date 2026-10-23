@@ -246,10 +246,10 @@ export function GameCardDetail({
     return (
       <div className="flex-1 min-w-[200px]">
         <div className="flex items-center justify-between border-b border-border pb-2 mb-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <span className="text-xs font-semibold text-text-secondary">
             {title}
           </span>
-          <span className="text-[11px] font-medium text-text-muted">
+          <span className="text-xs font-medium text-text-muted">
             {players.length} oyuncu
           </span>
         </div>
@@ -335,22 +335,22 @@ export function GameCardDetail({
           {
             id: "game" as const,
             label: "Recap & Stats",
-            icon: <LayoutGrid size={14} />,
+            icon: <LayoutGrid size={16} />,
           },
         ]
       : []),
     {
       id: "away" as const,
       label: `${game.AWAY_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Roster"}`,
-      icon: <Users size={14} />,
+      icon: <Users size={16} />,
     },
     {
       id: "home" as const,
       label: `${game.HOME_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Roster"}`,
-      icon: <Users size={14} />,
+      icon: <Users size={16} />,
     },
     ...(isCompleted
-      ? [{ id: "highlights" as const, label: "Highlights", icon: <Flame size={14} /> }]
+      ? [{ id: "highlights" as const, label: "Highlights", icon: <Flame size={16} /> }]
       : []),
   ];
 
@@ -375,13 +375,13 @@ export function GameCardDetail({
                 variant="secondary"
                 size="sm"
                 onClick={onBack}
-                leftIcon={<ArrowLeft size={13} />}
+                leftIcon={<ArrowLeft size={16} />}
                 className="mr-1 h-7 px-2 text-xs"
               >
                 Geri
               </Button>
             )}
-            <Calendar size={13} className="text-text-muted" />
+            <Calendar size={16} className="text-text-muted" />
             <span className="font-medium text-text-primary">
               {fmtDate(game.GAME_DATE)}
             </span>
@@ -400,7 +400,7 @@ export function GameCardDetail({
               </Badge>
             ) : (
               <span className="inline-flex items-center gap-1 text-text-secondary">
-                <Clock size={12} className="text-text-muted" />
+                <Clock size={16} className="text-text-muted" />
                 {fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Upcoming")}
               </span>
             )}
@@ -409,7 +409,7 @@ export function GameCardDetail({
           <div className="flex items-center gap-2">
             {arenaName && (
               <div className="hidden sm:flex items-center gap-1.5 text-text-muted mr-1">
-                <MapPin size={12} />
+                <MapPin size={16} />
                 <span className="truncate max-w-sm">
                   {[arenaName, arenaCity].filter(Boolean).join(" · ")}
                 </span>
@@ -422,7 +422,7 @@ export function GameCardDetail({
                 disabled={refreshState === "running" || refreshDone}
                 onClick={onRefresh}
                 isLoading={refreshState === "running"}
-                leftIcon={!refreshState || refreshState !== "running" ? <RefreshCw size={13} /> : undefined}
+                leftIcon={!refreshState || refreshState !== "running" ? <RefreshCw size={16} /> : undefined}
                 className="h-7 px-2.5 text-xs"
               >
                 {refreshDone
@@ -493,7 +493,7 @@ export function GameCardDetail({
                   <div className="flex items-baseline justify-center gap-2 text-2xl sm:text-3xl font-semibold tabular-nums">
                     <span
                       className={
-                        awayWon ? "text-text-primary font-bold" : "text-text-secondary"
+                        awayWon ? "text-text-primary font-semibold" : "text-text-secondary"
                       }
                     >
                       {awayScore ?? "—"}
@@ -503,14 +503,14 @@ export function GameCardDetail({
                     </span>
                     <span
                       className={
-                        homeWon ? "text-text-primary font-bold" : "text-text-secondary"
+                        homeWon ? "text-text-primary font-semibold" : "text-text-secondary"
                       }
                     >
                       {homeScore ?? "—"}
                     </span>
                   </div>
                   {margin > 0 && winnerAbbr && (
-                    <p className="mt-1 text-[11px] font-medium text-text-muted">
+                    <p className="mt-1 text-xs font-medium text-text-muted">
                       {winnerAbbr} +{margin}
                     </p>
                   )}
@@ -676,25 +676,25 @@ export function GameCardDetail({
                     <p className="text-base font-semibold tabular-nums text-text-primary">
                       {homeScore ?? "—"}
                     </p>
-                    <p className="text-[11px] font-medium text-text-muted">PTS</p>
+                    <p className="text-xs font-medium text-text-muted">PTS</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
                     <p className="text-base font-semibold tabular-nums text-text-primary">
                       {fmtInt(homeBS?.REB ?? null)}
                     </p>
-                    <p className="text-[11px] font-medium text-text-muted">REB</p>
+                    <p className="text-xs font-medium text-text-muted">REB</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
                     <p className="text-base font-semibold tabular-nums text-text-primary">
                       {fmtInt(homeBS?.AST ?? null)}
                     </p>
-                    <p className="text-[11px] font-medium text-text-muted">AST</p>
+                    <p className="text-xs font-medium text-text-muted">AST</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
                     <p className="text-base font-semibold tabular-nums text-text-primary">
                       {fmtInt(homeBS?.TOV ?? null)}
                     </p>
-                    <p className="text-[11px] font-medium text-text-muted">TOV</p>
+                    <p className="text-xs font-medium text-text-muted">TOV</p>
                   </div>
                 </div>
               )}
@@ -741,25 +741,25 @@ export function GameCardDetail({
                     <p className="text-base font-semibold tabular-nums text-text-primary">
                       {awayScore ?? "—"}
                     </p>
-                    <p className="text-[11px] font-medium text-text-muted">PTS</p>
+                    <p className="text-xs font-medium text-text-muted">PTS</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
                     <p className="text-base font-semibold tabular-nums text-text-primary">
                       {fmtInt(awayBS?.REB ?? null)}
                     </p>
-                    <p className="text-[11px] font-medium text-text-muted">REB</p>
+                    <p className="text-xs font-medium text-text-muted">REB</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
                     <p className="text-base font-semibold tabular-nums text-text-primary">
                       {fmtInt(awayBS?.AST ?? null)}
                     </p>
-                    <p className="text-[11px] font-medium text-text-muted">AST</p>
+                    <p className="text-xs font-medium text-text-muted">AST</p>
                   </div>
                   <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
                     <p className="text-base font-semibold tabular-nums text-text-primary">
                       {fmtInt(awayBS?.TOV ?? null)}
                     </p>
-                    <p className="text-[11px] font-medium text-text-muted">TOV</p>
+                    <p className="text-xs font-medium text-text-muted">TOV</p>
                   </div>
                 </div>
               )}
@@ -1080,7 +1080,7 @@ function HighlightsTab({
                 : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary"
             }`}
           >
-            <Flame size={13} className="text-status-warning" />
+            <Flame size={16} className="text-status-warning" />
             <span>Arka Arkaya 3'lükler</span>
             <span className="tabular-nums opacity-75">{filterCounts.threes}</span>
           </button>
@@ -1095,7 +1095,7 @@ function HighlightsTab({
                 : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary"
             }`}
           >
-            <ArrowRightLeft size={13} className="text-status-success" />
+            <ArrowRightLeft size={16} className="text-status-success" />
             <span>Liderlik Değişimi</span>
             <span className="tabular-nums opacity-75">{filterCounts.leads}</span>
           </button>
@@ -1110,7 +1110,7 @@ function HighlightsTab({
                 : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary"
             }`}
           >
-            <Zap size={13} className="text-status-error" />
+            <Zap size={16} className="text-status-error" />
             <span>Clutch</span>
             <span className="tabular-nums opacity-75">{filterCounts.clutch}</span>
           </button>
@@ -1125,7 +1125,7 @@ function HighlightsTab({
                 : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary"
             }`}
           >
-            <TrendingUp size={13} className="text-primary" />
+            <TrendingUp size={16} className="text-primary" />
             <span>Seriler</span>
             <span className="tabular-nums opacity-75">{filterCounts.runs}</span>
           </button>
@@ -1194,9 +1194,9 @@ function HighlightsTab({
                       return (
                         <span
                           key={r}
-                          className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium tracking-tight ${meta.badgeClass}`}
+                          className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium ${meta.badgeClass}`}
                         >
-                          <IconComponent size={12} className="shrink-0" />
+                          <IconComponent size={16} className="shrink-0" />
                           <span>{meta.label}</span>
                         </span>
                       );
@@ -1211,7 +1211,7 @@ function HighlightsTab({
                   {e.score_away} - {e.score_home}
                 </div>
                 {e.points_scored > 0 && (
-                  <div className="mt-0.5 inline-block rounded-sm bg-status-success/10 px-1.5 py-0.2 text-xs font-semibold tabular-nums text-status-success">
+                  <div className="mt-0.5 inline-block rounded-sm bg-status-success/10 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-status-success">
                     +{e.points_scored} PTS
                   </div>
                 )}

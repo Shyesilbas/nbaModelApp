@@ -23,7 +23,7 @@ export function OfficialsCard({
           </div>
         </div>
         <span className="inline-flex items-center gap-1 rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-text-secondary">
-          <Award size={12} className="text-text-muted" />
+          <Award size={16} className="text-text-muted" />
           {officials.length} Assigned
         </span>
       </div>
@@ -34,7 +34,7 @@ export function OfficialsCard({
             key={idx}
             className="flex items-center gap-3 rounded border border-border bg-background-primary p-3 transition-colors hover:border-card-border-hover"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border-light bg-background-tertiary font-mono text-xs font-semibold tabular-nums text-text-primary">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border-light bg-background-tertiary tabular-nums text-xs font-semibold tabular-nums text-text-primary">
               {o.jerseyNum ? `#${o.jerseyNum}` : `#${idx + 1}`}
             </div>
             <div className="min-w-0 flex-1">

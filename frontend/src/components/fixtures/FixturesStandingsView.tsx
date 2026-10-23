@@ -193,10 +193,10 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
             <Trophy className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-text-primary">
+            <h3 className="text-sm font-semibold text-text-primary">
               NBA Puan Durumu & Siralama
             </h3>
-            <p className="text-[11px] text-text-muted">
+            <p className="text-xs text-text-muted">
               {season} Normal Sezon (82 Mac) Siralamasi ve Sonuclari
             </p>
           </div>
@@ -207,7 +207,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           <button
             type="button"
             onClick={() => setConferenceFilter("all")}
-            className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${
               conferenceFilter === "all"
                 ? "bg-primary text-white "
                 : "text-text-secondary hover:text-text-primary"
@@ -218,7 +218,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           <button
             type="button"
             onClick={() => setConferenceFilter("east")}
-            className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${
               conferenceFilter === "east"
                 ? "bg-primary text-white "
                 : "text-text-secondary hover:text-text-primary"
@@ -229,7 +229,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           <button
             type="button"
             onClick={() => setConferenceFilter("west")}
-            className={`rounded px-3 py-1.5 text-xs font-bold transition-all ${
+            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${
               conferenceFilter === "west"
                 ? "bg-primary text-white "
                 : "text-text-secondary hover:text-text-primary"
@@ -244,7 +244,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="border-b border-border text-[11px] font-bold text-text-muted uppercase tracking-wider bg-background-tertiary/50">
+            <tr className="border-b border-border text-xs font-semibold text-text-muted bg-background-tertiary/50">
               <th className="py-2.5 px-3 w-12 text-center">#</th>
               <th className="py-2.5 px-3 min-w-[180px]">Takim</th>
               <th className="py-2.5 px-2 text-center w-10" title="Oynanan Mac">O</th>
@@ -274,7 +274,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                   className="transition-colors hover:bg-background-tertiary/60 group"
                 >
                   {/* Rank */}
-                  <td className="py-2.5 px-3 text-center font-mono font-bold text-text-secondary">
+                  <td className="py-2.5 px-3 text-center tabular-nums font-semibold text-text-secondary">
                     <div className="flex items-center justify-center gap-1.5">
                       {isDirectPlayoff && (
                         <span className="h-1.5 w-1.5 rounded-full bg-status-success" title="Dogrudan Playoff (1-6)" />
@@ -296,13 +296,13 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                       <button
                         type="button"
                         onClick={() => onSelectTeam?.(t.abbr)}
-                        className="truncate text-left font-bold text-text-primary transition-colors hover:underline hover:text-primary"
+                        className="truncate text-left font-semibold text-text-primary transition-colors hover:underline hover:text-primary"
                         title={t.fullName || t.name}
                       >
                         <span className="hidden md:inline">{t.name}</span>
                         <span className="inline md:hidden">{t.abbr}</span>
                       </button>
-                      <span className="hidden font-mono text-[10px] font-bold text-text-muted lg:inline">
+                      <span className="hidden tabular-nums text-xs font-semibold text-text-muted lg:inline">
                         {t.abbr}
                       </span>
                     </div>
@@ -310,21 +310,21 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
 
                   {/* Stats */}
                   <td className="py-2.5 px-2 text-center font-semibold text-text-primary">{t.gp}</td>
-                  <td className="py-2.5 px-2 text-center font-bold text-status-success">{t.w}</td>
+                  <td className="py-2.5 px-2 text-center font-semibold text-status-success">{t.w}</td>
                   <td className="py-2.5 px-2 text-center text-text-secondary">{t.l}</td>
-                  <td className="py-2.5 px-2 text-center font-mono font-bold text-text-primary">{t.pctFormatted}</td>
-                  <td className="py-2.5 px-2 text-center font-mono text-text-muted">{t.gb}</td>
-                  <td className="py-2.5 px-2 text-center font-mono text-text-secondary hidden md:table-cell">{t.ppg}</td>
-                  <td className="py-2.5 px-2 text-center font-mono text-text-secondary hidden md:table-cell">{t.oppPpg}</td>
-                  <td className={`py-2.5 px-2 text-center font-mono font-bold ${
+                  <td className="py-2.5 px-2 text-center tabular-nums font-semibold text-text-primary">{t.pctFormatted}</td>
+                  <td className="py-2.5 px-2 text-center tabular-nums text-text-muted">{t.gb}</td>
+                  <td className="py-2.5 px-2 text-center tabular-nums text-text-secondary hidden md:table-cell">{t.ppg}</td>
+                  <td className="py-2.5 px-2 text-center tabular-nums text-text-secondary hidden md:table-cell">{t.oppPpg}</td>
+                  <td className={`py-2.5 px-2 text-center tabular-nums font-semibold ${
                     t.diffNum > 0 ? "text-status-success" : t.diffNum < 0 ? "text-status-error" : "text-text-muted"
                   }`}>
                     {t.diff}
                   </td>
-                  <td className="py-2.5 px-2 text-center font-mono text-text-muted hidden lg:table-cell">{t.homeRecord}</td>
-                  <td className="py-2.5 px-2 text-center font-mono text-text-muted hidden lg:table-cell">{t.awayRecord}</td>
-                  <td className="py-2.5 px-2 text-center font-mono text-text-secondary hidden sm:table-cell">{t.l10}</td>
-                  <td className="py-2.5 px-2 text-center font-mono font-bold text-text-primary hidden sm:table-cell">{t.streak}</td>
+                  <td className="py-2.5 px-2 text-center tabular-nums text-text-muted hidden lg:table-cell">{t.homeRecord}</td>
+                  <td className="py-2.5 px-2 text-center tabular-nums text-text-muted hidden lg:table-cell">{t.awayRecord}</td>
+                  <td className="py-2.5 px-2 text-center tabular-nums text-text-secondary hidden sm:table-cell">{t.l10}</td>
+                  <td className="py-2.5 px-2 text-center tabular-nums font-semibold text-text-primary hidden sm:table-cell">{t.streak}</td>
 
                   {/* Form */}
                   <td className="py-2.5 px-3 text-center hidden sm:table-cell">
@@ -332,7 +332,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                       {t.form.map((res, i) => (
                         <span
                           key={i}
-                          className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold text-white ${
+                          className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold text-white ${
                             res === "W" ? "bg-status-success" : "bg-status-error"
                           }`}
                           title={res === "W" ? "Galibiyet" : "Maglubiyet"}
@@ -350,7 +350,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
       </div>
 
       {/* Legend Footer */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-[11px] font-medium text-text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs font-medium text-text-muted">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-status-success" />
@@ -366,7 +366,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           </div>
         </div>
 
-        <div className="font-mono text-[10px] text-text-muted">
+        <div className="tabular-nums text-xs text-text-muted">
           O: Oynanan • G: Galibiyet • M: Maglubiyet • %: Yuzde • Fark: Galibiyet Farki • AV: Averaj
         </div>
       </div>

@@ -43,12 +43,12 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
       {/* 1. Status / Time */}
       <div className="w-16 shrink-0 text-left sm:w-20">
         {isCompleted ? (
-          <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-text-secondary">
+          <div className="flex items-center gap-1.5 tabular-nums text-xs font-semibold text-text-secondary">
             <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
             <span>MS</span>
           </div>
         ) : (
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-text-secondary sm:text-xs">
+          <div className="flex items-center gap-1 text-xs font-semibold text-text-secondary sm:text-xs">
             <Clock className="hidden h-3 w-3 shrink-0 text-text-muted sm:inline" />
             <span className="truncate">{fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "vs")}</span>
           </div>
@@ -65,7 +65,7 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
               event.stopPropagation();
               onSelectTeam?.(awayAbbr);
             }}
-            className={`truncate text-xs font-bold transition-colors hover:underline sm:text-sm ${
+            className={`truncate text-xs font-semibold transition-colors hover:underline sm:text-sm ${
               awayWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
             }`}
             title={awayFullName}
@@ -79,7 +79,7 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
         {/* Score / VS Display (Clean text, no box for VS) */}
         <div className="flex shrink-0 min-w-[58px] items-center justify-center sm:min-w-[70px]">
           {isCompleted ? (
-            <div className="rounded bg-primary px-2.5 py-1 text-center font-mono text-xs font-bold text-white sm:text-sm">
+            <div className="rounded bg-primary px-2.5 py-1 text-center tabular-nums text-xs font-semibold text-white sm:text-sm">
               <span>{game.AWAY_SCORE}</span>
               <span className="mx-1 text-white/70">-</span>
               <span>{game.HOME_SCORE}</span>
@@ -100,7 +100,7 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
               event.stopPropagation();
               onSelectTeam?.(homeAbbr);
             }}
-            className={`truncate text-xs font-bold transition-colors hover:underline sm:text-sm ${
+            className={`truncate text-xs font-semibold transition-colors hover:underline sm:text-sm ${
               homeWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
             }`}
             title={homeFullName}
@@ -114,19 +114,19 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
       {/* 3. Prediction / Margin Badge & Chevron */}
       <div className="flex shrink-0 min-w-[75px] items-center justify-end gap-2 sm:min-w-[130px]">
         {isCompleted ? (
-          <div className="hidden items-center gap-1 text-[11px] text-text-muted sm:flex">
+          <div className="hidden items-center gap-1 text-xs text-text-muted sm:flex">
             {margin > 0 && (
-              <span className="rounded border border-border bg-background-tertiary px-1.5 py-0.5 font-mono text-[10px] font-semibold text-text-secondary">
+              <span className="rounded border border-border bg-background-tertiary px-1.5 py-0.5 tabular-nums text-xs font-semibold text-text-secondary">
                 +{margin}
               </span>
             )}
             {game.SERIES_GAME_NUMBER != null && (
-              <span className="rounded border border-border bg-background-tertiary px-1.5 py-0.5 text-[10px] font-medium text-text-secondary">
+              <span className="rounded border border-border bg-background-tertiary px-1.5 py-0.5 text-xs font-medium text-text-secondary">
                 G{game.SERIES_GAME_NUMBER}
               </span>
             )}
             {game.IS_ELIMINATION_GAME && (
-              <span className="rounded border border-border bg-background-tertiary px-1.5 py-0.5 text-[10px] font-bold text-status-error">
+              <span className="rounded border border-border bg-background-tertiary px-1.5 py-0.5 text-xs font-semibold text-status-error">
                 Elim
               </span>
             )}
@@ -138,9 +138,9 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
               event.stopPropagation();
               onPredict();
             }}
-            className="hidden items-center gap-1 rounded-full border border-border bg-background-tertiary px-2 py-0.5 text-[10px] font-bold text-text-primary transition-colors hover:border-primary sm:inline-flex"
+            className="hidden items-center gap-1 rounded-full border border-border bg-background-tertiary px-2 py-0.5 text-xs font-semibold text-text-primary transition-colors hover:border-primary sm:inline-flex"
           >
-            <Sparkles size={11} className="text-primary" />
+            <Sparkles size={16} className="text-primary" />
             <span>Model</span>
           </button>
         ) : null}

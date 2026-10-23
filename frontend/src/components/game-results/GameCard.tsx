@@ -59,7 +59,7 @@ export function GameCard({
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary">
-              <Clock size={12} className="text-text-muted" />
+              <Clock size={16} className="text-text-muted" />
               {fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Scheduled")}
             </span>
           )}
@@ -88,11 +88,11 @@ export function GameCard({
             {isCompleted ? (
               <div>
                 <div className="flex items-baseline justify-center gap-1.5">
-                  <span className={`text-lg tabular-nums ${awayWon ? "font-bold text-text-primary" : "text-text-secondary"}`}>
+                  <span className={`text-lg tabular-nums ${awayWon ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
                     {game.AWAY_SCORE ?? "-"}
                   </span>
                   <span className="text-xs text-text-muted">:</span>
-                  <span className={`text-lg tabular-nums ${homeWon ? "font-bold text-text-primary" : "text-text-secondary"}`}>
+                  <span className={`text-lg tabular-nums ${homeWon ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
                     {game.HOME_SCORE ?? "-"}
                   </span>
                 </div>
@@ -124,7 +124,7 @@ export function GameCard({
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border-light pt-3 text-xs text-text-secondary">
           <div className="flex items-center gap-2 text-text-muted">
             <div className="flex items-center gap-1">
-              <Calendar size={12} />
+              <Calendar size={16} />
               <span>{fmtDate(game.GAME_DATE)}</span>
             </div>
             {game.ARENA && (
@@ -139,7 +139,7 @@ export function GameCard({
               <>
                 <span>•</span>
                 <span className="inline-flex items-center gap-1 text-text-secondary" title={`Officials: ${officials.map((o) => o.cleanName).join(", ")}`}>
-                  <Shield size={11} className="text-text-muted" />
+                  <Shield size={16} className="text-text-muted" />
                   <span>{officials.map((o) => o.jerseyNum ? `#${o.jerseyNum}` : o.cleanName).slice(0, 3).join(" ")}</span>
                 </span>
               </>
@@ -156,7 +156,7 @@ export function GameCard({
                 }}
                 className="inline-flex items-center gap-1 rounded border border-border bg-background-primary px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:bg-background-tertiary disabled:opacity-50"
               >
-                <RefreshCw size={11} className={isRefreshing ? "animate-spin" : ""} />
+                <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
                 {isRefreshing ? "Refreshing…" : "Refresh"}
               </button>
             )}
@@ -169,13 +169,13 @@ export function GameCard({
                 }}
                 className="inline-flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
               >
-                <Sparkles size={11} />
+                <Sparkles size={16} />
                 Predict
               </button>
             )}
             <span className="inline-flex items-center gap-0.5 text-xs font-medium text-text-secondary transition-colors group-hover:text-text-primary">
               {isCompleted ? "Box Score" : "Match Details"}
-              <ChevronRight size={13} />
+              <ChevronRight size={16} />
             </span>
           </div>
         </div>
