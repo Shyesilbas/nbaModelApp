@@ -80,3 +80,5 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600091,2026-10-21,HOU,Rockets,128,DAL,Mavericks,110,HOU,DAL,Regular Season,False,Final,1.0,,,0,0,False,False,Toyota Center,"Houston, TX"
 0022600092,2026-10-21,POR,Trail Blazers,124,PHX,Suns,83,POR,PHX,Regular Season,False,Final,1.0,,,0,0,False,False,Moda Center,"Portland, OR"
 0022600093,2026-10-21,LAC,Clippers,121,SAC,Kings,96,LAC,SAC,Regular Season,False,Final,1.0,,,0,0,False,False,Intuit Dome,"Inglewood, CA"
+0022600006,2026-10-22,PHI,76ers,114,CLE,Cavaliers,106,PHI,CLE,Regular Season,False,Final,1.0,,,0,0,False,False,Xfinity Mobile Arena,"Philadelphia, PA"
+0022600007,2026-10-22,OKC,Thunder,96,DEN,Nuggets,84,OKC,DEN,Regular Season,False,Final,1.0,,,0,0,False,False,Paycom Center,"Oklahoma City, OK"
