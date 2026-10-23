@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { Badge, Card, DatePicker, EmptyState, InlineError, Skeleton } from "./common";
 import TeamLogo from "./TeamLogo";
+import { CalibrationChart, RollingAccuracyChart } from "./paper/PaperCharts";
 import PublishSnapshotButton from "./PublishSnapshotButton";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
@@ -324,6 +325,11 @@ export default function PaperTrading() {
       {/* TAB CONTENT: Winner */}
       {activeTab === "winner" && (
         <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <RollingAccuracyChart games={games} />
+            <CalibrationChart bands={s.bands} />
+          </div>
+
           {s.bands.length > 0 && (
             <Card padding="none" className="overflow-x-auto">
               <table className="w-full text-left text-sm">
