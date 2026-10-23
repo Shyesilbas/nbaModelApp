@@ -631,8 +631,8 @@ function PlayerTrendRadar({ games, seasonAvgs }: TrendRadarProps) {
   const recent10 = useMemo(() => playedGamesChronological.slice(-10), [playedGamesChronological]);
   const recent5 = useMemo(() => playedGamesChronological.slice(-5), [playedGamesChronological]);
 
-  if (recent5.length < 3) {
-    return null; // Not enough data for meaningful trend visualization
+  if (recent5.length < 1) {
+    return null; // No played game this season yet
   }
 
   // Calculate averages
@@ -732,7 +732,7 @@ function PlayerTrendRadar({ games, seasonAvgs }: TrendRadarProps) {
         {/* Left Side: Summary Badges */}
         <div className="grid grid-cols-3 gap-2 lg:col-span-4">
           <div className="rounded border border-border bg-background-secondary p-2.5">
-            <span className="text-[11px] font-medium text-text-secondary">Son 5 Maç</span>
+            <span className="text-[11px] font-medium text-text-secondary">Son {recent5.length} Maç</span>
             <p className="mt-1 text-base font-semibold text-text-primary tabular-nums">
               {l5Avg.toFixed(1)}
             </p>
