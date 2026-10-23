@@ -102,10 +102,10 @@ export function PlayerMatchupModal({
         const latestSeason = availableSeasons.length > 0 ? availableSeasons[availableSeasons.length - 1] : "";
         const targetSeason = gamesBySeason[season]?.length ? season : latestSeason;
 
-        // Preseason games stay out of recent form, as they do in the model inputs
-        const allPlayedGames = Object.values(gamesBySeason)
-          .flat()
-          .filter((g) => !g.DID_NOT_PLAY && g.SEASON_TYPE !== "Pre Season");
+        // Recent form comes from the current season only; preseason games stay out, as in the model inputs
+        const allPlayedGames = (gamesBySeason[season] ?? []).filter(
+          (g) => !g.DID_NOT_PLAY && g.SEASON_TYPE !== "Pre Season"
+        );
         allPlayedGames.sort((a, b) => b.GAME_DATE.localeCompare(a.GAME_DATE));
 
         const seasonAvg = payload.averages?.[targetSeason] || payload.averages?.[latestSeason] || null;

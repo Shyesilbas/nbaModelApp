@@ -13,6 +13,7 @@ import {
   Minus,
 } from "lucide-react";
 import { loadPrivateApi } from "../lib/dataCache";
+import { CURRENT_SEASON } from "../lib/constants";
 import { updateUrlRoute, parseUrlRoute } from "../lib/router";
 import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
@@ -623,7 +624,7 @@ function PlayerTrendRadar({ games, seasonAvgs }: TrendRadarProps) {
   // Filter out DNP games and sort chronologically (oldest to newest for charting)
   const playedGamesChronological = useMemo(() => {
     return [...games]
-      .filter((g) => !g.DID_NOT_PLAY && (g[metric] != null || metric === "PLUS_MINUS"))
+      .filter((g) => !g.DID_NOT_PLAY && g.SEASON_TYPE !== "Pre Season" && (g[metric] != null || metric === "PLUS_MINUS"))
       .sort((a, b) => (a.GAME_DATE ?? "").localeCompare(b.GAME_DATE ?? ""));
   }, [games, metric]);
 
@@ -1592,8 +1593,8 @@ export default function PlayerPage({
             <>
               {/* Performance Trend Radar */}
               <PlayerTrendRadar
-                games={playerGames[selectedSeason] ?? []}
-                seasonAvgs={currentAvgs}
+                games={playerGames[CURRENT_SEASON] ?? []}
+                seasonAvgs={playerAvgs[CURRENT_SEASON] ?? null}
               />
 
               {/* Game Log Section */}
