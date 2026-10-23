@@ -5,9 +5,8 @@ Run after `main.py --update-data` and before tip-off. Games already in the ledge
 are never rewritten and games that have started are skipped, so each record is a
 true pre-game call. Uses the production models; trains nothing.
 
-Best timing: run `--pre-tip 30 --final-attempt 20` at :15 and :45 past the hour during game
-hours. A game tipping off on the hour or half hour is then frozen 15 minutes before tip-off with
-the newest official injury report. Failed downloads are retried inside the run; if the report is
+Best timing: run `--pre-tip 45 --final-attempt 25` every 10 minutes during game hours. Each game
+is frozen by the first run inside its 45 minute window, with the newest official injury report. Failed downloads are retried inside the run; if the report is
 still missing, the game waits for the next run only while more than --final-attempt minutes remain.
 """
 import argparse
