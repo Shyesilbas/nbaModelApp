@@ -8,6 +8,9 @@ import {
   ArrowRightLeft,
   X,
   User,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from "lucide-react";
 import { loadPrivateApi } from "../lib/dataCache";
 import { updateUrlRoute, parseUrlRoute } from "../lib/router";
@@ -603,6 +606,252 @@ function GameLogTable({
         </div>
       )}
     </div>
+  );
+}
+
+/* ─────────── Player Trend Radar & Sparkline ─────────── */
+type TrendMetric = "PTS" | "REB" | "AST" | "MIN" | "PLUS_MINUS";
+
+interface TrendRadarProps {
+  games: GameRow[];
+  seasonAvgs?: SeasonAverages | null;
+}
+
+function PlayerTrendRadar({ games, seasonAvgs }: TrendRadarProps) {
+  const [metric, setMetric] = useState<TrendMetric>("PTS");
+
+  // Filter out DNP games and sort chronologically (oldest to newest for charting)
+  const playedGamesChronological = useMemo(() => {
+    return [...games]
+      .filter((g) => !g.DID_NOT_PLAY && (g[metric] != null || metric === "PLUS_MINUS"))
+      .sort((a, b) => (a.GAME_DATE ?? "").localeCompare(b.GAME_DATE ?? ""));
+  }, [games, metric]);
+
+  const recent10 = useMemo(() => playedGamesChronological.slice(-10), [playedGamesChronological]);
+  const recent5 = useMemo(() => playedGamesChronological.slice(-5), [playedGamesChronological]);
+
+  if (recent5.length < 3) {
+    return null; // Not enough data for meaningful trend visualization
+  }
+
+  // Calculate averages
+  const calcAvg = (rows: GameRow[], m: TrendMetric): number => {
+    const valid = rows.map((r) => Number(r[m] ?? 0)).filter((v) => !isNaN(v));
+    if (valid.length === 0) return 0;
+    return valid.reduce((acc, v) => acc + v, 0) / valid.length;
+  };
+
+  const l5Avg = calcAvg(recent5, metric);
+  const l10Avg = calcAvg(recent10, metric);
+  const seasonBenchmark = seasonAvgs ? Number(seasonAvgs[metric as keyof SeasonAverages] ?? 0) : l10Avg;
+  const diffFromSeason = l5Avg - seasonBenchmark;
+
+  // Chart metrics
+  const values = recent10.map((g) => Number(g[metric] ?? 0));
+  const maxVal = Math.max(...values, seasonBenchmark, 1);
+  const minVal = Math.min(...values, 0);
+  const range = maxVal - minVal || 1;
+
+  // SVG dimensions
+  const svgWidth = 460;
+  const svgHeight = 110;
+  const padX = 24;
+  const padY = 16;
+  const chartW = svgWidth - padX * 2;
+  const chartH = svgHeight - padY * 2;
+
+  const points = recent10.map((g, idx) => {
+    const x = padX + (idx / Math.max(recent10.length - 1, 1)) * chartW;
+    const yVal = Number(g[metric] ?? 0);
+    const y = padY + chartH - ((yVal - minVal) / range) * chartH;
+    return { x, y, val: yVal, game: g };
+  });
+
+  const pathD = points.length > 1
+    ? points.reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`, "")
+    : "";
+
+  const areaD = points.length > 1
+    ? `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${svgHeight - padY} L ${points[0].x.toFixed(1)} ${svgHeight - padY} Z`
+    : "";
+
+  const benchmarkY = padY + chartH - ((seasonBenchmark - minVal) / range) * chartH;
+
+  const metricLabels: { id: TrendMetric; label: string }[] = [
+    { id: "PTS", label: "Sayı (PTS)" },
+    { id: "REB", label: "Ribaund (REB)" },
+    { id: "AST", label: "Asist (AST)" },
+    { id: "MIN", label: "Dakika (MIN)" },
+    { id: "PLUS_MINUS", label: "+/- Verimlilik" },
+  ];
+
+  return (
+    <Card padding="md" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+        <div className="flex items-center gap-2">
+          {diffFromSeason >= 1 ? (
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-status-success/10 text-status-success">
+              <TrendingUp size={16} strokeWidth={2} />
+            </div>
+          ) : diffFromSeason <= -1 ? (
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-status-error/10 text-status-error">
+              <TrendingDown size={16} strokeWidth={2} />
+            </div>
+          ) : (
+            <div className="flex h-7 w-7 items-center justify-center rounded bg-background-tertiary text-text-secondary">
+              <Minus size={16} strokeWidth={2} />
+            </div>
+          )}
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary">Form & Trend Radarı</h3>
+            <p className="text-xs text-text-secondary">Son maçlar vs sezon ortalaması gidişatı</p>
+          </div>
+        </div>
+
+        {/* Metric Selector Pills */}
+        <div className="flex flex-wrap items-center gap-1">
+          {metricLabels.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setMetric(m.id)}
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                metric === m.id
+                  ? "bg-primary text-white"
+                  : "border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
+              }`}
+            >
+              {m.label.split(" ")[0]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-center">
+        {/* Left Side: Summary Badges */}
+        <div className="grid grid-cols-3 gap-2 lg:col-span-4">
+          <div className="rounded border border-border bg-background-secondary p-2.5">
+            <span className="text-[11px] font-medium text-text-secondary">Son 5 Maç</span>
+            <p className="mt-1 text-base font-semibold text-text-primary tabular-nums">
+              {l5Avg.toFixed(1)}
+            </p>
+            <div className="mt-1 flex items-center gap-1 text-[11px] font-medium">
+              {diffFromSeason > 0.3 ? (
+                <span className="text-status-success">
+                  +{diffFromSeason.toFixed(1)} (Yükselişte)
+                </span>
+              ) : diffFromSeason < -0.3 ? (
+                <span className="text-status-error">
+                  {diffFromSeason.toFixed(1)} (Düşüşte)
+                </span>
+              ) : (
+                <span className="text-text-muted">Stabil</span>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded border border-border bg-background-secondary p-2.5">
+            <span className="text-[11px] font-medium text-text-secondary">Son 10 Maç</span>
+            <p className="mt-1 text-base font-semibold text-text-primary tabular-nums">
+              {l10Avg.toFixed(1)}
+            </p>
+            <span className="mt-1 block text-[11px] text-text-muted">
+              {recent10.length} maç ort.
+            </span>
+          </div>
+
+          <div className="rounded border border-border bg-background-secondary p-2.5">
+            <span className="text-[11px] font-medium text-text-secondary">Sezon Ort.</span>
+            <p className="mt-1 text-base font-semibold text-text-primary tabular-nums">
+              {seasonBenchmark.toFixed(1)}
+            </p>
+            <span className="mt-1 block text-[11px] text-text-muted">Referans</span>
+          </div>
+        </div>
+
+        {/* Right Side: Trend Sparkline Chart */}
+        <div className="relative overflow-hidden rounded border border-border bg-background-secondary p-3 lg:col-span-8">
+          <div className="flex items-center justify-between text-[11px] text-text-secondary mb-1">
+            <span>Son {recent10.length} Karşılaşma İlerlemesi</span>
+            <span className="flex items-center gap-1.5 font-medium">
+              <span className="inline-block h-0.5 w-3 bg-text-muted border-b border-dashed border-text-muted" />
+              Sezon Ort: {seasonBenchmark.toFixed(1)}
+            </span>
+          </div>
+
+          <div className="w-full overflow-x-auto">
+            <svg
+              viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+              className="w-full h-24 overflow-visible"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--color-primary, #10b981)" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="var(--color-primary, #10b981)" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {/* Benchmark Reference Line */}
+              {benchmarkY >= padY && benchmarkY <= svgHeight - padY && (
+                <line
+                  x1={padX}
+                  y1={benchmarkY}
+                  x2={svgWidth - padX}
+                  y2={benchmarkY}
+                  stroke="currentColor"
+                  className="text-text-muted opacity-40"
+                  strokeDasharray="4 3"
+                  strokeWidth="1.2"
+                />
+              )}
+
+              {/* Fill Area Under Curve */}
+              {areaD && <path d={areaD} fill="url(#trendGradient)" />}
+
+              {/* Main Trend Line */}
+              {pathD && (
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke="var(--color-primary, #10b981)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+
+              {/* Data Points */}
+              {points.map((p, i) => (
+                <g key={i} className="group cursor-pointer">
+                  <circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={i === points.length - 1 ? 4.5 : 3}
+                    className={
+                      i === points.length - 1
+                        ? "fill-primary stroke-background-primary stroke-2"
+                        : "fill-primary"
+                    }
+                  />
+                  <title>
+                    {`${p.game.GAME_DATE ?? ""} vs ${p.game.MATCHUP ?? "Rakip"}: ${p.val} ${metric}`}
+                  </title>
+                </g>
+              ))}
+            </svg>
+          </div>
+
+          <div className="flex items-center justify-between text-[10px] text-text-muted pt-1 border-t border-border-light">
+            <span>{recent10[0]?.GAME_DATE ?? "İlk maç"}</span>
+            <span className="font-medium text-text-secondary">
+              Son Maç: {recent10[recent10.length - 1]?.[metric] ?? 0} {metric} ({recent10[recent10.length - 1]?.MATCHUP ?? ""})
+            </span>
+            <span>{recent10[recent10.length - 1]?.GAME_DATE ?? "Son maç"}</span>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -1341,6 +1590,12 @@ export default function PlayerPage({
             />
           ) : (
             <>
+              {/* Performance Trend Radar */}
+              <PlayerTrendRadar
+                games={playerGames[selectedSeason] ?? []}
+                seasonAvgs={currentAvgs}
+              />
+
               {/* Game Log Section */}
               <Card padding="md" className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-light pb-4">

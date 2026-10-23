@@ -28,6 +28,7 @@ import { TopPerformers } from "./TopPerformers";
 import { PlayerBoxTable } from "./PlayerBoxTable";
 import { Button, Badge, Card, Skeleton } from "../common";
 import { loadPrivateApi, loadPrivateApiFresh } from "../../lib/dataCache";
+import PlayerPhoto from "../PlayerPhoto";
 
 export interface GameCardDetailProps {
   game: GameFeedRow;
@@ -128,8 +129,9 @@ export function GameCardDetail({
       ((a.PTS ?? (a as { pts?: number | null }).pts) ?? 0)
   );
 
-  // For unplayed games or games without player stats, fetch team rosters & injury report
+  // For unplayed games or games without player stats, fetch team rosters, player profiles & injury report
   const [teamRosters, setTeamRosters] = useState<any[]>([]);
+  const [playerPositions, setPlayerPositions] = useState<Record<number, string>>({});
   const [loadingRosters, setLoadingRosters] = useState(false);
   const [injuries, setInjuries] = useState<Record<string, { status: string; reason?: string }>>({});
   // null when the report is known; otherwise why statuses cannot be shown (never display everyone as active)
@@ -144,6 +146,9 @@ export function GameCardDetail({
 
       Promise.all([
         loadPrivateApi<any[]>(`/frontend-data-api/team-rosters?season=${encodeURIComponent(activeSeason)}`),
+        loadPrivateApi<Array<{ PLAYER_ID: number; POSITION_GROUP?: string; OFFICIAL_POSITION?: string }>>(
+          "/frontend-data-api/player-profiles"
+        ).catch(() => []),
         loadPrivateApiFresh<{
           entries: Array<{ player_name: string; team: string; status: string; reason?: string }>;
           not_submitted?: string[][];
@@ -152,8 +157,22 @@ export function GameCardDetail({
           `/frontend-data-api/injury-report?season=${encodeURIComponent(activeSeason)}&date=${encodeURIComponent(gameDate)}`
         ).catch((e: Error) => ({ entries: [], not_submitted: [], error: e.message })),
       ])
-        .then(([rosterData, injuryData]) => {
+        .then(([rosterData, profileData, injuryData]) => {
           setTeamRosters(rosterData || []);
+
+          const posMap: Record<number, string> = {};
+          (profileData || []).forEach((p) => {
+            const raw = (p.POSITION_GROUP || p.OFFICIAL_POSITION || "").toUpperCase();
+            if (raw.includes("GUARD") || raw === "G") {
+              posMap[p.PLAYER_ID] = "guard";
+            } else if (raw.includes("BIG") || raw === "C" || raw.includes("CENTER")) {
+              posMap[p.PLAYER_ID] = "center";
+            } else {
+              posMap[p.PLAYER_ID] = "forward";
+            }
+          });
+          setPlayerPositions(posMap);
+
           const map: Record<string, { status: string; reason?: string }> = {};
           (injuryData?.entries ?? []).forEach((e) => {
             const key = `${e.team}_${e.player_name.toLowerCase().trim()}`;
@@ -202,6 +221,73 @@ export function GameCardDetail({
   const awayRoster = teamRosters.filter(
     (p) => p.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION
   );
+
+  const groupRosterByPosition = (roster: any[]) => {
+    const guards: any[] = [];
+    const forwards: any[] = [];
+    const centers: any[] = [];
+
+    roster.forEach((p) => {
+      const pos = playerPositions[p.PLAYER_ID] || "forward";
+      if (pos === "guard") guards.push(p);
+      else if (pos === "center") centers.push(p);
+      else forwards.push(p);
+    });
+
+    return { guards, forwards, centers };
+  };
+
+  const renderPositionColumn = (title: string, players: any[], teamAbbr: string) => {
+    return (
+      <div className="flex-1 min-w-[200px]">
+        <div className="flex items-center justify-between border-b border-border pb-2 mb-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">
+            {title}
+          </span>
+          <span className="text-[11px] font-medium text-text-muted">
+            {players.length} oyuncu
+          </span>
+        </div>
+        {players.length === 0 ? (
+          <p className="text-xs text-text-muted py-2 italic">Oyuncu bulunmuyor</p>
+        ) : (
+          <div className="space-y-2">
+            {players.map((p) => {
+              const injury = getPlayerInjury(teamAbbr, p.PLAYER_NAME);
+              return (
+                <div
+                  key={p.PLAYER_ID}
+                  className="flex items-center justify-between gap-3 py-1.5 transition-colors hover:bg-background-tertiary/40 px-2 rounded"
+                  title={injury.reason ? `${p.PLAYER_NAME}: ${injury.label} (${injury.reason})` : `${p.PLAYER_NAME}: ${injury.label}`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME} size={32} />
+                    <span className="text-xs font-medium text-text-primary truncate">
+                      {p.PLAYER_NAME}
+                    </span>
+                  </div>
+                  <Badge variant={injury.variant} size="sm">
+                    {injury.label}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderRosterByPositions = (roster: any[], teamAbbr: string) => {
+    const { guards, forwards, centers } = groupRosterByPosition(roster);
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1">
+        {renderPositionColumn("Guards", guards, teamAbbr)}
+        {renderPositionColumn("Forwards", forwards, teamAbbr)}
+        {renderPositionColumn("Centers", centers, teamAbbr)}
+      </div>
+    );
+  };
 
   const officials = parseOfficials(game.OFFICIALS);
   const arenaName =
@@ -617,23 +703,7 @@ export function GameCardDetail({
                 ))}
               </div>
             ) : homeRoster.length > 0 ? (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {homeRoster.map((p) => {
-                  const injury = getPlayerInjury(game.HOME_TEAM_ABBREVIATION ?? "", p.PLAYER_NAME);
-                  return (
-                    <div
-                      key={p.PLAYER_ID}
-                      className="flex items-center justify-between gap-2 rounded border border-border bg-background-tertiary px-3 py-2 text-xs font-medium text-text-primary"
-                      title={injury.reason ? `${p.PLAYER_NAME}: ${injury.label} (${injury.reason})` : `${p.PLAYER_NAME}: ${injury.label}`}
-                    >
-                      <span className="truncate">{p.PLAYER_NAME}</span>
-                      <Badge variant={injury.variant} size="sm">
-                        {injury.label}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
+              renderRosterByPositions(homeRoster, game.HOME_TEAM_ABBREVIATION ?? "")
             ) : (
               <div className="rounded border border-border bg-background-tertiary p-6 text-center">
                 <p className="text-xs font-medium text-text-secondary">
@@ -698,23 +768,7 @@ export function GameCardDetail({
                 ))}
               </div>
             ) : awayRoster.length > 0 ? (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {awayRoster.map((p) => {
-                  const injury = getPlayerInjury(game.AWAY_TEAM_ABBREVIATION ?? "", p.PLAYER_NAME);
-                  return (
-                    <div
-                      key={p.PLAYER_ID}
-                      className="flex items-center justify-between gap-2 rounded border border-border bg-background-tertiary px-3 py-2 text-xs font-medium text-text-primary"
-                      title={injury.reason ? `${p.PLAYER_NAME}: ${injury.label} (${injury.reason})` : `${p.PLAYER_NAME}: ${injury.label}`}
-                    >
-                      <span className="truncate">{p.PLAYER_NAME}</span>
-                      <Badge variant={injury.variant} size="sm">
-                        {injury.label}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </div>
+              renderRosterByPositions(awayRoster, game.AWAY_TEAM_ABBREVIATION ?? "")
             ) : (
               <div className="rounded border border-border bg-background-tertiary p-6 text-center">
                 <p className="text-xs font-medium text-text-secondary">

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isGameEligibleForRefresh } from "./game-results/utils";
 import {
   AlertTriangle,
-  ArrowLeft,
   Calendar,
   ChevronDown,
   ChevronLeft,
@@ -28,7 +27,6 @@ import {
   type PlayerBoxScore,
   type TeamBoxScore,
 } from "./game-results";
-import { Button } from "./common";
 import { parseUrlRoute, updateUrlRoute } from "../lib/router";
 import type { ActiveView, DayGroup, DisplayMode } from "./fixtures/types";
 import { FixturesScheduleView } from "./fixtures/FixturesScheduleView";
@@ -528,14 +526,6 @@ export default function FixturesTab({
 
     return (
       <div className="space-y-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleBackToFixtures}
-          leftIcon={<ArrowLeft size={16} strokeWidth={1.5} />}
-        >
-          Fikstüre dön
-        </Button>
         {isCompletedGame && detailLoading ? (
           <div className="flex h-32 items-center justify-center gap-2 rounded border border-border bg-background-primary ">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />

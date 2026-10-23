@@ -8,598 +8,437 @@ interface ExportPredictionReportArgs {
 }
 
 const getTeamInfo = (abbr: string) =>
-  NBA_TEAMS.find((t) => t.abbr === abbr) || { abbr, name: abbr, color: "#475569" };
+  NBA_TEAMS.find((t) => t.abbr === abbr) || { abbr, name: abbr, color: "#1e293b" };
+
+function formatPublishedTSI(publishedEt?: string | null): string {
+  if (!publishedEt) return "";
+  const m = publishedEt.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})\s+([AP]M)/i);
+  if (!m) return publishedEt;
+  const [, mon, day, yr, hh, mm, ap] = m;
+  const fullYear = yr.length === 2 ? `20${yr}` : yr;
+  let h = parseInt(hh, 10);
+  if (ap.toUpperCase() === "PM" && h < 12) h += 12;
+  if (ap.toUpperCase() === "AM" && h === 12) h = 0;
+  // NBA Eastern time is typically UTC-4 (EDT) or UTC-5 (EST)
+  // Converting via US Eastern timezone offset
+  try {
+    const iso = `${fullYear}-${mon.padStart(2, "0")}-${day.padStart(2, "0")}T${String(h).padStart(2, "0")}:${mm}:00-04:00`;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return publishedEt;
+    const fmt = new Intl.DateTimeFormat("tr-TR", {
+      timeZone: "Europe/Istanbul",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return `${fmt.format(d)} TSİ`;
+  } catch {
+    return publishedEt;
+  }
+}
 
 export function exportPredictionAsPDF({
-result: resData,
-date: predDate,
-fallbackHome,
-fallbackAway,
+  result: resData,
+  date: predDate,
+  fallbackHome,
+  fallbackAway,
 }: ExportPredictionReportArgs) {
-if (!resData) return;
-const hInfo = getTeamInfo(resData.home_team || fallbackHome);
-const aInfo = getTeamInfo(resData.away_team || fallbackAway);
+  if (!resData) return;
+
+  const hInfo = getTeamInfo(resData.home_team || fallbackHome);
+  const aInfo = getTeamInfo(resData.away_team || fallbackAway);
   const winnerAbbr = resData.win_probability?.predicted_winner || resData.predicted_winner;
   const winnerInfo = getTeamInfo(winnerAbbr);
-  const winProb = Math.max(resData.win_probability?.home_win_probability ?? 0, resData.win_probability?.away_win_probability ?? 0);
-  const confidence = resData.win_probability?.confidence_bucket || "MEDIUM";
-  const margin = resData.score_prediction?.predicted_margin ?? 0;
-  const total = resData.score_prediction?.predicted_total_points ?? 0;
 
-  const expl = resData.explanation;
-  const winExpl = expl?.win_probability;
-  const winFeatures = (winExpl?.features || []).filter(
-    (f: any) => Math.abs(f.contribution) > 0.0001
-  );
+  const homeProb = Number(resData.win_probability?.home_win_probability ?? 0.5);
+  const awayProb = Number(resData.win_probability?.away_win_probability ?? 0.5);
 
-  // Calculate total absolute contribution for percentage scaling
-  const totalWinContrib = winFeatures.reduce((sum: number, f: any) => sum + Math.abs(f.contribution), 0) || 1;
-  const top3 = winFeatures.slice(0, 3);
-  const other2 = winFeatures.slice(3, 5);
+  const predHomeScore = resData.score_prediction?.predicted_home_score?.toFixed(1) ?? "—";
+  const predAwayScore = resData.score_prediction?.predicted_away_score?.toFixed(1) ?? "—";
+  const predMargin = Math.abs(Number(resData.score_prediction?.predicted_margin ?? 0)).toFixed(1);
+  const predTotal = Number(resData.score_prediction?.predicted_total_points ?? 0).toFixed(1);
 
-  const getReasonText = (f: any) => {
-    const name = f.feature_name;
-    const val = f.value;
+  // Player projections
+  const awayPlayers = (resData.player_predictions?.away_players || []).slice(0, 7);
+  const homePlayers = (resData.player_predictions?.home_players || []).slice(0, 7);
 
-    const isAwayFeature = name.startsWith("OPP_") || name.startsWith("AWAY_");
-    const ownerTeam = isAwayFeature ? aInfo : hInfo;
-    const otherTeam = isAwayFeature ? hInfo : aInfo;
+  // Injury report players
+  const injuryReport = resData.injury_report;
+  const injuryPlayers: Array<{ team: string; player_name: string; status: string; reason?: string }> =
+    injuryReport?.players || [];
 
-    const favorsHome = f.influence === "FAVORS_HOME";
-    const favorsAway = f.influence === "FAVORS_AWAY";
-    const favorsTeam = favorsHome ? hInfo : favorsAway ? aInfo : null;
-
-    if (name === "IS_HOME") {
-      return `Home Court Advantage: Playing at home gives ${hInfo.name} a strong environmental edge.`;
-    }
-    if (name === "DAYS_REST" || name === "OPP_DAYS_REST") {
-      return `Rest Advantage: ${ownerTeam.name} has a recovery edge with ${val} days of rest.`;
-    }
-    if (name === "IS_B2B" || name === "OPP_IS_B2B") {
-      return val === 1
-        ? `Fatigue Factor: ${ownerTeam.name} is playing on a back-to-back, creating a physical stamina disadvantage.`
-        : `Schedule Advantage: ${ownerTeam.name} avoided back-to-back fatigue, entering the matchup fresher.`;
-    }
-    if (name.includes("WINRATE_LAST_")) {
-      const games = name.split("_").pop();
-      if (name.includes("HOME_")) {
-        return `Home Splits Win Rate: ${ownerTeam.name} (${ownerTeam.abbr}) won ${(val * 100).toFixed(0)}% of their last 5 home games.`;
-      }
-      if (name.includes("AWAY_")) {
-        return `Away Splits Win Rate: ${ownerTeam.name} (${ownerTeam.abbr}) won ${(val * 100).toFixed(0)}% of their last 5 road games.`;
-      }
-      return `Recent Momentum: ${ownerTeam.name} (${ownerTeam.abbr}) won ${(val * 100).toFixed(0)}% of their last ${games} games.`;
-    }
-    if (name.includes("PTS_ALLOWED_LAST_")) {
-      const games = name.split("_").pop();
-      if (name.includes("HOME_")) {
-        return `Home Splits Defense: ${ownerTeam.name} (${ownerTeam.abbr}) allowed an average of ${val} points at home in their last 5 home games.`;
-      }
-      if (name.includes("AWAY_")) {
-        return `Away Splits Defense: ${ownerTeam.name} (${ownerTeam.abbr}) allowed an average of ${val} points on the road in their last 5 away games.`;
-      }
-      return `Overall Defense: ${ownerTeam.name} (${ownerTeam.abbr}) allowed an average of ${val} points in their last ${games} games.`;
-    }
-    if (name.includes("PTS_LAST_")) {
-      const games = name.split("_").pop();
-      if (name.includes("HOME_")) {
-        return `Home Splits Offense: ${ownerTeam.name} (${ownerTeam.abbr}) scored an average of ${val} points at home in their last 5 home games.`;
-      }
-      if (name.includes("AWAY_")) {
-        return `Away Splits Offense: ${ownerTeam.name} (${ownerTeam.abbr}) scored an average of ${val} points on the road in their last 5 away games.`;
-      }
-      return `Recent Offense: ${ownerTeam.name} (${ownerTeam.abbr}) scored an average of ${val} points in their last ${games} games.`;
-    }
-    if (name.includes("PROJ_PTS_SUM")) {
-      return `Roster Firepower: Projections forecast high-scoring active players (${val} points) for ${ownerTeam.name} (${ownerTeam.abbr}).`;
-    }
-    if (name.includes("PROJ_PRA_SUM")) {
-      return `All-Around Depth: Combined projected Points, Rebounds, and Assists (${val} PRA) favor ${ownerTeam.name} (${ownerTeam.abbr}).`;
-    }
-    if (name.includes("OFF_RTG_LAST_")) {
-      const games = name.split("_").pop();
-      return `Offensive Efficiency: ${ownerTeam.name} (${ownerTeam.abbr}) boasts a rating of ${val} points per 100 possessions (last ${games} games).`;
-    }
-    if (name.includes("DEF_RTG_LAST_")) {
-      const games = name.split("_").pop();
-      return `Defensive Strength: ${ownerTeam.name} (${ownerTeam.abbr}) locked down opponents with a defensive rating of ${val} (last ${games} games).`;
-    }
-    if (name.includes("H2H_WINRATE")) {
-      return `Head-to-Head History: ${ownerTeam.name} holds a matchup edge, winning ${(val * 100).toFixed(0)}% of recent meetings against ${otherTeam.abbr}.`;
-    }
-    if (name === "TRAVEL_DISTANCE") {
-      return `Travel Factor: Less travel fatigue favors ${favorsTeam ? favorsTeam.name : hInfo.name} (distance: ${val} miles).`;
-    }
-
-    const favorsText = favorsTeam ? `, favoring ${favorsTeam.name} (${favorsTeam.abbr})` : "";
-    let cleanDisplayName = f.display_name || f.feature_name || "";
-    if (cleanDisplayName.startsWith("Opponent ")) {
-      cleanDisplayName = cleanDisplayName.replace("Opponent ", "");
-    }
-    return `${cleanDisplayName} for ${ownerTeam.name} (${ownerTeam.abbr}): ${val}${favorsText}, driving the model's prediction.`;
-  };
+  const awayInjuries = injuryPlayers.filter((p) => p.team === aInfo.abbr);
+  const homeInjuries = injuryPlayers.filter((p) => p.team === hInfo.abbr);
 
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
 
+  const getStatusBadge = (status: string) => {
+    const s = (status || "").toLowerCase();
+    if (s.includes("out")) {
+      return '<span style="background: #fee2e2; color: #dc2626; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 9px; text-transform: uppercase;">OUT</span>';
+    }
+    if (s.includes("questionable") || s.includes("doubtful")) {
+      return '<span style="background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 9px; text-transform: uppercase;">QUESTIONABLE</span>';
+    }
+    return '<span style="background: #dcfce7; color: #16a34a; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 9px; text-transform: uppercase;">ACTIVE</span>';
+  };
+
+  const renderRosterRows = (players: any[]) => {
+    if (!players || players.length === 0) {
+      return '<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 8px;">Projeksiyon bulunamadı</td></tr>';
+    }
+    return players
+      .map(
+        (p) => `
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 5px 6px; font-weight: 600; color: #0f172a; text-align: left;">${p.player_name}</td>
+          <td style="padding: 5px 6px; text-align: center; color: #64748b; font-weight: 600; text-transform: uppercase; font-size: 9px;">${p.position_group || "—"}</td>
+          <td style="padding: 5px 6px; text-align: right; tabular-nums; font-weight: 600;">${Number(p.predicted_pts || 0).toFixed(1)}</td>
+          <td style="padding: 5px 6px; text-align: right; tabular-nums; color: #475569;">${Number(p.predicted_reb || 0).toFixed(1)}</td>
+          <td style="padding: 5px 6px; text-align: right; tabular-nums; color: #475569;">${Number(p.predicted_ast || 0).toFixed(1)}</td>
+        </tr>
+      `
+      )
+      .join("");
+  };
+
+  const renderInjuryList = (injuries: any[], teamName: string) => {
+    if (!injuries || injuries.length === 0) {
+      return `<div style="font-size: 10px; color: #64748b; font-style: italic; padding: 4px 0;">${teamName} için sakatlık bildirimi yok.</div>`;
+    }
+    return injuries
+      .map(
+        (inj) => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #f1f5f9; font-size: 10px;">
+          <div style="display: flex; flex-direction: column; overflow: hidden; padding-right: 8px;">
+            <span style="font-weight: 600; color: #0f172a;">${inj.player_name}</span>
+            ${inj.reason ? `<span style="font-size: 8.5px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${inj.reason}</span>` : ""}
+          </div>
+          <div>${getStatusBadge(inj.status)}</div>
+        </div>
+      `
+      )
+      .join("");
+  };
+
   const html = `
+    <!DOCTYPE html>
     <html>
       <head>
-        <title>NBA Prediction Report - ${aInfo.abbr} @ ${hInfo.abbr}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+        <meta charset="utf-8" />
+        <title>NBA Tahmin Raporu - ${aInfo.abbr} @ ${hInfo.abbr}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
         <style>
-          body {
-            font-family: 'Inter', sans-serif;
-            color: #1e293b;
-            background-color: #ffffff;
-            margin: 0;
-            padding: 30px;
-            font-size: 11px;
-            line-height: 1.4;
+          @page {
+            size: A4 portrait;
+            margin: 10mm 12mm 10mm 12mm;
           }
-          @media print {
-            body { padding: 0; }
-            .no-print { display: none; }
+          * {
+            box-sizing: border-box;
+          }
+          body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+            font-size: 10px;
+            line-height: 1.35;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           .header {
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 12px;
-            margin-bottom: 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
           }
-          .title {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 24px;
-            font-weight: 900;
-            text-transform: uppercase;
-            color: #0f172a;
+          .title-area h1 {
             margin: 0;
+            font-size: 17px;
+            font-weight: 900;
             letter-spacing: -0.5px;
-          }
-          .subtitle {
-            font-size: 9px;
-            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            color: #64748b;
-            margin-top: 3px;
           }
-          .meta-date {
-            font-family: monospace;
-            font-size: 11px;
-            font-weight: bold;
+          .title-area p {
+            margin: 2px 0 0 0;
+            font-size: 8.5px;
             color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
-          .matchup-hero {
-            background: #f8fafc;
+          .meta-pill {
+            background: #f1f5f9;
             border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 18px;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #334155;
+          }
+          .hero-card {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
             display: grid;
             grid-template-columns: 1fr auto 1fr;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
           }
-          .team-row {
+          .team-box {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
           }
-          .team-row.away {
-            justify-content: flex-start;
-            text-align: left;
-          }
-          .team-row.home {
-            justify-content: flex-end;
-            text-align: right;
-          }
+          .team-box.away { justify-content: flex-start; }
+          .team-box.home { justify-content: flex-end; text-align: right; }
           .team-logo {
             width: 40px;
             height: 40px;
             object-fit: contain;
           }
-          .team-meta {
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-            min-width: 0;
-          }
-          .team-name {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 18px;
+          .score-num {
+            font-size: 24px;
             font-weight: 900;
-            text-transform: uppercase;
+            font-variant-numeric: tabular-nums;
             color: #0f172a;
-            margin: 0;
           }
-          .team-sub {
-            font-size: 8px;
-            font-weight: 800;
-            color: #64748b;
-            text-transform: uppercase;
-            margin-top: 1px;
-            letter-spacing: 0.5px;
-          }
-          .team-score {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 30px;
-            font-weight: 900;
-            line-height: 1;
-          }
-          .vs-divider {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          .vs-text {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 11px;
-            font-weight: 900;
-            color: #94a3b8;
-            padding: 4px 8px;
-            border: 1px dashed #cbd5e1;
-            border-radius: 50%;
-            background: #ffffff;
-          }
-          .win-banner {
-            grid-column: 1 / span 3;
-            margin-top: 10px;
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            padding: 6px;
-            border-radius: 6px;
-            color: #15803d;
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+          .score-center {
             text-align: center;
-          }
-          .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 18px;
-          }
-          .card {
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 14px;
-            background: #ffffff;
-          }
-          .card-title {
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: #64748b;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #f1f5f9;
-            padding-bottom: 5px;
+            padding: 0 6px;
           }
           .kpi-row {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
           }
           .kpi-box {
-            background: #f8fafc;
-            border: 1px solid #f1f5f9;
-            padding: 8px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 6px;
+            padding: 6px 8px;
             text-align: center;
           }
-          .kpi-value {
-            font-size: 14px;
-            font-weight: 900;
-            font-family: monospace;
-            color: #0f172a;
-          }
-          .kpi-label {
-            font-size: 7.5px;
+          .kpi-box-val {
+            font-size: 13px;
             font-weight: 800;
-            color: #64748b;
+            color: #0f172a;
+            font-variant-numeric: tabular-nums;
+          }
+          .kpi-box-lbl {
+            font-size: 8px;
+            font-weight: 700;
             text-transform: uppercase;
+            color: #64748b;
             margin-top: 1px;
+            letter-spacing: 0.5px;
           }
-          .narrative-text {
-            font-size: 11px;
-            color: #334155;
-            line-height: 1.5;
-            margin: 0;
-            font-weight: 500;
-            text-align: left;
+          .section-title {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #0f172a;
+            margin-bottom: 5px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #e2e8f0;
           }
-          .page-break {
-            page-break-before: always;
+          .columns-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
           }
-          .roster-table {
+          .panel {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 10px;
+            background: #ffffff;
+          }
+          .panel-header {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 6px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+          table.data-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9.5px;
-            margin-top: 6px;
+            font-size: 9px;
           }
-          .roster-table th {
+          table.data-table th {
             background: #f8fafc;
             color: #475569;
-            font-weight: 800;
-            text-transform: uppercase;
+            font-weight: 700;
             font-size: 8px;
-            letter-spacing: 1px;
-            padding: 5px 6px;
+            text-transform: uppercase;
+            padding: 3px 5px;
             border-bottom: 1px solid #cbd5e1;
-            text-align: right;
           }
-          .roster-table th:first-child { text-align: left; }
-          .roster-table td {
-            padding: 5px 6px;
-            border-bottom: 1px solid #f1f5f9;
-            text-align: right;
-          }
-          .roster-table td:first-child {
-            text-align: left;
-            font-weight: bold;
-            color: #1e293b;
-          }
-          .roster-table tr:hover { background: #f8fafc; }
-          .footer-section {
-            margin-top: 30px;
-            padding-top: 12px;
+          .footer {
+            margin-top: 8px;
+            padding-top: 6px;
             border-top: 1px solid #e2e8f0;
             display: flex;
             justify-content: space-between;
-            align-items: center;
             font-size: 8px;
             color: #94a3b8;
-          }
-          .xai-section {
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 18px;
-            background: #ffffff;
-          }
-          .xai-driver-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 10px;
-            background: #f8fafc;
-            border-radius: 8px;
-            border: 1px solid #f1f5f9;
-            margin-bottom: 6px;
-          }
-          .xai-driver-item:last-child {
-            margin-bottom: 0;
-          }
-          .xai-driver-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          .xai-driver-num {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            color: #ffffff;
-            font-size: 9px;
-            font-weight: bold;
-          }
-          .xai-driver-text {
-            font-size: 11px;
-            font-weight: 500;
-            color: #334155;
-          }
-          .xai-driver-right {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-          }
-          .xai-badge {
-            font-size: 8px;
-            font-weight: 850;
-            padding: 2px 6px;
-            border-radius: 4px;
-            text-transform: uppercase;
           }
         </style>
       </head>
       <body>
+        <!-- Header -->
         <div class="header">
-          <div>
-            <h1 class="title">NBA Prediction Report</h1>
-            <div class="subtitle">Powered by Antigravity Predictive Engine</div>
+          <div class="title-area">
+            <h1>NBA Matchup Prediction Report</h1>
+            <p>Official Predictive Model Output</p>
           </div>
-          <div class="meta-date">Date: ${predDate}</div>
+          <div class="meta-pill">
+            Tarih: ${predDate}
+          </div>
         </div>
 
-        <div class="matchup-hero">
-          <div class="team-row away">
+        <!-- Hero Matchup Card -->
+        <div class="hero-card">
+          <!-- Away Team -->
+          <div class="team-box away">
             <img class="team-logo" src="${getTeamLogoUrl(aInfo.abbr)}" alt="${aInfo.name}" />
-            <div class="team-meta">
-              <div class="team-name">${aInfo.name}</div>
-              <div class="team-sub">Away · ${(resData.win_probability?.away_win_probability * 100).toFixed(1)}% Win Prob</div>
+            <div>
+              <div style="font-size: 12px; font-weight: 800; text-transform: uppercase;">${aInfo.name}</div>
+              <div style="font-size: 8.5px; font-weight: 600; color: #64748b;">Deplasman · ${(awayProb * 100).toFixed(1)}% Galibiyet</div>
             </div>
-            <div class="team-score" style="color: ${aInfo.color};">${resData.score_prediction?.predicted_away_score?.toFixed(1)}</div>
+            <div class="score-num" style="margin-left: 6px;">${predAwayScore}</div>
           </div>
 
-          <div class="vs-divider">
-            <div class="vs-text">VS</div>
+          <!-- Divider -->
+          <div class="score-center">
+            <div style="font-size: 10px; font-weight: 800; color: #94a3b8; padding: 2px 7px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff;">VS</div>
           </div>
 
-          <div class="team-row home">
-            <div class="team-score" style="color: ${hInfo.color};">${resData.score_prediction?.predicted_home_score?.toFixed(1)}</div>
-            <div class="team-meta">
-              <div class="team-name">${hInfo.name}</div>
-              <div class="team-sub">Home · ${(resData.win_probability?.home_win_probability * 100).toFixed(1)}% Win Prob</div>
+          <!-- Home Team -->
+          <div class="team-box home">
+            <div class="score-num" style="margin-right: 6px;">${predHomeScore}</div>
+            <div>
+              <div style="font-size: 12px; font-weight: 800; text-transform: uppercase;">${hInfo.name}</div>
+              <div style="font-size: 8.5px; font-weight: 600; color: #64748b;">Ev Sahibi · ${(homeProb * 100).toFixed(1)}% Galibiyet</div>
             </div>
             <img class="team-logo" src="${getTeamLogoUrl(hInfo.abbr)}" alt="${hInfo.name}" />
           </div>
+        </div>
 
-          <div class="win-banner">
-            Projected Winner: ${winnerInfo.name} (${confidence} Confidence)
+        <!-- KPI Metrics Strip -->
+        <div class="kpi-row">
+          <div class="kpi-box">
+            <div class="kpi-box-val" style="color: #10b981;">${winnerInfo.abbr} (%${(Math.max(homeProb, awayProb) * 100).toFixed(1)})</div>
+            <div class="kpi-box-lbl">Tahmini Galip</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-box-val">${predMargin} Sayı</div>
+            <div class="kpi-box-lbl">Beklenen Fark</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-box-val">${predTotal} Sayı</div>
+            <div class="kpi-box-lbl">Beklenen Toplam Sayı</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-box-val">${predAwayScore} - ${predHomeScore}</div>
+            <div class="kpi-box-lbl">Skor Tahmini</div>
           </div>
         </div>
 
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title">Score Predictions</div>
-            <div class="kpi-row">
-              <div class="kpi-box">
-                <div class="kpi-value">${resData.score_prediction?.predicted_away_score?.toFixed(1)}</div>
-                <div class="kpi-label">${aInfo.abbr} Expected</div>
-              </div>
-              <div class="kpi-box">
-                <div class="kpi-value">${resData.score_prediction?.predicted_home_score?.toFixed(1)}</div>
-                <div class="kpi-label">${hInfo.abbr} Expected</div>
-              </div>
-              <div class="kpi-box">
-                <div class="kpi-value">${Math.abs(margin).toFixed(1)} pts</div>
-                <div class="kpi-label">Expected Margin (${winnerInfo.abbr})</div>
-              </div>
-              <div class="kpi-box">
-                <div class="kpi-value">${total?.toFixed(1)} pts</div>
-                <div class="kpi-label">Expected Total</div>
-              </div>
+        <!-- Section: Player Projections (Top 7 Players) -->
+        <div class="section-title">Oyuncu Projeksiyonları</div>
+        <div class="columns-2">
+          <!-- Away Roster -->
+          <div class="panel">
+            <div class="panel-header">
+              <span>${aInfo.name} (${aInfo.abbr})</span>
+              <span style="font-size: 8px; color: #64748b;">En Yüksek Projeksiyonlar</span>
             </div>
-          </div>
-
-          <div class="card">
-            <div class="card-title">Matchup Analysis</div>
-            <p class="narrative-text">
-              The model projects ${winnerInfo.name} to control this matchup, assigning a ${(winProb * 100).toFixed(1)}% win probability. 
-              The expected winning margin of ${Math.abs(margin).toFixed(1)} points suggests ${winnerInfo.abbr} maintains a meaningful edge throughout. 
-              Offensive efficiency, squad rosters, and home court factors contribute significantly to the forecast.
-            </p>
-          </div>
-        </div>
-
-        ${expl && winFeatures.length > 0 ? `
-          <div class="xai-section">
-            <div class="card-title">Model Prediction Drivers (Explainable AI)</div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              ${top3.map((f: any, idx: number) => {
-                const favorsHome = f.influence === "FAVORS_HOME";
-                const favorsAway = f.influence === "FAVORS_AWAY";
-                const teamColor = favorsHome ? hInfo.color : favorsAway ? aInfo.color : "#64748b";
-                const teamAbbr = favorsHome ? hInfo.abbr : favorsAway ? aInfo.abbr : "NEUT";
-                const weightPct = ((Math.abs(f.contribution) / totalWinContrib) * 100).toFixed(1);
-                const isSupporting = (favorsHome && winnerAbbr === hInfo.abbr) || (favorsAway && winnerAbbr === aInfo.abbr);
-                
-                return `
-                  <div class="xai-driver-item" style="border-left: 4px solid ${teamColor};">
-                    <div class="xai-driver-left">
-                      <div class="xai-driver-num" style="background: ${teamColor};">${idx + 1}</div>
-                      <div class="xai-driver-text">${getReasonText(f)}</div>
-                    </div>
-                    <div class="xai-driver-right">
-                      <span class="xai-badge" style="background: ${teamColor}15; color: ${teamColor};">Favors ${teamAbbr}</span>
-                      <span class="xai-badge" style="background: #f1f5f9; color: #475569;">${isSupporting ? "+" : "-"}${weightPct}% Impact</span>
-                    </div>
-                  </div>
-                `;
-              }).join("")}
-              ${other2.map((f: any, idx: number) => {
-                const favorsHome = f.influence === "FAVORS_HOME";
-                const favorsAway = f.influence === "FAVORS_AWAY";
-                const teamColor = favorsHome ? hInfo.color : favorsAway ? aInfo.color : "#64748b";
-                const teamAbbr = favorsHome ? hInfo.abbr : favorsAway ? aInfo.abbr : "NEUT";
-                const weightPct = ((Math.abs(f.contribution) / totalWinContrib) * 100).toFixed(1);
-                const isSupporting = (favorsHome && winnerAbbr === hInfo.abbr) || (favorsAway && winnerAbbr === aInfo.abbr);
-
-                return `
-                  <div class="xai-driver-item" style="background: #ffffff; border: 1px solid #f1f5f9;">
-                    <div class="xai-driver-left">
-                      <div class="xai-driver-num" style="background: #94a3b8;">${idx + 4}</div>
-                      <div class="xai-driver-text" style="color: #475569;">${getReasonText(f)}</div>
-                    </div>
-                    <div class="xai-driver-right">
-                      <span class="xai-badge" style="background: ${teamColor}10; color: ${teamColor};">Favors ${teamAbbr}</span>
-                      <span class="xai-badge" style="background: #f1f5f9; color: #64748b;">${isSupporting ? "+" : "-"}${weightPct}% Impact</span>
-                    </div>
-                  </div>
-                `;
-              }).join("")}
-            </div>
-          </div>
-        ` : ""}
-
-        <div class="page-break"></div>
-
-        <div class="header">
-          <div>
-            <h1 class="title">Roster Projections</h1>
-            <div class="subtitle">${aInfo.abbr} vs ${hInfo.abbr} Player Details</div>
-          </div>
-        </div>
-
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-title">${aInfo.name} Projections</div>
-            <table class="roster-table">
+            <table class="data-table">
               <thead>
                 <tr>
-                  <th style="text-align: left;">Player</th>
-                  <th>Pos</th>
-                  <th>PTS</th>
-                  <th>REB</th>
-                  <th>AST</th>
-                  <th>PRA</th>
+                  <th style="text-align: left;">Oyuncu</th>
+                  <th style="text-align: center;">Poz</th>
+                  <th style="text-align: right;">Sayı</th>
+                  <th style="text-align: right;">Rib</th>
+                  <th style="text-align: right;">Ast</th>
                 </tr>
               </thead>
               <tbody>
-                ${resData.player_predictions?.away_players?.map((p: any) => `
-                  <tr>
-                    <td style="text-align: left;">${p.player_name}</td>
-                    <td style="text-align: right; color: #64748b; font-weight: bold; text-transform: uppercase;">${p.position_group}</td>
-                    <td>${p.predicted_pts.toFixed(1)}</td>
-                    <td>${p.predicted_reb.toFixed(1)}</td>
-                    <td>${p.predicted_ast.toFixed(1)}</td>
-                    <td style="font-weight: bold; color: #0f172a;">${p.predicted_pra.toFixed(1)}</td>
-                  </tr>
-                `).join("") || "<tr><td colspan='6'>No projections</td></tr>"}
+                ${renderRosterRows(awayPlayers)}
               </tbody>
             </table>
           </div>
 
-          <div class="card">
-            <div class="card-title">${hInfo.name} Projections</div>
-            <table class="roster-table">
+          <!-- Home Roster -->
+          <div class="panel">
+            <div class="panel-header">
+              <span>${hInfo.name} (${hInfo.abbr})</span>
+              <span style="font-size: 8px; color: #64748b;">En Yüksek Projeksiyonlar</span>
+            </div>
+            <table class="data-table">
               <thead>
                 <tr>
-                  <th style="text-align: left;">Player</th>
-                  <th>Pos</th>
-                  <th>PTS</th>
-                  <th>REB</th>
-                  <th>AST</th>
-                  <th>PRA</th>
+                  <th style="text-align: left;">Oyuncu</th>
+                  <th style="text-align: center;">Poz</th>
+                  <th style="text-align: right;">Sayı</th>
+                  <th style="text-align: right;">Rib</th>
+                  <th style="text-align: right;">Ast</th>
                 </tr>
               </thead>
               <tbody>
-                ${resData.player_predictions?.home_players?.map((p: any) => `
-                  <tr>
-                    <td style="text-align: left;">${p.player_name}</td>
-                    <td style="text-align: right; color: #64748b; font-weight: bold; text-transform: uppercase;">${p.position_group}</td>
-                    <td>${p.predicted_pts.toFixed(1)}</td>
-                    <td>${p.predicted_reb.toFixed(1)}</td>
-                    <td>${p.predicted_ast.toFixed(1)}</td>
-                    <td style="font-weight: bold; color: #0f172a;">${p.predicted_pra.toFixed(1)}</td>
-                  </tr>
-                `).join("") || "<tr><td colspan='6'>No projections</td></tr>"}
+                ${renderRosterRows(homePlayers)}
               </tbody>
             </table>
           </div>
         </div>
 
-        <div class="footer-section">
-          <div>Model: ${resData.win_probability?.model_version ?? resData.score_prediction?.model_version ?? '—'}</div>
-          <div>Report generated automatically. All predictions are statistical estimates.</div>
+        <!-- Section: Injury Report (Sakatlık Raporu) -->
+        <div class="section-title">
+          <span>Resmi Sakatlık Raporu</span>
+          ${injuryReport?.published_et ? `<span style="font-size: 8px; font-weight: 600; color: #475569; margin-left: 6px;">(Rapor Saati: ${formatPublishedTSI(injuryReport.published_et)})</span>` : ""}
+        </div>
+        <div class="columns-2">
+          <!-- Away Injuries -->
+          <div class="panel">
+            <div class="panel-header">
+              <span>${aInfo.name} Durumu</span>
+              <span style="font-size: 8px; color: #64748b;">${awayInjuries.length} Oyuncu</span>
+            </div>
+            <div>
+              ${renderInjuryList(awayInjuries, aInfo.name)}
+            </div>
+          </div>
+
+          <!-- Home Injuries -->
+          <div class="panel">
+            <div class="panel-header">
+              <span>${hInfo.name} Durumu</span>
+              <span style="font-size: 8px; color: #64748b;">${homeInjuries.length} Oyuncu</span>
+            </div>
+            <div>
+              ${renderInjuryList(homeInjuries, hInfo.name)}
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <div>Model: ${resData.win_probability?.model_version ?? resData.score_prediction?.model_version ?? "v11 Production"}</div>
+          <div>NBA Intelligence Predictive Platform · Resmi NBA verileriyle oluşturulmuştur.</div>
         </div>
 
         <script>

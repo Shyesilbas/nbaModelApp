@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Search, Check } from "lucide-react";
 import { loadPrivateApi } from "../lib/dataCache";
+import { CURRENT_SEASON } from "../lib/constants";
 import PlayerPhoto from "./PlayerPhoto";
 
 interface PlayerProfile {
@@ -44,7 +45,7 @@ export const PlayerCompare: React.FC<PlayerCompareProps> = ({
   const [profiles, setProfiles] = useState<PlayerProfile[]>([]);
   const [averagesMap, setAveragesMap] = useState<Record<string, Record<string, SeasonAverages>>>({});
   const [seasons, setSeasons] = useState<string[]>([]);
-  const [selectedSeason, setSelectedSeason] = useState<string>("2025-26");
+  const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
 
   const [p1Id, setP1Id] = useState<number | null>(initialP1Id || null);
   const [p2Id, setP2Id] = useState<number | null>(initialP2Id || null);
@@ -65,14 +66,11 @@ export const PlayerCompare: React.FC<PlayerCompareProps> = ({
         setAveragesMap(avg || {});
         if (seas && seas.length > 0) {
           setSeasons(seas);
-          // Default to the latest season that has substantial regular season games played (e.g. 2025-26)
-          const latestComplete = [...seas].reverse().find((s) => {
-            const count = Object.values(avg || {}).filter(
-              (pMap) => (pMap[s]?.games_played ?? 0) >= 10
-            ).length;
-            return count > 50;
-          });
-          setSelectedSeason(latestComplete || seas[seas.length - 1]);
+          if (seas.includes(CURRENT_SEASON)) {
+            setSelectedSeason(CURRENT_SEASON);
+          } else {
+            setSelectedSeason(seas[seas.length - 1]);
+          }
         }
       })
       .catch(() => {});

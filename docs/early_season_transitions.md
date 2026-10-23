@@ -107,7 +107,7 @@ injury-report overrides for minutes limits.
 
 ## Verifying a live prediction
 
-- WIN: the paper ledger stores `EARLY_SEASON_ELO_BLEND_WEIGHT` in the frozen features of each record; it must be 0 from
-  the 6th game of both teams.
+- WIN: the feature dict from `build_features` carries `EARLY_SEASON_ELO_BLEND_WEIGHT` (and `GAMES_PLAYED_HOME_SEASON` /
+  `GAMES_PLAYED_AWAY_SEASON`); it must be 0 once both teams have played 6 games. The paper ledger does not store it.
 - SCORE: openers should no longer sit on one total; teams differ by last season's pace and ratings.
 - PLAYER: first-game projections sit between the model value and last season's average.
