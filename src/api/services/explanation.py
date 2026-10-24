@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from . import win_prediction as svc
-from ..schemas import ExplanationFeature, WinProbabilityExplanation
+from ..schemas import ExplanationContext, ExplanationFeature, WinProbabilityExplanation
 from .feature_metadata import FEATURE_METADATA
 
 
@@ -30,6 +30,27 @@ def _playoff_influence(raw_val: float, feats: dict) -> str:
     if away_wins == 3 and home_wins < 3:
         return "FAVORS_AWAY"
     return "NEUTRAL"
+
+
+def _num(feats: dict, key: str):
+    v = feats.get(key)
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return None
+    return None if np.isnan(v) else v
+
+
+def build_explanation_context(feats: dict) -> ExplanationContext:
+    return ExplanationContext(
+        home_games_played=int(_num(feats, "GAMES_PLAYED_HOME_SEASON") or 0),
+        away_games_played=int(_num(feats, "GAMES_PLAYED_AWAY_SEASON") or 0),
+        home_winrate_last_10=_num(feats, "WINRATE_LAST_10"),
+        away_winrate_last_10=_num(feats, "OPP_WINRATE_LAST_10"),
+        home_is_b2b=bool(_num(feats, "IS_B2B")),
+        away_is_b2b=bool(_num(feats, "OPP_IS_B2B")),
+        elo_blend_weight=_num(feats, "EARLY_SEASON_ELO_BLEND_WEIGHT") or 0.0,
+    )
 
 
 def explain_win_probability(feats: dict) -> WinProbabilityExplanation:
@@ -100,7 +121,7 @@ def explain_win_probability(feats: dict) -> WinProbabilityExplanation:
         ))
 
     explanations.sort(key=lambda x: abs(x.contribution), reverse=True)
-    return WinProbabilityExplanation(intercept=round(intercept, 4), features=explanations)
+    return WinProbabilityExplanation(intercept=round(intercept, 4), features=explanations, context=build_explanation_context(feats))
 
 
 

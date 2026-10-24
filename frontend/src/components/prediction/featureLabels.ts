@@ -1,6 +1,17 @@
 import type { TeamInfo } from "./types";
 
+export interface ExplanationContext {
+  home_games_played?: number;
+  away_games_played?: number;
+  home_winrate_last_10?: number | null;
+  away_winrate_last_10?: number | null;
+  home_is_b2b?: boolean;
+  away_is_b2b?: boolean;
+  elo_blend_weight?: number;
+}
+
 export interface FormattedFeatureInfo {
+  neutralBadge?: boolean;
   title: string;
   category: string;
   insight: string;
@@ -8,16 +19,29 @@ export interface FormattedFeatureInfo {
   categoryIcon?: "trophy" | "zap" | "clock" | "home" | "target" | "shield" | "scale" | "activity";
 }
 
+const FORM_WINDOW = 10;
+
+// "6-4" gibi kayit; oran son 10 maca (sezon basinda oynanan tum maclara) aittir.
+function formatRecord(winrate: number | null | undefined, games: number | undefined): string | null {
+  if (winrate == null || !games) return null;
+  const played = Math.min(games, FORM_WINDOW);
+  const wins = Math.round(winrate * played);
+  return `${wins}-${played - wins}`;
+}
+
 export function formatFeatureInsight(
   featureKey: string,
   value: number,
   influence: string,
   homeInfo: TeamInfo,
-  awayInfo: TeamInfo
+  awayInfo: TeamInfo,
+  ctx?: ExplanationContext
 ): FormattedFeatureInfo {
   const key = featureKey.toUpperCase();
   const favorsHome = influence === "FAVORS_HOME";
   const favoredTeam = favorsHome ? homeInfo : awayInfo;
+  const minGames = ctx ? Math.min(ctx.home_games_played ?? 0, ctx.away_games_played ?? 0) : FORM_WINDOW;
+  const formWindow = minGames > 0 && minGames < FORM_WINDOW ? `bu sezonki ${minGames} maçta` : "son maçlarında";
 
   // 1. Skor Modeli Tahmini
   if (key === "SCORE_PRED_MARGIN") {
@@ -46,12 +70,13 @@ export function formatFeatureInsight(
   // 2. Elo ve Güç Sıralaması
   if (key === "ELO_DIFF" || key === "ABS_ELO_DIFF") {
     const eloAbs = Math.abs(value).toFixed(0);
+    const eloLevel = Math.abs(value) >= 100 ? "belirgin şekilde" : Math.abs(value) >= 40 ? "bir miktar" : "hafifçe";
     return {
       title: "Takım Kalitesi ve Güç Sıralaması",
       category: "Kadro & Güç",
       categoryIcon: "trophy",
-      simpleValue: `+${eloAbs} Güç Puanı`,
-      insight: `${favoredTeam.name}, lig genelindeki Elo güç sıralaması ve kadro kalitesi açısından rakibinin belirgin şekilde önünde yer alıyor.`,
+      simpleValue: `+${eloAbs} Elo Farkı`,
+      insight: `${favoredTeam.name}, Elo güç sıralamasında rakibinin ${eloLevel} önünde yer alıyor.`,
     };
   }
 
@@ -120,12 +145,23 @@ export function formatFeatureInsight(
   }
 
   if (key === "IS_B2B" || key === "OPP_IS_B2B") {
+    const homeTired = ctx?.home_is_b2b ?? (key === "IS_B2B" && value === 1);
+    const awayTired = ctx?.away_is_b2b ?? (key === "OPP_IS_B2B" && value === 1);
+    const base = { title: "Üst Üste Maç (Yorgunluk) Faktörü", category: "Fikstür & Kondisyon", categoryIcon: "clock" as const };
+    if (homeTired && awayTired) {
+      return {
+        ...base,
+        neutralBadge: true,
+        simpleValue: "İki takım da dün oynadı",
+        insight: `${homeInfo.name} ve ${awayInfo.name} dün gece de maç oynadı; yorgunluk açısından bir takıma avantaj yok.`,
+      };
+    }
+    const tired = homeTired ? homeInfo : awayInfo;
+    const rested = homeTired ? awayInfo : homeInfo;
     return {
-      title: "Üst Üste Maç (Yorgunluk) Faktörü",
-      category: "Fikstür & Kondisyon",
-      categoryIcon: "clock",
-      simpleValue: value === 1 ? "Üst Üste Maç (Yorgun)" : "Dinlenmiş Kadro",
-      insight: `${favoredTeam.name} dinlenmiş olarak maça hazırlanırken, rakip takım dün gece de maç oynadığı için yorgunluk dezavantajı taşıyor.`,
+      ...base,
+      simpleValue: `${tired.abbr} üst üste maçta`,
+      insight: `${tired.name} dün gece de maç oynadığı için yorgunluk dezavantajı taşıyor; ${rested.name} dinlenmiş çıkıyor.`,
     };
   }
 
@@ -137,7 +173,7 @@ export function formatFeatureInsight(
       category: "Form & Ritim",
       categoryIcon: "activity",
       simpleValue: `+${diff} Verimlilik Farkı`,
-      insight: `${favoredTeam.name}, son maçlarında sahada kaldığı her 100 hücumda rakibinden belirgin şekilde daha üstün bir sayı üretkenliği sağladı.`,
+      insight: `${favoredTeam.name}, ${formWindow} sahada kaldığı her 100 hücumda rakibinden ${Math.abs(value) >= 5 ? "belirgin şekilde " : ""}daha iyi bir sayı farkı üretti.`,
     };
   }
 
@@ -153,15 +189,41 @@ export function formatFeatureInsight(
     };
   }
 
-  // 7. Form ve Galibiyet Serisi
+  // 7. Galibiyet kaydi (son 10 mac; sezon basinda yalnizca bu sezonun maclari)
   if (key.includes("WINRATE_LAST_") || key.includes("WINRATE_DIFF")) {
+    const homeWr = ctx?.home_winrate_last_10;
+    const awayWr = ctx?.away_winrate_last_10;
+    const homeRec = formatRecord(homeWr, ctx?.home_games_played);
+    const awayRec = formatRecord(awayWr, ctx?.away_games_played);
+    const early = minGames > 0 && minGames < FORM_WINDOW;
+    const title = early ? "Sezon Başı Galibiyet Kaydı" : "Son 10 Maçtaki Galibiyet Kaydı";
+
+    if (homeRec && awayRec && homeWr != null && awayWr != null) {
+      const better = homeWr > awayWr ? homeInfo : homeWr < awayWr ? awayInfo : null;
+      const sample = early ? ` Örneklem çok küçük (${ctx?.home_games_played} ve ${ctx?.away_games_played} maç), bu yüzden bu sinyal gürültülü.` : "";
+      let reading: string;
+      if (!better) {
+        reading = "İki takımın kaydı eşit.";
+      } else if (better.abbr === favoredTeam.abbr) {
+        reading = `Daha iyi kayıt ${better.name} tarafında ve model bunu onun lehine sayıyor.`;
+      } else {
+        reading = `Daha iyi kayıt ${better.name} tarafında, ancak model Elo ve net rating zaten aynı bilgiyi taşıdığı için bu farka ters yönde ağırlık veriyor; bu satır ${favoredTeam.name} için iyi form anlamına gelmiyor.`;
+      }
+      return {
+        title,
+        category: "Form & Kayıt",
+        categoryIcon: "activity",
+        simpleValue: `${homeInfo.abbr} ${homeRec} · ${awayInfo.abbr} ${awayRec}`,
+        insight: `${homeInfo.name} ${homeRec}, ${awayInfo.name} ${awayRec}. ${reading}${sample}`,
+      };
+    }
     const pct = (Math.abs(value) * 100).toFixed(0);
     return {
-      title: "Son Maçlardaki Galibiyet Formu",
-      category: "Form & Moral",
+      title,
+      category: "Form & Kayıt",
       categoryIcon: "activity",
-      simpleValue: `%${pct} Galibiyet Oranı`,
-      insight: `${favoredTeam.name}, son dönemde yakaladığı galibiyet serisi ve yüksek takım moraliyle maça çok daha özgüvenli çıkıyor.`,
+      simpleValue: `%${pct} Oran Farkı`,
+      insight: `İki takımın son maçlardaki galibiyet oranı arasında %${pct} fark var; model bu farkı ${favoredTeam.name} lehine sayıyor.`,
     };
   }
 

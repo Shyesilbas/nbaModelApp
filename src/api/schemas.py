@@ -182,9 +182,21 @@ class ExplanationFeature(BaseModel):
     influence: str  # "FAVORS_HOME", "FAVORS_AWAY", "NEUTRAL"
 
 
+class ExplanationContext(BaseModel):
+    """Facts the explanation text needs beyond the feature values (home = the team the row is built for)."""
+    home_games_played: int = 0
+    away_games_played: int = 0
+    home_winrate_last_10: Optional[float] = None
+    away_winrate_last_10: Optional[float] = None
+    home_is_b2b: bool = False
+    away_is_b2b: bool = False
+    elo_blend_weight: float = 0.0
+
+
 class WinProbabilityExplanation(BaseModel):
     intercept: float
     features: List[ExplanationFeature]
+    context: Optional[ExplanationContext] = None
 
 
 class ScoreModelExplanation(BaseModel):

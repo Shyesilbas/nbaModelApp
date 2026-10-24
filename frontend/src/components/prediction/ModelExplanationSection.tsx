@@ -11,7 +11,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { TeamInfo } from "./types";
-import { formatFeatureInsight } from "./featureLabels";
+import { formatFeatureInsight, type ExplanationContext } from "./featureLabels";
 
 type FeatureImpact = {
   feature_name: string;
@@ -56,32 +56,31 @@ function TeamAdvantageBadge({
 function ReasonCard({
   feature,
   rank,
-  maxImpact,
   totalImpact,
   homeInfo,
   awayInfo,
   showTech,
+  ctx,
 }: {
   feature: FeatureImpact;
   rank: number;
-  maxImpact: number;
   totalImpact: number;
   homeInfo: TeamInfo;
   awayInfo: TeamInfo;
   showTech: boolean;
+  ctx?: ExplanationContext;
 }) {
   const formatted = formatFeatureInsight(
     feature.feature_name,
     feature.value,
     feature.influence ?? "NEUTRAL",
     homeInfo,
-    awayInfo
+    awayInfo,
+    ctx
   );
 
   const contributionAbs = Math.abs(feature.contribution);
   const share = Math.round((contributionAbs / totalImpact) * 100);
-  // 100 uzerinden normalize edilmis guc puani
-  const powerScore = Math.max(10, Math.min(100, Math.round((contributionAbs / maxImpact) * 100)));
 
   return (
     <article className="py-3 first:pt-1 last:pb-1">
@@ -101,7 +100,7 @@ function ReasonCard({
         </div>
 
         <TeamAdvantageBadge
-          influence={feature.influence}
+          influence={formatted.neutralBadge ? "NEUTRAL" : feature.influence}
           homeInfo={homeInfo}
           awayInfo={awayInfo}
         />
@@ -115,11 +114,6 @@ function ReasonCard({
       {/* 3. Bar yerine Guc Puani ve Olculen Deger Bilgisi */}
       <div className="pl-4 pt-1.5 flex items-center justify-between text-xs">
         <div className="flex items-center gap-2 text-text-muted">
-          <span>Güç Puanı:</span>
-          <span className="font-semibold text-text-primary tabular-nums">
-            {powerScore}/100
-          </span>
-          <span className="text-text-muted">·</span>
           <span className="tabular-nums">Etki Payı: %{share}</span>
         </div>
 
@@ -151,6 +145,7 @@ function ReasonCard({
 type PredictionResult = {
   explanation?: {
     win_probability?: {
+      context?: ExplanationContext;
       features?: FeatureImpact[];
       predicted_winner?: string;
     };
@@ -211,15 +206,14 @@ export function ModelExplanationSection({
       .slice(0, 5);
   }, [explanation]);
 
+  const winContext = explanation?.win_probability?.context;
   const activeFeatures = activeTab === "win" ? winTop5 : scoreTop5;
 
   const totalImpact = useMemo(() => {
     return activeFeatures.reduce((sum, f) => sum + Math.abs(f.contribution), 0) || 1;
   }, [activeFeatures]);
 
-  const maxImpact = useMemo(() => {
-    return Math.max(...activeFeatures.map((f) => Math.abs(f.contribution)), 0.0001);
-  }, [activeFeatures]);
+
 
   if (!explanation || (!winTop5.length && !scoreTop5.length)) {
     return (
@@ -246,7 +240,8 @@ export function ModelExplanationSection({
         activeFeatures[0].value,
         activeFeatures[0].influence ?? "NEUTRAL",
         homeInfo,
-        awayInfo
+        awayInfo,
+        winContext
       )
     : null;
 
@@ -256,7 +251,8 @@ export function ModelExplanationSection({
         activeFeatures[1].value,
         activeFeatures[1].influence ?? "NEUTRAL",
         homeInfo,
-        awayInfo
+        awayInfo,
+        winContext
       )
     : null;
 
@@ -346,11 +342,11 @@ export function ModelExplanationSection({
             key={`${feature.feature_name}-${index}`}
             feature={feature}
             rank={index + 1}
-            maxImpact={maxImpact}
             totalImpact={totalImpact}
             homeInfo={homeInfo}
             awayInfo={awayInfo}
             showTech={showTechDetails}
+            ctx={winContext}
           />
         ))}
       </div>
