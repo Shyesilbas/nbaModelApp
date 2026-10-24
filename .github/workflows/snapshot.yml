@@ -3,8 +3,9 @@ name: paper trading snapshot
 # Freezes each game's prediction shortly before tip-off with the newest official injury report.
 # GitHub cron cannot be scheduled per game and skips or delays runs (the first night only one of
 # about twelve fired), so it is set every 10 minutes during US game hours (UTC, covers daylight
-# and standard time) with a 45 minute window: any run that does fire in the 45 minutes before
-# tip-off freezes the game. Runs with no game due exit before any
+# and standard time) with a 15 minute window: the official injury report is republished at :00, :15, :30
+# and :45, so a run in the last 15 minutes before tip-off always sees the report from the last
+# quarter hour. Any run that does fire in that window freezes the game. Runs with no game due exit before any
 # network call. Data inputs come from scripts/ops/publish_snapshot_data.py (run each morning).
 on:
   schedule:
@@ -14,7 +15,7 @@ on:
     inputs:
       pre_tip:
         description: "Minutes before tip-off a game counts as due"
-        default: "45"
+        default: "15"
       dry_run:
         description: "Predict and print only, write nothing"
         type: boolean
@@ -40,7 +41,7 @@ jobs:
           cache-dependency-path: requirements-snapshot.txt
       - run: pip install -r requirements-snapshot.txt
       - name: Snapshot games about to start
-        run: PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --pre-tip "${{ inputs.pre_tip || '45' }}" --final-attempt 25 ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --pre-tip "${{ inputs.pre_tip || '15' }}" --final-attempt 6 ${{ inputs.dry_run && '--dry-run' || '' }}
       - name: Commit the ledger
         run: |
           git config user.name "snapshot-bot"
