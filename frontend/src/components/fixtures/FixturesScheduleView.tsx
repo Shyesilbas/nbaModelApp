@@ -4,6 +4,7 @@ import type { DayGroup, DisplayMode } from "./types";
 import { FixtureMatchRow } from "./FixtureMatchRow";
 import { FixtureMatchCard } from "./FixtureMatchCard";
 import type { GameFeedRow } from "../../types/gameFeed";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface FixturesScheduleViewProps {
   loading: boolean;
@@ -28,11 +29,15 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
   onRefresh,
   refreshingGameId,
 }) => {
+  const { language } = useLanguage();
+
   if (loading) {
     return (
       <div className="rounded border border-border bg-background-primary py-20 text-center ">
         <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p className="text-xs font-semibold text-text-secondary">Fikstür ve maç verileri yükleniyor...</p>
+        <p className="text-xs font-semibold text-text-secondary">
+          {language === "tr" ? "Fikstür ve maç verileri yükleniyor..." : "Loading fixtures and schedule..."}
+        </p>
       </div>
     );
   }
@@ -40,8 +45,12 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
   if (dayGroups.length === 0) {
     return (
       <div className="rounded border border-border bg-background-primary py-16 text-center ">
-        <p className="text-sm font-semibold text-text-primary">Aramayla eşleşen maç bulunamadı.</p>
-        <p className="mt-1 text-xs text-text-secondary">Filtreleri veya arama kriterini degistirip tekrar deneyin.</p>
+        <p className="text-sm font-semibold text-text-primary">
+          {language === "tr" ? "Aramayla eşleşen maç bulunamadı." : "No games found matching your search."}
+        </p>
+        <p className="mt-1 text-xs text-text-secondary">
+          {language === "tr" ? "Filtreleri veya arama kriterini değiştirip tekrar deneyin." : "Try adjusting filters or search criteria."}
+        </p>
       </div>
     );
   }
@@ -57,7 +66,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
               <span>{dayGroup.formattedDate}</span>
             </div>
             <span className="rounded-full bg-background-tertiary px-2 py-0.5 text-xs font-semibold text-text-muted">
-              {dayGroup.games.length} mac
+              {dayGroup.games.length} {language === "tr" ? "maç" : (dayGroup.games.length === 1 ? "game" : "games")}
             </span>
           </div>
 

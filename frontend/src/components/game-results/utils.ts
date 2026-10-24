@@ -139,12 +139,16 @@ export function parseOfficials(rawList: unknown): ParsedOfficial[] {
 
 // toLocaleTimeString with options builds a new formatter on every call (~1 ms each).
 const TIPOFF_TR = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", hour12: false });
+const TIPOFF_EN = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", hour12: true });
 
-/** Scheduled tip-off in Turkey time (HH:mm), or null when the feed has no start time. */
-export function fmtTipoffTR(startUtc?: string | null): string | null {
+/** Scheduled tip-off in local or ET time, or null when the feed has no start time. */
+export function fmtTipoffTR(startUtc?: string | null, lang: string = "tr"): string | null {
   if (!startUtc) return null;
   const t = new Date(startUtc);
   if (isNaN(t.getTime())) return null;
+  if (lang === "en") {
+    return `${TIPOFF_EN.format(t)} ET`;
+  }
   return `${TIPOFF_TR.format(t)} TSİ`;
 }
 

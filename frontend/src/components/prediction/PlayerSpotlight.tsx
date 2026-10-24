@@ -4,6 +4,7 @@ import TeamLogo from "../TeamLogo";
 import PlayerPhoto from "../PlayerPhoto";
 import { PlayerMatchupModal, type PlayerMatchupData } from "./PlayerMatchupModal";
 import type { TeamInfo } from "./types";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface PlayerSpotlightProps {
   players: { home_players?: PlayerMatchupData[]; away_players?: PlayerMatchupData[] };
@@ -14,6 +15,7 @@ interface PlayerSpotlightProps {
 }
 
 export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season = "2025-26" }: PlayerSpotlightProps) {
+  const { t, language } = useLanguage();
   const [selectedPlayer, setSelectedPlayer] = useState<{
     player: PlayerMatchupData;
     team: TeamInfo;
@@ -33,9 +35,9 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
   const topAssister = [...all].sort((a, b) => b.predicted_ast - a.predicted_ast)[0];
 
   const spotlights = [
-    { player: topScorer, stat: topScorer?.predicted_pts, label: "En Skorer", unit: "PTS", icon: <Trophy size={16} /> },
-    { player: topRebounder, stat: topRebounder?.predicted_reb, label: "Ribaund Lideri", unit: "REB", icon: <Shield size={16} /> },
-    { player: topAssister, stat: topAssister?.predicted_ast, label: "Asist Lideri", unit: "AST", icon: <Users size={16} /> },
+    { player: topScorer, stat: topScorer?.predicted_pts, label: language === "tr" ? "En Skorer" : "Top Scorer", unit: "PTS", icon: <Trophy size={16} /> },
+    { player: topRebounder, stat: topRebounder?.predicted_reb, label: language === "tr" ? "Ribaund Lideri" : "Top Rebounder", unit: "REB", icon: <Shield size={16} /> },
+    { player: topAssister, stat: topAssister?.predicted_ast, label: language === "tr" ? "Asist Lideri" : "Top Assister", unit: "AST", icon: <Users size={16} /> },
   ];
 
   const handleOpenPlayerModal = (p: PlayerMatchupData, isHome: boolean) => {
@@ -64,11 +66,11 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
         <div className="flex items-center gap-2">
           <Sparkles size={16} className="text-primary" />
           <h4 className="text-sm font-semibold text-text-primary">
-            Oyuncu Tahmin Projeksiyonları ve Liderler
+            {t.predictions.playerProjections}
           </h4>
         </div>
         <span className="text-xs text-text-secondary">
-          Detaylı analiz için oyuncu satırına veya bilgi ikonuna tıklayın
+          {t.predictions.playerProjectionsSubtitle}
         </span>
       </div>
 
@@ -78,7 +80,7 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
           <div
             key={i}
             onClick={() => s.player && handleOpenPlayerModal(s.player, s.player.isHome)}
-            title="Oyuncu Maç Raporunu Aç"
+            title={t.predictions.viewPlayerReport}
             className="bg-background-primary border border-border rounded p-4 group hover:border-card-border-hover transition-colors cursor-pointer flex flex-col justify-between gap-3"
           >
             <div className="flex items-center justify-between">
@@ -112,7 +114,7 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                   )}
                   {s.player?.status === "RESTRICTED" && (
                     <span className="text-xs font-medium px-1.5 py-0.5 rounded-sm bg-status-warning/10 text-status-warning">
-                      Kısıtlı
+                      {language === "tr" ? "Kısıtlı" : "Restricted"}
                     </span>
                   )}
                 </div>
@@ -156,12 +158,12 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                 <div className="flex items-center gap-2">
                   <TeamLogo abbr={side.label} name={side.name} size={18} />
                   <h5 className="text-xs font-semibold text-text-primary">
-                    {side.label} Projeksiyonları
+                    {side.label} {language === "tr" ? "Projeksiyonları" : "Projections"}
                   </h5>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-medium text-text-secondary bg-background-secondary border border-border px-2 py-0.5 rounded-sm">
-                    {activePlayers.length} Rotasyon Oyuncusu
+                    {activePlayers.length} {language === "tr" ? "Rotasyon Oyuncusu" : "Active Players"}
                   </span>
                   {outPlayers.length > 0 && (
                     <span className="text-xs font-medium text-status-error bg-status-error/10 px-1.5 py-0.5 rounded-sm">
@@ -181,13 +183,13 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                 <table className="w-full">
                   <thead className="bg-background-secondary border-b border-border text-left text-xs font-medium text-text-secondary">
                     <tr>
-                      <th className="px-3 py-2.5">Oyuncu</th>
-                      <th className="px-2 py-2.5 text-center">Poz</th>
+                      <th className="px-3 py-2.5">{t.common.player}</th>
+                      <th className="px-2 py-2.5 text-center">{language === "tr" ? "Poz" : "Pos"}</th>
                       <th className="px-2 py-2.5 text-right text-text-primary">PTS</th>
                       <th className="px-2 py-2.5 text-right">REB</th>
                       <th className="px-2 py-2.5 text-right">AST</th>
                       <th className="px-2 py-2.5 text-right text-primary">PRA</th>
-                      <th className="px-2.5 py-2.5 text-center w-10">İncele</th>
+                      <th className="px-2.5 py-2.5 text-center w-10">{language === "tr" ? "İncele" : "View"}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
@@ -213,14 +215,14 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                               {isOut && (
                                 <span
                                   className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-status-error/10 text-status-error"
-                                  title="Bu maçta oynamayacak olarak işaretlendi"
+                                  title={t.predictions.markedOut}
                                 >
                                   OUT
                                 </span>
                               )}
                               {isRestricted && (
                                 <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-status-warning/10 text-status-warning">
-                                  Kısıtlı
+                                  {language === "tr" ? "Kısıtlı" : "Restricted"}
                                 </span>
                               )}
                             </div>

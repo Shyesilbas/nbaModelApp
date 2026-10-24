@@ -14,9 +14,11 @@ import {
 import GameResults from "./components/GameResults";
 import { parseUrlRoute, updateUrlRoute } from "./lib/router";
 import { ThemeToggle } from "./components/common/ThemeToggle";
+import { LanguageToggle } from "./components/common/LanguageToggle";
 import { CommandPalette } from "./components/common/CommandPalette";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { Skeleton } from "./components/common/Skeleton";
+import { useLanguage } from "./context/LanguageContext";
 
 const TeamExplorer = lazy(() => import("./components/TeamExplorer"));
 const TradeBoard = lazy(() => import("./components/TradeBoard"));
@@ -30,23 +32,32 @@ const PlayerCompare = lazy(() =>
 
 import { loadPrivateApi } from "./lib/dataCache";
 
-const MENU = [
-  { id: "game-results",   label: "Game Results",   icon: <CalendarDays size={16} strokeWidth={1.5} />, section: "Fixture" },
-  { id: "player-profile", label: "Player Profile", icon: <UserCircle size={16} strokeWidth={1.5} />,  section: "Players" },
-  { id: "player-compare", label: "Head-to-Head",   icon: <ArrowLeftRight size={16} strokeWidth={1.5} />, section: null },
-  { id: "team-explorer",  label: "Team Explorer",  icon: <Search size={16} strokeWidth={1.5} />,      section: "Analysis" },
-  { id: "multi-team",     label: "Trade Discovery",icon: <RefreshCw size={16} strokeWidth={1.5} />,   section: null },
-  { id: "nba-prediction", label: "Predictions",    icon: <BarChart2 size={16} strokeWidth={1.5} />,   section: "Models" },
-  { id: "paper-trading",  label: "Paper Trading",  icon: <ClipboardCheck size={16} strokeWidth={1.5} />, section: null },
-  { id: "injuries",       label: "Injuries",       icon: <Stethoscope size={16} strokeWidth={1.5} />,    section: null },
-];
+const MENU_ITEMS = [
+  { id: "game-results",   labelKey: "gameResults",   icon: <CalendarDays size={16} strokeWidth={1.5} />, sectionKey: "fixtureSection" },
+  { id: "player-profile", labelKey: "playerProfile", icon: <UserCircle size={16} strokeWidth={1.5} />,  sectionKey: "playersSection" },
+  { id: "player-compare", labelKey: "playerCompare", icon: <ArrowLeftRight size={16} strokeWidth={1.5} />, sectionKey: null },
+  { id: "team-explorer",  labelKey: "teamExplorer",  icon: <Search size={16} strokeWidth={1.5} />,      sectionKey: "analysisSection" },
+  { id: "multi-team",     labelKey: "tradeDiscovery",icon: <RefreshCw size={16} strokeWidth={1.5} />,   sectionKey: null },
+  { id: "nba-prediction", labelKey: "predictions",    icon: <BarChart2 size={16} strokeWidth={1.5} />,   sectionKey: "modelsSection" },
+  { id: "paper-trading",  labelKey: "paperTrading",  icon: <ClipboardCheck size={16} strokeWidth={1.5} />, sectionKey: null },
+  { id: "injuries",       labelKey: "injuries",       icon: <Stethoscope size={16} strokeWidth={1.5} />,    sectionKey: null },
+] as const;
 
 export default function App() {
+  const { t } = useLanguage();
+
+  const menu = MENU_ITEMS.map((item) => ({
+    id: item.id,
+    label: t.menu[item.labelKey as keyof typeof t.menu],
+    section: item.sectionKey ? t.menu[item.sectionKey as keyof typeof t.menu] : null,
+    icon: item.icon,
+  }));
+
   const [activeTab, setActiveTab] = useState(() => {
     const urlRoute = parseUrlRoute();
-    if (MENU.some((item) => item.id === urlRoute.tab)) return urlRoute.tab;
+    if (MENU_ITEMS.some((item) => item.id === urlRoute.tab)) return urlRoute.tab;
     const savedTab = sessionStorage.getItem("nba-intel-active-tab");
-    return MENU.some((item) => item.id === savedTab) ? savedTab! : "game-results";
+    return MENU_ITEMS.some((item) => item.id === savedTab) ? savedTab! : "game-results";
   });
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -119,7 +130,7 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       const route = parseUrlRoute();
-      if (MENU.some((item) => item.id === route.tab)) {
+      if (MENU_ITEMS.some((item) => item.id === route.tab)) {
         setActiveTab(route.tab);
       }
       setProfileTargetPlayerId(route.playerId ?? null);
@@ -149,9 +160,9 @@ export default function App() {
 
   useEffect(() => {
     sessionStorage.setItem("nba-intel-active-tab", activeTab);
-    const label = MENU.find((item) => item.id === activeTab)?.label;
+    const label = menu.find((item) => item.id === activeTab)?.label;
     document.title = label ? `${label} | NBA Intelligence Lab` : "NBA Intelligence Lab";
-  }, [activeTab]);
+  }, [activeTab, menu]);
 
   useEffect(() => {
     if (predictionTarget) {
@@ -217,8 +228,8 @@ export default function App() {
             <button
               type="button"
               onClick={toggleSidebar}
-              title={sidebarCollapsed ? "Kenar çubuğunu genişlet" : "Kenar çubuğunu daralt"}
-              aria-label={sidebarCollapsed ? "Kenar çubuğunu genişlet" : "Kenar çubuğunu daralt"}
+              title={sidebarCollapsed ? t.common.expandSidebar : t.common.collapseSidebar}
+              aria-label={sidebarCollapsed ? t.common.expandSidebar : t.common.collapseSidebar}
               aria-expanded={!sidebarCollapsed}
               className={`flex h-8 w-8 items-center justify-center rounded text-text-secondary hover:bg-background-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
                 sidebarCollapsed ? "mx-auto" : "ml-auto"
@@ -233,8 +244,8 @@ export default function App() {
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 overflow-y-auto p-2" aria-label="Ana gezinme">
-            {MENU.map((item) => (
+          <nav className="flex-1 overflow-y-auto p-2" aria-label={t.common.mainNav}>
+            {menu.map((item) => (
               <div key={item.id} className="mb-1">
                 {item.section && !sidebarCollapsed && (
                   <p className="px-3 pb-1 pt-3 text-xs font-medium text-text-secondary">
@@ -278,12 +289,12 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setCommandPaletteOpen(true)}
-                aria-label="Hızlı arama (Ctrl veya Cmd + K)"
+                aria-label={t.common.searchCmdK}
                 className="flex h-9 w-full items-center justify-between rounded border border-border bg-background-secondary px-3 text-xs text-text-muted hover:border-card-border-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
               >
                 <div className="flex items-center gap-2">
                   <Search size={16} strokeWidth={1.5} />
-                  <span>Oyuncu veya takım ara</span>
+                  <span>{t.common.searchPlaceholder}</span>
                 </div>
                 <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-secondary">
                   ⌘K
@@ -292,6 +303,7 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2 ml-auto">
+              <LanguageToggle />
               <ThemeToggle />
             </div>
           </header>
@@ -299,9 +311,9 @@ export default function App() {
           {/* Mobile nav */}
           <nav
             className="flex gap-1 overflow-x-auto border-b border-border bg-background-primary px-3 py-2 lg:hidden"
-            aria-label="Ana gezinme (mobil)"
+            aria-label={t.common.mobileNav}
           >
-            {MENU.map((item) => (
+            {menu.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleTabChange(item.id)}
@@ -325,7 +337,7 @@ export default function App() {
                   </div>
                   <div>
                     <h2 className="text-base font-semibold text-text-primary">
-                      Veriler yüklenemedi
+                      {t.common.loadFailed}
                     </h2>
                     <p className="mt-1 text-sm text-text-secondary">{error}</p>
                   </div>
@@ -362,7 +374,7 @@ export default function App() {
                   )}
                   <Suspense
                     fallback={
-                      <div className="space-y-4" aria-busy="true" aria-label="Ekran yükleniyor">
+                      <div className="space-y-4" aria-busy="true" aria-label={t.common.loadingScreen}>
                         <Skeleton className="h-10 w-1/3 rounded" />
                         <Skeleton className="h-64 w-full rounded" />
                       </div>
@@ -393,7 +405,7 @@ export default function App() {
                     {activeTab === "team-explorer" &&
                       (loading ? (
                         <div className="flex h-72 flex-col items-center justify-center gap-3">
-                          <p className="text-sm text-text-secondary">Loading rosters...</p>
+                          <p className="text-sm text-text-secondary">{t.team.loadingRosters}</p>
                         </div>
                       ) : (
                         <TeamExplorer

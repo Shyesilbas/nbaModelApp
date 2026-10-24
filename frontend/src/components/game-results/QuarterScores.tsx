@@ -1,4 +1,5 @@
 import TeamLogo from "../TeamLogo";
+import { useLanguage } from "../../context/LanguageContext";
 
 export interface QuarterScoresProps {
   homeAbbr: string;
@@ -25,6 +26,7 @@ export function QuarterScores({
   winnerAbbr,
   margin,
 }: QuarterScoresProps) {
+  const { language } = useLanguage();
   const hasQS =
     (Array.isArray(awayQS) && awayQS.length > 0) ||
     (Array.isArray(homeQS) && homeQS.length > 0);
@@ -43,12 +45,16 @@ export function QuarterScores({
     <div className="rounded border border-border bg-background-primary p-4 sm:p-5">
       <div className="mb-3 flex items-center justify-between border-b border-border-light pb-3">
         <div>
-          <h3 className="text-sm font-semibold text-text-primary">Periyot Skorlari</h3>
-          <p className="mt-0.5 text-xs text-text-secondary">Ceyrek ve uzatma bazinda skor dagilimi</p>
+          <h3 className="text-sm font-semibold text-text-primary">
+            {language === "tr" ? "Periyot Skorları" : "Quarter Scores"}
+          </h3>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            {language === "tr" ? "Çeyrek ve uzatma bazında skor dağılımı" : "Score progression by quarters and overtime"}
+          </p>
         </div>
         {winnerAbbr && margin != null && margin > 0 && (
           <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-text-secondary">
-            {winnerAbbr} +{margin} farkla kazandi
+            {winnerAbbr} +{margin} {language === "tr" ? "farkla kazandı" : "pts win"}
           </span>
         )}
       </div>
@@ -57,7 +63,7 @@ export function QuarterScores({
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border-light text-text-secondary">
-              <th className="pb-2 text-left text-xs font-medium min-w-[140px]">Takım</th>
+              <th className="pb-2 text-left text-xs font-medium min-w-[140px]">{language === "tr" ? "Takım" : "Team"}</th>
               {cols.map((i) => {
                 const label = i < 4 ? `Q${i + 1}` : quarters === 5 ? "OT" : `OT${i - 3}`;
                 return (
@@ -67,7 +73,7 @@ export function QuarterScores({
                 );
               })}
               <th className="pb-2 text-center text-xs font-semibold text-text-primary w-14 sm:w-18">
-                Toplam
+                {language === "tr" ? "Toplam" : "Total"}
               </th>
             </tr>
           </thead>
@@ -81,7 +87,7 @@ export function QuarterScores({
                     {awayAbbr}
                   </span>
                   <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-muted">
-                    Dep
+                    {language === "tr" ? "Dep" : "Away"}
                   </span>
                 </div>
               </td>
@@ -114,7 +120,7 @@ export function QuarterScores({
                     {homeAbbr}
                   </span>
                   <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-muted">
-                    Ev
+                    {language === "tr" ? "Ev" : "Home"}
                   </span>
                 </div>
               </td>

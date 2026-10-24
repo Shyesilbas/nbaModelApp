@@ -4,6 +4,7 @@ import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { TEAM_NAME_BY_ABBR, getTeamShortName, isKnownTeamAbbr } from "../../lib/nbaTeams";
 import { fmtTipoffTR, isGameEligibleForRefresh, parseOfficials } from "../game-results/utils";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface FixtureMatchCardProps {
   game: GameFeedRow;
@@ -26,6 +27,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
   homeForm = [],
   awayForm = [],
 }) => {
+  const { language } = useLanguage();
   const isCompleted =
     game.GAME_STATUS === "Final" ||
     game.GAME_STATUS === "FINAL" ||
@@ -62,12 +64,12 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
             <span className="inline-flex items-center gap-1 text-xs font-medium text-status-success">
               <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
               {game.GAME_STATUS || "Final"}
-              {fmtTipoffTR(game.GAME_START_UTC) && <span className="font-normal text-text-muted">· {fmtTipoffTR(game.GAME_START_UTC)}</span>}
+              {fmtTipoffTR(game.GAME_START_UTC, language) && <span className="font-normal text-text-muted">· {fmtTipoffTR(game.GAME_START_UTC, language)}</span>}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-text-muted">
               <Clock className="h-3 w-3" />
-              <span>{fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Programda")}</span>
+              <span>{fmtTipoffTR(game.GAME_START_UTC, language) ?? (game.GAME_STATUS || (language === "tr" ? "Programda" : "Scheduled"))}</span>
             </span>
           )}
           {game.SERIES_GAME_NUMBER != null && (
@@ -77,13 +79,13 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
           )}
           {game.IS_ELIMINATION_GAME && (
             <span className="rounded-sm border border-status-error/30 bg-status-error/10 px-1 py-0.5 text-xs font-medium text-status-error">
-              Elimination
+              {language === "tr" ? "Eleme Maçı" : "Elimination"}
             </span>
           )}
         </div>
 
         <span className="flex items-center gap-0.5 text-xs font-medium text-text-secondary transition-colors group-hover:text-text-primary shrink-0 ml-2">
-          <span>{isCompleted ? "Kutu Puanı" : "Detay"}</span>
+          <span>{isCompleted ? (language === "tr" ? "Kutu Puanı" : "Box Score") : (language === "tr" ? "Detay" : "Details")}</span>
           <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </span>
       </div>
@@ -109,7 +111,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
                 {awayName}
               </button>
               <span className="text-xs text-text-muted block">
-                Deplasman
+                {language === "tr" ? "Deplasman" : "Away"}
               </span>
             </div>
           </div>
@@ -129,7 +131,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
                 </div>
                 {margin > 0 && (
                   <span className="text-xs font-medium text-text-muted tabular-nums">
-                    +{margin} sayı
+                    +{margin} {language === "tr" ? "sayı" : "pts"}
                   </span>
                 )}
               </>
@@ -157,7 +159,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
                 {homeName}
               </button>
               <span className="text-xs text-text-muted block text-right">
-                Ev Sahibi
+                {language === "tr" ? "Ev Sahibi" : "Home"}
               </span>
             </div>
             <TeamLogo abbr={homeAbbr} name={homeName} size={34} className="shrink-0" />
@@ -168,32 +170,32 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
       {/* Recent Form (Son 5 Maç) */}
       {(awayForm.length > 0 || homeForm.length > 0) && (
         <div className="flex items-center justify-between gap-2 border-t border-border-light py-1.5 px-0.5 text-xs">
-          <div className="flex items-center gap-1" title={`${awayName} son 5 maç formu`}>
+          <div className="flex items-center gap-1" title={`${awayName} ${language === "tr" ? "son 5 maç formu" : "last 5 games form"}`}>
             {awayForm.map((res, i) => (
               <span
                 key={i}
                 className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold text-white ${
                   res === "W" ? "bg-status-success" : "bg-status-error"
                 }`}
-                title={res === "W" ? "Galibiyet" : "Mağlubiyet"}
+                title={res === "W" ? (language === "tr" ? "Galibiyet" : "Win") : (language === "tr" ? "Mağlubiyet" : "Loss")}
               >
-                {res === "W" ? "G" : "M"}
+                {res === "W" ? (language === "tr" ? "G" : "W") : (language === "tr" ? "M" : "L")}
               </span>
             ))}
           </div>
           <span className="shrink-0 font-medium text-xs text-text-muted">
-            SON 5
+            {language === "tr" ? "SON 5" : "LAST 5"}
           </span>
-          <div className="flex items-center gap-1" title={`${homeName} son 5 maç formu`}>
+          <div className="flex items-center gap-1" title={`${homeName} ${language === "tr" ? "son 5 maç formu" : "last 5 games form"}`}>
             {homeForm.map((res, i) => (
               <span
                 key={i}
                 className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold text-white ${
                   res === "W" ? "bg-status-success" : "bg-status-error"
                 }`}
-                title={res === "W" ? "Galibiyet" : "Mağlubiyet"}
+                title={res === "W" ? (language === "tr" ? "Galibiyet" : "Win") : (language === "tr" ? "Mağlubiyet" : "Loss")}
               >
-                {res === "W" ? "G" : "M"}
+                {res === "W" ? (language === "tr" ? "G" : "W") : (language === "tr" ? "M" : "L")}
               </span>
             ))}
           </div>
@@ -216,7 +218,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
               {game.ARENA && <span>•</span>}
               <span
                 className="inline-flex items-center gap-1 text-text-secondary shrink-0"
-                title={`Hakemler: ${officials.map((o) => o.cleanName).join(", ")}`}
+                title={`${language === "tr" ? "Hakemler" : "Officials"}: ${officials.map((o) => o.cleanName).join(", ")}`}
               >
                 <Shield size={16} className="text-text-muted" />
                 <span>{officials.map((o) => o.jerseyNum ? `#${o.jerseyNum}` : o.cleanName).slice(0, 2).join(" ")}</span>
@@ -238,7 +240,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
               className="inline-flex items-center gap-1 rounded border border-border bg-background-primary px-2 py-0.5 text-xs font-medium text-text-primary transition-colors hover:bg-background-tertiary disabled:opacity-50"
             >
               <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
-              <span>{isRefreshing ? "..." : "Yenile"}</span>
+              <span>{isRefreshing ? "..." : (language === "tr" ? "Yenile" : "Refresh")}</span>
             </button>
           )}
 
@@ -252,7 +254,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
               className="inline-flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
             >
               <Sparkles size={16} />
-              <span>Tahmin</span>
+              <span>{language === "tr" ? "Tahmin" : "Predict"}</span>
             </button>
           )}
         </div>

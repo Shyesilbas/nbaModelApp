@@ -4,6 +4,7 @@ import TeamLogo from "../TeamLogo";
 import type { ConferenceFilter, TeamStanding } from "./types";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { NBA_TEAM_ABBRS, TEAM_NAME_BY_ABBR, getTeamShortName, isKnownTeamAbbr } from "../../lib/nbaTeams";
+import { useLanguage } from "../../context/LanguageContext";
 
 const EAST_TEAMS = new Set([
   "ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DET", "IND",
@@ -21,6 +22,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
   season,
   onSelectTeam,
 }) => {
+  const { t, language } = useLanguage();
   const [conferenceFilter, setConferenceFilter] = useState<ConferenceFilter>("all");
 
   const standings = useMemo(() => {
@@ -194,10 +196,10 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-semibold text-text-primary">
-              NBA puan durumu ve sıralama
+              {t.fixtures.standingsTitle}
             </h3>
             <p className="text-xs text-text-muted">
-              {season} normal sezon (82 maç) sıralaması ve sonuçları
+              {t.fixtures.standingsSubtitle.replace("{season}", season)}
             </p>
           </div>
         </div>
@@ -213,7 +215,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
-            Genel
+            {t.common.all}
           </button>
           <button
             type="button"
@@ -224,7 +226,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
-            Dogu Konferansi
+            {t.fixtures.easternConference}
           </button>
           <button
             type="button"
@@ -235,7 +237,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
-            Bati Konferansi
+            {t.fixtures.westernConference}
           </button>
         </div>
       </div>
@@ -246,20 +248,46 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           <thead>
             <tr className="border-b border-border text-xs font-semibold text-text-muted bg-background-tertiary/50">
               <th className="py-2.5 px-3 w-12 text-center">#</th>
-              <th className="py-2.5 px-3 min-w-[180px]">Takım</th>
-              <th className="py-2.5 px-2 text-center w-10" title="Oynanan maç">O</th>
-              <th className="py-2.5 px-2 text-center w-10" title="Galibiyet">G</th>
-              <th className="py-2.5 px-2 text-center w-10" title="Mağlubiyet">M</th>
-              <th className="py-2.5 px-2 text-center w-12 font-semibold text-text-primary" title="Galibiyet yüzdesi">%</th>
-              <th className="py-2.5 px-2 text-center w-12" title="Lider ile galibiyet farkı">Fark</th>
-              <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title="Maç başına atılan sayı">Sayı</th>
-              <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title="Maç başına yenilen sayı">Y.Sayı</th>
-              <th className="py-2.5 px-2 text-center w-12" title="Sayı averajı">AV</th>
-              <th className="py-2.5 px-2 text-center w-16 hidden lg:table-cell" title="İç saha">İç</th>
-              <th className="py-2.5 px-2 text-center w-16 hidden lg:table-cell" title="Deplasman">Dep</th>
-              <th className="py-2.5 px-2 text-center w-14 hidden sm:table-cell" title="Son 10 maç">S10</th>
-              <th className="py-2.5 px-2 text-center w-12 hidden sm:table-cell" title="Mevcut seri">Seri</th>
-              <th className="py-2.5 px-3 text-center w-28 hidden sm:table-cell" title="Son 5 maç">Form</th>
+              <th className="py-2.5 px-3 min-w-[180px]">{t.common.team}</th>
+              <th className="py-2.5 px-2 text-center w-10" title={language === "tr" ? "Oynanan maç" : "Games Played"}>
+                {language === "tr" ? "O" : "GP"}
+              </th>
+              <th className="py-2.5 px-2 text-center w-10" title={language === "tr" ? "Galibiyet" : "Wins"}>
+                {language === "tr" ? "G" : "W"}
+              </th>
+              <th className="py-2.5 px-2 text-center w-10" title={language === "tr" ? "Mağlubiyet" : "Losses"}>
+                {language === "tr" ? "M" : "L"}
+              </th>
+              <th className="py-2.5 px-2 text-center w-12 font-semibold text-text-primary" title={t.fixtures.winRate}>
+                {t.fixtures.pct}
+              </th>
+              <th className="py-2.5 px-2 text-center w-12" title={t.fixtures.gamesBehind}>
+                {t.fixtures.gamesBehind}
+              </th>
+              <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title={t.fixtures.pointsFor}>
+                {language === "tr" ? "Sayı" : "PPG"}
+              </th>
+              <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title={t.fixtures.pointsAgainst}>
+                {language === "tr" ? "Y.Sayı" : "OPP"}
+              </th>
+              <th className="py-2.5 px-2 text-center w-12" title={t.fixtures.pointDiff}>
+                {language === "tr" ? "AV" : "DIFF"}
+              </th>
+              <th className="py-2.5 px-2 text-center w-16 hidden lg:table-cell" title={language === "tr" ? "İç saha" : "Home record"}>
+                {t.fixtures.homeRecord}
+              </th>
+              <th className="py-2.5 px-2 text-center w-16 hidden lg:table-cell" title={language === "tr" ? "Deplasman" : "Away record"}>
+                {t.fixtures.awayRecord}
+              </th>
+              <th className="py-2.5 px-2 text-center w-14 hidden sm:table-cell" title={language === "tr" ? "Son 10 maç" : "Last 10"}>
+                {t.fixtures.l10}
+              </th>
+              <th className="py-2.5 px-2 text-center w-12 hidden sm:table-cell" title={language === "tr" ? "Mevcut seri" : "Streak"}>
+                {t.fixtures.streak}
+              </th>
+              <th className="py-2.5 px-3 text-center w-28 hidden sm:table-cell" title={t.fixtures.recentForm}>
+                Form
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -335,9 +363,9 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                           className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold text-white ${
                             res === "W" ? "bg-status-success" : "bg-status-error"
                           }`}
-                          title={res === "W" ? "Galibiyet" : "Mağlubiyet"}
+                          title={res === "W" ? (language === "tr" ? "Galibiyet" : "Win") : (language === "tr" ? "Mağlubiyet" : "Loss")}
                         >
-                          {res === "W" ? "G" : "M"}
+                          {res === "W" ? (language === "tr" ? "G" : "W") : (language === "tr" ? "M" : "L")}
                         </span>
                       ))}
                     </div>
@@ -354,20 +382,22 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-status-success" />
-            <span>Dogrudan Playoff (1-6)</span>
+            <span>{language === "tr" ? "Doğrudan Playoff (1-6)" : "Playoffs Seed (1-6)"}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-amber-500" />
-            <span>Play-In Turnuvasi (7-10)</span>
+            <span>{language === "tr" ? "Play-In Turnuvası (7-10)" : "Play-In Tournament (7-10)"}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-border" />
-            <span>Piyango / Elenenler (11-15)</span>
+            <span>{language === "tr" ? "Piyango / Elenenler (11-15)" : "Lottery / Eliminated (11-15)"}</span>
           </div>
         </div>
 
         <div className="tabular-nums text-xs text-text-muted">
-          O: oynanan • G: galibiyet • M: mağlubiyet • %: yüzde • Fark: galibiyet farkı • AV: averaj
+          {language === "tr"
+            ? "O: oynanan • G: galibiyet • M: mağlubiyet • %: yüzde • Fark: galibiyet farkı • AV: averaj"
+            : "GP: games played • W: wins • L: losses • %: win pct • GB: games behind • DIFF: point diff"}
         </div>
       </div>
     </div>

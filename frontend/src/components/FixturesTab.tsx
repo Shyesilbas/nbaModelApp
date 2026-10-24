@@ -30,6 +30,7 @@ import type { ActiveView, DayGroup, DisplayMode } from "./fixtures/types";
 import { DatePicker } from "./common";
 import { FixturesScheduleView } from "./fixtures/FixturesScheduleView";
 import { FixturesStandingsView } from "./fixtures/FixturesStandingsView";
+import { useLanguage } from "../context/LanguageContext";
 
 type SeasonTypeFilter = "all" | "regular" | "playin" | "playoffs" | "finals";
 
@@ -54,6 +55,7 @@ export default function FixturesTab({
   onNavigateToPrediction,
   onSelectTeam,
 }: FixturesTabProps) {
+  const { t, language } = useLanguage();
   const [seasonsList, setSeasonsList] = useState<string[]>([
     "2026-27",
     "2025-26",
@@ -125,7 +127,13 @@ export default function FixturesTab({
   const [refreshDone, setRefreshDone] = useState<boolean>(false);
   const [freshPlayByPlay, setFreshPlayByPlay] = useState<any>(null);
 
-  // Persistence to session storage and URL (only if game-results is the active tab)
+  const seasonTypeFilters: { id: SeasonTypeFilter; label: string; values: string[] }[] = useMemo(() => [
+    { id: "all", label: language === "tr" ? "Tümü" : "All", values: [] },
+    { id: "regular", label: language === "tr" ? "Normal Sezon" : "Regular Season", values: ["Regular Season"] },
+    { id: "playoffs", label: language === "tr" ? "Play-Off" : "Playoffs", values: ["Playoffs"] },
+    { id: "playin", label: "Play-In", values: ["PlayIn"] },
+    { id: "finals", label: "NBA Finals", values: ["NBA Finals"] },
+  ], [language]);
   useEffect(() => {
     sessionStorage.setItem("nba-fixtures-active-view", activeView);
     sessionStorage.setItem("nba-results-search", search);
@@ -471,7 +479,7 @@ export default function FixturesTab({
     if (games.length === 0 || batchRunning) return;
     setBatchRunning(true);
     setBatchProgress({ current: 0, total: games.length, done: 0, failed: 0 });
-    setBatchMsg(`0/${games.length} maç güncelleniyor...`);
+    setBatchMsg(language === "tr" ? `0/${games.length} maç güncelleniyor...` : `Updating 0/${games.length} games...`);
     const stateOf: Record<string, string> = {};
     const ids = games.map((g) => g.GAME_ID);
     const done = new Set<string>();
@@ -495,11 +503,13 @@ export default function FixturesTab({
         }
         const finished = done.size + failed.size;
         setBatchProgress({ current: finished, total: games.length, done: done.size, failed: failed.size });
-        setBatchMsg(`${finished}/${games.length} maç işlendi`);
+        setBatchMsg(language === "tr" ? `${finished}/${games.length} maç işlendi` : `${finished}/${games.length} games processed`);
       }
-      setBatchMsg(failed.size ? `${done.size} alındı, ${failed.size} alınamadı` : `${done.size} maç güncellendi`);
+      setBatchMsg(failed.size
+        ? (language === "tr" ? `${done.size} alındı, ${failed.size} alınamadı` : `${done.size} fetched, ${failed.size} failed`)
+        : (language === "tr" ? `${done.size} maç güncellendi` : `${done.size} games updated`));
     } catch (err) {
-      setBatchMsg(err instanceof Error ? err.message : "Maç verileri alınamadı.");
+      setBatchMsg(err instanceof Error ? err.message : t.fixtures.refreshFailed);
     } finally {
       setBatchRunning(false);
       setTimeout(() => {
@@ -533,7 +543,7 @@ export default function FixturesTab({
         {isCompletedGame && detailLoading ? (
           <div className="flex h-32 items-center justify-center gap-2 rounded border border-border bg-background-primary ">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span className="text-xs text-text-secondary">Kutu puanları yükleniyor...</span>
+            <span className="text-xs text-text-secondary">{t.fixtures.boxscoresLoading}</span>
           </div>
         ) : (
           <GameCardDetail
@@ -587,7 +597,7 @@ export default function FixturesTab({
                 }`}
               >
                 <Calendar className="h-3.5 w-3.5" />
-                <span>Fikstür</span>
+                <span>{language === "tr" ? "Fikstür" : "Schedule"}</span>
               </button>
               <button
                 type="button"
@@ -599,7 +609,7 @@ export default function FixturesTab({
                 }`}
               >
                 <Trophy className="h-3.5 w-3.5 text-amber-500" />
-                <span>Puan Tablosu</span>
+                <span>{language === "tr" ? "Puan Tablosu" : "Standings"}</span>
               </button>
             </div>
 
@@ -624,10 +634,10 @@ export default function FixturesTab({
                   onClick={refreshDateGames}
                   disabled={batchRunning}
                   className="inline-flex items-center gap-1.5 rounded border border-border bg-background-tertiary px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:border-primary disabled:opacity-50"
-                  title={`${pendingDateGames.length} tamamlanan maçın kutu puanını çek`}
+                  title={language === "tr" ? `${pendingDateGames.length} tamamlanan maçın kutu puanını çek` : `Fetch box scores for ${pendingDateGames.length} finished games`}
                 >
                   <RefreshCw size={16} className={batchRunning ? "animate-spin text-primary" : "text-text-muted"} />
-                  <span>{batchRunning ? "Çekiliyor..." : "Yenile"}</span>
+                  <span>{batchRunning ? (language === "tr" ? "Çekiliyor..." : "Fetching...") : (language === "tr" ? "Yenile" : "Refresh")}</span>
                   <span className="rounded-sm border border-border bg-background-primary px-1 py-0.5 text-xs text-text-muted">
                     {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : pendingDateGames.length}
                   </span>
@@ -665,10 +675,10 @@ export default function FixturesTab({
                 type="button"
                 onClick={() => setSelectedDate(todayStr)}
                 className="flex shrink-0 items-center gap-1.5 rounded border border-border bg-background-tertiary px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:border-primary"
-                title="Bugünkü maçlara git"
+                title={t.fixtures.goToToday}
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
-                <span>Bugün</span>
+                <span>{t.common.today}</span>
               </button>
             )}
           </div>
@@ -684,7 +694,7 @@ export default function FixturesTab({
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Takım veya arena ara"
+                  placeholder={t.fixtures.searchPlaceholder}
                   className="w-full rounded border border-border bg-background-tertiary py-1.5 pl-8 pr-7 text-xs font-medium text-text-primary placeholder:text-text-muted outline-none transition-all focus:border-border-focus focus:bg-background-primary"
                 />
                 {search && (
@@ -692,7 +702,7 @@ export default function FixturesTab({
                     type="button"
                     onClick={() => setSearch("")}
                     className="absolute right-2 top-1/2 -translate-y-1/2 px-1 text-xs font-semibold text-text-muted hover:text-text-primary"
-                    title="Aramayi temizle"
+                    title={t.fixtures.clearSearch}
                   >
                     x
                   </button>
@@ -711,10 +721,10 @@ export default function FixturesTab({
                       ? "bg-primary text-white "
                       : "text-text-secondary hover:text-text-primary"
                   }`}
-                  title="Kompakt liste"
+                  title={language === "tr" ? "Kompakt liste" : "Compact list"}
                 >
                   <List className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Liste</span>
+                  <span className="hidden sm:inline">{language === "tr" ? "Liste" : "List"}</span>
                 </button>
                 <button
                   type="button"
@@ -724,10 +734,10 @@ export default function FixturesTab({
                       ? "bg-primary text-white "
                       : "text-text-secondary hover:text-text-primary"
                   }`}
-                  title="Ayrıntılı kartlar"
+                  title={language === "tr" ? "Ayrıntılı kartlar" : "Detailed cards"}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Kart</span>
+                  <span className="hidden sm:inline">{language === "tr" ? "Kart" : "Cards"}</span>
                 </button>
               </div>
             )}
@@ -735,7 +745,7 @@ export default function FixturesTab({
             {/* Season Selector Dropdown */}
             <div className="relative shrink-0">
               <label htmlFor="fixtures-season-select" className="sr-only">
-                Sezon sec
+                {t.common.season}
               </label>
               <select
                 id="fixtures-season-select"
@@ -763,7 +773,7 @@ export default function FixturesTab({
       {/* Season Type Pills (in fixtures view) */}
       {activeView === "fixtures" && (
         <div className="flex flex-wrap items-center gap-1.5">
-          {SEASON_TYPE_FILTERS.map((filter) => {
+          {seasonTypeFilters.map((filter) => {
             const count = seasonTypeCounts[filter.id];
             const isSelected = seasonTypeFilter === filter.id;
             return (

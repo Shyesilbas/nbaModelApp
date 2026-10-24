@@ -21,7 +21,7 @@ import { loadArchivedGameIndex } from "../lib/archiveData";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { NBA_TEAMS } from "../lib/nbaTeams";
 import { CURRENT_SEASON, MIN_PREDICTION_DATE } from "../lib/constants";
-import { fmtDate } from "./game-results/utils";
+import { useLanguage } from "../context/LanguageContext";
 
 import {
   MatchupHeroCard,
@@ -49,6 +49,7 @@ const etDate = (offsetDays: number) =>
   new Date(Date.now() + offsetDays * 86400000).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
 export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPredictionProps = {}) {
+  const { t, language, formatDate } = useLanguage();
   const [home, setHome] = useState(initialGame?.home || "");
   const [away, setAway] = useState(initialGame?.away || "");
   const [date, setDate] = useState(initialGame?.date || "");
@@ -91,7 +92,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         setSelectedDate(initialDate);
       } catch (err: any) {
         console.error("Error loading schedule games:", err);
-        if (active) setDataError("Takvim maçları yüklenemedi.");
+        if (active) setDataError(t.predictions.scheduleLoadError);
       } finally {
         if (active) setLoadingData(false);
       }
@@ -171,12 +172,14 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
       setError(null);
       setLoading(true);
       try {
-        if (!h || !a) throw new Error("Lütfen ev sahibi ve deplasman takımlarını seçin.");
-        if (h === a) throw new Error("Ev sahibi ve deplasman aynı takım olamaz.");
-        if (!d) throw new Error("Lütfen maç tarihini seçin.");
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error("Geçersiz tarih formatı (YYYY-MM-DD olmalı).");
+        if (!h || !a) throw new Error(t.predictions.selectTeamsError);
+        if (h === a) throw new Error(t.predictions.sameTeamError);
+        if (!d) throw new Error(language === "tr" ? "Lütfen maç tarihini seçin." : "Please select a game date.");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error(language === "tr" ? "Geçersiz tarih formatı (YYYY-MM-DD olmalı)." : "Invalid date format (must be YYYY-MM-DD).");
         if (d < MIN_PREDICTION_DATE) {
-          throw new Error(`Tahminler sadece henüz oynanmamış gelecek maçlar (${CURRENT_SEASON} sezonu ve sonrası) için geçerlidir.`);
+          throw new Error(
+            t.predictions.dateOutOfRange.replace("{season}", CURRENT_SEASON)
+          );
         }
 
         const data = await predictGameFull({
@@ -189,12 +192,12 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         setActiveResultTab("overview");
         setSelectorOpen(false);
       } catch (e: any) {
-        setError(e.message || "Bilinmeyen bir hata oluştu.");
+        setError(e.message || (language === "tr" ? "Bilinmeyen bir hata oluştu." : "An unknown error occurred."));
       } finally {
         setLoading(false);
       }
     },
-    []
+    [t, language]
   );
 
   useEffect(() => {
@@ -249,15 +252,6 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
   const homeInfo = getTeamInfo(home);
   const awayInfo = getTeamInfo(away);
-
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return "";
-    try {
-      return new Date(dateStr).toLocaleDateString("tr-TR", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
-    } catch {
-      return dateStr;
-    }
-  };
 
   const winnerAbbr = result?.win_probability?.predicted_winner || result?.predicted_winner;
   const winnerInfo = winnerAbbr ? getTeamInfo(winnerAbbr) : null;
@@ -328,14 +322,14 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                   value={selectedDate}
                   onChange={setSelectedDate}
                   todayStr={todayStr}
-                  formatDate={fmtDate}
+                  formatDate={formatDate}
                   order="asc"
                   className="shrink-0"
                 />
 
                 <div className="flex items-center gap-2 text-xs text-text-secondary">
                   <span className="text-xs text-text-secondary">
-                    {dateGames.length} Karşılaşma ({selectedDate ? fmtDate(selectedDate) : "Tarih"})
+                    {dateGames.length} {language === "tr" ? "Karşılaşma" : "Games"} ({selectedDate ? formatDate(selectedDate) : (language === "tr" ? "Tarih" : "Date")})
                   </span>
                 </div>
               </div>
@@ -345,14 +339,14 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold text-text-primary">
-                      {selectedDate ? fmtDate(selectedDate) : ""} Karşılaşmaları
+                      {selectedDate ? formatDate(selectedDate) : ""} {language === "tr" ? "Karşılaşmaları" : "Matchups"}
                     </p>
                   </div>
 
                   <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                     {dateGames.length === 0 ? (
                       <div className="rounded border border-border bg-background-secondary p-6 text-center text-xs text-text-secondary">
-                        Bu tarih için henüz oynanmamış maç bulunamadı.
+                        {language === "tr" ? "Bu tarih için henüz oynanmamış maç bulunamadı." : "No upcoming games found for this date."}
                       </div>
                     ) : (
                       dateGames.map((g: any) => {

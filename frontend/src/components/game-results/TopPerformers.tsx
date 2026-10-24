@@ -1,5 +1,6 @@
 import PlayerPhoto from "../PlayerPhoto";
 import type { TeamLeader } from "../../types/gameFeed";
+import { useLanguage } from "../../context/LanguageContext";
 
 export interface TopPerformerRow {
   PTS?: number | null;
@@ -25,6 +26,7 @@ export function TopPerformers({
   topGame: TopPerformerRow[];
   leaders?: { points?: TeamLeader | null; rebounds?: TeamLeader | null; assists?: TeamLeader | null } | null;
 }) {
+  const { language } = useLanguage();
   if (topGame.length === 0 && !leaders) return null;
 
   // 1. Extract category leaders
@@ -51,19 +53,19 @@ export function TopPerformers({
 
   const trioLeaders = [
     {
-      category: "Sayı Lideri",
+      category: language === "tr" ? "Sayı Lideri" : "Points Leader",
       statKey: "PTS",
       val: ptsLeaderPlayer?.PTS ?? ptsLeaderPlayer?.pts ?? (leaders?.points?.value ?? "-"),
       player: ptsLeaderPlayer,
     },
     {
-      category: "Ribaund Lideri",
+      category: language === "tr" ? "Ribaund Lideri" : "Rebounds Leader",
       statKey: "REB",
       val: rebLeaderPlayer?.REB ?? rebLeaderPlayer?.reb ?? (leaders?.rebounds?.value ?? "-"),
       player: rebLeaderPlayer,
     },
     {
-      category: "Asist Lideri",
+      category: language === "tr" ? "Asist Lideri" : "Assists Leader",
       statKey: "AST",
       val: astLeaderPlayer?.AST ?? astLeaderPlayer?.ast ?? (leaders?.assists?.value ?? "-"),
       player: astLeaderPlayer,
@@ -89,12 +91,16 @@ export function TopPerformers({
       {/* Section Header */}
       <div className="mb-4 flex items-center justify-between border-b border-border-light pb-3">
         <div>
-          <h3 className="text-sm font-semibold text-text-primary">Maçın Liderleri & Öne Çıkanlar</h3>
-          <p className="mt-0.5 text-xs text-text-secondary">Kategori liderleri ve öne çıkan bireysel istatistikler</p>
+          <h3 className="text-sm font-semibold text-text-primary">
+            {language === "tr" ? "Maçın Liderleri & Öne Çıkanlar" : "Game Leaders & Top Performers"}
+          </h3>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            {language === "tr" ? "Kategori liderleri ve öne çıkan bireysel istatistikler" : "Category leaders and standout individual box scores"}
+          </p>
         </div>
         {topGame.length > 0 && (
           <span className="text-xs font-medium tabular-nums text-text-muted">
-            {topGame.length} Oyuncu İncelendi
+            {topGame.length} {language === "tr" ? "Oyuncu İncelendi" : "Players Evaluated"}
           </span>
         )}
       </div>
@@ -135,7 +141,7 @@ export function TopPerformers({
                       {name}
                     </p>
                     <p className="text-xs text-text-muted tabular-nums">
-                      {min != null ? `${Math.round(Number(min))} dk oynadı` : "—"}
+                      {min != null ? (language === "tr" ? `${Math.round(Number(min))} dk oynadı` : `${Math.round(Number(min))} mins played`) : "—"}
                     </p>
                   </div>
                 </div>
@@ -165,7 +171,7 @@ export function TopPerformers({
         <div className="mt-6 pt-4 border-t border-border-light">
           <div className="mb-2.5 flex items-center justify-between">
             <h4 className="text-xs font-semibold text-text-secondary">
-              Öne çıkan diğer performanslar
+              {language === "tr" ? "Öne çıkan diğer performanslar" : "Other Standout Contributors"}
             </h4>
           </div>
 

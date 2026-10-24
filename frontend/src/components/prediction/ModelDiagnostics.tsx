@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Cpu } from "lucide-react";
+import { useLanguage } from "../../context/LanguageContext";
 
 export function ModelDiagnostics({ modelStatus, result }: { modelStatus: any; result: any }) {
+  const { t, language } = useLanguage();
   const [open, setOpen] = useState(false);
 
   if (!modelStatus) return null;
@@ -19,7 +21,7 @@ export function ModelDiagnostics({ modelStatus, result }: { modelStatus: any; re
         <div className="flex items-center gap-2">
           <Cpu size={16} className="text-text-secondary" />
           <span className="text-xs font-semibold text-text-primary">
-            Model Tanılama ve Doğrulama
+            {t.predictions.diagnosticsTitle}
           </span>
         </div>
         {open ? <ChevronUp size={16} className="text-text-secondary" /> : <ChevronDown size={16} className="text-text-secondary" />}
@@ -29,10 +31,10 @@ export function ModelDiagnostics({ modelStatus, result }: { modelStatus: any; re
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
             { label: "ROC-AUC", value: winModel?.metrics?.roc_auc?.toFixed(4) },
-            { label: "Doğruluk", value: winModel?.metrics?.accuracy ? `%${(winModel.metrics.accuracy * 100).toFixed(1)}` : null },
-            { label: "Model Sürümü", value: result?.win_probability?.model_version },
-            { label: "Ev H-MAE", value: scoreModel?.metrics?.home_mae?.toFixed(2) },
-            { label: "Dep A-MAE", value: scoreModel?.metrics?.away_mae?.toFixed(2) },
+            { label: t.predictions.accuracy, value: winModel?.metrics?.accuracy ? `%${(winModel.metrics.accuracy * 100).toFixed(1)}` : null },
+            { label: t.predictions.modelVersion, value: result?.win_probability?.model_version },
+            { label: language === "tr" ? "Ev H-MAE" : "Home H-MAE", value: scoreModel?.metrics?.home_mae?.toFixed(2) },
+            { label: language === "tr" ? "Dep A-MAE" : "Away A-MAE", value: scoreModel?.metrics?.away_mae?.toFixed(2) },
           ]
             .filter((d) => d.value)
             .map((d, i) => (

@@ -4,6 +4,7 @@ import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { fmtTipoffTR } from "../game-results/utils";
 import { TEAM_NAME_BY_ABBR, getTeamShortName, isKnownTeamAbbr } from "../../lib/nbaTeams";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface FixtureMatchRowProps {
   game: GameFeedRow;
@@ -18,6 +19,7 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
   onSelectTeam,
   onPredict,
 }) => {
+  const { language } = useLanguage();
   const isCompleted =
     game.GAME_STATUS === "Final" ||
     game.GAME_STATUS === "FINAL" ||
@@ -45,12 +47,12 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
         {isCompleted ? (
           <div className="flex items-center gap-1.5 tabular-nums text-xs font-semibold text-text-secondary">
             <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
-            <span>MS</span>
+            <span>{language === "tr" ? "MS" : "Final"}</span>
           </div>
         ) : (
           <div className="flex items-center gap-1 text-xs font-semibold text-text-secondary sm:text-xs">
             <Clock className="hidden h-3 w-3 shrink-0 text-text-muted sm:inline" />
-            <span className="truncate">{fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "vs")}</span>
+            <span className="truncate">{fmtTipoffTR(game.GAME_START_UTC, language) ?? (game.GAME_STATUS || "vs")}</span>
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { BarChart2, Home, Shield, Target, TrendingUp, Zap } from "lucide-react";
 import type { TeamInfo } from "./types";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface SignalCardsProps {
   result: any;
@@ -13,6 +14,7 @@ export function SignalCards({
   homeInfo,
   winnerInfo,
 }: SignalCardsProps) {
+  const { t, language } = useLanguage();
   const win = result.win_probability;
   const score = result.score_prediction;
   const winProb = Math.max(win?.home_win_probability ?? 0, win?.away_win_probability ?? 0);
@@ -22,29 +24,31 @@ export function SignalCards({
   const signals = [
     {
       icon: <Home size={16} />,
-      label: "Saha Avantajı",
-      value: isHome ? `+${homeInfo.abbr} Üstünlüğü` : "Nötr / Denge",
-      detail: isHome ? "Ev sahibi faktörü" : "Deplasman direnci",
+      label: language === "tr" ? "Saha Avantajı" : "Court Factor",
+      value: isHome
+        ? (language === "tr" ? `+${homeInfo.abbr} Üstünlüğü` : `+${homeInfo.abbr} Edge`)
+        : (language === "tr" ? "Nötr / Denge" : "Neutral / Road"),
+      detail: isHome ? t.predictions.homeCourtAdvantage : t.predictions.roadResistance,
     },
     {
       icon: <TrendingUp size={16} />,
-      label: "Kazanma Olasılığı",
+      label: t.predictions.winProbability,
       value: `%${(winProb * 100).toFixed(1)}`,
-      detail: "Model güveni",
+      detail: language === "tr" ? "Model güveni" : "Model confidence",
     },
     {
       icon: <Target size={16} />,
-      label: "Güven Seviyesi",
-      value: win?.confidence_bucket || "ORTA",
-      detail: "Tahmin gücü",
+      label: language === "tr" ? "Güven Seviyesi" : "Confidence Level",
+      value: win?.confidence_bucket || (language === "tr" ? "ORTA" : "MODERATE"),
+      detail: language === "tr" ? "Tahmin gücü" : "Prediction strength",
     },
     ...(margin !== null
       ? [
           {
             icon: <BarChart2 size={16} />,
-            label: "Beklenen Fark",
-            value: `+${margin.toFixed(1)} Sayı`,
-            detail: `${winnerInfo.abbr} öngörülen marj`,
+            label: t.predictions.expectedMargin,
+            value: `+${margin.toFixed(1)} ${t.common.ptsUnit}`,
+            detail: `${winnerInfo.abbr} ${language === "tr" ? "öngörülen marj" : "projected margin"}`,
           },
         ]
       : []),
@@ -52,17 +56,17 @@ export function SignalCards({
       ? [
           {
             icon: <Zap size={16} />,
-            label: "Toplam Sayı",
-            value: `${score.predicted_total_points.toFixed(0)} Sayı`,
-            detail: `Aralık: ${score.total_points_range[0]}–${score.total_points_range[1]}`,
+            label: t.predictions.expectedTotal,
+            value: `${score.predicted_total_points.toFixed(0)} ${t.common.ptsUnit}`,
+            detail: `${language === "tr" ? "Aralık" : "Range"}: ${score.total_points_range[0]}–${score.total_points_range[1]}`,
           },
         ]
       : []),
     {
       icon: <Shield size={16} />,
-      label: "Model Kararı",
+      label: t.predictions.modelDecision,
       value: result.final_display_recommendation?.primary_winner_signal || "WIN_PROB",
-      detail: "Birincil sinyal",
+      detail: language === "tr" ? "Birincil sinyal" : "Primary signal",
     },
   ];
 

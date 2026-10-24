@@ -5,8 +5,8 @@ import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
-import { fmtDate } from "./game-results/utils";
 import { reportStampText } from "../lib/injuryTime";
+import { useLanguage } from "../context/LanguageContext";
 
 type InjuredPlayer = {
   team: string;
@@ -24,10 +24,11 @@ type InjuredPlayer = {
 type Change = {
   team: string;
   player_name: string;
-  matchup: string;
-  from: string | null;
-  to: string | null;
-  since_report_et: string;
+  matchup?: string;
+  from?: string | null;
+  to?: string | null;
+  since_report_et?: string;
+  steps?: { status: string | null; at: string }[];
 };
 
 type Returned = {
@@ -66,7 +67,8 @@ const isUncertain = (status: string) => status === "Questionable" || status === 
 const todayEt = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
 function StatusBadge({ status }: { status: string | null }) {
-  if (!status) return <Badge variant="neutral" size="sm">Belirtilmedi</Badge>;
+  const { t } = useLanguage();
+  if (!status) return <Badge variant="neutral" size="sm">{t.injuries.notSpecified}</Badge>;
   return <Badge variant={STATUS_VARIANT[status] ?? "neutral"} size="sm">{status}</Badge>;
 }
 
@@ -81,8 +83,9 @@ function SummaryTile({ label, value, tone }: { label: string; value: number; ton
 }
 
 function InjuriesSkeleton() {
+  const { t } = useLanguage();
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Sakatlık raporu yükleniyor">
+    <div className="space-y-4" aria-busy="true" aria-label={t.injuries.loadingReport}>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-20 w-full rounded" />
@@ -95,6 +98,7 @@ function InjuriesSkeleton() {
 }
 
 export default function InjuriesTab() {
+  const { t, language, formatDate } = useLanguage();
   const [date, setDate] = useState<string>(todayEt());
   const [reloadKey, setReloadKey] = useState(0);
   const [result, setResult] = useState<{ key: string; data?: Payload; error?: string } | null>(null);
@@ -115,14 +119,14 @@ export default function InjuriesTab() {
         if (!cancelled) {
           setResult({
             key: requestKey,
-            error: e instanceof Error && e.message ? e.message : "Sakatlık raporu alınamadı.",
+            error: e instanceof Error && e.message ? e.message : t.injuries.loadError,
           });
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [date, requestKey]);
+  }, [date, requestKey, t.injuries.loadError]);
 
   const loading = result?.key !== requestKey;
   const data = result?.key === requestKey ? result.data : undefined;
@@ -132,6 +136,15 @@ export default function InjuriesTab() {
     () => Array.from(new Set([...(result?.data?.stored_days ?? []), todayEt(), date])).sort(),
     [result, date]
   );
+
+  const realChanges = useMemo(() => {
+    if (!data?.changes) return [];
+    return data.changes.filter((c) => {
+      const fromSt = c.from ?? (c.steps?.[0]?.status ?? "Available");
+      const toSt = c.to ?? (c.steps?.[c.steps.length - 1]?.status ?? "Available");
+      return fromSt !== toSt;
+    });
+  }, [data?.changes]);
 
   const all = useMemo(() => data?.players ?? [], [data]);
   const outCount = all.filter((p) => p.status === "Out").length;
@@ -168,7 +181,7 @@ export default function InjuriesTab() {
   };
 
   const filters: { id: StatusFilter; label: string; count?: number }[] = [
-    { id: "all", label: "Tümü", count: all.length },
+    { id: "all", label: t.common.all, count: all.length },
     { id: "out", label: "Out", count: outCount },
     { id: "uncertain", label: "Questionable / Doubtful", count: uncertainCount },
   ];
@@ -177,16 +190,20 @@ export default function InjuriesTab() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 border-b border-border-light pb-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Sakatlık raporu</h1>
+          <h1 className="text-2xl font-semibold text-text-primary">
+            {language === "tr" ? "Sakatlık raporu" : "Injury Report"}
+          </h1>
           <p className="mt-1 text-xs text-text-secondary">
-            Resmi NBA sakatlık bülteni. Model tahminlerine 15 dakikada bir senkronize edilir.
+            {language === "tr"
+              ? "Resmi NBA sakatlık bülteni. Model tahminlerine 15 dakikada bir senkronize edilir."
+              : "Official NBA injury report. Synchronized with model predictions every 15 minutes."}
           </p>
         </div>
 
         <div className="flex flex-wrap items-end gap-3">
           {data?.published_et && (
             <Badge variant="success" dot>
-              Bülten: {reportStampText(data.published_et)}
+              {language === "tr" ? "Bülten: " : "Report: "}{reportStampText(data.published_et)}
             </Badge>
           )}
           <DatePicker
@@ -194,7 +211,7 @@ export default function InjuriesTab() {
             value={date}
             onChange={setDate}
             todayStr={todayEt()}
-            formatDate={fmtDate}
+            formatDate={formatDate}
           />
         </div>
       </div>
@@ -203,37 +220,56 @@ export default function InjuriesTab() {
         <InjuriesSkeleton />
       ) : error || !data ? (
         <InlineError
-          title="Sakatlık raporu yüklenemedi"
-          message={error ?? "Rapor verisi alınamadı."}
+          title={t.injuries.loadError}
+          message={error ?? t.injuries.loadError}
           onRetry={() => setReloadKey((k) => k + 1)}
         />
       ) : (
         <>
           <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <SummaryTile label="Raporlanan oyuncu" value={all.length} />
-            <SummaryTile label="Kesin yok (Out)" value={outCount} tone="error" />
-            <SummaryTile label="Belirsiz / şüpheli" value={uncertainCount} tone="warning" />
-            <SummaryTile label="Etkilenen rotasyon oyuncusu" value={rotationCount} tone="info" />
+            <SummaryTile
+              label={language === "tr" ? "Raporlanan oyuncu" : "Reported players"}
+              value={all.length}
+            />
+            <SummaryTile
+              label={language === "tr" ? "Kesin yok (Out)" : "Ruled Out"}
+              value={outCount}
+              tone="error"
+            />
+            <SummaryTile
+              label={language === "tr" ? "Belirsiz / şüpheli" : "Uncertain / Doubtful"}
+              value={uncertainCount}
+              tone="warning"
+            />
+            <SummaryTile
+              label={language === "tr" ? "Etkilenen rotasyon oyuncusu" : "Affected rotation players"}
+              value={rotationCount}
+              tone="info"
+            />
           </dl>
 
           {data.not_filed.length > 0 && (
             <Card padding="sm" className="text-xs">
-              <span className="font-semibold text-text-primary">Henüz rapor bildirmeyen takımlar: </span>
+              <span className="font-semibold text-text-primary">
+                {language === "tr" ? "Henüz rapor bildirmeyen takımlar: " : "Teams yet to file report: "}
+              </span>
               <span className="text-text-secondary">{data.not_filed.join(", ")}</span>
             </Card>
           )}
 
-          {data.changes.length > 0 && (
+          {realChanges.length > 0 && (
             <section aria-labelledby="injury-changes" className="rounded border border-status-warning/30 bg-status-warning/5 p-4">
               <div className="mb-3 flex items-center justify-between gap-2 border-b border-status-warning/20 pb-2">
                 <h2 id="injury-changes" className="flex items-center gap-2 text-sm font-semibold text-text-primary">
                   <Flame size={16} strokeWidth={1.5} className="text-status-warning" aria-hidden="true" />
-                  Son rapordan bu yana durumu değişenler
+                  {t.injuries.changesTitle}
                 </h2>
-                <span className="text-xs tabular-nums text-text-secondary">{data.changes.length} oyuncu</span>
+                <span className="text-xs tabular-nums text-text-secondary">
+                  {realChanges.length} {language === "tr" ? "oyuncu" : "players"}
+                </span>
               </div>
               <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {data.changes.map((c, i) => (
+                {realChanges.map((c, i) => (
                   <li
                     key={`${c.team}-${c.player_name}-${i}`}
                     className="flex items-center justify-between gap-3 rounded border border-border bg-background-primary p-3"
@@ -248,9 +284,16 @@ export default function InjuriesTab() {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
-                      <Badge variant="neutral" size="sm">{c.from ?? "Belirtilmedi"}</Badge>
-                      <ArrowRight size={16} strokeWidth={1.5} className="text-text-muted" aria-label="değişti" />
-                      <StatusBadge status={c.to} />
+                      <Badge
+                        variant={c.from ? (STATUS_VARIANT[c.from] ?? "neutral") : "neutral"}
+                        size="sm"
+                      >
+                        {c.from ?? (c.steps?.[0]?.status ?? "Available")}
+                      </Badge>
+                      <ArrowRight size={16} strokeWidth={1.5} className="text-text-muted" aria-label={t.injuries.changedTo} />
+                      <StatusBadge
+                        status={c.to ?? (c.steps?.[c.steps.length - 1]?.status ?? "Available")}
+                      />
                     </div>
                   </li>
                 ))}
@@ -261,10 +304,10 @@ export default function InjuriesTab() {
           <Card padding="sm" className="flex flex-col gap-3 lg:flex-row lg:items-end">
             <div className="w-full lg:flex-1">
               <Input
-                label="Oyuncu ara"
+                label={t.injuries.searchPlayer}
                 type="text"
                 autoComplete="off"
-                placeholder="Oyuncu adı"
+                placeholder={language === "tr" ? "Oyuncu adı" : "Player name"}
                 leftIcon={<Search size={16} strokeWidth={1.5} />}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -272,8 +315,10 @@ export default function InjuriesTab() {
               />
             </div>
             <div className="w-full lg:w-52">
-              <Select label="Takım" value={team} onChange={(e) => setTeam(e.target.value)} className="h-10">
-                <option value="">Tüm takımlar ({teams.length})</option>
+              <Select label={t.common.team} value={team} onChange={(e) => setTeam(e.target.value)} className="h-10">
+                <option value="">
+                  {language === "tr" ? `Tüm takımlar (${teams.length})` : `All teams (${teams.length})`}
+                </option>
                 {teams.map((t) => (
                   <option key={t} value={t}>
                     {t}
@@ -281,7 +326,7 @@ export default function InjuriesTab() {
                 ))}
               </Select>
             </div>
-            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Durum filtresi">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label={language === "tr" ? "Durum filtresi" : "Status filter"}>
               {filters.map((f) => (
                 <Button
                   key={f.id}
@@ -299,7 +344,7 @@ export default function InjuriesTab() {
                 aria-pressed={rotationOnly}
                 onClick={() => setRotationOnly((v) => !v)}
               >
-                Sadece rotasyon
+                {language === "tr" ? "Sadece rotasyon" : "Rotation only"}
               </Button>
             </div>
           </Card>
@@ -307,18 +352,26 @@ export default function InjuriesTab() {
           {all.length === 0 ? (
             <EmptyState
               icon={<Stethoscope size={32} strokeWidth={1.5} />}
-              title={data.live ? "Bugün için henüz rapor yayınlanmadı" : "Bu tarih için kayıt bulunamadı"}
+              title={
+                data.live
+                  ? (language === "tr" ? "Bugün için henüz rapor yayınlanmadı" : "No reports filed yet for today")
+                  : (language === "tr" ? "Bu tarih için kayıt bulunamadı" : "No records found for this date")
+              }
               description={
                 data.live
-                  ? "Takımlar maçtan önceki gün ilk listelerini verir ve maç saatine kadar günceller."
-                  : "Seçilen tarihte bildirilmiş herhangi bir sakatlık kaydı mevcut değil."
+                  ? (language === "tr"
+                      ? "Takımlar maçtan önceki gün ilk listelerini verir ve maç saatine kadar günceller."
+                      : "Teams submit preliminary lists the evening before and update continuously until game time.")
+                  : (language === "tr"
+                      ? "Seçilen tarihte bildirilmiş herhangi bir sakatlık kaydı mevcut değil."
+                      : "No injury reports were filed on this date.")
               }
             />
           ) : players.length === 0 ? (
             <EmptyState
-              title="Filtreye uyan oyuncu bulunamadı"
-              description="Seçtiğin kriterlere uyan sakatlık kaydı yok."
-              actionLabel="Filtreleri temizle"
+              title={language === "tr" ? "Filtreye uyan oyuncu bulunamadı" : "No players match the filter"}
+              description={language === "tr" ? "Seçtiğin kriterlere uyan sakatlık kaydı yok." : "No injury entries match your filter criteria."}
+              actionLabel={t.injuries.clearFilter}
               onAction={resetFilters}
             />
           ) : (
@@ -329,7 +382,7 @@ export default function InjuriesTab() {
                 const matchup = teamPlayers[0]?.matchup || "";
 
                 return (
-                  <Card key={teamAbbr} padding="none" className="overflow-hidden" aria-label={`${teamAbbr} sakatlık listesi`}>
+                  <Card key={teamAbbr} padding="none" className="overflow-hidden" aria-label={`${teamAbbr} ${language === "tr" ? "sakatlık listesi" : "injury list"}`}>
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-light bg-background-tertiary px-4 py-3">
                       <div className="flex items-center gap-3">
                         <TeamLogo abbr={teamAbbr} name="" size={28} />
@@ -344,25 +397,29 @@ export default function InjuriesTab() {
                         )}
                         {teamUncertain > 0 && (
                           <Badge variant="warning" size="sm">
-                            <span className="tabular-nums">{teamUncertain}</span> belirsiz
+                            <span className="tabular-nums">{teamUncertain}</span> {language === "tr" ? "belirsiz" : "uncertain"}
                           </Badge>
                         )}
                         <span className="text-xs tabular-nums text-text-secondary">
-                          {teamPlayers.length} oyuncu
+                          {teamPlayers.length} {language === "tr" ? "oyuncu" : "players"}
                         </span>
                       </div>
                     </div>
 
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-sm">
-                        <caption className="sr-only">{teamAbbr} için raporlanan sakat oyuncular</caption>
+                        <caption className="sr-only">
+                          {language === "tr"
+                            ? `${teamAbbr} için raporlanan sakat oyuncular`
+                            : `Injured players reported for ${teamAbbr}`}
+                        </caption>
                         <thead className="border-b border-border-light text-xs text-text-secondary">
                           <tr>
-                            <th scope="col" className="px-4 py-2 font-medium">Oyuncu</th>
-                            <th scope="col" className="px-4 py-2 font-medium">Durum</th>
-                            <th scope="col" className="px-4 py-2 font-medium">Gerekçe</th>
-                            <th scope="col" className="px-4 py-2 text-right font-medium">Kaçırılan maç</th>
-                            <th scope="col" className="px-4 py-2 text-right font-medium">Ortalama dakika</th>
+                            <th scope="col" className="px-4 py-2 font-medium">{t.common.player}</th>
+                            <th scope="col" className="px-4 py-2 font-medium">{t.injuries.statusBadge}</th>
+                            <th scope="col" className="px-4 py-2 font-medium">{language === "tr" ? "Gerekçe" : "Reason"}</th>
+                            <th scope="col" className="px-4 py-2 text-right font-medium">{language === "tr" ? "Kaçırılan maç" : "Games missed"}</th>
+                            <th scope="col" className="px-4 py-2 text-right font-medium">{language === "tr" ? "Ortalama dakika" : "Avg minutes"}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border-light">
@@ -374,9 +431,11 @@ export default function InjuriesTab() {
                                   <div>
                                     <div className="flex items-center gap-2">
                                       <span className="font-semibold text-text-primary">{p.player_name}</span>
-                                      {p.rotation && <Badge variant="info" size="sm">Rotasyon</Badge>}
+                                      {p.rotation && <Badge variant="info" size="sm">{language === "tr" ? "Rotasyon" : "Rotation"}</Badge>}
                                     </div>
-                                    <span className="text-xs tabular-nums text-text-muted">{p.since} tarihinden beri</span>
+                                    <span className="text-xs tabular-nums text-text-muted">
+                                      {language === "tr" ? `${p.since} tarihinden beri` : `Since ${p.since}`}
+                                    </span>
                                   </div>
                                 </div>
                               </td>
@@ -387,10 +446,10 @@ export default function InjuriesTab() {
                                 {p.reason || "—"}
                               </td>
                               <td className="px-4 py-3 text-right tabular-nums text-text-secondary">
-                                {p.games_missed > 0 ? `${p.games_missed} maç` : "—"}
+                                {p.games_missed > 0 ? `${p.games_missed} ${language === "tr" ? "maç" : "games"}` : "—"}
                               </td>
                               <td className="px-4 py-3 text-right tabular-nums text-text-secondary">
-                                {p.minutes ? `${p.minutes.toFixed(1)} dk` : "—"}
+                                {p.minutes ? `${p.minutes.toFixed(1)} ${language === "tr" ? "dk" : "min"}` : "—"}
                               </td>
                             </tr>
                           ))}
@@ -406,17 +465,17 @@ export default function InjuriesTab() {
           {data.recent_returns.length > 0 && (
             <Card padding="none" className="overflow-hidden">
               <div className="border-b border-border-light px-4 py-3">
-                <h2 className="text-sm font-semibold text-text-primary">Son 7 günde sahalara dönenler</h2>
-                <p className="text-xs text-text-secondary">Sakatlık listesinden çıkarılarak tekrar aktif olan oyuncular</p>
+                <h2 className="text-sm font-semibold text-text-primary">{t.injuries.returnsTitle}</h2>
+                <p className="text-xs text-text-secondary">{t.injuries.returnsSubtitle}</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-background-tertiary text-xs text-text-secondary">
                     <tr>
-                      <th scope="col" className="px-4 py-2 font-medium">Oyuncu</th>
-                      <th scope="col" className="px-4 py-2 font-medium">Dönüş tarihi</th>
-                      <th scope="col" className="px-4 py-2 font-medium">Sakatlık dönemi</th>
-                      <th scope="col" className="px-4 py-2 text-right font-medium">Kaçırılan maç</th>
+                      <th scope="col" className="px-4 py-2 font-medium">{t.common.player}</th>
+                      <th scope="col" className="px-4 py-2 font-medium">{language === "tr" ? "Dönüş tarihi" : "Return date"}</th>
+                      <th scope="col" className="px-4 py-2 font-medium">{language === "tr" ? "Sakatlık dönemi" : "Injury period"}</th>
+                      <th scope="col" className="px-4 py-2 text-right font-medium">{language === "tr" ? "Kaçırılan maç" : "Games missed"}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
@@ -432,7 +491,9 @@ export default function InjuriesTab() {
                         <td className="whitespace-nowrap px-4 py-3 tabular-nums text-text-secondary">
                           {r.listed_from} – {r.listed_to}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-text-secondary">{r.games_missed} maç</td>
+                        <td className="px-4 py-3 text-right tabular-nums text-text-secondary">
+                          {r.games_missed} {language === "tr" ? "maç" : "games"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

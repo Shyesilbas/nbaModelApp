@@ -1,3 +1,5 @@
+import { useLanguage } from "../../context/LanguageContext";
+
 interface WinProbabilityArcProps {
   homeProb: number;
   awayProb: number;
@@ -20,6 +22,7 @@ export function WinProbabilityArc({
   margin,
   winnerAbbr,
 }: WinProbabilityArcProps) {
+  const { language } = useLanguage();
   const size = 200;
   const cx = size / 2;
   const cy = size / 2 + 16;
@@ -80,7 +83,7 @@ export function WinProbabilityArc({
           textAnchor="middle"
           className="fill-text-secondary text-xs font-medium"
         >
-          Beklenen Fark
+          {language === "tr" ? "Beklenen Fark" : "Expected Margin"}
         </text>
         <text
           x={cx}
@@ -96,18 +99,22 @@ export function WinProbabilityArc({
           textAnchor="middle"
           className="fill-text-secondary text-xs font-medium"
         >
-          {winnerAbbr} Üstünlüğü
+          {language === "tr" ? `${winnerAbbr} Üstünlüğü` : `${winnerAbbr} Advantage`}
         </text>
       </svg>
       <div className="flex justify-between w-full px-4 -mt-1 text-xs">
         <div className="text-left">
-          <p className="text-text-secondary font-medium">{awayAbbr} (Dep)</p>
+          <p className="text-text-secondary font-medium">
+            {awayAbbr} {language === "tr" ? "(Dep)" : "(Away)"}
+          </p>
           <p className="font-semibold tabular-nums text-text-primary">
             %{(awayProb * 100).toFixed(1)}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-text-secondary font-medium">{homeAbbr} (Ev)</p>
+          <p className="text-text-secondary font-medium">
+            {homeAbbr} {language === "tr" ? "(Ev)" : "(Home)"}
+          </p>
           <p className="font-semibold tabular-nums text-text-primary">
             %{(homeProb * 100).toFixed(1)}
           </p>

@@ -1,6 +1,7 @@
 import type { TeamBoxScore, PlayerBoxScore } from "./types";
 import { fmtInt, fmtPct } from "./utils";
 import TeamLogo from "../TeamLogo";
+import { useLanguage } from "../../context/LanguageContext";
 
 export function TeamComparisonBars({
   home,
@@ -13,10 +14,12 @@ export function TeamComparisonBars({
   homePlayers?: PlayerBoxScore[];
   awayPlayers?: PlayerBoxScore[];
 }) {
+  const { language } = useLanguage();
+
   if (!home || !away) {
     return (
       <div className="rounded border border-border bg-background-primary p-4 sm:p-5 text-xs text-text-secondary">
-        Takım istatistikleri bu maç için bulunamadı.
+        {language === "tr" ? "Takım istatistikleri bu maç için bulunamadı." : "Team stats are not available for this game."}
       </div>
     );
   }
@@ -36,27 +39,31 @@ export function TeamComparisonBars({
   };
 
   const rows: BarRow[] = [
-    { label: "Sayı (PTS)", aVal: away.PTS, hVal: home.PTS, higherIsBetter: true, fmt: fmtInt },
-    { label: "Saha İçi (FG%)", aVal: away.FG_PCT, hVal: home.FG_PCT, higherIsBetter: true, fmt: fmtPct },
-    { label: "3 Sayılık (3PT%)", aVal: away.FG3_PCT, hVal: home.FG3_PCT, higherIsBetter: true, fmt: fmtPct },
-    { label: "Serbest Atış (FT%)", aVal: away.FT_PCT, hVal: home.FT_PCT, higherIsBetter: true, fmt: fmtPct },
-    { label: "Ribaund (REB)", aVal: away.REB, hVal: home.REB, higherIsBetter: true, fmt: fmtInt },
-    { label: "Asist (AST)", aVal: away.AST, hVal: home.AST, higherIsBetter: true, fmt: fmtInt },
+    { label: language === "tr" ? "Sayı (PTS)" : "Points (PTS)", aVal: away.PTS, hVal: home.PTS, higherIsBetter: true, fmt: fmtInt },
+    { label: language === "tr" ? "Saha İçi (FG%)" : "Field Goals (FG%)", aVal: away.FG_PCT, hVal: home.FG_PCT, higherIsBetter: true, fmt: fmtPct },
+    { label: language === "tr" ? "3 Sayılık (3PT%)" : "3-Pointers (3PT%)", aVal: away.FG3_PCT, hVal: home.FG3_PCT, higherIsBetter: true, fmt: fmtPct },
+    { label: language === "tr" ? "Serbest Atış (FT%)" : "Free Throws (FT%)", aVal: away.FT_PCT, hVal: home.FT_PCT, higherIsBetter: true, fmt: fmtPct },
+    { label: language === "tr" ? "Ribaund (REB)" : "Rebounds (REB)", aVal: away.REB, hVal: home.REB, higherIsBetter: true, fmt: fmtInt },
+    { label: language === "tr" ? "Asist (AST)" : "Assists (AST)", aVal: away.AST, hVal: home.AST, higherIsBetter: true, fmt: fmtInt },
     ...(awayStl != null || homeStl != null
-      ? [{ label: "Top Çalma (STL)", aVal: awayStl, hVal: homeStl, higherIsBetter: true, fmt: fmtInt }]
+      ? [{ label: language === "tr" ? "Top Çalma (STL)" : "Steals (STL)", aVal: awayStl, hVal: homeStl, higherIsBetter: true, fmt: fmtInt }]
       : []),
     ...(awayBlk != null || homeBlk != null
-      ? [{ label: "Blok (BLK)", aVal: awayBlk, hVal: homeBlk, higherIsBetter: true, fmt: fmtInt }]
+      ? [{ label: language === "tr" ? "Blok (BLK)" : "Blocks (BLK)", aVal: awayBlk, hVal: homeBlk, higherIsBetter: true, fmt: fmtInt }]
       : []),
-    { label: "Top Kaybı (TOV)", aVal: away.TOV, hVal: home.TOV, higherIsBetter: false, fmt: fmtInt },
+    { label: language === "tr" ? "Top Kaybı (TOV)" : "Turnovers (TOV)", aVal: away.TOV, hVal: home.TOV, higherIsBetter: false, fmt: fmtInt },
   ];
 
   return (
     <div className="flex flex-col justify-between rounded border border-border bg-background-primary p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between border-b border-border-light pb-3">
         <div>
-          <h3 className="text-sm font-semibold text-text-primary">Takım Karşılaştırması</h3>
-          <p className="mt-0.5 text-xs text-text-secondary">Genel maç istatistikleri</p>
+          <h3 className="text-sm font-semibold text-text-primary">
+            {language === "tr" ? "Takım Karşılaştırması" : "Team Comparison"}
+          </h3>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            {language === "tr" ? "Genel maç istatistikleri" : "Matchup team stat differentials"}
+          </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-medium">
           <div className="flex items-center gap-1.5">

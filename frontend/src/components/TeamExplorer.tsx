@@ -16,6 +16,7 @@ import {
   EmptyState,
   InlineError,
 } from "./common";
+import { useLanguage } from "../context/LanguageContext";
 
 interface CorePlayer {
   PLAYER_ID: number;
@@ -121,6 +122,7 @@ function TeamExplorerSkeleton() {
 }
 
 const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam }) => {
+  const { t, language } = useLanguage();
   const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
   const [activeRosters, setActiveRosters] = useState<any[]>([]);
   const [playerPositions, setPlayerPositions] = useState<Record<number, "guard" | "forward" | "center">>({});
@@ -299,12 +301,12 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                   {TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR] || activeTeam}
                 </h1>
                 <p className="text-xs text-text-secondary">
-                  Team Explorer · {selectedSeason} Sezonu
+                  {language === "tr" ? `Takım Keşfi · ${selectedSeason} Sezonu` : `Team Explorer · ${selectedSeason} Season`}
                 </p>
               </div>
             </div>
             <p className="mt-2 max-w-2xl text-xs text-text-secondary">
-              Kadrolar, çekirdek oyuncu rotasyonu ve takım güç endeksleri.
+              {t.team.subtitle}
             </p>
           </div>
 
@@ -313,7 +315,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
             {/* Team Dropdown */}
             <div className="flex flex-col gap-1">
               <label htmlFor="team-explorer-team-select" className="text-xs font-medium text-text-secondary">
-                Takım Seçimi
+                {t.team.selectTeam}
               </label>
               <div className="relative">
                 <select
@@ -338,7 +340,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
             {/* Season Dropdown */}
             <div className="flex flex-col gap-1">
               <label htmlFor="team-explorer-season-select" className="text-xs font-medium text-text-secondary">
-                Sezon Seçimi
+                {t.team.selectSeason}
               </label>
               <div className="relative">
                 <select
@@ -349,7 +351,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                 >
                   {seasonsList.map((season) => (
                     <option key={season} value={season}>
-                      {season} Sezonu
+                      {season} {language === "tr" ? "Sezonu" : "Season"}
                     </option>
                   ))}
                 </select>
@@ -367,13 +369,13 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
           <div className="mt-3 border-t border-border-light pt-2.5">
             {loadingSeason && (
               <p className="text-xs text-text-secondary">
-                {selectedSeason} kadro verileri yükleniyor...
+                {t.team.loadingRosters}
               </p>
             )}
             {loadError && (
               <div className="mt-2">
                 <InlineError
-                  title="Kadro verisi yüklenemedi"
+                  title={t.common.error}
                   message={loadError}
                   onRetry={fetchRosters}
                 />
@@ -397,7 +399,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
               : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
           }`}
         >
-          Takım Genel Bakış
+          {language === "tr" ? "Takım Genel Bakış" : "Team Overview"}
         </button>
         <button
           type="button"
@@ -408,7 +410,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
               : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
           }`}
         >
-          Lig Sıralaması
+          {language === "tr" ? "Lig Sıralaması" : "League Rankings"}
         </button>
       </nav>
 
@@ -417,9 +419,13 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
           {/* Franchise Hierarchy Overview */}
           <div className="space-y-4">
             <div>
-              <h2 className="text-sm font-semibold text-text-primary">Çekirdek Rotasyon (Top 5)</h2>
+              <h2 className="text-sm font-semibold text-text-primary">
+                {language === "tr" ? "Çekirdek Rotasyon (Top 5)" : "Core Rotation (Top 5)"}
+              </h2>
               <p className="mt-0.5 text-xs text-text-secondary">
-                Model etki puanına göre takımın en belirleyici ilk 5 oyuncusu
+                {language === "tr"
+                  ? "Model etki puanına göre takımın en belirleyici ilk 5 oyuncusu"
+                  : "Top 5 decisive players by model impact score"}
               </p>
             </div>
 
@@ -448,7 +454,9 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                             {player.PLAYER_NAME}
                           </span>
                           <p className="text-xs tabular-nums text-text-muted">
-                            {player.GP > 0 ? `${player.GP} maç oynadı` : "Henüz maça çıkmadı"}
+                            {player.GP > 0
+                              ? (language === "tr" ? `${player.GP} maç oynadı` : `${player.GP} games played`)
+                              : (language === "tr" ? "Henüz maça çıkmadı" : "No games yet")}
                           </p>
                         </div>
                       </div>
@@ -461,7 +469,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                             {player.IMPORTANCE_SCORE.toFixed(1)}%
                           </span>
                           <p className="text-xs text-text-muted">
-                            Model Etki
+                            {language === "tr" ? "Model Etki" : "Model Impact"}
                           </p>
                         </div>
 
@@ -502,8 +510,12 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
             ) : (
               <EmptyState
                 icon={<Users size={28} strokeWidth={1.5} />}
-                title="Kadro bulunamadı"
-                description={`${activeTeam} takımı için ${selectedSeason} sezonunda kayıtlı oyuncu bulunamadı.`}
+                title={language === "tr" ? "Kadro bulunamadı" : "No roster found"}
+                description={
+                  language === "tr"
+                    ? `${activeTeam} takımı için ${selectedSeason} sezonunda kayıtlı oyuncu bulunamadı.`
+                    : `No registered players found for ${activeTeam} in the ${selectedSeason} season.`
+                }
               />
             )}
           </div>
@@ -511,9 +523,13 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
           {/* Full Discovered Roster Grouped by Position */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">Tam Takım Kadrosu</h3>
+              <h3 className="text-sm font-semibold text-text-primary">
+                {language === "tr" ? "Tam Takım Kadrosu" : "Full Team Roster"}
+              </h3>
               <p className="text-xs text-text-secondary">
-                Pozisyon bazında (Guard, Forvet, Center) ayrılmış oyuncu listesi ve sezon istatistikleri
+                {language === "tr"
+                  ? "Pozisyon bazında (Guard, Forvet, Center) ayrılmış oyuncu listesi ve sezon istatistikleri"
+                  : "Roster breakdown by position (Guard, Forward, Center) with season statistics"}
               </p>
             </div>
 
@@ -532,13 +548,13 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                         {title}
                       </span>
                       <span className="text-xs font-medium text-text-muted tabular-nums">
-                        {players.length} oyuncu
+                        {players.length} {language === "tr" ? "oyuncu" : "players"}
                       </span>
                     </div>
 
                     {players.length === 0 ? (
                       <p className="text-xs text-text-muted py-6 text-center italic">
-                        Kayıtlı oyuncu bulunamadı
+                        {language === "tr" ? "Kayıtlı oyuncu bulunamadı" : "No players found"}
                       </p>
                     ) : (
                       <div className="divide-y divide-border-light">
@@ -561,7 +577,9 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                                     {p.PLAYER_NAME}
                                   </span>
                                   <p className="text-xs tabular-nums text-text-muted">
-                                    {p.GP > 0 ? `${p.GP} maç · ${p.AVG_MIN.toFixed(0)} dk` : "Henüz oynamadı"}
+                                    {p.GP > 0
+                                      ? (language === "tr" ? `${p.GP} maç · ${p.AVG_MIN.toFixed(0)} dk` : `${p.GP} GP · ${p.AVG_MIN.toFixed(0)}m`)
+                                      : (language === "tr" ? "Henüz oynamadı" : "No minutes yet")}
                                   </p>
                                 </div>
                               </div>
@@ -602,9 +620,11 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
           {/* Franchise strength section */}
           <Card padding="none" className="overflow-hidden">
             <div className="border-b border-border p-4">
-              <h2 className="text-sm font-semibold text-text-primary">Takım Güç Endeksi</h2>
+              <h2 className="text-sm font-semibold text-text-primary">
+                {language === "tr" ? "Takım Güç Endeksi" : "Team Power Index"}
+              </h2>
               <p className="mt-0.5 text-xs text-text-secondary">
-                İlk 3 oyuncunun ortalama önem puanı · lig ortalaması{" "}
+                {language === "tr" ? "İlk 3 oyuncunun ortalama önem puanı · lig ortalaması " : "Top 3 players avg importance · league average "}
                 <span className="tabular-nums font-medium text-text-primary">
                   {leagueAverage.toFixed(1)}
                 </span>
@@ -654,9 +674,13 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
           {/* League leaders section */}
           <Card padding="none" className="overflow-hidden">
             <div className="border-b border-border p-4">
-              <h2 className="text-sm font-semibold text-text-primary">Lig Liderleri</h2>
+              <h2 className="text-sm font-semibold text-text-primary">
+                {language === "tr" ? "Lig Liderleri" : "League Leaders"}
+              </h2>
               <p className="mt-0.5 text-xs text-text-secondary">
-                Önem puanına göre en etkili oyuncular · {selectedSeason}
+                {language === "tr"
+                  ? `Önem puanına göre en etkili oyuncular · ${selectedSeason}`
+                  : `Top players by importance score · ${selectedSeason}`}
               </p>
             </div>
             <div className="divide-y divide-border-light">
@@ -682,7 +706,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                       {player.PLAYER_NAME}
                     </p>
                     <p className="text-xs text-text-muted">
-                      {player.TEAM_ABBREVIATION} · sıra #{player.CORE_RANK}
+                      {player.TEAM_ABBREVIATION} · {language === "tr" ? `sıra #${player.CORE_RANK}` : `rank #${player.CORE_RANK}`}
                     </p>
                   </div>
                   <span className="font-semibold tabular-nums text-text-primary">

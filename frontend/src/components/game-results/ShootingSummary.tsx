@@ -1,8 +1,10 @@
 import type { TeamBoxScore } from "./types";
 import { fmtPair, fmtPct } from "./utils";
 import TeamLogo from "../TeamLogo";
+import { useLanguage } from "../../context/LanguageContext";
 
 export function ShootingSummary({ home, away }: { home: TeamBoxScore | null; away: TeamBoxScore | null }) {
+  const { language } = useLanguage();
   if (!home && !away) return null;
 
   const hasFG = (away?.FGM != null || away?.FGA != null) || (home?.FGM != null || home?.FGA != null);
@@ -25,7 +27,7 @@ export function ShootingSummary({ home, away }: { home: TeamBoxScore | null; awa
   const rows = [
     {
       key: "fg",
-      label: "Saha İçi (FG)",
+      label: language === "tr" ? "Saha İçi (FG)" : "Field Goals (FG)",
       aVal: fmtPair(away?.FGM, away?.FGA),
       hVal: fmtPair(home?.FGM, home?.FGA),
       aPctStr: fmtPct(away?.FG_PCT ?? null),
@@ -36,7 +38,7 @@ export function ShootingSummary({ home, away }: { home: TeamBoxScore | null; awa
     },
     {
       key: "2pt",
-      label: "2 Sayılık (2PT)",
+      label: language === "tr" ? "2 Sayılık (2PT)" : "2-Pointers (2PT)",
       aVal: fmtPair(away2M, away2A),
       hVal: fmtPair(home2M, home2A),
       aPctStr: away2Pct != null ? `${away2Pct.toFixed(1)}%` : "—",
@@ -47,7 +49,7 @@ export function ShootingSummary({ home, away }: { home: TeamBoxScore | null; awa
     },
     {
       key: "3pt",
-      label: "3 Sayılık (3PT)",
+      label: language === "tr" ? "3 Sayılık (3PT)" : "3-Pointers (3PT)",
       aVal: fmtPair(away?.FG3M, away?.FG3A),
       hVal: fmtPair(home?.FG3M, home?.FG3A),
       aPctStr: fmtPct(away?.FG3_PCT ?? null),
@@ -58,7 +60,7 @@ export function ShootingSummary({ home, away }: { home: TeamBoxScore | null; awa
     },
     {
       key: "ft",
-      label: "Serbest Atış (FT)",
+      label: language === "tr" ? "Serbest Atış (FT)" : "Free Throws (FT)",
       aVal: fmtPair(away?.FTM, away?.FTA),
       hVal: fmtPair(home?.FTM, home?.FTA),
       aPctStr: fmtPct(away?.FT_PCT ?? null),
@@ -75,8 +77,12 @@ export function ShootingSummary({ home, away }: { home: TeamBoxScore | null; awa
     <div className="flex flex-col justify-between rounded border border-border bg-background-primary p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between border-b border-border-light pb-3">
         <div>
-          <h3 className="text-sm font-semibold text-text-primary">Şut Dağılımı ve Verimlilik</h3>
-          <p className="mt-0.5 text-xs text-text-secondary">İsabet / Deneme ve yüzdeler</p>
+          <h3 className="text-sm font-semibold text-text-primary">
+            {language === "tr" ? "Şut Dağılımı ve Verimlilik" : "Shooting Efficiency"}
+          </h3>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            {language === "tr" ? "İsabet / Deneme ve yüzdeler" : "Made / Attempted and shooting percentages"}
+          </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-medium">
           {away && (

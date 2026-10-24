@@ -3,6 +3,7 @@ import { Search, Shield, CornerDownLeft, X } from "lucide-react";
 import { loadPrivateApi } from "../../lib/dataCache";
 import { NBA_TEAMS, getTeamLogoUrl } from "../../lib/nbaTeams";
 import PlayerPhoto from "../PlayerPhoto";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface PlayerProfile {
   PLAYER_ID: number;
@@ -25,6 +26,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onSelectPlayer,
   onSelectTeam,
 }) => {
+  const { t, language } = useLanguage();
   const [query, setQuery] = useState("");
   const [players, setPlayers] = useState<PlayerProfile[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -146,7 +148,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Hızlı arama"
+        aria-label={t.common.searchCmdK}
         className="w-full max-w-xl overflow-hidden rounded-md border border-border bg-background-primary shadow-md"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
@@ -163,18 +165,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             aria-expanded="true"
             aria-controls="command-palette-list"
             aria-activedescendant={results.length > 0 ? optionId(selectedIndex) : undefined}
-            aria-label="Oyuncu veya takım ara"
+            aria-label={t.common.search}
             autoComplete="off"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Oyuncu (Luka, Curry, Jokić) veya takım (BOS, LAL) ara"
+            placeholder={t.common.searchPlaceholder}
             className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
           />
           {query ? (
             <button
               type="button"
               onClick={() => setQuery("")}
-              aria-label="Aramayı temizle"
+              aria-label={t.common.clearSearch}
               className="rounded p-1 text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
             >
               <X size={16} strokeWidth={1.5} />
@@ -186,10 +188,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           )}
         </div>
 
-        <div ref={listRef} id="command-palette-list" role="listbox" aria-label="Sonuçlar" className="max-h-80 overflow-y-auto p-2">
+        <div ref={listRef} id="command-palette-list" role="listbox" aria-label={language === "tr" ? "Sonuçlar" : "Results"} className="max-h-80 overflow-y-auto p-2">
           {results.length === 0 ? (
             <div className="py-8 text-center text-sm text-text-secondary">
-              &quot;{query}&quot; ile eşleşen oyuncu veya takım bulunamadı.
+              {language === "tr"
+                ? `"${query}" ile eşleşen oyuncu veya takım bulunamadı.`
+                : `No players or teams found matching "${query}".`}
             </div>
           ) : (
             results.map((item, idx) => {
@@ -229,11 +233,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   <div className="flex items-center gap-2 text-xs text-text-muted">
                     {isSelected && (
                       <span className="flex items-center gap-1 text-text-secondary">
-                        Seç <CornerDownLeft size={16} strokeWidth={1.5} aria-hidden="true" />
+                        {language === "tr" ? "Seç" : "Select"} <CornerDownLeft size={16} strokeWidth={1.5} aria-hidden="true" />
                       </span>
                     )}
                     <span className="rounded-sm border border-border px-1.5 py-0.5 text-xs font-medium">
-                      {item.type === "player" ? "Oyuncu" : "Takım"}
+                      {item.type === "player" ? t.common.player : t.common.team}
                     </span>
                   </div>
                 </div>
@@ -247,13 +251,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             <span>
               <kbd className="rounded-sm border border-border bg-background-primary px-1 py-0.5 text-xs">↑</kbd>{" "}
               <kbd className="rounded-sm border border-border bg-background-primary px-1 py-0.5 text-xs">↓</kbd>{" "}
-              gezin
+              {language === "tr" ? "gezin" : "navigate"}
             </span>
             <span>
-              <kbd className="rounded-sm border border-border bg-background-primary px-1 py-0.5 text-xs">↵</kbd> seç
+              <kbd className="rounded-sm border border-border bg-background-primary px-1 py-0.5 text-xs">↵</kbd>{" "}
+              {language === "tr" ? "seç" : "select"}
             </span>
           </div>
-          <span>Genel arama</span>
+          <span>{language === "tr" ? "Genel arama" : "Global search"}</span>
         </div>
       </div>
     </div>

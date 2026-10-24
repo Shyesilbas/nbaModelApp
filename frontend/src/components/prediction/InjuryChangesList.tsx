@@ -1,4 +1,5 @@
 import { Badge } from "../common";
+import { useLanguage } from "../../context/LanguageContext";
 
 export type InjuryChange = {
   team: string;
@@ -18,10 +19,13 @@ const clock = (published: string) => published.split(" ").slice(1).join(" ");
 
 /** Status changes of players across today's injury reports ("not on the report" reads as Available). */
 export function InjuryChangesList({ changes }: { changes: InjuryChange[] }) {
+  const { language } = useLanguage();
   if (changes.length === 0) return null;
   return (
     <div className="rounded border border-status-warning/30 bg-status-warning/10 p-3">
-      <p className="mb-2 text-xs font-medium text-text-primary">Injury report changes today</p>
+      <p className="mb-2 text-xs font-medium text-text-primary">
+        {language === "tr" ? "Bugünkü sakatlık raporu değişimleri" : "Injury report changes today"}
+      </p>
       <ul className="space-y-1.5">
         {changes.map((c) => (
           <li key={`${c.team}-${c.player_name}`} className="flex flex-wrap items-center gap-1.5 text-xs text-text-secondary">
@@ -29,7 +33,7 @@ export function InjuryChangesList({ changes }: { changes: InjuryChange[] }) {
             <span>({c.team})</span>
             {c.steps.map((s, i) => (
               <span key={`${s.at}-${i}`} className="inline-flex items-center gap-1.5">
-                {i > 0 && <span className="text-text-muted">then</span>}
+                {i > 0 && <span className="text-text-muted">{language === "tr" ? "ardından" : "then"}</span>}
                 <Badge variant={VARIANT[s.status ?? "Available"] ?? "neutral"} size="sm">{s.status ?? "Available"}</Badge>
                 <span className="text-text-muted">{clock(s.at)}</span>
               </span>

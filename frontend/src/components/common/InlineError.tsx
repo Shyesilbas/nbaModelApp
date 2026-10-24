@@ -1,6 +1,7 @@
 import React from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "./Button";
+import { useLanguage } from "../../context/LanguageContext";
 
 export interface InlineErrorProps {
   message: string;
@@ -11,10 +12,13 @@ export interface InlineErrorProps {
 
 export const InlineError: React.FC<InlineErrorProps> = ({
   message,
-  title = "An error occurred",
+  title,
   onRetry,
   className = "",
 }) => {
+  const { t } = useLanguage();
+  const resolvedTitle = title ?? t.common.error;
+
   return (
     <div
       role="alert"
@@ -27,7 +31,7 @@ export const InlineError: React.FC<InlineErrorProps> = ({
           strokeWidth={2}
         />
         <div>
-          <p className="font-semibold text-status-error">{title}</p>
+          <p className="font-semibold text-status-error">{resolvedTitle}</p>
           <p className="mt-0.5 text-text-secondary">{message}</p>
         </div>
       </div>
@@ -39,7 +43,7 @@ export const InlineError: React.FC<InlineErrorProps> = ({
           leftIcon={<RefreshCw size={12} />}
           className="shrink-0"
         >
-          Retry
+          {t.common.retry}
         </Button>
       )}
     </div>

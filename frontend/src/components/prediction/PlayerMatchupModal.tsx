@@ -4,6 +4,7 @@ import PlayerPhoto from "../PlayerPhoto";
 import { Badge, Button, EmptyState, InlineError, Skeleton } from "../common";
 import { loadPrivateApi } from "../../lib/dataCache";
 import type { TeamInfo } from "./types";
+import { useLanguage } from "../../context/LanguageContext";
 
 export interface PlayerMatchupData {
   player_id: number | string;
@@ -66,6 +67,7 @@ export function PlayerMatchupModal({
   season = "2025-26",
   onClose,
 }: PlayerMatchupModalProps) {
+  const { language } = useLanguage();
   const [result, setResult] = useState<{
     key: string;
     games: GameRow[];
@@ -200,38 +202,63 @@ export function PlayerMatchupModal({
       const diffPct = ptsSeason > 0 ? ((ptsProj - ptsSeason) / ptsSeason) * 100 : 0;
       const formDiff = ((stats5.pts - ptsSeason) / Math.max(ptsSeason, 1)) * 100;
 
-      let trendWord = "istikrarlı bir çizgide";
-      if (formDiff > 10) trendWord = "belirgin bir yükseliş trendinde (sıcak form)";
-      else if (formDiff < -10) trendWord = "son dönemde hafif bir düşüş grafiğinde";
+      let trendWord = language === "tr" ? "istikrarlı bir çizgide" : "at a consistent pace";
+      if (formDiff > 10) trendWord = language === "tr" ? "belirgin bir yükseliş trendinde (sıcak form)" : "in an ascending hot-streak";
+      else if (formDiff < -10) trendWord = language === "tr" ? "son dönemde hafif bir düşüş grafiğinde" : "in a slight recent cooldown";
 
-      parts.push(
-        `Son ${stats5.count} maçında ortalama ${stats5.pts.toFixed(1)} sayı, ${stats5.reb.toFixed(1)} ribaund ve ${stats5.ast.toFixed(1)} asist (` +
-        `${stats5.min.toFixed(1)} dk, %${((stats5.fgPct || 0) * 100).toFixed(0)} FG) ile ${trendWord} oynuyor. Sezon ortalaması ise ${ptsSeason.toFixed(1)} PTS.`
-      );
-
-      if (Math.abs(diffPct) >= 5) {
-        const dir = diffPct > 0 ? "artış" : "azalış";
+      if (language === "tr") {
         parts.push(
-          `Model bu maç için ${ptsProj.toFixed(1)} sayı (${diffPct > 0 ? "+" : ""}${diffPct.toFixed(1)}% ${dir}) öngörmektedir. ` +
-          `Bu projeksiyon; takımın beklenen maç temposu (${teamInfo.abbr} - ${opponentInfo.abbr}) ve oyuncunun kullanım hacmi (USG) ile doğrudan ilişkilidir.`
+          `Son ${stats5.count} maçında ortalama ${stats5.pts.toFixed(1)} sayı, ${stats5.reb.toFixed(1)} ribaund ve ${stats5.ast.toFixed(1)} asist (` +
+          `${stats5.min.toFixed(1)} dk, %${((stats5.fgPct || 0) * 100).toFixed(0)} FG) ile ${trendWord} oynuyor. Sezon ortalaması ise ${ptsSeason.toFixed(1)} PTS.`
         );
       } else {
         parts.push(
-          `Modelin ${ptsProj.toFixed(1)} sayı tahmini, oyuncunun temel sezon standartlarıyla dengeli bir uyum göstermektedir.`
+          `Averaging ${stats5.pts.toFixed(1)} PTS, ${stats5.reb.toFixed(1)} REB, and ${stats5.ast.toFixed(1)} AST (` +
+          `${stats5.min.toFixed(1)} MIN, ${((stats5.fgPct || 0) * 100).toFixed(0)}% FG) over the last ${stats5.count} games, performing ${trendWord}. Season benchmark is ${ptsSeason.toFixed(1)} PTS.`
+        );
+      }
+
+      if (Math.abs(diffPct) >= 5) {
+        if (language === "tr") {
+          const dir = diffPct > 0 ? "artış" : "azalış";
+          parts.push(
+            `Model bu maç için ${ptsProj.toFixed(1)} sayı (${diffPct > 0 ? "+" : ""}${diffPct.toFixed(1)}% ${dir}) öngörmektedir. ` +
+            `Bu projeksiyon; takımın beklenen maç temposu (${teamInfo.abbr} - ${opponentInfo.abbr}) ve oyuncunun kullanım hacmi (USG) ile doğrudan ilişkilidir.`
+          );
+        } else {
+          const dir = diffPct > 0 ? "surge" : "dip";
+          parts.push(
+            `The model projects ${ptsProj.toFixed(1)} PTS (${diffPct > 0 ? "+" : ""}${diffPct.toFixed(1)}% ${dir}) for this matchup. ` +
+            `This projection directly incorporates matchup pace dynamics (${teamInfo.abbr} vs ${opponentInfo.abbr}) and implied offensive usage.`
+          );
+        }
+      } else {
+        parts.push(
+          language === "tr"
+            ? `Modelin ${ptsProj.toFixed(1)} sayı tahmini, oyuncunun temel sezon standartlarıyla dengeli bir uyum göstermektedir.`
+            : `The model's projection of ${ptsProj.toFixed(1)} PTS closely tracks the player's core season baseline.`
         );
       }
     } else if (!seasonAverages) {
-      parts.push("Bu sezon için henüz oynanmış maç verisi yok; projeksiyon önceki sezonlardaki role ve güncel kadro bağlamına dayanır.");
+      parts.push(
+        language === "tr"
+          ? "Bu sezon için henüz oynanmış maç verisi yok; projeksiyon önceki sezonlardaki role ve güncel kadro bağlamına dayanır."
+          : "No games recorded yet for this season; projections rely on historical role depth and roster environment."
+      );
     } else {
       parts.push(
-        `Sezon genelinde ${ptsSeason.toFixed(1)} sayı, ${seasonAverages?.REB?.toFixed(1) || 0} ribaund ve ${seasonAverages?.AST?.toFixed(1) || 0} asist ortalamasına sahip.`
+        language === "tr"
+          ? `Sezon genelinde ${ptsSeason.toFixed(1)} sayı, ${seasonAverages?.REB?.toFixed(1) || 0} ribaund ve ${seasonAverages?.AST?.toFixed(1) || 0} asist ortalamasına sahip.`
+          : `Holding season-long averages of ${ptsSeason.toFixed(1)} PTS, ${seasonAverages?.REB?.toFixed(1) || 0} REB, and ${seasonAverages?.AST?.toFixed(1) || 0} AST.`
       );
     }
 
     // 2. Position group and matchup context
-    const pos = player.position_group || "Oyuncu";
+    const pos = player.position_group || (language === "tr" ? "Oyuncu" : "Player");
     parts.push(
-      `${opponentInfo.name} (${opponentInfo.abbr}) savunmasına karşı ${pos} pozisyonunda ana hücum/rotasyon aktörü olarak sahada yer alması bekleniyor.`
+      language === "tr"
+        ? `${opponentInfo.name} (${opponentInfo.abbr}) savunmasına karşı ${pos} pozisyonunda ana hücum/rotasyon aktörü olarak sahada yer alması bekleniyor.`
+        : `Expected to feature as a primary rotation/offensive contributor at ${pos} against the ${opponentInfo.name} (${opponentInfo.abbr}) defense.`
     );
 
     // 3. Top-down scaling context if present
@@ -239,8 +266,11 @@ export function PlayerMatchupModal({
       const scalePercent = ((player.scale_factor - 1) * 100).toFixed(1);
       const isPositive = player.scale_factor >= 1.0;
       parts.push(
-        `Skor modeli senkronizasyonu: Ham bireysel model tahmini ${player.raw_pts.toFixed(1)} PTS iken, ` +
-        `takımın hedeflenen maç skoru doğrultusunda ${player.scale_factor.toFixed(3)}x katsayısı (${isPositive ? "+" : ""}${scalePercent}%) uygulanarak ${player.predicted_pts.toFixed(1)} PTS olarak kalibre edilmiştir.`
+        language === "tr"
+          ? `Skor modeli senkronizasyonu: Ham bireysel model tahmini ${player.raw_pts.toFixed(1)} PTS iken, ` +
+            `takımın hedeflenen maç skoru doğrultusunda ${player.scale_factor.toFixed(3)}x katsayısı (${isPositive ? "+" : ""}${scalePercent}%) uygulanarak ${player.predicted_pts.toFixed(1)} PTS olarak kalibre edilmiştir.`
+          : `Score model synchronization: Unconstrained individual projection was ${player.raw_pts.toFixed(1)} PTS, ` +
+            `calibrated by ${player.scale_factor.toFixed(3)}x (${isPositive ? "+" : ""}${scalePercent}%) to match projected team totals at ${player.predicted_pts.toFixed(1)} PTS.`
       );
     }
 
@@ -326,10 +356,12 @@ export function PlayerMatchupModal({
           </div>
 
           {/* Narrative */}
-          <section className="space-y-2 rounded border border-border bg-background-secondary p-4" aria-label="Maç ve form analizi">
+          <section className="space-y-2 rounded border border-border bg-background-secondary p-4" aria-label={language === "tr" ? "Maç ve form analizi" : "Matchup and form analysis"}>
             <div className="flex items-center gap-2">
               <Info size={16} strokeWidth={1.5} className="text-primary" />
-              <h3 className="text-sm font-semibold text-text-primary">Maç ve form analizi</h3>
+              <h3 className="text-sm font-semibold text-text-primary">
+                {language === "tr" ? "Maç ve form analizi" : "Matchup & Form Analysis"}
+              </h3>
             </div>
             {loading ? (
               <div className="space-y-2" aria-busy="true">
@@ -349,13 +381,17 @@ export function PlayerMatchupModal({
           </section>
 
           {/* Stat comparison */}
-          <section className="space-y-3" aria-label="İstatistiksel karşılaştırma">
+          <section className="space-y-3" aria-label={language === "tr" ? "İstatistiksel karşılaştırma" : "Statistical Comparison"}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <BarChart2 size={16} strokeWidth={1.5} className="text-text-primary" />
-                <h3 className="text-sm font-semibold text-text-primary">İstatistiksel karşılaştırma</h3>
+                <h3 className="text-sm font-semibold text-text-primary">
+                  {language === "tr" ? "İstatistiksel karşılaştırma" : "Statistical Comparison"}
+                </h3>
               </div>
-              <span className="text-xs text-text-secondary">Son maçlar, sezon ortalaması ve model</span>
+              <span className="text-xs text-text-secondary">
+                {language === "tr" ? "Son maçlar, sezon ortalaması ve model" : "Recent games, season benchmark, and projections"}
+              </span>
             </div>
 
             {loading ? (
@@ -365,20 +401,22 @@ export function PlayerMatchupModal({
                 <table className="w-full text-xs">
                   <thead className="whitespace-nowrap border-b border-border bg-background-tertiary text-xs font-medium text-text-secondary">
                     <tr>
-                      <th scope="col" className="px-3 py-2 text-left">Metrik</th>
-                      <th scope="col" className="px-3 py-2 text-right">Sezon ort.</th>
-                      <th scope="col" className="px-3 py-2 text-right">Son {stats5.count} maç</th>
+                      <th scope="col" className="px-3 py-2 text-left">{language === "tr" ? "Metrik" : "Metric"}</th>
+                      <th scope="col" className="px-3 py-2 text-right">{language === "tr" ? "Sezon ort." : "Season Avg"}</th>
+                      <th scope="col" className="px-3 py-2 text-right">
+                        {language === "tr" ? `Son ${stats5.count} maç` : `Last ${stats5.count}`}
+                      </th>
                       <th scope="col" className="px-3 py-2 text-right text-primary">Model</th>
-                      <th scope="col" className="px-3 py-2 text-right">Fark</th>
+                      <th scope="col" className="px-3 py-2 text-right">{language === "tr" ? "Fark" : "Diff"}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
                     {[
-                      { metric: "Sayı (PTS)", season: seasonAverages?.PTS, l5: stats5.pts, model: player.predicted_pts },
-                      { metric: "Ribaund (REB)", season: seasonAverages?.REB, l5: stats5.reb, model: player.predicted_reb },
-                      { metric: "Asist (AST)", season: seasonAverages?.AST, l5: stats5.ast, model: player.predicted_ast },
+                      { metric: language === "tr" ? "Sayı (PTS)" : "Points (PTS)", season: seasonAverages?.PTS, l5: stats5.pts, model: player.predicted_pts },
+                      { metric: language === "tr" ? "Ribaund (REB)" : "Rebounds (REB)", season: seasonAverages?.REB, l5: stats5.reb, model: player.predicted_reb },
+                      { metric: language === "tr" ? "Asist (AST)" : "Assists (AST)", season: seasonAverages?.AST, l5: stats5.ast, model: player.predicted_ast },
                       {
-                        metric: "Toplam PRA",
+                        metric: language === "tr" ? "Toplam PRA" : "Total PRA",
                         season: (seasonAverages?.PTS || 0) + (seasonAverages?.REB || 0) + (seasonAverages?.AST || 0),
                         l5: stats5.pra,
                         model: player.predicted_pra,
@@ -423,15 +461,18 @@ export function PlayerMatchupModal({
           </section>
 
           {/* Recent games */}
-          <section className="space-y-3" aria-label="Son maç performansları">
+          <section className="space-y-3" aria-label={language === "tr" ? "Son maç performansları" : "Recent Game Performances"}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Clock size={16} strokeWidth={1.5} className="text-text-primary" />
                 <h3 className="text-sm font-semibold text-text-primary">
-                  Son maç performansları{!loading && !error ? ` (${recentGames.length} maç)` : ""}
+                  {language === "tr" ? "Son maç performansları" : "Recent Game Performances"}
+                  {!loading && !error ? ` (${recentGames.length} ${language === "tr" ? "maç" : "games"})` : ""}
                 </h3>
               </div>
-              <span className="text-xs text-text-secondary">Bu sezonun gerçekleşen istatistikleri</span>
+              <span className="text-xs text-text-secondary">
+                {language === "tr" ? "Bu sezonun gerçekleşen istatistikleri" : "Actual box scores from this season"}
+              </span>
             </div>
 
             {loading ? (
@@ -442,14 +483,14 @@ export function PlayerMatchupModal({
               </div>
             ) : error ? (
               <InlineError
-                title="Oyuncu verisi yüklenemedi"
+                title={language === "tr" ? "Oyuncu verisi yüklenemedi" : "Failed to load player data"}
                 message={error}
                 onRetry={() => setReloadKey((k) => k + 1)}
               />
             ) : recentGames.length === 0 ? (
               <EmptyState
-                title="Maç kaydı yok"
-                description="Bu sezon için oynanmış maç kaydı bulunamadı."
+                title={language === "tr" ? "Maç kaydı yok" : "No games recorded"}
+                description={language === "tr" ? "Bu sezon için oynanmış maç kaydı bulunamadı." : "No played game records found for this season."}
                 icon={<Clock size={32} strokeWidth={1.5} />}
                 className="p-6 sm:p-6"
               />
@@ -458,10 +499,10 @@ export function PlayerMatchupModal({
                 <table className="w-full text-xs">
                   <thead className="whitespace-nowrap border-b border-border bg-background-tertiary text-xs font-medium text-text-secondary">
                     <tr>
-                      <th scope="col" className="px-3 py-2 text-left">Tarih</th>
-                      <th scope="col" className="px-3 py-2 text-left">Eşleşme</th>
-                      <th scope="col" className="px-2 py-2 text-center">Sonuç</th>
-                      <th scope="col" className="px-2 py-2 text-right">Dk</th>
+                      <th scope="col" className="px-3 py-2 text-left">{language === "tr" ? "Tarih" : "Date"}</th>
+                      <th scope="col" className="px-3 py-2 text-left">{language === "tr" ? "Eşleşme" : "Matchup"}</th>
+                      <th scope="col" className="px-2 py-2 text-center">{language === "tr" ? "Sonuç" : "Result"}</th>
+                      <th scope="col" className="px-2 py-2 text-right">{language === "tr" ? "Dk" : "Min"}</th>
                       <th scope="col" className="px-3 py-2 text-right text-text-primary">PTS</th>
                       <th scope="col" className="px-2 py-2 text-right">REB</th>
                       <th scope="col" className="px-2 py-2 text-right">AST</th>

@@ -2,6 +2,7 @@ import { Award, Calendar, Cpu, Download, RefreshCw, Trophy } from "lucide-react"
 import TeamLogo from "../TeamLogo";
 import type { TeamInfo } from "./types";
 import { exportPredictionAsPDF } from "../../lib/predictionReport";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface MatchupHeroCardProps {
   result: any;
@@ -22,6 +23,7 @@ export function MatchupHeroCard({
   onRefresh,
   isLoading = false,
 }: MatchupHeroCardProps) {
+  const { t, language, formatDate } = useLanguage();
   const win = result?.win_probability || {};
   const score = result?.score_prediction || {};
 
@@ -43,20 +45,6 @@ export function MatchupHeroCard({
   const isHighConfidence = confidence.toUpperCase().includes("STRONG");
   const isModerateConfidence = confidence.toUpperCase().includes("MODERATE");
 
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return "";
-    try {
-      return new Date(dateStr).toLocaleDateString("tr-TR", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
   const isHomeWinner = winnerInfo.abbr === homeInfo.abbr;
 
   return (
@@ -67,7 +55,7 @@ export function MatchupHeroCard({
           {win.model_version && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-background-secondary border border-border text-text-secondary text-xs font-medium">
               <Cpu size={16} className="text-primary" />
-              <span>Model {win.model_version}</span>
+              <span>{language === "tr" ? "Model " : "Model "}{win.model_version}</span>
             </span>
           )}
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-background-secondary border border-border text-text-secondary text-xs font-medium tabular-nums">
@@ -85,7 +73,7 @@ export function MatchupHeroCard({
               className="flex items-center gap-1.5 h-8 px-3 rounded border border-border bg-background-primary hover:bg-background-secondary text-text-primary text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw size={16} className={isLoading ? "animate-spin text-primary" : ""} />
-              <span>Yenile</span>
+              <span>{language === "tr" ? "Yenile" : "Refresh"}</span>
             </button>
           )}
           <button
@@ -101,7 +89,7 @@ export function MatchupHeroCard({
             className="flex items-center gap-1.5 h-8 px-3 rounded bg-primary hover:bg-primary/90 text-white text-xs font-medium transition-colors cursor-pointer"
           >
             <Download size={16} />
-            <span>Raporu İndir (PDF)</span>
+            <span>{t.predictions.downloadPdf}</span>
           </button>
         </div>
       </div>
@@ -116,7 +104,7 @@ export function MatchupHeroCard({
               {!isHomeWinner && (
                 <span
                   className="absolute -top-1.5 -right-1.5 p-1 bg-background-primary border border-border rounded-full text-status-warning "
-                  title="Galibiyet Favorisi"
+                  title={language === "tr" ? "Galibiyet Favorisi" : "Matchup Favorite"}
                 >
                   <Trophy size={16} />
                 </span>
@@ -125,10 +113,10 @@ export function MatchupHeroCard({
 
             <div>
               <div className="flex items-center gap-1.5 justify-center md:justify-start">
-                <span className="text-xs font-medium text-text-secondary">Deplasman</span>
+                <span className="text-xs font-medium text-text-secondary">{t.common.away}</span>
                 {!isHomeWinner && (
                   <span className="px-1.5 py-0.5 rounded-sm bg-status-success/10 text-status-success text-xs font-semibold">
-                    Favori
+                    {language === "tr" ? "Favori" : "Favorite"}
                   </span>
                 )}
               </div>
@@ -141,18 +129,18 @@ export function MatchupHeroCard({
 
           <div className="flex items-baseline gap-4 pt-1">
             <div>
-              <span className="text-xs font-medium text-text-secondary block">Kazanma Olasılığı</span>
+              <span className="text-xs font-medium text-text-secondary block">{t.predictions.winProbability}</span>
               <span className="text-2xl sm:text-3xl font-semibold tabular-nums text-text-primary">
                 %{awayProbPct}
               </span>
             </div>
             <div className="pl-4 border-l border-border-light">
-              <span className="text-xs font-medium text-text-secondary block">Tahmini Skor</span>
+              <span className="text-xs font-medium text-text-secondary block">{t.predictions.expectedScore}</span>
               <span className="text-2xl sm:text-3xl font-semibold tabular-nums text-text-primary">
                 {awayScore}
               </span>
               <span className="text-xs text-text-secondary tabular-nums block">
-                {awayRange[0]}–{awayRange[1]} Sayı
+                {awayRange[0]}–{awayRange[1]} {t.common.ptsUnit}
               </span>
             </div>
           </div>
@@ -164,12 +152,12 @@ export function MatchupHeroCard({
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-sm border border-border bg-background-secondary text-xs font-medium text-text-primary text-center">
             <span>
               {isHighConfidence
-                ? "Yüksek Güvenilirlik"
+                ? t.predictions.highConfidence
                 : isModerateConfidence
-                ? "Orta Güvenilirlik"
-                : "Dengeli Karşılaşma"}
+                ? t.predictions.moderateConfidence
+                : (language === "tr" ? "Dengeli Karşılaşma" : "Balanced Matchup")}
               {" · "}
-              {scoreWinnerInfo.abbr} +{margin} Fark
+              {scoreWinnerInfo.abbr} +{margin} {language === "tr" ? "Fark" : "Margin"}
             </span>
           </div>
 
@@ -205,12 +193,12 @@ export function MatchupHeroCard({
             <div className="flex items-center gap-1.5 text-xs text-text-secondary">
               <Award size={16} className="text-status-warning shrink-0" />
               <span>
-                Galibiyet favorisi:{" "}
+                {language === "tr" ? "Galibiyet favorisi: " : "Projected winner: "}
                 <strong className="text-text-primary font-semibold">{winnerInfo.name}</strong>
               </span>
             </div>
             <span className="text-xs font-medium tabular-nums text-text-muted">
-              Tempo (Pace): {pace} pos/48m · {parseFloat(pace) > 100 ? "Yüksek Tempo" : "Kontrollü Set"}
+              {t.predictions.expectedPace}: {pace} {t.predictions.possession} · {parseFloat(pace) > 100 ? (language === "tr" ? "Yüksek Tempo" : "High Pace") : (language === "tr" ? "Kontrollü Set" : "Controlled Pace")}
             </span>
           </div>
         </div>
@@ -223,7 +211,7 @@ export function MatchupHeroCard({
               {isHomeWinner && (
                 <span
                   className="absolute -top-1.5 -right-1.5 p-1 bg-background-primary border border-border rounded-full text-status-warning "
-                  title="Galibiyet Favorisi"
+                  title={language === "tr" ? "Galibiyet Favorisi" : "Matchup Favorite"}
                 >
                   <Trophy size={16} />
                 </span>
@@ -234,10 +222,10 @@ export function MatchupHeroCard({
               <div className="flex items-center gap-1.5 justify-center md:justify-end">
                 {isHomeWinner && (
                   <span className="px-1.5 py-0.5 rounded-sm bg-status-success/10 text-status-success text-xs font-semibold">
-                    Favori
+                    {language === "tr" ? "Favori" : "Favorite"}
                   </span>
                 )}
-                <span className="text-xs font-medium text-text-secondary">Ev Sahibi</span>
+                <span className="text-xs font-medium text-text-secondary">{t.common.home}</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-semibold text-text-primary mt-0.5">
                 {homeInfo.name}
@@ -248,18 +236,18 @@ export function MatchupHeroCard({
 
           <div className="flex items-baseline md:flex-row-reverse gap-4 pt-1">
             <div>
-              <span className="text-xs font-medium text-text-secondary block">Kazanma Olasılığı</span>
+              <span className="text-xs font-medium text-text-secondary block">{t.predictions.winProbability}</span>
               <span className="text-2xl sm:text-3xl font-semibold tabular-nums text-text-primary">
                 %{homeProbPct}
               </span>
             </div>
             <div className="pr-4 md:border-r border-border-light text-right">
-              <span className="text-xs font-medium text-text-secondary block">Tahmini Skor</span>
+              <span className="text-xs font-medium text-text-secondary block">{t.predictions.expectedScore}</span>
               <span className="text-2xl sm:text-3xl font-semibold tabular-nums text-text-primary">
                 {homeScore}
               </span>
               <span className="text-xs text-text-secondary tabular-nums block">
-                {homeRange[0]}–{homeRange[1]} Sayı
+                {homeRange[0]}–{homeRange[1]} {t.common.ptsUnit}
               </span>
             </div>
           </div>

@@ -30,10 +30,11 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   render() {
     if (this.state.error) {
+      const isTr = typeof document !== "undefined" && document.documentElement.lang === "tr";
       return (
         <InlineError
-          title="Bu ekran görüntülenemedi"
-          message={this.state.error.message || "Beklenmeyen bir hata oluştu."}
+          title={isTr ? "Bu ekran görüntülenemedi" : "Unable to display this view"}
+          message={this.state.error.message || (isTr ? "Beklenmeyen bir hata oluştu." : "An unexpected error occurred.")}
           onRetry={() => this.setState({ error: null })}
         />
       );

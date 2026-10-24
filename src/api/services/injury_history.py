@@ -259,7 +259,17 @@ def status_changes(season: str, day: str, game_date: Optional[str] = None, match
             if not steps or steps[-1]["status"] != status:
                 steps.append({"status": status, "at": published})
         if len(steps) > 1:
-            out.append({"team": key[0], "player_name": key[1], "steps": steps})
+            from_st = steps[0]["status"] or "Available"
+            to_st = steps[-1]["status"] or "Available"
+            if from_st != to_st:
+                out.append({
+                    "team": key[0],
+                    "player_name": key[1],
+                    "matchup": matchups.get(key, ""),
+                    "from": from_st,
+                    "to": to_st,
+                    "steps": steps,
+                })
     return out
 
 

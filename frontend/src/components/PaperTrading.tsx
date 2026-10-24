@@ -6,7 +6,7 @@ import { CalibrationChart, RollingAccuracyChart } from "./paper/PaperCharts";
 import PublishSnapshotButton from "./PublishSnapshotButton";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
-import { fmtDate } from "./game-results/utils";
+import { useLanguage } from "../context/LanguageContext";
 
 type PaperGame = {
   game_id: string;
@@ -90,6 +90,7 @@ function TeamCell({ abbr, bold }: { abbr: string; bold: boolean }) {
 }
 
 export default function PaperTrading() {
+  const { t, language, formatDate } = useLanguage();
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -127,7 +128,13 @@ export default function PaperTrading() {
   const dayCorrect = dayGraded.filter((g) => g.correct).length;
 
   if (error) {
-    return <InlineError title="Failed to load paper trading" message={error} onRetry={load} />;
+    return (
+      <InlineError
+        title={t.common.loadFailed}
+        message={error}
+        onRetry={load}
+      />
+    );
   }
 
   if (loading || !report) {
@@ -149,13 +156,17 @@ export default function PaperTrading() {
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-lg font-semibold text-text-primary">Paper Trading</h1>
+          <h1 className="text-lg font-semibold text-text-primary">{t.paper.title}</h1>
           <PublishSnapshotButton />
         </div>
         <EmptyState
           icon={<ClipboardCheck size={32} strokeWidth={1.5} />}
-          title="No predictions logged yet"
-          description={`The cloud freezes each ${report.season} prediction shortly before tip-off and commits it to GitHub. Publish data to cloud also pulls the latest predictions; they are graded here once the game is final.`}
+          title={language === "tr" ? "Henüz kayıtlı tahmin bulunmuyor" : "No predictions logged yet"}
+          description={
+            language === "tr"
+              ? `Model tahminleri maç başlamadan önce dondurulup kaydedilir. Maçlar tamamlandıkça sonuçlar burada değerlendirilir.`
+              : `Predictions are frozen before tip-off. They are graded here once the game is final.`
+          }
         />
       </div>
     );
@@ -167,12 +178,11 @@ export default function PaperTrading() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">Paper Trading</h1>
+          <h1 className="text-lg font-semibold text-text-primary">{t.paper.title}</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Season {report.season}. Each prediction is frozen before tip-off and never rewritten; the result is
-            attached once the game is final.
-            {s.backfilled_graded > 0 &&
-              ` ${s.backfilled_graded} graded games are backfills: re-predicted as of their date using only earlier games.`}
+            {language === "tr"
+              ? `${report.season} sezonu. Her tahmin maç başlangıcından önce kilitlenir ve asla değiştirilmez; maç bittiğinde sonuç eklenir.`
+              : `Season ${report.season}. Each prediction is frozen before tip-off and never rewritten; the result is attached once the game is final.`}
           </p>
         </div>
         <PublishSnapshotButton />
@@ -183,34 +193,46 @@ export default function PaperTrading() {
         {activeTab === "score" ? (
           <>
             <Stat
-              label="Total score error (MAE)"
-              value={`${num(s.mae_total, 1)} pts`}
-              hint="Average absolute error of predicted total points"
+              label={t.paper.totalMse}
+              value={`${num(s.mae_total, 1)} ${t.common.ptsUnit}`}
+              hint={language === "tr" ? "Toplam maç skorundaki ortalama hata" : "Average absolute error on game total"}
             />
             <Stat
-              label="Margin error (MAE)"
-              value={`${num(s.mae_margin, 1)} pts`}
-              hint="Average absolute error of predicted margin"
+              label={language === "tr" ? "Fark hatası (MAE)" : "Margin error (MAE)"}
+              value={`${num(s.mae_margin, 1)} ${t.common.ptsUnit}`}
+              hint={language === "tr" ? "Skor farkı tahminindeki ortalama mutlak hata" : "Average absolute error of predicted margin"}
             />
-            <Stat label="Games graded" value={`${s.games_graded}`} hint={`${s.games_pending} pending`} />
+            <Stat
+              label={language === "tr" ? "Değerlendirilen maç" : "Games graded"}
+              value={`${s.games_graded}`}
+              hint={language === "tr" ? `${s.games_pending} bekleniyor` : `${s.games_pending} pending`}
+            />
           </>
         ) : (
           <>
             <Stat
-              label="Winner accuracy"
+              label={t.paper.winRate}
               value={pct(s.accuracy)}
-              hint={s.games_graded ? `${Math.round((s.accuracy ?? 0) * s.games_graded)} of ${s.games_graded} graded` : "No graded games yet"}
+              hint={
+                s.games_graded
+                  ? (language === "tr" ? `${s.games_graded} maçta ${Math.round((s.accuracy ?? 0) * s.games_graded)} doğru` : `${Math.round((s.accuracy ?? 0) * s.games_graded)} of ${s.games_graded} graded`)
+                  : (language === "tr" ? "Henüz sonuçlanmış maç yok" : "No graded games yet")
+              }
             />
-            <Stat label="Brier / log loss" value={`${num(s.brier, 3)} / ${num(s.log_loss, 3)}`} hint="Lower is better" />
             <Stat
-              label="Model edge vs home"
+              label="Brier / log loss"
+              value={`${num(s.brier, 3)} / ${num(s.log_loss, 3)}`}
+              hint={language === "tr" ? "Düşük değer daha iyi kalibrasyon" : "Lower is better"}
+            />
+            <Stat
+              label={language === "tr" ? "Ev sahibi bazına göre model farkı" : "Model edge vs home"}
               value={edge == null ? "—" : `${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}%`}
-              hint={`Home baseline: ${pct(s.home_baseline_accuracy)}`}
+              hint={`${language === "tr" ? "Ev sahibi bazı: " : "Home baseline: "}${pct(s.home_baseline_accuracy)}`}
             />
             <Stat
-              label="Margin error (MAE)"
-              value={`${num(s.mae_margin, 1)} pts`}
-              hint="Average margin prediction error"
+              label={language === "tr" ? "Fark hatası (MAE)" : "Margin error (MAE)"}
+              value={`${num(s.mae_margin, 1)} ${t.common.ptsUnit}`}
+              hint={language === "tr" ? "Ortalama skor farkı hatası" : "Average margin prediction error"}
             />
           </>
         )}
@@ -227,7 +249,7 @@ export default function PaperTrading() {
               : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
           }`}
         >
-          Score & Total
+          {t.paper.scoreAndTotalTab}
         </button>
         <button
           type="button"
@@ -238,7 +260,7 @@ export default function PaperTrading() {
               : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
           }`}
         >
-          Winner
+          {t.paper.winnerTab}
           {s.games_graded > 0 && (
             <span className="rounded-full bg-background-tertiary px-1.5 py-0.5 text-xs text-text-muted">
               {s.games_graded}
@@ -251,14 +273,18 @@ export default function PaperTrading() {
       <div className="flex flex-wrap items-center gap-2">
         <DatePicker
           dates={dates}
-          value={activeDate}
+          value={activeDate ?? ""}
           onChange={setSelectedDate}
           counts={dateCounts}
-          formatDate={fmtDate}
+          formatDate={formatDate}
         />
         <span className="text-xs text-text-secondary">
-          {dayGames.length} games
-          {activeTab === "winner" && dayGraded.length > 0 && `, ${dayCorrect} of ${dayGraded.length} picked correctly`}
+          {dayGames.length} {language === "tr" ? "maç" : "games"}
+          {activeTab === "winner" &&
+            dayGraded.length > 0 &&
+            (language === "tr"
+              ? `, ${dayGraded.length} maçtan ${dayCorrect} tanesi doğru bilindi`
+              : `, ${dayCorrect} of ${dayGraded.length} picked correctly`)}
         </span>
       </div>
 

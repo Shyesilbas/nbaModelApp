@@ -13,7 +13,6 @@ import TeamLogo from "../TeamLogo";
 import type { GameFeedRow, GameDetail } from "../../types/gameFeed";
 import type { TeamBoxScore, PlayerBoxScore } from "./types";
 import {
-  fmtDate,
   fmtInt,
   fmtTipoffTR,
   teamFull,
@@ -29,6 +28,7 @@ import { HighlightsTab, type PbpData } from "./HighlightsTab";
 import { Button, Badge, Card, Skeleton } from "../common";
 import { loadPrivateApi, loadPrivateApiFresh } from "../../lib/dataCache";
 import PlayerPhoto from "../PlayerPhoto";
+import { useLanguage } from "../../context/LanguageContext";
 
 export interface GameCardDetailProps {
   game: GameFeedRow;
@@ -67,6 +67,7 @@ export function GameCardDetail({
   season,
   onBack,
 }: GameCardDetailProps) {
+  const { language, formatDate } = useLanguage();
   const isCompleted =
     game.GAME_STATUS === "Final" ||
     game.GAME_STATUS === "FINAL" ||
@@ -329,23 +330,23 @@ export function GameCardDetail({
       ? [
           {
             id: "game" as const,
-            label: "Recap & Stats",
+            label: language === "tr" ? "Özet ve İstatistikler" : "Recap & Stats",
             icon: <LayoutGrid size={16} />,
           },
         ]
       : []),
     {
       id: "away" as const,
-      label: `${game.AWAY_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Roster"}`,
+      label: `${game.AWAY_TEAM_ABBREVIATION} ${isCompleted ? (language === "tr" ? "Kutu Puanı" : "Box Score") : (language === "tr" ? "Kadro" : "Roster")}`,
       icon: <Users size={16} />,
     },
     {
       id: "home" as const,
-      label: `${game.HOME_TEAM_ABBREVIATION} ${isCompleted ? "Box Score" : "Roster"}`,
+      label: `${game.HOME_TEAM_ABBREVIATION} ${isCompleted ? (language === "tr" ? "Kutu Puanı" : "Box Score") : (language === "tr" ? "Kadro" : "Roster")}`,
       icon: <Users size={16} />,
     },
     ...(isCompleted
-      ? [{ id: "highlights" as const, label: "Highlights", icon: <Flame size={16} /> }]
+      ? [{ id: "highlights" as const, label: language === "tr" ? "Önemli Anlar" : "Highlights", icon: <Flame size={16} /> }]
       : []),
   ];
 
@@ -373,12 +374,12 @@ export function GameCardDetail({
                 leftIcon={<ArrowLeft size={16} />}
                 className="mr-1 h-7 px-2 text-xs"
               >
-                Geri
+                {language === "tr" ? "Geri" : "Back"}
               </Button>
             )}
             <Calendar size={16} className="text-text-muted" />
             <span className="font-medium text-text-primary">
-              {fmtDate(game.GAME_DATE)}
+              {formatDate(game.GAME_DATE)}
             </span>
             <span className="text-text-muted">•</span>
             <Badge variant="neutral">{seasonLabel}</Badge>
@@ -386,7 +387,7 @@ export function GameCardDetail({
               <Badge variant="neutral">Game {game.SERIES_GAME_NUMBER}</Badge>
             )}
             {game.IS_ELIMINATION_GAME && (
-              <Badge variant="error">Elimination Match</Badge>
+              <Badge variant="error">{language === "tr" ? "Eleme Maçı" : "Elimination Match"}</Badge>
             )}
             <span className="text-text-muted">•</span>
             {isCompleted ? (
@@ -396,7 +397,7 @@ export function GameCardDetail({
             ) : (
               <span className="inline-flex items-center gap-1 text-text-secondary">
                 <Clock size={16} className="text-text-muted" />
-                {fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Upcoming")}
+                {fmtTipoffTR(game.GAME_START_UTC, language) ?? (game.GAME_STATUS || (language === "tr" ? "Gelecek" : "Upcoming"))}
               </span>
             )}
           </div>
@@ -421,10 +422,10 @@ export function GameCardDetail({
                 className="h-7 px-2.5 text-xs"
               >
                 {refreshDone
-                  ? "Veri Alındı"
+                  ? (language === "tr" ? "Veri Alındı" : "Cached")
                   : refreshState === "failed"
-                  ? "Yeniden Dene"
-                  : "Kutu Puanı Çek"}
+                  ? (language === "tr" ? "Yeniden Dene" : "Retry")
+                  : (language === "tr" ? "Kutu Puanı Çek" : "Fetch Box Score")}
               </Button>
             )}
             {!isCompleted && onPredict && (
@@ -434,7 +435,7 @@ export function GameCardDetail({
                 onClick={onPredict}
                 className="h-7 px-2.5 text-xs"
               >
-                Model Prediction
+                {language === "tr" ? "Model Tahmini" : "Model Prediction"}
               </Button>
             )}
           </div>
@@ -464,11 +465,11 @@ export function GameCardDetail({
                     {game.AWAY_TEAM_ABBREVIATION}
                   </span>
                   <Badge variant="neutral" size="sm">
-                    Away
+                    {language === "tr" ? "Deplasman" : "Away"}
                   </Badge>
                   {awayWon && (
                     <Badge variant="success" size="sm">
-                      Win
+                      {language === "tr" ? "Galibiyet" : "Win"}
                     </Badge>
                   )}
                 </div>
@@ -515,9 +516,9 @@ export function GameCardDetail({
                   <span className="text-sm font-semibold text-text-secondary">
                     VS
                   </span>
-                  {fmtTipoffTR(game.GAME_START_UTC) && (
+                  {fmtTipoffTR(game.GAME_START_UTC, language) && (
                     <span className="mt-1 text-xs font-medium tabular-nums text-text-primary">
-                      {fmtTipoffTR(game.GAME_START_UTC)}
+                      {fmtTipoffTR(game.GAME_START_UTC, language)}
                     </span>
                   )}
                 </div>
@@ -534,11 +535,11 @@ export function GameCardDetail({
                 <div className="flex items-center justify-end gap-2">
                   {homeWon && (
                     <Badge variant="success" size="sm">
-                      Win
+                      {language === "tr" ? "Galibiyet" : "Win"}
                     </Badge>
                   )}
                   <Badge variant="neutral" size="sm">
-                    Home
+                    {language === "tr" ? "Ev Sahibi" : "Home"}
                   </Badge>
                   <span
                     className={`text-base sm:text-lg font-semibold ${
@@ -568,7 +569,7 @@ export function GameCardDetail({
         {officials.length > 0 && (
           <div className="border-t border-border-light bg-background-tertiary/50 px-4 py-2 text-center text-xs text-text-secondary">
             <span>
-              Officials:{" "}
+              {language === "tr" ? "Hakemler: " : "Officials: "}
               <span className="text-text-primary font-medium">
                 {officials.map((o) => o.cleanName).join(", ")}
               </span>

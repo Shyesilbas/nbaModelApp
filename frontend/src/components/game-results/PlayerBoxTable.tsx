@@ -3,6 +3,7 @@ import { ChevronUp, ChevronDown } from "lucide-react";
 import PlayerPhoto from "../PlayerPhoto";
 import type { PlayerBoxScore } from "./types";
 import { fmtInt, fmtPair, fmtPct, parseMinutes } from "./utils";
+import { useLanguage } from "../../context/LanguageContext";
 
 const STAT_COLUMNS = [
   { key: "MIN", label: "MIN" },
@@ -39,6 +40,7 @@ export function PlayerBoxTable({
   players: PlayerBoxScore[];
   accent?: string;
 }) {
+  const { language } = useLanguage();
   const [sortCol, setSortCol] = useState<string>("MIN");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -121,7 +123,9 @@ export function PlayerBoxTable({
               className="sticky left-0 z-10 min-w-[190px] cursor-pointer bg-background-tertiary px-3 py-2.5 text-left text-xs font-medium text-text-secondary select-none transition-colors hover:text-text-primary"
             >
               <div className="flex items-center gap-1">
-                <span className={sortCol === "Player" ? "font-semibold text-text-primary" : ""}>Player</span>
+                <span className={sortCol === "Player" ? "font-semibold text-text-primary" : ""}>
+                  {language === "tr" ? "Oyuncu" : "Player"}
+                </span>
                 {sortCol === "Player" && (
                   sortDir === "asc" ? <ChevronUp size={16} className="text-primary" /> : <ChevronDown size={16} className="text-primary" />
                 )}
@@ -226,7 +230,7 @@ export function PlayerBoxTable({
           ) : (
             <tr>
               <td colSpan={12} className="px-3 py-6 text-center text-xs text-text-muted">
-                No player rows for this side.
+                {language === "tr" ? "Bu takım için oyuncu kaydı bulunamadı." : "No player rows for this side."}
               </td>
             </tr>
           )}
@@ -234,7 +238,9 @@ export function PlayerBoxTable({
         {players.length > 0 && (
           <tfoot>
             <tr className="border-t border-border bg-background-tertiary">
-              <td className="sticky left-0 z-10 bg-background-tertiary px-3 py-2.5 text-xs font-semibold text-text-primary">Team totals</td>
+              <td className="sticky left-0 z-10 bg-background-tertiary px-3 py-2.5 text-xs font-semibold text-text-primary">
+                {language === "tr" ? "Takım Toplamı" : "Team totals"}
+              </td>
               <td />
               <td className="px-2 py-2.5 text-right text-xs font-semibold tabular-nums text-text-primary">{sum("PTS")}</td>
               <td className="px-2 py-2.5 text-right text-xs font-medium tabular-nums text-text-primary">{sum("REB")}</td>

@@ -27,6 +27,7 @@ import {
   EmptyState,
   InlineError,
 } from "./common";
+import { useLanguage } from "../context/LanguageContext";
 
 /* ─────────── Types ─────────── */
 interface GameRow {
@@ -662,6 +663,7 @@ function DiscoveryGrid({
   onSelect: (p: PlayerProfile) => void;
   seasons: string[];
 }) {
+  const { t, language } = useLanguage();
   const seasonsDesc = useMemo(() => [...seasons].reverse(), [seasons]);
   const defaultSeason = useMemo(
     () =>
@@ -713,15 +715,17 @@ function DiscoveryGrid({
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-text-primary">Lig liderleri</h2>
+          <h2 className="text-lg font-semibold text-text-primary">
+            {language === "tr" ? "Lig liderleri" : "League Leaders"}
+          </h2>
           <p className="text-xs sm:text-sm text-text-secondary">
-            Maç başına ortalamalar · en az 1 maç ·{" "}
-            <span className="tabular-nums font-medium text-text-primary">{list.length}</span> oyuncu
+            {language === "tr" ? "Maç başına ortalamalar · en az 1 maç · " : "Per-game averages · min. 1 game · "}
+            <span className="tabular-nums font-medium text-text-primary">{list.length}</span> {language === "tr" ? "oyuncu" : "players"}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
-            aria-label="Sezon"
+            aria-label={t.common.season}
             value={season}
             onChange={(e) => {
               setSeason(e.target.value);
@@ -737,7 +741,7 @@ function DiscoveryGrid({
             ))}
           </select>
           <select
-            aria-label="Takım"
+            aria-label={t.common.team}
             value={team}
             onChange={(e) => {
               setTeam(e.target.value);
@@ -745,7 +749,7 @@ function DiscoveryGrid({
             }}
             className={selectCls}
           >
-            <option value="all">Tüm takımlar</option>
+            <option value="all">{language === "tr" ? "Tüm takımlar" : "All teams"}</option>
             {teams.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -754,7 +758,7 @@ function DiscoveryGrid({
           </select>
           <div
             role="group"
-            aria-label="Pozisyon"
+            aria-label={language === "tr" ? "Pozisyon" : "Position"}
             className="inline-flex rounded border border-border bg-background-tertiary p-0.5"
           >
             {POSITION_GROUPS.map((g) => (
@@ -772,7 +776,7 @@ function DiscoveryGrid({
                     : "text-text-secondary hover:text-text-primary"
                 }`}
               >
-                {g.label}
+                {g.id === "all" ? (language === "tr" ? "Tümü" : "All") : g.label}
               </button>
             ))}
           </div>
@@ -784,8 +788,8 @@ function DiscoveryGrid({
           <thead>
             <tr className="border-b border-border bg-background-tertiary text-left text-xs font-semibold text-text-secondary">
               <th className="w-10 px-3 py-2.5">#</th>
-              <th className="px-3 py-2.5">Oyuncu</th>
-              <th className="px-3 py-2.5">Takım</th>
+              <th className="px-3 py-2.5">{language === "tr" ? "Oyuncu" : "Player"}</th>
+              <th className="px-3 py-2.5">{language === "tr" ? "Takım" : "Team"}</th>
               <th className="px-3 py-2.5 text-right">GP</th>
               {LEADER_COLS.map((c) => (
                 <th key={c.key} className="px-2 py-1 text-right">
@@ -973,6 +977,7 @@ export default function PlayerPage({
   initialPlayerId?: number | null;
   onSelectGame?: (gameId: string) => void;
 }) {
+  const { t, language } = useLanguage();
   const [seasonsList, setSeasonsList] = useState<string[]>([
     "2022-23",
     "2023-24",
@@ -1021,7 +1026,7 @@ export default function PlayerPage({
       setProfiles(prof);
       setAveragesData(avgs);
     } catch (e) {
-      setError((e instanceof Error && e.message) || "Oyuncu verileri yüklenirken bir hata oluştu.");
+      setError((e instanceof Error && e.message) || t.player.loadError);
     } finally {
       setLoading(false);
     }
@@ -1152,7 +1157,7 @@ export default function PlayerPage({
     return (
       <div className="py-8">
         <InlineError
-          title="Oyuncu verileri yüklenemedi"
+          title={t.player.loadError}
           message={error}
           onRetry={loadData}
         />
@@ -1167,9 +1172,9 @@ export default function PlayerPage({
         <Input
           id="player-profile-search"
           type="text"
-          aria-label="Oyuncu ara"
+          aria-label={t.player.searchAria}
           autoComplete="off"
-          placeholder="Oyuncu ara (örn. LeBron James, Stephen Curry)"
+          placeholder={t.player.searchPlaceholder}
           leftIcon={<Search size={16} strokeWidth={1.5} />}
           value={search}
           onChange={(e) => {
@@ -1196,7 +1201,7 @@ export default function PlayerPage({
               setShowDropdown(false);
             }}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus cursor-pointer"
-            aria-label="Aramayı temizle"
+            aria-label={t.player.clearSearch}
           >
             <X size={16} strokeWidth={1.5} />
           </button>
@@ -1257,7 +1262,7 @@ export default function PlayerPage({
             }}
             leftIcon={<ArrowLeft size={16} strokeWidth={1.5} />}
           >
-            Oyuncu profilleri
+            {language === "tr" ? "Oyuncu profilleri" : "All Player Profiles"}
           </Button>
 
           <PlayerHeroCard
@@ -1273,8 +1278,8 @@ export default function PlayerPage({
           {availableSeasons.length === 0 ? (
             <EmptyState
               icon={<User size={28} strokeWidth={1.5} />}
-              title="Maç kaydı bulunamadı"
-              description="Bu oyuncu için veritabanında henüz maç kaydı bulunmuyor."
+              title={language === "tr" ? "Maç kaydı bulunamadı" : "No game log found"}
+              description={language === "tr" ? "Bu oyuncu için veritabanında henüz maç kaydı bulunmuyor." : "No games are recorded for this player in the database."}
             />
           ) : (
             <>
@@ -1289,10 +1294,10 @@ export default function PlayerPage({
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border-light pb-4">
                   <div>
                     <h2 className="text-lg font-semibold text-text-primary">
-                      <span className="tabular-nums">{selectedSeason}</span> maç günlüğü
+                      <span className="tabular-nums">{selectedSeason}</span> {language === "tr" ? "maç günlüğü" : "Game Log"}
                     </h2>
                     <p className="text-xs text-text-secondary tabular-nums">
-                      {currentGames.length} karşılaşma
+                      {currentGames.length} {language === "tr" ? "karşılaşma" : "games"}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -1367,23 +1372,23 @@ export default function PlayerPage({
                     />
                   ) : (
                     <EmptyState
-                      title="Eşleşen maç bulunamadı"
-                      description={`"${opponentSearch}" aramasıyla eşleşen karşılaşma kaydı bulunmuyor.`}
-                      actionLabel="Filtreyi temizle"
+                      title={language === "tr" ? "Eşleşen maç bulunamadı" : "No matching games"}
+                      description={language === "tr" ? `"${opponentSearch}" aramasıyla eşleşen karşılaşma kaydı bulunmuyor.` : `No games found matching "${opponentSearch}".`}
+                      actionLabel={language === "tr" ? "Filtreyi temizle" : "Clear filter"}
                       onAction={() => setOpponentSearch("")}
                     />
                   )
                 ) : selectedSeason === "2026-27" ? (
                   <EmptyState
                     icon={<Calendar size={28} strokeWidth={1.5} />}
-                    title="Henüz maç oynanmadı"
-                    description="Maç kayıtları sezon başladığında burada görüntülenecektir."
+                    title={language === "tr" ? "Henüz maç oynanmadı" : "Season not started"}
+                    description={language === "tr" ? "Maç kayıtları sezon başladığında burada görüntülenecektir." : "Game records will appear here as the season progresses."}
                   />
                 ) : (
                   <EmptyState
                     icon={<Calendar size={28} strokeWidth={1.5} />}
-                    title="Maç kaydı bulunamadı"
-                    description={`${selectedSeason} sezonu için kayıtlı maç bulunmuyor.`}
+                    title={language === "tr" ? "Maç kaydı bulunamadı" : "No games recorded"}
+                    description={language === "tr" ? `${selectedSeason} sezonu için kayıtlı maç bulunmuyor.` : `No games recorded for the ${selectedSeason} season.`}
                   />
                 )}
               </Card>

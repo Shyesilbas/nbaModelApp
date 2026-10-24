@@ -4,6 +4,7 @@ import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { loadPrivateApi } from "../lib/dataCache";
 import { TEAM_NAME_BY_ABBR, type NbaTeamAbbr } from "../lib/nbaTeams";
+import { useLanguage } from "../context/LanguageContext";
 
 interface TradeSide {
   team: string;
@@ -56,13 +57,12 @@ const seasonOf = (iso: string) => {
 };
 
 const POS_TR: Record<string, string> = { guard: "Guard", forward: "Forward", center: "Center" };
-const fmtDate = (iso: string) =>
-  new Date(`${iso}T12:00:00`).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" });
 const teamName = (abbr: string) => TEAM_NAME_BY_ABBR[abbr as NbaTeamAbbr] ?? abbr;
 const posLabel = (pos: string | null) =>
   pos ? pos.split("-").map((p) => POS_TR[p] ?? p).join("-") : null;
 
 function SideColumn({ side }: { side: TradeSide }) {
+  const { language } = useLanguage();
   return (
     <div className="flex min-w-0 flex-col gap-3 p-4 sm:p-5">
       <div className="flex items-center gap-3">
@@ -70,7 +70,9 @@ function SideColumn({ side }: { side: TradeSide }) {
         <div className="min-w-0">
           <p className="text-sm font-semibold text-text-primary">{teamName(side.team)}</p>
           <p className="text-sm text-text-secondary">
-            {side.from.join(", ")} takımından alıyor
+            {language === "tr"
+              ? `${side.from.join(", ")} takımından alıyor`
+              : `Acquires from ${side.from.join(", ")}`}
           </p>
         </div>
       </div>
@@ -96,6 +98,7 @@ function SideColumn({ side }: { side: TradeSide }) {
 }
 
 function TradeCard({ trade }: { trade: Trade }) {
+  const { language, formatDate } = useLanguage();
   const count = trade.sides.reduce((n, s) => n + s.players.length, 0);
   return (
     <article className="rounded border border-border bg-background-primary hover:border-card-border-hover">
@@ -109,9 +112,9 @@ function TradeCard({ trade }: { trade: Trade }) {
           ))}
         </div>
         <div className="flex items-center gap-3 text-sm text-text-secondary">
-          <span className="tabular-nums">{fmtDate(trade.date)}</span>
+          <span className="tabular-nums">{formatDate(trade.date)}</span>
           <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium">
-            {count} oyuncu
+            {count} {language === "tr" ? "oyuncu" : "players"}
           </span>
         </div>
       </div>
@@ -129,11 +132,14 @@ function TradeCard({ trade }: { trade: Trade }) {
 }
 
 function MovesCard({ moves }: { moves: Move[] }) {
+  const { language, formatDate } = useLanguage();
   return (
     <article className="rounded border border-border bg-background-primary">
       <div className="flex items-center justify-between gap-3 border-b border-border-light px-4 py-3 text-sm sm:px-5">
-        <span className="font-semibold text-text-primary">Kadro dışı hareketler</span>
-        <span className="tabular-nums text-text-secondary">{fmtDate(moves[0].date)}</span>
+        <span className="font-semibold text-text-primary">
+          {language === "tr" ? "Kadro dışı hareketler" : "Roster moves & Waivers"}
+        </span>
+        <span className="tabular-nums text-text-secondary">{formatDate(moves[0].date)}</span>
       </div>
       <ul className="px-4 sm:px-5">
         {moves.map((m) => (
@@ -161,6 +167,7 @@ const KINDS = [
 ] as const;
 
 export default function TradeBoard() {
+  const { t, language, formatDate } = useLanguage();
   const [events, setEvents] = useState<Event[]>([]);
   const [kind, setKind] = useState<(typeof KINDS)[number]["id"]>("all");
   const [tier, setTier] = useState<Tier | "all">("all");
@@ -205,8 +212,16 @@ export default function TradeBoard() {
   const next = dates.find((d) => d > date);
   const latest = dates[dates.length - 1] ?? date;
 
-  if (error) return <p className="text-sm text-status-error">Takas verisi yüklenemedi: {error}</p>;
-  if (!date) return <p className="text-sm text-text-secondary">Takaslar yükleniyor</p>;
+  if (error) {
+    return (
+      <p className="text-sm text-status-error">
+        {language === "tr" ? `Takas verisi yüklenemedi: ${error}` : `Failed to load trade data: ${error}`}
+      </p>
+    );
+  }
+  if (!date) {
+    return <p className="text-sm text-text-secondary">{t.trades.loading}</p>;
+  }
 
   const stepBtn =
     "inline-flex h-10 w-10 items-center justify-center rounded border border-border bg-background-primary text-text-primary hover:border-card-border-hover disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer";
@@ -214,16 +229,16 @@ export default function TradeBoard() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary">Trade günlüğü</h1>
-        <p className="text-sm text-text-secondary">Takasları gün gün incele.</p>
+        <h1 className="text-2xl font-semibold text-text-primary">{t.trades.title}</h1>
+        <p className="text-sm text-text-secondary">{t.trades.subtitle}</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className={stepBtn} disabled={byTier || !prev} onClick={() => prev && setDate(prev)} aria-label="Önceki gün">
+        <button type="button" className={stepBtn} disabled={byTier || !prev} onClick={() => prev && setDate(prev)} aria-label={t.common.previousDay}>
           <ChevronLeft size={16} strokeWidth={1.5} />
         </button>
         <label className={`inline-flex h-10 items-center rounded border border-border bg-background-primary px-3 focus-within:border-border-focus ${byTier ? "opacity-40" : ""}`}>
-          <span className="sr-only">Tarih seç</span>
+          <span className="sr-only">{t.common.date}</span>
           <input
             type="date"
             value={date}
@@ -234,7 +249,7 @@ export default function TradeBoard() {
             className="rounded bg-transparent text-sm font-medium tabular-nums text-text-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
           />
         </label>
-        <button type="button" className={stepBtn} disabled={byTier || !next} onClick={() => next && setDate(next)} aria-label="Sonraki gün">
+        <button type="button" className={stepBtn} disabled={byTier || !next} onClick={() => next && setDate(next)} aria-label={t.common.nextDay}>
           <ChevronRight size={16} strokeWidth={1.5} />
         </button>
         <button
@@ -243,18 +258,22 @@ export default function TradeBoard() {
           disabled={byTier || date === latest}
           className="h-10 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary hover:border-card-border-hover disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
-          Son kayıt
+          {language === "tr" ? "Son kayıt" : "Latest"}
         </button>
         <span className="ml-auto text-sm tabular-nums text-text-secondary">
           {byTier
-            ? `${visible.length} kayıt · tüm tarihler`
-            : todays.length ? `${todayTrades.length} takas · ${todayMoves.length} kadro dışı` : "Kayıt yok"}
+            ? (language === "tr" ? `${visible.length} kayıt · tüm tarihler` : `${visible.length} entries · all dates`)
+            : todays.length
+            ? (language === "tr"
+                ? `${todayTrades.length} takas · ${todayMoves.length} kadro dışı`
+                : `${todayTrades.length} trades · ${todayMoves.length} moves`)
+            : (language === "tr" ? "Kayıt yok" : "No records")}
         </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
-          Sezon
+          {t.common.season}
           <select
             value={season}
             onChange={(e) => {
@@ -269,7 +288,7 @@ export default function TradeBoard() {
             ))}
           </select>
         </label>
-        <div role="group" aria-label="Hareket türü" className="inline-flex rounded border border-border bg-background-tertiary p-0.5">
+        <div role="group" aria-label={language === "tr" ? "Hareket türü" : "Movement type"} className="inline-flex rounded border border-border bg-background-tertiary p-0.5">
           {KINDS.map((k) => (
             <button
               key={k.id}
@@ -280,18 +299,18 @@ export default function TradeBoard() {
                 kind === k.id ? "bg-background-primary text-text-primary" : "text-text-secondary hover:text-text-primary"
               }`}
             >
-              {k.label}
+              {k.id === "all" ? t.common.all : k.id === "trade" ? (language === "tr" ? "Takas" : "Trades") : (language === "tr" ? "Kadro dışı" : "Moves")}
             </button>
           ))}
         </div>
         <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
-          Etki seviyesi
+          {language === "tr" ? "Etki seviyesi" : "Impact level"}
           <select
             value={tier}
             onChange={(e) => setTier(e.target.value as Tier | "all")}
             className="h-10 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary focus:border-border-focus focus:outline-none"
           >
-            <option value="all">Tümü</option>
+            <option value="all">{t.common.all}</option>
             {TIERS.map((t) => (
               <option key={t.id} value={t.id}>{t.label}</option>
             ))}
@@ -311,7 +330,7 @@ export default function TradeBoard() {
                 onClick={() => setShown((n) => n + PAGE)}
                 className="h-10 self-center rounded border border-border px-4 text-sm font-medium text-text-primary hover:border-card-border-hover cursor-pointer"
               >
-                Daha fazla göster
+                {language === "tr" ? "Daha fazla göster" : "Show more"}
               </button>
             )}
           </>
@@ -323,13 +342,17 @@ export default function TradeBoard() {
         )
       ) : (
         <div className="flex flex-col items-center gap-3 rounded border border-border bg-background-primary px-4 py-12 text-center text-sm text-text-secondary">
-          <p>{fmtDate(date)} tarihinde kayıt yok.</p>
+          <p>
+            {language === "tr"
+              ? `${formatDate(date)} tarihinde kayıt yok.`
+              : `No moves recorded on ${formatDate(date)}.`}
+          </p>
           <button
             type="button"
             onClick={() => setDate(prev ?? next ?? latest)}
             className="h-10 rounded border border-border px-3 font-medium text-text-primary hover:border-card-border-hover cursor-pointer"
           >
-            En yakın kayıt gününe git
+            {language === "tr" ? "En yakın kayıt gününe git" : "Jump to nearest active date"}
           </button>
         </div>
       )}

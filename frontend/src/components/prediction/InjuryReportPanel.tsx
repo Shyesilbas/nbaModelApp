@@ -3,6 +3,7 @@ import { reportStampText } from "../../lib/injuryTime";
 import TeamLogo from "../TeamLogo";
 import { InjuryChangesList, type InjuryChange } from "./InjuryChangesList";
 import type { TeamInfo } from "./types";
+import { useLanguage } from "../../context/LanguageContext";
 
 export type InjuryReportSummary = {
   published_et: string;
@@ -28,10 +29,14 @@ interface InjuryReportPanelProps {
 
 /** The official injury report the prediction was made with (applied automatically, read only). */
 export function InjuryReportPanel({ report, homeInfo, awayInfo }: InjuryReportPanelProps) {
+  const { language, t } = useLanguage();
+
   if (!report) {
     return (
       <div className="rounded border border-border bg-background-primary p-4 text-xs text-text-secondary">
-        No official injury report applies to this date, so rosters are projected from recent games only.
+        {language === "tr"
+          ? "Bu tarih için geçerli resmi sakatlık raporu bulunamadı; kadro durumu son maçlara göre varsayılmıştır."
+          : "No official injury report applies to this date, so rosters are projected from recent games only."}
       </div>
     );
   }
@@ -39,10 +44,16 @@ export function InjuryReportPanel({ report, homeInfo, awayInfo }: InjuryReportPa
   return (
     <div className="rounded border border-border bg-background-primary p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-text-primary">Official injury report</span>
+        <span className="text-xs font-semibold text-text-primary">
+          {t.injuries.officialReport}
+        </span>
         <span className="text-xs text-text-secondary">
-          Rapor Saati: {reportStampText(report.published_et)}
-          {promoted > 0 && `, ${promoted} starter${promoted > 1 ? "s" : ""} replaced automatically`}
+          {language === "tr" ? "Rapor Saati: " : "Published: "}
+          {reportStampText(report.published_et)}
+          {promoted > 0 &&
+            (language === "tr"
+              ? `, ${promoted} as oyuncu otomatik ikame edildi`
+              : `, ${promoted} starter${promoted > 1 ? "s" : ""} replaced automatically`)}
         </span>
       </div>
       {report.changes && report.changes.length > 0 && (

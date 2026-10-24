@@ -1,5 +1,6 @@
 import { Activity, Flame, TrendingUp, Zap } from "lucide-react";
 import type { TeamInfo } from "./types";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface MatchupTacticalHubProps {
   result: any;
@@ -14,6 +15,7 @@ export function MatchupTacticalHub({
   awayInfo,
   winnerInfo,
 }: MatchupTacticalHubProps) {
+  const { language } = useLanguage();
   const win = result?.win_probability || {};
   const score = result?.score_prediction || {};
   const expl = result?.explanation || {};
@@ -37,29 +39,47 @@ export function MatchupTacticalHub({
   const awayOffRtg = score?.predicted_away_off_rtg ? score.predicted_away_off_rtg.toFixed(1) : "--";
 
   const buildGameScript = () => {
-    const paceDesc =
-      parseFloat(paceVal) >= 101.5
-        ? "yüksek tempolu ve hızlı hücum geçişlerinin bol olduğu bir maç dinamiği"
-        : parseFloat(paceVal) <= 97.5
-        ? "yarı saha set hücumlarının ve savunma disiplininin öne çıktığı kontrollü bir maç"
-        : "dengeli ve kontrollü bir tempo";
+    if (language === "tr") {
+      const paceDesc =
+        parseFloat(paceVal) >= 101.5
+          ? "yüksek tempolu ve hızlı hücum geçişlerinin bol olduğu bir maç dinamiği"
+          : parseFloat(paceVal) <= 97.5
+          ? "yarı saha set hücumlarının ve savunma disiplininin öne çıktığı kontrollü bir maç"
+          : "dengeli ve kontrollü bir tempo";
 
-    const marginDesc =
-      parseFloat(margin) >= 10.0
-        ? `Skor modeli ${scoreWinnerInfo.name} (${scoreWinnerInfo.abbr}) takımını yaklaşık ${margin} sayı farkla önde öngörüyor.`
-        : parseFloat(margin) <= 4.0
-        ? `Skor modeli iki takım arasında yaklaşık ${margin} sayılık dar bir fark öngörüyor; bu skor tahmini kazanma olasılığı tahmininden ayrı hesaplanır.`
-        : `Skor modeli ${scoreWinnerInfo.abbr} takımını yaklaşık ${margin} sayı farkla önde öngörüyor.`;
+      const marginDesc =
+        parseFloat(margin) >= 10.0
+          ? `Skor modeli ${scoreWinnerInfo.name} (${scoreWinnerInfo.abbr}) takımını yaklaşık ${margin} sayı farkla önde öngörüyor.`
+          : parseFloat(margin) <= 4.0
+          ? `Skor modeli iki takım arasında yaklaşık ${margin} sayılık dar bir fark öngörüyor; bu skor tahmini kazanma olasılığı tahmininden ayrı hesaplanır.`
+          : `Skor modeli ${scoreWinnerInfo.abbr} takımını yaklaşık ${margin} sayı farkla önde öngörüyor.`;
 
-    const edgeFactor = isHomeWinner
-      ? `Saha avantajı ve ev sahibi seyirci desteği, modelin ${homeInfo.abbr} lehine verdiği %${probPct}'lik ağırlıkta ana katalizör görevi görüyor.`
-      : `Deplasman ekibi ${awayInfo.abbr}, son dönemdeki form grafiği ve hücum etkinliğiyle deplasman dezavantajını telafi ederek modelde öne çıkıyor.`;
+      const edgeFactor = isHomeWinner
+        ? `Saha avantajı ve ev sahibi seyirci desteği, modelin ${homeInfo.abbr} lehine verdiği %${probPct}'lik ağırlıkta ana katalizör görevi görüyor.`
+        : `Deplasman ekibi ${awayInfo.abbr}, son dönemdeki form grafiği ve hücum etkinliğiyle deplasman dezavantajını telafi ederek modelde öne çıkıyor.`;
 
-    return {
-      tempo: paceDesc,
-      body: marginDesc,
-      edge: edgeFactor,
-    };
+      return { tempo: paceDesc, body: marginDesc, edge: edgeFactor };
+    } else {
+      const paceDesc =
+        parseFloat(paceVal) >= 101.5
+          ? "a fast-paced transition dynamic with high possessions"
+          : parseFloat(paceVal) <= 97.5
+          ? "a disciplined half-court battle with controlled possessions"
+          : "a balanced and measured tempo";
+
+      const marginDesc =
+        parseFloat(margin) >= 10.0
+          ? `The score model projects ${scoreWinnerInfo.name} (${scoreWinnerInfo.abbr}) to hold a decisive ~${margin}-point advantage.`
+          : parseFloat(margin) <= 4.0
+          ? `The score model foresees a tightly contested ~${margin}-point margin between the sides.`
+          : `The score model expects ${scoreWinnerInfo.abbr} ahead by approximately ${margin} points.`;
+
+      const edgeFactor = isHomeWinner
+        ? `Home court atmosphere serves as a primary driver supporting the ${homeInfo.abbr} %${probPct} projected probability.`
+        : `The road team ${awayInfo.abbr} overcomes away travel friction through recent form and net rating efficiency.`;
+
+      return { tempo: paceDesc, body: marginDesc, edge: edgeFactor };
+    }
   };
 
   const script = buildGameScript();
@@ -73,19 +93,21 @@ export function MatchupTacticalHub({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-text-secondary">
-                Model Simülasyon Akışı & Taktik Raporu
+                {language === "tr" ? "Model Simülasyon Akışı & Taktik Raporu" : "Model Simulation Script & Tactical Hub"}
               </span>
               <span className="text-xs font-semibold tabular-nums text-text-primary">
-                {winnerInfo.abbr} Favori · %{probPct}
+                {winnerInfo.abbr} {language === "tr" ? "Favori" : "Favorite"} · %{probPct}
               </span>
             </div>
 
             <p className="text-xs text-text-primary leading-relaxed font-medium">
-              Model tahminine göre karşılaşmada <span className="underline decoration-border-focus underline-offset-2">{script.tempo}</span> bekleniyor. {script.body}
+              {language === "tr" ? "Model tahminine göre karşılaşmada " : "Model projection expects "}
+              <span className="underline decoration-border-focus underline-offset-2">{script.tempo}</span>. {script.body}
             </p>
 
             <p className="text-xs text-text-secondary leading-relaxed">
-              {script.edge} Skor modelinde görece dezavantajlı görünen taraf: <span className="font-semibold text-text-primary">{scoreLoserInfo.name}</span>.
+              {script.edge} {language === "tr" ? "Skor modelinde görece dezavantajlı görünen taraf: " : "Underdog in score projection: "}
+              <span className="font-semibold text-text-primary">{scoreLoserInfo.name}</span>.
             </p>
           </div>
 
@@ -93,7 +115,7 @@ export function MatchupTacticalHub({
           <div className="grid grid-cols-3 gap-4 pt-3 border-t border-border-light tabular-nums">
             <div>
               <span className="text-xs font-medium text-text-muted block">
-                Öngörülen Tempo
+                {language === "tr" ? "Öngörülen Tempo" : "Projected Pace"}
               </span>
               <span className="text-sm font-semibold text-text-primary mt-0.5 block">
                 {paceVal} <span className="text-xs font-normal text-text-muted">Poss</span>
@@ -101,7 +123,7 @@ export function MatchupTacticalHub({
             </div>
             <div>
               <span className="text-xs font-medium text-text-muted block">
-                {homeInfo.abbr} Hücum Rtg
+                {homeInfo.abbr} {language === "tr" ? "Hücum Rtg" : "Off Rtg"}
               </span>
               <span className="text-sm font-semibold text-text-primary mt-0.5 block">
                 {homeOffRtg}
@@ -109,7 +131,7 @@ export function MatchupTacticalHub({
             </div>
             <div>
               <span className="text-xs font-medium text-text-muted block">
-                {awayInfo.abbr} Hücum Rtg
+                {awayInfo.abbr} {language === "tr" ? "Hücum Rtg" : "Off Rtg"}
               </span>
               <span className="text-sm font-semibold text-text-primary mt-0.5 block">
                 {awayOffRtg}
@@ -121,7 +143,7 @@ export function MatchupTacticalHub({
         {/* Right Column: 4 Matchup Pillars in Clean Divided List */}
         <div className="lg:col-span-5 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-border-light pt-4 lg:pt-0 lg:pl-6">
           <span className="text-xs font-semibold text-text-secondary mb-2 block">
-            Önemli Saha Üstünlükleri
+            {language === "tr" ? "Önemli Saha Üstünlükleri" : "Key Decisive Drivers"}
           </span>
 
           <div className="divide-y divide-border-light flex-1 flex flex-col justify-around">
@@ -133,11 +155,11 @@ export function MatchupTacticalHub({
                   <p className="text-xs font-semibold text-text-primary truncate">
                     {netRtgFeat
                       ? netRtgFeat.contribution > 0
-                        ? `${homeInfo.abbr} Form Avantajı`
-                        : `${awayInfo.abbr} Form Avantajı`
-                      : `${winnerInfo.abbr} Net Rating Üstünlüğü`}
+                        ? `${homeInfo.abbr} ${language === "tr" ? "Form Avantajı" : "Form Edge"}`
+                        : `${awayInfo.abbr} ${language === "tr" ? "Form Avantajı" : "Form Edge"}`
+                      : `${winnerInfo.abbr} Net Rating`}
                   </p>
-                  <p className="text-xs text-text-muted">Takım formu ve net verimlilik</p>
+                  <p className="text-xs text-text-muted">{language === "tr" ? "Takım formu ve net verimlilik" : "Team form & net rating"}</p>
                 </div>
               </div>
               <span className="text-xs font-semibold tabular-nums text-text-primary shrink-0">
@@ -152,14 +174,14 @@ export function MatchupTacticalHub({
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-text-primary truncate">
                     {isHomeWinner
-                      ? `${homeInfo.abbr} Ev Sahibi Avantajı`
-                      : `${awayInfo.abbr} Deplasman Direnci`}
+                      ? `${homeInfo.abbr} ${language === "tr" ? "Ev Sahibi Avantajı" : "Home Court Advantage"}`
+                      : `${awayInfo.abbr} ${language === "tr" ? "Deplasman Direnci" : "Road Resilience"}`}
                   </p>
-                  <p className="text-xs text-text-muted">Saha faktörü ve seyirci</p>
+                  <p className="text-xs text-text-muted">{language === "tr" ? "Saha faktörü ve seyirci" : "Court factor & fans"}</p>
                 </div>
               </div>
               <span className="text-xs font-medium tabular-nums text-text-secondary shrink-0">
-                {isHomeWinner ? "+3.5 Pts" : "Deplasman"}
+                {isHomeWinner ? "+3.5 Pts" : (language === "tr" ? "Deplasman" : "Away")}
               </span>
             </div>
 
@@ -169,13 +191,13 @@ export function MatchupTacticalHub({
                 <Flame size={16} className="text-text-muted shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-text-primary truncate">
-                    {threePtFeat ? "Dış Şut Etkinliği" : "Boyalı Alan Üstünlüğü"}
+                    {threePtFeat ? (language === "tr" ? "Dış Şut Etkinliği" : "Perimeter Efficiency") : (language === "tr" ? "Boyalı Alan Üstünlüğü" : "Paint Dominance")}
                   </p>
-                  <p className="text-xs text-text-muted">Yay gerisi ve bitiricilik</p>
+                  <p className="text-xs text-text-muted">{language === "tr" ? "Yay gerisi ve bitiricilik" : "Beyond the arc & finishing"}</p>
                 </div>
               </div>
               <span className="text-xs font-medium text-text-secondary shrink-0">
-                Şut Payı
+                {language === "tr" ? "Şut Payı" : "Efficiency"}
               </span>
             </div>
 
@@ -185,13 +207,13 @@ export function MatchupTacticalHub({
                 <Zap size={16} className="text-text-muted shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-text-primary truncate">
-                    Tahmin Güven Derecesi
+                    {language === "tr" ? "Tahmin Güven Derecesi" : "Prediction Confidence"}
                   </p>
-                  <p className="text-xs text-text-muted">Model güven aralığı</p>
+                  <p className="text-xs text-text-muted">{language === "tr" ? "Model güven aralığı" : "Model calibration tier"}</p>
                 </div>
               </div>
               <span className="text-xs font-semibold tabular-nums text-text-primary shrink-0">
-                {win?.confidence_bucket || "ORTA"}
+                {win?.confidence_bucket || (language === "tr" ? "ORTA" : "MODERATE")}
               </span>
             </div>
           </div>

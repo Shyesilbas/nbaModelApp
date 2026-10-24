@@ -14,6 +14,7 @@ import PlayerPhoto from "../PlayerPhoto";
 import TeamLogo from "../TeamLogo";
 import { loadArchivedPlayByPlay } from "../../lib/archiveData";
 import { Badge, Button, Card, EmptyState, InlineError, Skeleton } from "../common";
+import { useLanguage } from "../../context/LanguageContext";
 
 export interface PbpEvent {
   period: number;
@@ -216,6 +217,7 @@ export function HighlightsTab({
   season?: string;
   initialData?: PbpData | null;
 }) {
+  const { language } = useLanguage();
   const [reloadKey, setReloadKey] = useState(0);
   const requestKey = `${gameId}|${season ?? ""}|${reloadKey}`;
   const [result, setResult] = useState<{ key: string; data?: PbpData; error?: string } | null>(null);
@@ -275,15 +277,21 @@ export function HighlightsTab({
   }
 
   if (error) {
-    return <InlineError title="Önemli anlar yüklenemedi" message={error} onRetry={() => setReloadKey((k) => k + 1)} />;
+    return (
+      <InlineError
+        title={language === "tr" ? "Önemli anlar yüklenemedi" : "Failed to load highlights"}
+        message={error}
+        onRetry={() => setReloadKey((k) => k + 1)}
+      />
+    );
   }
 
   if (!data) {
     return (
       <EmptyState
         icon={<Clock size={24} strokeWidth={1.5} />}
-        title="Önemli anlar yok"
-        description="Bu maç için play-by-play verisi henüz hazır değil."
+        title={language === "tr" ? "Önemli anlar yok" : "No highlights available"}
+        description={language === "tr" ? "Bu maç için play-by-play verisi henüz hazır değil." : "Play-by-play data is not yet recorded for this game."}
       />
     );
   }
@@ -292,13 +300,17 @@ export function HighlightsTab({
     <Card className="space-y-4">
       <div className="flex flex-col gap-2 border-b border-border-light pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-text-primary">Maçın dönüm noktaları</h3>
+          <h3 className="text-sm font-semibold text-text-primary">
+            {language === "tr" ? "Maçın dönüm noktaları" : "Key Matchup Moments & Turning Points"}
+          </h3>
           <p className="mt-0.5 text-xs text-text-secondary">
-            Skor serileri, ikinci yarıdaki liderlik değişimleri, clutch basketler ve eşiği aşan bireysel performanslar
+            {language === "tr"
+              ? "Skor serileri, ikinci yarıdaki liderlik değişimleri, clutch basketler ve eşiği aşan bireysel performanslar"
+              : "Scoring runs, second-half lead changes, clutch executions, and milestone performances"}
           </p>
         </div>
         <Badge variant="neutral">
-          <span className="tabular-nums">{visible.length}</span> an
+          <span className="tabular-nums">{visible.length}</span> {language === "tr" ? "an" : "events"}
         </Badge>
       </div>
 

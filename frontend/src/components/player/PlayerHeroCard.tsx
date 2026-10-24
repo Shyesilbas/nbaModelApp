@@ -6,6 +6,7 @@ import { Badge, Card, Skeleton } from "../common";
 import { TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../../lib/nbaTeams";
 import { fmtPct, fmtStat } from "./format";
 import type { PlayerProfile, SeasonAverages } from "./types";
+import { useLanguage } from "../../context/LanguageContext";
 
 /* ─────────── Season selector ─────────── */
 
@@ -104,32 +105,45 @@ function StatTile({ label, value, hint }: { label: string; value: string; hint?:
   );
 }
 
-function makesOf(made: number | null, att: number | null): string | undefined {
-  return made != null && att != null ? `${fmtStat(made)} / ${fmtStat(att)} maç başı` : undefined;
+function makesOf(made: number | null, att: number | null, lang: string = "tr"): string | undefined {
+  return made != null && att != null ? `${fmtStat(made)} / ${fmtStat(att)} ${lang === "tr" ? "maç başı" : "per game"}` : undefined;
 }
 
 function SeasonStats({ avgs }: { avgs: SeasonAverages }) {
+  const { language } = useLanguage();
   const supporting = [
-    { label: "Top çalma", value: fmtStat(avgs.STL) },
-    { label: "Blok", value: fmtStat(avgs.BLK) },
-    { label: "Top kaybı", value: fmtStat(avgs.TOV) },
-    { label: "Hücum ribaundu", value: fmtStat(avgs.OREB) },
-    { label: "Savunma ribaundu", value: fmtStat(avgs.DREB) },
-    { label: "Artı/eksi", value: fmtStat(avgs.PLUS_MINUS) },
+    { label: language === "tr" ? "Top çalma" : "Steals", value: fmtStat(avgs.STL) },
+    { label: language === "tr" ? "Blok" : "Blocks", value: fmtStat(avgs.BLK) },
+    { label: language === "tr" ? "Top kaybı" : "Turnovers", value: fmtStat(avgs.TOV) },
+    { label: language === "tr" ? "Hücum ribaundu" : "Off. Rebounds", value: fmtStat(avgs.OREB) },
+    { label: language === "tr" ? "Savunma ribaundu" : "Def. Rebounds", value: fmtStat(avgs.DREB) },
+    { label: language === "tr" ? "Artı/eksi" : "+/-", value: fmtStat(avgs.PLUS_MINUS) },
   ];
 
   return (
     <div className="space-y-3">
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Sayı" value={fmtStat(avgs.PTS)} />
-        <StatTile label="Ribaund" value={fmtStat(avgs.REB)} />
-        <StatTile label="Asist" value={fmtStat(avgs.AST)} />
-        <StatTile label="Dakika" value={fmtStat(avgs.MIN)} />
+        <StatTile label={language === "tr" ? "Sayı" : "Points"} value={fmtStat(avgs.PTS)} />
+        <StatTile label={language === "tr" ? "Ribaund" : "Rebounds"} value={fmtStat(avgs.REB)} />
+        <StatTile label={language === "tr" ? "Asist" : "Assists"} value={fmtStat(avgs.AST)} />
+        <StatTile label={language === "tr" ? "Dakika" : "Minutes"} value={fmtStat(avgs.MIN)} />
       </dl>
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatTile label="Saha içi isabet" value={fmtPct(avgs.FG_PCT)} hint={makesOf(avgs.FGM, avgs.FGA)} />
-        <StatTile label="3 sayılık isabet" value={fmtPct(avgs.FG3_PCT)} hint={makesOf(avgs.FG3M, avgs.FG3A)} />
-        <StatTile label="Serbest atış isabet" value={fmtPct(avgs.FT_PCT)} hint={makesOf(avgs.FTM, avgs.FTA)} />
+        <StatTile
+          label={language === "tr" ? "Saha içi isabet" : "Field Goal %"}
+          value={fmtPct(avgs.FG_PCT)}
+          hint={makesOf(avgs.FGM, avgs.FGA, language)}
+        />
+        <StatTile
+          label={language === "tr" ? "3 sayılık isabet" : "3-Point %"}
+          value={fmtPct(avgs.FG3_PCT)}
+          hint={makesOf(avgs.FG3M, avgs.FG3A, language)}
+        />
+        <StatTile
+          label={language === "tr" ? "Serbest atış isabet" : "Free Throw %"}
+          value={fmtPct(avgs.FT_PCT)}
+          hint={makesOf(avgs.FTM, avgs.FTA, language)}
+        />
       </dl>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded border border-border-light px-4 py-3 sm:grid-cols-3 lg:grid-cols-6">
         {supporting.map((s) => (
@@ -195,12 +209,13 @@ export default function PlayerHeroCard({
   onSeasonChange,
   teamFor,
 }: PlayerHeroCardProps) {
+  const { language } = useLanguage();
   const teams = avgs?.teams && avgs.teams.length > 0 ? avgs.teams : player.CURRENT_TEAM ? [player.CURRENT_TEAM] : [];
   const bio = [
-    { label: "Boy", value: player.HEIGHT },
-    { label: "Kilo", value: player.WEIGHT ? `${player.WEIGHT} lbs` : null },
-    { label: "Ülke", value: player.COUNTRY },
-    { label: "Okul", value: player.COLLEGE },
+    { label: language === "tr" ? "Boy" : "Height", value: player.HEIGHT },
+    { label: language === "tr" ? "Kilo" : "Weight", value: player.WEIGHT ? `${player.WEIGHT} lbs` : null },
+    { label: language === "tr" ? "Ülke" : "Country", value: player.COUNTRY },
+    { label: language === "tr" ? "Okul" : "College", value: player.COLLEGE },
     { label: "Draft", value: draftText(player) },
   ];
   const hasAverages = avgs != null && avgs.games_total > 0;
@@ -263,18 +278,18 @@ export default function PlayerHeroCard({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <h2 id="player-hero-stats" className="text-sm font-semibold text-text-primary">
-                <span className="tabular-nums">{season}</span> sezon ortalamaları
+                <span className="tabular-nums">{season}</span> {language === "tr" ? "sezon ortalamaları" : "Season Averages"}
               </h2>
               {hasAverages && (
                 <Badge variant="neutral" size="sm">
                   <span className="tabular-nums">
                     {avgs.games_played} / {avgs.games_total}
                   </span>{" "}
-                  maç
+                  {language === "tr" ? "maç" : "games"}
                 </Badge>
               )}
             </div>
-            <span className="text-xs text-text-muted">Maç başına</span>
+            <span className="text-xs text-text-muted">{language === "tr" ? "Maç başına" : "Per game"}</span>
           </div>
 
           {loading ? (
@@ -283,7 +298,15 @@ export default function PlayerHeroCard({
             <SeasonStats avgs={avgs} />
           ) : (
             <p className="py-2 text-sm text-text-secondary">
-              <span className="tabular-nums">{season}</span> sezonu için ortalama verisi bulunamadı.
+              {language === "tr" ? (
+                <>
+                  <span className="tabular-nums">{season}</span> sezonu için ortalama verisi bulunamadı.
+                </>
+              ) : (
+                <>
+                  No average stats found for the <span className="tabular-nums">{season}</span> season.
+                </>
+              )}
             </p>
           )}
         </section>

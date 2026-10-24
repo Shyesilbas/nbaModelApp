@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { TeamInfo } from "./types";
 import { formatFeatureInsight, type ExplanationContext } from "./featureLabels";
+import { useLanguage } from "../../context/LanguageContext";
 
 type FeatureImpact = {
   feature_name: string;
@@ -32,6 +33,7 @@ function TeamAdvantageBadge({
   homeInfo: TeamInfo;
   awayInfo: TeamInfo;
 }) {
+  const { language } = useLanguage();
   const isHome = influence === "FAVORS_HOME";
   const isAway = influence === "FAVORS_AWAY";
   const team = isHome ? homeInfo : isAway ? awayInfo : null;
@@ -39,7 +41,7 @@ function TeamAdvantageBadge({
   if (!team) {
     return (
       <span className="text-xs font-medium text-text-muted">
-        Nötr
+        {language === "tr" ? "Nötr" : "Neutral"}
       </span>
     );
   }
@@ -47,7 +49,7 @@ function TeamAdvantageBadge({
   return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-text-primary">
       {isHome ? <ArrowUpRight size={16} className="text-text-secondary" /> : <ArrowDownRight size={16} className="text-text-secondary" />}
-      <span>{team.name} ({team.abbr}) Lehine</span>
+      <span>{team.name} ({team.abbr}) {language === "tr" ? "Lehine" : "Advantage"}</span>
     </span>
   );
 }
@@ -172,6 +174,7 @@ export function ModelExplanationSection({
   homeInfo: TeamInfo;
   awayInfo: TeamInfo;
 }) {
+  const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState<"win" | "score">("win");
   const [showTechDetails, setShowTechDetails] = useState(false);
 
@@ -221,9 +224,13 @@ export function ModelExplanationSection({
         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded border border-border bg-background-secondary text-text-secondary mb-3">
           <Info size={18} />
         </div>
-        <h3 className="text-sm font-semibold text-text-primary">Model açıklaması bulunamadı</h3>
+        <h3 className="text-sm font-semibold text-text-primary">
+          {language === "tr" ? "Model açıklaması bulunamadı" : "Model explanation not available"}
+        </h3>
         <p className="mt-1 text-xs text-text-secondary leading-relaxed">
-          Bu maç için etken analizi verisi üretilmedi. Ana tahmin sonuçları geçerlidir.
+          {language === "tr"
+            ? "Bu maç için etken analizi verisi üretilmedi. Ana tahmin sonuçları geçerlidir."
+            : "Feature explanation factors are not generated for this match. Primary prediction results remain valid."}
         </p>
       </div>
     );
@@ -267,17 +274,25 @@ export function ModelExplanationSection({
             </span>
             <div>
               <h3 className="text-sm font-semibold text-text-primary">
-                Modelin Karar Gerekçeleri
+                {language === "tr" ? "Modelin Karar Gerekçeleri" : "Model Decision Drivers"}
               </h3>
               <p className="mt-0.5 text-xs text-text-secondary">
-                Modelin bu maçı değerlendirirken en çok ağırlık verdiği ve tercihi belirleyen <strong>5 temel neden</strong>:
+                {language === "tr" ? (
+                  <>
+                    Modelin bu maçı değerlendirirken en çok ağırlık verdiği ve tercihi belirleyen <strong>5 temel neden</strong>:
+                  </>
+                ) : (
+                  <>
+                    The top <strong>5 primary drivers</strong> weighted by the model for this matchup:
+                  </>
+                )}
               </p>
             </div>
           </div>
 
           {winnerName && (
             <div className="inline-flex shrink-0 items-center gap-1.5 rounded-sm border border-border bg-background-secondary px-2.5 py-1 text-xs font-semibold text-text-primary">
-              <span className="text-text-secondary font-normal">Favori:</span>
+              <span className="text-text-secondary font-normal">{language === "tr" ? "Favori:" : "Favored:"}</span>
               <span>{favoredTeam.name}</span>
             </div>
           )}
@@ -288,7 +303,7 @@ export function ModelExplanationSection({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div
           role="tablist"
-          aria-label="Sebep kategorileri"
+          aria-label={language === "tr" ? "Sebep kategorileri" : "Driver categories"}
           className="inline-flex rounded border border-border bg-background-secondary p-0.5 gap-1"
         >
           <button
@@ -303,7 +318,7 @@ export function ModelExplanationSection({
             }`}
           >
             <Trophy size={16} />
-            <span>Kazanma Tercihi (5 Sebep)</span>
+            <span>{language === "tr" ? "Kazanma Tercihi (5 Sebep)" : "Win Probability (5 Factors)"}</span>
           </button>
 
           {scoreTop5.length > 0 && (
@@ -319,7 +334,7 @@ export function ModelExplanationSection({
               }`}
             >
               <Zap size={16} />
-              <span>Skor ve Sayı Beklentisi (5 Sebep)</span>
+              <span>{language === "tr" ? "Skor ve Sayı Beklentisi (5 Sebep)" : "Score & Pace Profile (5 Factors)"}</span>
             </button>
           )}
         </div>
@@ -331,7 +346,11 @@ export function ModelExplanationSection({
           className="inline-flex items-center gap-1.5 rounded border border-border bg-background-primary px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
         >
           {showTechDetails ? <EyeOff size={16} /> : <Eye size={16} />}
-          <span>{showTechDetails ? "Teknik Değerleri Gizle" : "Teknik Verileri Göster"}</span>
+          <span>
+            {showTechDetails
+              ? (language === "tr" ? "Teknik Değerleri Gizle" : "Hide Technical Values")
+              : (language === "tr" ? "Teknik Verileri Göster" : "Show Technical Details")}
+          </span>
         </button>
       </div>
 
@@ -360,13 +379,23 @@ export function ModelExplanationSection({
             </span>
             <div className="min-w-0">
               <h5 className="text-xs font-semibold text-text-primary">
-                Genel Değerlendirme
+                {language === "tr" ? "Genel Değerlendirme" : "Model Verdict"}
               </h5>
               <p className="mt-1 text-xs sm:text-sm leading-relaxed text-text-secondary">
-                Modelimiz bu karşılaşmada özellikle <strong>{favoredTeam.name}</strong> lehine olan{" "}
-                <strong className="text-text-primary font-medium">{top1Insight.title}</strong> ve{" "}
-                <strong className="text-text-primary font-medium">{top2Insight.title}</strong> avantajları sayesinde
-                bu takımın galibiyete daha yakın olduğunu değerlendirmektedir.
+                {language === "tr" ? (
+                  <>
+                    Modelimiz bu karşılaşmada özellikle <strong>{favoredTeam.name}</strong> lehine olan{" "}
+                    <strong className="text-text-primary font-medium">{top1Insight.title}</strong> ve{" "}
+                    <strong className="text-text-primary font-medium">{top2Insight.title}</strong> avantajları sayesinde
+                    bu takımın galibiyete daha yakın olduğunu değerlendirmektedir.
+                  </>
+                ) : (
+                  <>
+                    The model evaluates <strong>{favoredTeam.name}</strong> as favored in this matchup, primarily driven by{" "}
+                    <strong className="text-text-primary font-medium">{top1Insight.title}</strong> and{" "}
+                    <strong className="text-text-primary font-medium">{top2Insight.title}</strong> advantages.
+                  </>
+                )}
               </p>
             </div>
           </div>
