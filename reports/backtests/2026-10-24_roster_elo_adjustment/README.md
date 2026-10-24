@@ -127,3 +127,19 @@ defense (STL + 0.7 BLK), discipline (-0.4 PF - TOV). First-20-game log loss, mea
 - Of the remaining 0.0009: shooting efficiency, steals/blocks and playmaking add about 0.0004 each (overlapping); rebounds and
   fouls/turnovers add nothing. Efficiency alone is therefore worth about 0.0004, less than half of what the full game score gains over the volume rating.
 - Every single-component difference is 1-3 seasons of 5, i.e. noise level. Nothing was changed.
+
+## Position-relative rating (`code/position_exp.py`, `position_summary.csv`)
+
+GUARD / WING / BIG from `data/reference/player_metadata.csv`. Rebounds, assists, steals/blocks replaced by production above a typical
+player of the same position in the same minutes (same season). Shipped setup, first-20-game log loss, mean of 5 seasons:
+
+| variant | log loss | vs full game score |
+|---|---|---|
+| full game score (shipped) | 0.62066 | - |
+| rebounds + assists position-relative | 0.62095 | +0.00029 |
+| rebounds + assists + steals/blocks position-relative | 0.62105 | +0.00039 |
+| full + extra position-relative rebounds and assists | 0.62125 | +0.00058 |
+| every stat position-relative (incl. points) | 0.62536 | +0.00470 |
+
+Position adjustment does not help; it is slightly worse. Absolute production is what wins games: a center's rebounds are real
+value for his team even though bigs rebound more than guards. Not adopted.

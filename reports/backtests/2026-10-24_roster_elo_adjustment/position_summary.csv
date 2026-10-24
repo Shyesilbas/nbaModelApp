@@ -1,0 +1,6 @@
+variant,ll_all,ll_early,d_early_vs_full,seasons_better_than_full
+full,0.61831,0.62066,0.0,0
+rel_reb_ast,0.61839,0.62095,0.00029,1
+rel_reb_ast_def,0.61842,0.62105,0.00039,3
+full_plus_rel_reb_ast,0.61844,0.62125,0.00058,1
+rel_all,0.61956,0.62536,0.0047,0
