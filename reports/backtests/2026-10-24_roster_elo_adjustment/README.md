@@ -102,3 +102,28 @@ First-20-game log loss, mean of 5 seasons:
 - Shipped: game score + shrink, carried 0.75, level 30, no change term (0.62066 vs 0.62208 before, 0.62385 with no talent term).
   The whole grid is 5 seasons, so differences below about 0.0005 are noise; the direction (efficiency helps, availability multiplier hurts) is consistent across both setups.
 - Files: `team_elo_initial_before.json` (original), `team_elo_initial_importance_rating.json` (previous version), `data/season=2026-27/analysis/team_elo_initial.json` (current).
+
+## Game score ablation (`code/game_score_ablation.py`, `game_score_ablation_summary.csv`)
+
+Shipped setup (carried 0.75, level 30, 2 seasons, games-played shrink); each variant rescaled to the mean and spread of the
+full game score. Groups: scoring (PTS), shooting efficiency (0.4 FGM - 0.7 FGA - 0.4 missed FT), rebounds, playmaking (0.7 AST),
+defense (STL + 0.7 BLK), discipline (-0.4 PF - TOV). First-20-game log loss, mean of 5 seasons:
+
+| variant | log loss | vs full |
+|---|---|---|
+| full game score | 0.62066 | - |
+| scoring only | 0.62151 | +0.00085 |
+| scoring + shooting efficiency | 0.62112 | +0.00046 |
+| scoring + defense | 0.62109 | +0.00043 |
+| scoring + playmaking | 0.62139 | +0.00072 |
+| scoring + rebounds | 0.62156 | +0.00089 |
+| scoring + discipline | 0.62161 | +0.00095 |
+| drop shooting / defense / playmaking | 0.62098 / 0.62112 / 0.62128 | +0.0003 / +0.0005 / +0.0006 |
+| drop rebounds / discipline | 0.62047 / 0.62066 | -0.0002 / 0.0000 |
+| drop scoring | 0.62629 | +0.0056 |
+| no talent term (0.75 carried only) | 0.62482 | +0.0042 |
+
+- Points per game carry almost everything: scoring alone recovers 0.0033 of the 0.0042 the full rating gains.
+- Of the remaining 0.0009: shooting efficiency, steals/blocks and playmaking add about 0.0004 each (overlapping); rebounds and
+  fouls/turnovers add nothing. Efficiency alone is therefore worth about 0.0004, less than half of what the full game score gains over the volume rating.
+- Every single-component difference is 1-3 seasons of 5, i.e. noise level. Nothing was changed.

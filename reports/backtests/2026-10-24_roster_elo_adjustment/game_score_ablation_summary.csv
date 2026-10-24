@@ -1,0 +1,15 @@
+variant,ll_all,ll_early,d_early_vs_full,seasons_better_than_full
+drop rebounds,0.61826,0.62047,-0.00019,3
+drop discipline,0.61824,0.62066,-0.0,3
+full,0.61831,0.62066,0.0,0
+drop shooting,0.61833,0.62098,0.00032,2
+scoring + defense,0.61831,0.62109,0.00043,1
+scoring + shooting,0.6184,0.62112,0.00046,2
+drop defense,0.61843,0.62112,0.00046,2
+drop playmaking,0.61853,0.62128,0.00062,1
+scoring + playmaking,0.61836,0.62139,0.00072,1
+scoring only,0.61843,0.62151,0.00085,1
+scoring + rebounds,0.61846,0.62156,0.00089,0
+scoring + discipline,0.61854,0.62161,0.00095,2
+none (no talent term),0.61942,0.62482,0.00416,1
+drop scoring,0.62052,0.62629,0.00563,1
