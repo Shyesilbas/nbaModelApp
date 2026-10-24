@@ -211,18 +211,21 @@ def build_continuous_elo_dataset(seasons: List[str]) -> Tuple[pd.DataFrame, Dict
 def build_season_opening_elo(
     prev_seasons: List[str],
     roster_adjustment: Optional[Dict[str, float]] = None,
+    carried_weight: float = 1.0,
     season_regression: float = SEASON_REGRESSION,
 ) -> Dict[str, float]:
     """
     Calculates season opening Elo ratings by chaining historical seasons,
     applying offseason mean-reversion (SEASON_REGRESSION * Elo + rest * 1500),
-    and adding ``roster_adjustment`` (Elo per team, see src/features/roster_talent.py) if given.
+    keeping ``carried_weight`` of the carried-over rating's distance from 1500 and adding
+    ``roster_adjustment`` (Elo per team, see src/features/roster_talent.py) if given.
     """
     _, end_ratings = build_continuous_elo_dataset(prev_seasons)
 
     opening_ratings = {}
     for team, r in end_ratings.items():
-        opening_ratings[team] = round(season_regression * r + (1.0 - season_regression) * INITIAL_ELO, 2)
+        regressed = season_regression * r + (1.0 - season_regression) * INITIAL_ELO
+        opening_ratings[team] = round(INITIAL_ELO + carried_weight * (regressed - INITIAL_ELO), 2)
 
     for team, adj in (roster_adjustment or {}).items():
         if team in opening_ratings:

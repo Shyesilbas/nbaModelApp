@@ -78,3 +78,27 @@ opening = 1500 + w x (chained Elo - 1500) + k_level x z(talent level) + k_change
 Pure player-rating team strength is worse than carrying last season's Elo by about 0.011 log loss, and worse than the
 blend by 0.013. Player ratings help as a correction (w 0.75-1.0), not as a replacement. The best blend (0.75) is within
 noise of the shipped setting, so nothing was changed. Box-score importance has no efficiency, defense, age or availability signal.
+
+## Rating quality: efficiency and availability (`code/rating_quality_exp.py`, `rating_quality_summary.csv`)
+
+Score per game: `imp` (0.5 MIN + PTS + 0.8 AST + 0.6 REB), `poa` (imp + points over league-average efficiency on the
+same shots), `gs` (Hollinger game score, rescaled). Reliability: none; `shrink` (pull toward a replacement player
+by games played, 20 games of prior); `avail` (rating x games-played share of 82 + replacement for the rest).
+First-20-game log loss, mean of 5 seasons:
+
+| score | reliability | shipped setup (carried 1.0, level 10, change 15) | blend (carried 0.75, level 30) |
+|---|---|---|---|
+| imp | none | 0.62208 | 0.62187 |
+| imp | shrink | 0.62196 | 0.62151 |
+| imp | avail | 0.62263 | 0.62211 |
+| poa | none | 0.62178 | 0.62142 |
+| gs | none | 0.62115 | 0.62076 |
+| gs | shrink | 0.62121 | **0.62066** |
+| gs | avail | 0.62177 | 0.62104 |
+
+- Efficiency helps in every comparison: game score beats importance by 0.0009-0.0012, points-over-average by 0.0003-0.0004.
+- Shrinking by games played helps slightly (0.0001-0.0004); multiplying by availability hurts (a player's per-game
+  production already says more than the games he missed).
+- Shipped: game score + shrink, carried 0.75, level 30, no change term (0.62066 vs 0.62208 before, 0.62385 with no talent term).
+  The whole grid is 5 seasons, so differences below about 0.0005 are noise; the direction (efficiency helps, availability multiplier hurts) is consistent across both setups.
+- Files: `team_elo_initial_before.json` (original), `team_elo_initial_importance_rating.json` (previous version), `data/season=2026-27/analysis/team_elo_initial.json` (current).

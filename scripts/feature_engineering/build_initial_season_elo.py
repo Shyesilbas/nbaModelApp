@@ -18,14 +18,14 @@ from src.core.data_paths import get_data_paths
 from src.core.season_utils import get_default_season, normalize_season
 from src.features.continuous_elo import build_season_opening_elo
 from src.features.roster_talent import (
+    CARRIED_WEIGHT,
+    PLAYER_GAME_COLUMNS,
     SEASON_WEIGHTS,
     end_roster,
     player_ratings,
     regular_season_player_games,
     roster_elo_adjustment,
 )
-
-PLAYER_GAME_COLS = ["Player_ID", "Game_ID", "GAME_DATE", "MATCHUP", "MIN", "PTS", "AST", "REB"]
 
 
 def prior_seasons(season: str) -> list[str]:
@@ -47,7 +47,7 @@ def main():
     prev = prior_seasons(season)
 
     games = [
-        regular_season_player_games(pd.read_csv(get_data_paths(s).player_games_raw, usecols=PLAYER_GAME_COLS))
+        regular_season_player_games(pd.read_csv(get_data_paths(s).player_games_raw, usecols=PLAYER_GAME_COLUMNS))
         for s in prev[::-1][: len(SEASON_WEIGHTS)]
     ]
     ratings = player_ratings(games)
@@ -55,7 +55,7 @@ def main():
     new_roster = signed.groupby("TEAM_ABBREVIATION")["PLAYER_ID"].apply(list).to_dict()
     adjustment = roster_elo_adjustment(ratings, end_roster(games[0]), new_roster)
 
-    opening = build_season_opening_elo(prev, roster_adjustment=adjustment)
+    opening = build_season_opening_elo(prev, roster_adjustment=adjustment, carried_weight=CARRIED_WEIGHT)
 
     out_file = Path(dp.season_dir) / "analysis" / "team_elo_initial.json"
     old = json.loads(out_file.read_text()) if out_file.exists() else {}
