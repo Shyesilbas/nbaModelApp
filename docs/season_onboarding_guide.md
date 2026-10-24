@@ -39,6 +39,19 @@ PYTHONPATH=. python3 main.py --season YYYY-YY --run-roster-analysis
 
 ---
 
+### Step 2b: Build the Opening Elo (new season only)
+Sets each team's starting Elo from last season's chained Elo (75% kept) plus the talent of the signed roster:
+```bash
+PYTHONPATH=. python3 scripts/feature_engineering/build_initial_season_elo.py --season YYYY-YY          # dry run
+PYTHONPATH=. python3 scripts/feature_engineering/build_initial_season_elo.py --season YYYY-YY --write  # save
+```
+- **Needs**: `data/season=YYYY-YY/analysis/team_rosters.csv` holding the signed roster (one row per player and team) and `raw/player_games.csv` of the two previous seasons.
+- **What it does**: Player rating = Hollinger game score of the last two seasons shrunk by games played; team talent = star-weighted top 8; writes `data/season=YYYY-YY/analysis/team_elo_initial.json` (tracked bootstrap file, ask before overwriting).
+- **Without the file**: the latest season on disk builds the same ratings on the fly when its roster exists; otherwise it falls back to the plain chain with no roster information. Earlier seasons always use the plain chain, as in training.
+- **Evidence**: `reports/backtests/2026-10-24_roster_elo_adjustment/README.md`.
+
+---
+
 ### Step 3: Extract Observed Trade Affiliations (Stints)
 Reconstructs player-team affiliation timelines to eliminate trade leakage:
 ```bash

@@ -224,9 +224,9 @@ _opening_cache: dict[str, dict[str, float]] = {}
 
 
 def season_opening_ratings(season: str) -> dict[str, float]:
-    """Opening Elo for ``season``: the published file if there is one, otherwise
-    the ratings carried over from every earlier season on disk (same procedure
-    as ``scripts/feature_engineering/build_initial_season_elo.py``)."""
+    """Opening Elo for ``season``: the published file if there is one, otherwise (latest season) the
+    roster-talent opening of ``scripts/feature_engineering/build_initial_season_elo.py``, otherwise
+    the ratings carried over from every earlier season on disk."""
     from pathlib import Path
     import json
 
@@ -240,6 +240,17 @@ def season_opening_ratings(season: str) -> dict[str, float]:
                 return _opening_cache[season]
             except Exception:
                 pass
+    # The latest season on disk has a signed bootstrap roster, so it gets the roster-talent opening.
+    # Earlier seasons keep the plain chain (their roster files hold end-of-season stats and training
+    # Elo is the same chain).
+    from src.core.season_utils import discover_seasons
+    if season == max(discover_seasons()):
+        try:
+            from src.features.opening_elo import build_opening_elo
+            _opening_cache[season] = build_opening_elo(season)[0]
+            return _opening_cache[season]
+        except Exception:
+            pass
     prior = sorted(
         p.parent.parent.name.split("=", 1)[1]
         for p in root.glob("data/season=*/raw/team_games.csv")
