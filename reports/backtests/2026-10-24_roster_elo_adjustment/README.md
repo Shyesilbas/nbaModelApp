@@ -63,3 +63,18 @@ Fix (`code/fix_importance_2026_27.py`): recomputed `IMPORTANCE_SCORE` in `team_r
 (101 bootstrap rows) and `core_players.csv` (re-ranked within team: 6 players moved in or out of a team's top 3, 8 in or out of the top 5).
 Not touched: `star_candidates.csv` (nothing but the roster report reads it; its tiers are rank based).
 Guard: `tests/test_roster_importance.py` checks every season's roster files against the formula.
+
+## Carried Elo vs pure player-rating strength (`code/talent_only_exp.py`, `talent_only_summary.csv`)
+
+opening = 1500 + w x (chained Elo - 1500) + k_level x z(talent level) + k_change x z(talent change); 2-season ratings, star-weighted top-8.
+
+| w (carried share) | best k_level | log loss, first 20 games |
+|---|---|---|
+| 1.0, no talent term | 0 | 0.62385 |
+| 1.0 (shipped: level 10 + change 15) | 10 | 0.62208 |
+| 0.75 | 30 | 0.62187 (best) |
+| 0.0 (team strength from player ratings only) | 45 | 0.63520 |
+
+Pure player-rating team strength is worse than carrying last season's Elo by about 0.011 log loss, and worse than the
+blend by 0.013. Player ratings help as a correction (w 0.75-1.0), not as a replacement. The best blend (0.75) is within
+noise of the shipped setting, so nothing was changed. Box-score importance has no efficiency, defense, age or availability signal.
