@@ -52,3 +52,14 @@ Shipped: 2 seasons, change k15 + level k10 (4 of 5 seasons better, robust to a s
 Production: `scripts/feature_engineering/build_initial_season_elo.py --season 2026-27 --write` (dry run by default);
 the old file is kept as `team_elo_initial_before.json`. The 2026-27 `team_rosters.csv` `IMPORTANCE_SCORE`
 column (480 of 621 rows 0-31% above the formula) is no longer used for Elo; ratings come from `player_games.csv`.
+
+## Inflated IMPORTANCE_SCORE in the 2026-27 bootstrap files: cause and fix
+
+Cause: `team_rosters.csv` / `core_players.csv` for 2026-27 were generated on 2026-10-04 (commit 4eee929) with an
+older formula, `0.5 MIN + PTS + 1.5 AST + 1.2 REB`, instead of `0.5 MIN + PTS + 0.8 AST + 0.6 REB` (every other season,
+`roster_analysis.py`, `live_roster_refresh.py`). A least-squares fit of the file reproduces the old weights exactly
+(max error 0.18). 479 of 621 rows were affected (the 141 players without games have zero stats).
+Fix (`code/fix_importance_2026_27.py`): recomputed `IMPORTANCE_SCORE` in `team_rosters.csv`, `team_rosters_live.csv`
+(101 bootstrap rows) and `core_players.csv` (re-ranked within team: 6 players moved in or out of a team's top 3, 8 in or out of the top 5).
+Not touched: `star_candidates.csv` (nothing but the roster report reads it; its tiers are rank based).
+Guard: `tests/test_roster_importance.py` checks every season's roster files against the formula.
