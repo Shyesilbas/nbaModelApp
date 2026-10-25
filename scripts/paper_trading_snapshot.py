@@ -86,7 +86,8 @@ def main() -> int:
     args = parser.parse_args()
     now = datetime.now(timezone.utc)
     if args.pre_tip is not None:
-        args.date = now.date().isoformat()
+        # GAME_DATE is the US local date, so a game tipping off after 00:00 UTC still carries yesterday's date
+        args.date = (now - timedelta(days=1)).date().isoformat()
         args.through = (now + timedelta(days=1)).date().isoformat()
 
     season = normalize_season(args.season or get_default_season())
