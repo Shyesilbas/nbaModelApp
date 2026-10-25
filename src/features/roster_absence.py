@@ -53,7 +53,7 @@ def _prepare(player_games: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_absence_deltas(player_games: pd.DataFrame) -> pd.DataFrame:
-    """Actual-availability ABS_DELTA for every (GAME_ID, TEAM_ABBREVIATION) in the logs."""
+    """Actual-availability ABS_DELTA and decoupled rotation metrics for every (GAME_ID, TEAM_ABBREVIATION) in the logs."""
     d = _prepare(player_games)
     out = []
     for (_, team), g in d.groupby(["_season", "TEAM_ABBREVIATION"]):
@@ -68,27 +68,76 @@ def build_absence_deltas(player_games: pd.DataFrame) -> pd.DataFrame:
         n = pd.Series(np.minimum(np.arange(len(ids)), WINDOW), index=ids, dtype=float)
         gp, msum, gssum = roll(on), roll(mins), roll(gsv)
         presence = gp.div(n.replace(0, np.nan), axis=0)
-        rotation = msum.div(gp.replace(0, np.nan)) >= MIN_ROTATION_MINUTES
+        avg_min = msum.div(gp.replace(0, np.nan))
+        rotation = avg_min >= MIN_ROTATION_MINUTES
         gs_avg = gssum.div(gp.replace(0, np.nan))
+
+        # 1. Standard ABS_DELTA
         delta = ((on - presence) * gs_avg).where(rotation).sum(axis=1)
         delta[n < MIN_HISTORY_GAMES] = 0.0
-        out.append(pd.DataFrame({"GAME_ID": ids, "TEAM_ABBREVIATION": team, "ABS_DELTA": delta.values}))
+
+        # 2. Pure Missing Rotation Minutes (decoupled from noisy Game Score)
+        missing_mins = ((presence - on).clip(lower=0) * avg_min).where(rotation).sum(axis=1)
+        missing_mins[n < MIN_HISTORY_GAMES] = 0.0
+
+        # 3. Rotation Continuity (available rotation minutes vs expected)
+        avail_mins = (on * avg_min).where(rotation).sum(axis=1)
+        exp_mins = (presence * avg_min).where(rotation).sum(axis=1)
+        rot_continuity = avail_mins.div(exp_mins.replace(0, np.nan)).fillna(1.0).clip(0.0, 1.2)
+        rot_continuity[n < MIN_HISTORY_GAMES] = 1.0
+
+        # 4. Active Lineup Minute-Weighted Quality
+        active_wt_gs = (on * avg_min * gs_avg).where(rotation).sum(axis=1).div(avail_mins.replace(0, np.nan))
+        overall_gs = (avg_min * gs_avg).where(rotation).sum(axis=1).div(exp_mins.replace(0, np.nan))
+        active_wt_gs = active_wt_gs.fillna(overall_gs).fillna(10.0)
+        active_wt_gs[n < MIN_HISTORY_GAMES] = 10.0
+
+        out.append(pd.DataFrame({
+            "GAME_ID": ids,
+            "TEAM_ABBREVIATION": team,
+            "ABS_DELTA": delta.values,
+            "MISSING_ROT_MINS": missing_mins.values,
+            "ROT_CONTINUITY": rot_continuity.values,
+            "ACTIVE_WT_GS": active_wt_gs.values,
+        }))
     return pd.concat(out, ignore_index=True)
 
 
+ROTATION_COLUMNS = (
+    "ABS_DELTA", "OPP_ABS_DELTA", "ABS_DIFF",
+    "MISSING_ROT_MINS", "OPP_MISSING_ROT_MINS", "MISSING_ROT_MINS_DIFF",
+    "ROT_CONTINUITY", "OPP_ROT_CONTINUITY", "ROT_CONTINUITY_DIFF",
+    "ACTIVE_WT_GS", "OPP_ACTIVE_WT_GS", "ACTIVE_WT_GS_DIFF",
+)
+
+
 def add_absence_columns(model_df: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame:
-    """Add ABS_DELTA, OPP_ABS_DELTA and ABS_DIFF to a team-game model dataset."""
+    """Add ABS_DELTA, decoupled rotation metrics and their differentials to a team-game model dataset."""
     deltas = build_absence_deltas(player_games)
-    df = model_df.drop(columns=[c for c in ("ABS_DELTA", "OPP_ABS_DELTA", "ABS_DIFF") if c in model_df.columns]).copy()
+    df = model_df.drop(columns=[c for c in ROTATION_COLUMNS if c in model_df.columns]).copy()
     key = df["GAME_ID"].astype(str).str.zfill(10)
     df["_gid"] = key
     d = deltas.rename(columns={"GAME_ID": "_gid"})
     df = df.merge(d, on=["_gid", "TEAM_ABBREVIATION"], how="left")
-    opp = d.rename(columns={"TEAM_ABBREVIATION": "OPPONENT_ABBREVIATION", "ABS_DELTA": "OPP_ABS_DELTA"})
+    opp = d.rename(columns={
+        "TEAM_ABBREVIATION": "OPPONENT_ABBREVIATION",
+        "ABS_DELTA": "OPP_ABS_DELTA",
+        "MISSING_ROT_MINS": "OPP_MISSING_ROT_MINS",
+        "ROT_CONTINUITY": "OPP_ROT_CONTINUITY",
+        "ACTIVE_WT_GS": "OPP_ACTIVE_WT_GS",
+    })
     df = df.merge(opp, on=["_gid", "OPPONENT_ABBREVIATION"], how="left")
-    for c in ("ABS_DELTA", "OPP_ABS_DELTA"):
+    for c in ("ABS_DELTA", "OPP_ABS_DELTA", "MISSING_ROT_MINS", "OPP_MISSING_ROT_MINS"):
         df[c] = df[c].fillna(0.0)
+    for c in ("ROT_CONTINUITY", "OPP_ROT_CONTINUITY"):
+        df[c] = df[c].fillna(1.0)
+    for c in ("ACTIVE_WT_GS", "OPP_ACTIVE_WT_GS"):
+        df[c] = df[c].fillna(10.0)
+
     df["ABS_DIFF"] = df["ABS_DELTA"] - df["OPP_ABS_DELTA"]
+    df["MISSING_ROT_MINS_DIFF"] = df["OPP_MISSING_ROT_MINS"] - df["MISSING_ROT_MINS"]
+    df["ROT_CONTINUITY_DIFF"] = df["ROT_CONTINUITY"] - df["OPP_ROT_CONTINUITY"]
+    df["ACTIVE_WT_GS_DIFF"] = df["ACTIVE_WT_GS"] - df["OPP_ACTIVE_WT_GS"]
     return df.drop(columns="_gid")
 
 
@@ -184,6 +233,67 @@ def _read_roster(path: str, _mtime: float) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
+def live_roster_metrics(
+    player_games: pd.DataFrame,
+    team: str,
+    pred_date,
+    overrides: Optional[Mapping] = None,
+    preseason: bool = False,
+    roster_ids: Optional[set] = None,
+) -> dict[str, float]:
+    """ABS_DELTA and decoupled rotation metrics for ``team`` before ``pred_date``.
+
+    Returns a dict with ABS_DELTA, MISSING_ROT_MINS, ROT_CONTINUITY, and ACTIVE_WT_GS.
+    """
+    default_res = {
+        "ABS_DELTA": 0.0,
+        "MISSING_ROT_MINS": 0.0,
+        "ROT_CONTINUITY": 1.0,
+        "ACTIVE_WT_GS": 10.0,
+    }
+    live = _live_rotation(player_games, team, pred_date, preseason)
+    if live is None:
+        return default_res
+    rot, last_game, stale = live
+    rot = _on_roster(rot, roster_ids)
+    if rot.empty:
+        return default_res
+
+    total = 0.0
+    avail_mins = 0.0
+    exp_mins = 0.0
+    missing_mins = 0.0
+    active_weighted_gs_sum = 0.0
+    overall_gs_sum = 0.0
+
+    for pid, row in rot.iterrows():
+        hit = _override_for(overrides, pid, row["name"])
+        if hit is None and stale:
+            continue
+        avg_min = float(row["msum"] / row["gp"])
+        gs_val = float(row["gs"])
+        presence_val = float(row["presence"])
+        avail = _override_availability(hit, avg_min) if hit is not None else (1.0 if pid in last_game else 0.0)
+
+        total += (avail - presence_val) * gs_val
+        avail_mins += avail * avg_min
+        exp_mins += presence_val * avg_min
+        if presence_val > avail:
+            missing_mins += (presence_val - avail) * avg_min
+        active_weighted_gs_sum += avail * avg_min * gs_val
+        overall_gs_sum += avg_min * gs_val
+
+    rot_continuity = float(np.clip(avail_mins / exp_mins, 0.0, 1.2)) if exp_mins > 0 else 1.0
+    active_wt_gs = float(active_weighted_gs_sum / avail_mins) if avail_mins > 0 else (float(overall_gs_sum / exp_mins) if exp_mins > 0 else 10.0)
+
+    return {
+        "ABS_DELTA": float(total),
+        "MISSING_ROT_MINS": float(missing_mins),
+        "ROT_CONTINUITY": rot_continuity,
+        "ACTIVE_WT_GS": active_wt_gs,
+    }
+
+
 def live_absence_delta(
     player_games: pd.DataFrame,
     team: str,
@@ -197,19 +307,7 @@ def live_absence_delta(
     ``overrides`` is the dict from ``_parse_player_overrides``: player id or lower-case
     name -> {"factor": availability in [0, 1]}.
     """
-    live = _live_rotation(player_games, team, pred_date, preseason)
-    if live is None:
-        return 0.0
-    rot, last_game, stale = live
-    rot = _on_roster(rot, roster_ids)
-    total = 0.0
-    for pid, row in rot.iterrows():
-        hit = _override_for(overrides, pid, row["name"])
-        if hit is None and stale:
-            continue
-        avail = _override_availability(hit, row["msum"] / row["gp"]) if hit is not None else (1.0 if pid in last_game else 0.0)
-        total += (avail - row["presence"]) * row["gs"]
-    return float(total)
+    return live_roster_metrics(player_games, team, pred_date, overrides, preseason, roster_ids)["ABS_DELTA"]
 
 
 def assumed_out_players(

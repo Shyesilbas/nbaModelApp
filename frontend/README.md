@@ -10,7 +10,7 @@ The frontend has no static data files. Everything comes from the FastAPI ML serv
 
 ## Design rules
 
-All UI work follows [DESIGN_STANDARD.md](./DESIGN_STANDARD.md): semantic tokens, shared primitives in `src/components/common/`, flat bordered surfaces, no emojis, no arbitrary Tailwind values, and the four data states (loading, empty, error with retry, pending).
+All UI work follows the [`restrained-ui-design-standard`](../.agents/skills/restrained-ui-design-standard/SKILL.md) skill: semantic tokens, shared primitives in `src/components/common/`, flat bordered surfaces, no emojis, no arbitrary Tailwind values, and the four data states (loading, empty, error with retry, pending).
 
 ## Getting started
 

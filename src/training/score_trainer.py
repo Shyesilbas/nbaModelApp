@@ -303,6 +303,8 @@ class ScoreModelTrainer:
         df_list = []
         for f in files:
             f_df = pd.read_csv(f)
+            if f_df.empty:
+                continue
             row_counts_by_file[str(f)] = int(len(f_df))
             df_list.append(f_df)
         return pd.concat(df_list, ignore_index=True), row_counts_by_file

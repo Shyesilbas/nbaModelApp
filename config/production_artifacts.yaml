@@ -1,13 +1,13 @@
 # Release of the models below (set by scripts/retrain_pipeline.py on promotion).
 # File names carry no version; the release lives here and in each metadata file.
-release: v11
+release: v15
 
 win_model:
   model_path: models/production/win_model.pkl
   feature_columns_path: models/production/win_features.json
   metadata_path: models/production/win_metadata.json
   status: production
-  notes: "Uncalibrated logistic regression on 8 features (ELO_DIFF, IS_HOME, CLEAN_NET_RTG_DIFF_LAST_10, WINRATE_DIFF_LAST_10, REST_DIFF, IS_B2B, OPP_IS_B2B, ABS_DIFF roster availability)."
+  notes: "Uncalibrated logistic regression on 11 features (ELO_DIFF, IS_HOME, CLEAN_NET_RTG_DIFF_LAST_10, WINRATE_DIFF_LAST_10, REST_DIFF, IS_B2B, OPP_IS_B2B, ABS_DIFF, MISSING_ROT_MINS_DIFF, ROT_CONTINUITY_DIFF, ACTIVE_WT_GS_DIFF)."
 
 score_model:
   home_model_path: models/production/score_model_home_rtg.pkl

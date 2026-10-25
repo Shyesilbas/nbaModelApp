@@ -48,7 +48,26 @@ def compute_team_features(seasons):
     df_team["TEAM_ELO"] = df_elo_team["PRE_GAME_ELO"]
     df_team["OPP_ELO"] = df_elo_team["OPP_PRE_GAME_ELO"]
     
-    df_team_feats = df_team[["GAME_ID", "TEAM_ABBREVIATION", "TEAM_PACE", "GAME_DATE", "TEAM_ELO", "OPP_ELO"]].copy()
+    # Merge pre-game rotation absence & continuity features from team_model_ready datasets
+    from src.core.data_paths import team_training_csv
+    team_model_frames = []
+    for s in seasons:
+        f = team_training_csv(s)
+        if f.exists():
+            tf = pd.read_csv(f)
+            if not tf.empty and "MISSING_ROT_MINS" in tf.columns:
+                tf["GAME_ID"] = tf["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+                keep_c = ["GAME_ID", "TEAM_ABBREVIATION"] + [c for c in ["MISSING_ROT_MINS", "ROT_CONTINUITY", "ACTIVE_WT_GS"] if c in tf.columns]
+                team_model_frames.append(tf[keep_c])
+    if team_model_frames:
+        all_rot = pd.concat(team_model_frames, ignore_index=True).drop_duplicates(subset=["GAME_ID", "TEAM_ABBREVIATION"])
+        df_team = df_team.merge(all_rot, on=["GAME_ID", "TEAM_ABBREVIATION"], how="left")
+
+    cols_to_keep = ["GAME_ID", "TEAM_ABBREVIATION", "TEAM_PACE", "GAME_DATE", "TEAM_ELO", "OPP_ELO"]
+    for extra in ("MISSING_ROT_MINS", "ROT_CONTINUITY", "ACTIVE_WT_GS"):
+        if extra in df_team.columns:
+            cols_to_keep.append(extra)
+    df_team_feats = df_team[cols_to_keep].copy()
     
     opp_pace = df_team_feats[["GAME_ID", "TEAM_ABBREVIATION", "TEAM_PACE"]].copy()
     opp_pace = opp_pace.rename(columns={"TEAM_ABBREVIATION": "OPPONENT_ABBREVIATION", "TEAM_PACE": "OPP_TEAM_PACE"})
@@ -164,8 +183,12 @@ def build_player_dataset_v4(seasons=None, output_path=None, custom_metadata_df=N
     for raw, kept in RAW_GAME_COLUMNS.items():
         df_player[kept] = df_player[raw]
     
+    merge_team_cols = ["GAME_ID", "TEAM_ABBREVIATION", "TEAM_PACE", "TEAM_ELO", "OPP_ELO"]
+    for extra in ("MISSING_ROT_MINS", "ROT_CONTINUITY", "ACTIVE_WT_GS"):
+        if extra in df_team_feats.columns:
+            merge_team_cols.append(extra)
     df_player = df_player.merge(
-        df_team_feats[["GAME_ID", "TEAM_ABBREVIATION", "TEAM_PACE", "TEAM_ELO", "OPP_ELO"]],
+        df_team_feats[merge_team_cols],
         on=["GAME_ID", "TEAM_ABBREVIATION"],
         how="left"
     )

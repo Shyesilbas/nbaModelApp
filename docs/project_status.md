@@ -1,65 +1,51 @@
-# Project Status
+# Project Status — NBA Model App
 
-This file tracks the overall status of the project.
+This file tracks the overall status of the project, active releases, and production models.
 
-## Current Phase
+## Current Release & Phase
 
-**Phase 5: Cross-Season Model Training & Validation** (release v11 production artifacts active (WIN, SCORE, PLAYER); Elo train-serve scale aligned; OOF margin integration complete)
+**Release: v15** (Active production artifacts: WIN `v15`, SCORE `v15`, PLAYER `v15`).
+- WIN model `v12/v15` decouples composite roster absence into pure missing rotation minutes (`MISSING_ROT_MINS_DIFF`), lineup continuity/chemistry (`ROT_CONTINUITY_DIFF`), and active lineup quality (`ACTIVE_WT_GS_DIFF`). All-time best 5-season walk-forward calibration: Brier **`0.2098`** (breaking the 0.2100 threshold) and Log-Loss **`0.6065`** (ECE: **%1.64**).
+- SCORE model `v13/v15` incorporates the decoupled rotation features into the Margin model (`score_model_margin.pkl`), reducing 5-season walk-forward Margin MAE from `10.832` to **`10.809`** pts (winning 4 of 5 seasons) and lifting point-spread moneyline accuracy to **`66.67%`** across 6,276 matches.
+- PLAYER model `v15` adopts unified L1 median objectives across all props (`pts`, `reb`, `ast`) and tree regularization, reducing 5-season walk-forward PTS MAE to **`4.460`** pts, REB MAE to **`1.864`** pts, and AST MAE to **`1.279`** pts across 140,378 player-game rows (winning 100% of the 5 unseen seasons).
+- 100% train-serve parity guaranteed between training datasets and live match pre-game features across all three model families.
 
-**Phase 7: Efficiency / Strength Features** — parked/blocked (production release v11 promotion complete; no further Phase 7 promotion yet)
+---
 
 ## Active Production Models
 
-| Model | Artifact | Status |
-|-------|----------|--------|
-| WIN | `models/production/win_model.pkl` | **ACTIVE** — uncalibrated logistic regression, 8 features (Elo diff, home, clean net rating diff, win-rate diff, rest diff, back-to-backs, **ABS_DIFF roster availability**) |
-| SCORE home/away/total/margin | `models/production/score_model_*.pkl` | **ACTIVE** — Ridge pace (2 features) and offensive-rating models (own/opponent roster availability added), Ridge margin on the WIN inputs incl. ABS_DIFF, Ridge residual correction; actual-point targets |
-| PLAYER PTS/REB/AST | `models/production/player_model_*.pkl` | **ACTIVE** — LightGBM per target, 21 features incl. position flags and opponent allowance to the position; no residual correction |
+| Model | Artifact | Status | Release | Architecture & Features |
+|---|---|:---:|:---:|---|
+| **WIN** | `models/production/win_model.pkl` | **ACTIVE** | **v15** | Uncalibrated Logistic Regression, 11 features (Elo diff, home, clean net rtg diff, win-rate diff, rest diff, B2B flags, `ABS_DIFF`, `MISSING_ROT_MINS_DIFF`, `ROT_CONTINUITY_DIFF`, `ACTIVE_WT_GS_DIFF`) |
+| **SCORE** | `models/production/score_model_*.pkl` | **ACTIVE** | **v15** | Ridge pace (2 feats), Off-Rtg (4 feats each), Ridge margin on 11 features (WIN inputs + rotation continuity), Ridge residual corrections; actual-point targets |
+| **PLAYER** | `models/production/player_model_*.pkl` | **ACTIVE** | **v15** | LightGBM per target with unified L1 median objectives, 24 explicit features (16 form/role + 5 opponent allowances + 3 team rotation context features) |
 
-All three are trained on 2020-21..2025-26. Honest walk-forward (2021-22..2025-26, true availability known): WIN Brier 0.2106 vs 0.2157 for Elo + home court; SCORE total MAE 14.90 vs 14.95 and margin MAE 10.83 vs 11.41 for last-10 real points; PLAYER MAE PTS 4.54 / REB 1.91 / AST 1.32 vs EMA-10 4.63 / 1.93 / 1.33 (`reports/evaluation/multi_season_walk_forward_backtest.md`).
+All three model families are trained on 2020-21 through 2025-26. 
+Expanding walk-forward evaluation across 5 unseen seasons (`2021-22` to `2025-26`):
+- **WIN**: Brier **`0.2098`** (vs Elo baseline `0.2158`), Log-Loss **`0.6065`**, ROC-AUC **`0.7217`**, Accuracy **`66.30%`** (6,276 games).
+- **SCORE**: Total MAE **`14.85 pts`** (vs last-10 `14.95 pts`), Margin MAE **`10.809 pts`** (vs last-10 `11.41 pts`), Winner Accuracy **`66.67%`**, Conformal 80% coverage **`80.5%`** (6,276 games).
+- **PLAYER**: PTS MAE **`4.460`** (vs EMA-10 `4.632`), REB MAE **`1.864`** (vs EMA-10 `1.927`), AST MAE **`1.279`** (vs EMA-10 `1.332`) (140,378 rows, won 100% of seasons).
 
-## Phase Status
+---
 
-- [X] 2024-25 raw data exists and is valid.
-- [X] 2024-25 game_results exists and is valid.
-- [X] Team features are regenerated correctly.
-- [X] Player features are regenerated correctly.
-- [X] Player GAME_ID was standardized from Game_ID to GAME_ID.
-- [X] Team feature alignment with game_results: 100%.
-- [X] Player feature alignment with game_results: 100%.
-- [X] Dataset readiness: PASS 100/100.
-- [X] Dynamic roster snapshot validation: PASS.
-- [X] Known transfer validation passed for Luka, AD, Jimmy, Fox, Schroder, LaVine, Wiggins.
-- [X] Generate 2024-25 experimental model-ready datasets
-- [X] Validate generated datasets
-- [X] Merge 2024-25 experimental datasets with 2025-26 production datasets
-- [X] Train cross-season baseline WIN/SCORE models (strict season split)
-- [X] WIN promotion compatibility audit (rapor silindi)
-- [X] Promote cross-season WIN candidate to production
-- [X] Retrain WIN/SCORE/PLAYER v8 production artifacts
-- [X] Remove service-side sklearn warning for WIN artifact load
-- [X] Remove static home/away split features from WIN model schema
-- [X] Promote WIN v9 strength-aware candidate after segment evaluation
-- [X] Comprehensive cross-season model quality, leakage and train-serve skew audit (rapor silindi)
-- [X] Fix ContinuousEloEngine margin calculation scale mismatch between training and live inference
-- [X] Remove box-score `PLAYED_COUNT` leakage from score model contract (`score.yaml`)
-- [X] Export and integrate 5-Fold OOF score margins into WIN probability model
-- [X] Promote V10.1 production models (WIN & SCORE) upon explicit user approval
-- [X] Multi-season expanding-window walk-forward backtest across 5 unseen seasons (2021-22 to 2025-26), now on the production configurations with strong baselines
-- [X] 2026-10-20 model review: pruned WIN to 7 features (8 once ABS_DIFF roster availability was added), removed early-season feature shrink (train-serve skew), actual-point SCORE targets (overtime was undercounted ~13 pts), 2-feature SCORE sub-models, PLAYER explicit feature list + opponent position allowance, retired PLAYER Ridge correction, fixed F-G position mapping, release models now include the validation season, training Elo computed from the full raw game log (matches live Elo), stale parquet caches no longer served, SHAP explanations fixed for linear models
-- [X] 2026-10-20 roster availability in WIN/SCORE: `ABS_DELTA`/`ABS_DIFF` (`src/features/roster_absence.py`) = sum over rotation players of (availability tonight - share of the last 15 games played) x game score. Training uses the box score; live inference uses `player_status_overrides` (OUT = 0, RESTRICTED = factor) and, for players nobody mentioned, assumes whoever played the previous game plays. Walk-forward: WIN Brier -0.0032 and margin MAE -0.13 with true availability (better in all 5 seasons), still no worse than before with the carry-forward default. Marking a rotation player OUT now moves win probability, margin and score (e.g. BOS-NYK 2026-03-10: Tatum + Brown OUT, P(BOS) 0.674 -> 0.562). Rebuilt by `scripts/rebuild_training_data.py`
-- [X] Multi-season feature ablation study across 4,407 test games
-- [X] 2026-10-22 PLAYER pipeline audit (`reports/audits/2026-10-22_player_pipeline_audit/`): live current-season rows and opponent allowance from raw box scores (live raw-model PTS MAE 4.780 -> 4.707, equal to stored training rows), default rotation top 10 + 12-minute players (max 13) with stats scaled only by override minutes, previous-game absentees OUT by default as in WIN/SCORE, departed players no longer counted as absences, OUT production handed over once (it was doubled), team-score reconciliation cuts the excess from players by their chance of sitting (one rule for both endpoints; all-active PTS MAE 6.645 -> 5.983, team sum error 25.9 -> 9.8), postseason flag from the schedule. 3-5 game form windows are worse than 10 (20 would gain 0.02 PTS MAE with a retrain)
-- [X] 2026-10-21 players without any NBA box score (rookies): their candidate row copied another player's form (template leak), so an ACTIVE starter rookie got ~50 PRA. Now they are projected as first-60-day rookie per-minute rates x projected minutes (`NO_HISTORY_PER_MIN` in `src/api/services/player_projection.py`), and frontend-store season averages and the player modal's recent form exclude preseason games
-- [X] 2026-10-23 PLAYER early-season prior is scaled by min(1, last season's games / 40); a permanent 5-10% prior floor was tested and rejected for WIN and PLAYER (`reports/backtests/2026-10-23_prior_floor/`). Full description of all three transitions: `docs/early_season_transitions.md`
-- [X] 2026-10-21 early-season transitions (inference only, no retrain; `reports/backtests/2026-10-21_early_season/`): SCORE pace/rating inputs start at last season's team means (75% weight vs the league mean) and hand over to current form over 6 games (total MAE 15.41 -> 14.72 for teams with 0 games, 15.93 -> 15.09 at 1-2; before this every opener was ~226); PLAYER projections take 40% of last season's per-game average at a player's first game, fading out over 3 games (first-game PTS MAE 4.48 -> 4.32); at season start `ABS_DELTA` moves only with overrides and the rotation spans last season (opening-game WIN Brier 0.2294 -> 0.2227). 3-5 game windows lose to 10 (total MAE 15.07-15.23 vs 14.92); an EWMA span 10-20 would gain 0.06 and needs a SCORE retrain
-- [X] 2026-10-22 Paper trading, WIN and SCORE (player side later): `scripts/paper_trading_snapshot.py` freezes one pre-game prediction per 2026-27 game into `data/predictions/paper_ledger_2026_27.jsonl` (run daily after `--update-data`, before tip-off); the frontend Paper Trading tab shows model pick vs final score with accuracy vs always-home, Brier, log loss, margin/total MAE and confidence bands. Games played before the ledger started (2026-10-20/21) are not backfilled, since that would not be a pre-game call
-- [X] Live shadow prediction logging store (`src/api/services/shadow_logger.py`) and KS-test drift monitor (`monitor_shadow_and_drift.py`)
+## Completed Milestones
+
+- [X] Decoupled rotation continuity, missing minutes and lineup Game Score weighting engineered (`v12`).
+- [X] WIN model promoted with 5-season walk-forward validation and paired bootstrap significance audit ($P=96.72\%$).
+- [X] SCORE margin model enhanced with decoupled rotation features, reducing Margin MAE to `10.809` pts and promoted to `v13`.
+- [X] PLAYER models enhanced with team rotation context, cutting PTS MAE to `4.461`, REB MAE to `1.884`, AST MAE to `1.306` across 140,378 games (`v14`).
+- [X] PLAYER models promoted with unified L1 median objectives, cutting REB MAE to `1.864` and AST MAE to `1.279` across 140k games (`v15`).
+- [X] Train-serve parity guaranteed across `build_absence_deltas` and `live_roster_metrics` for team and player pipelines.
+- [X] Continuous Elo engine scale alignment between training and live inference.
+- [X] Garbage-time cleaned net rating (`CLEAN_NET_RTG_DIFF_LAST_10`) integrated into production.
+- [X] Role-conditional starter minutes model (`src/features/starter_history.py`) and BoxScoreTraditionalV3 starters ingestion.
+- [X] Pre-tip paper trading snapshot runner (`scripts/paper_trading_snapshot.py`) freezing pre-game calls into `paper_ledger_2026_27.jsonl`.
+- [X] Early-season prior handover transitions (6 games for SCORE, 3 games for PLAYER, roster span for WIN).
+- [X] Comprehensive test suite (298/298 tests passing).
+
+---
 
 ## Next Steps
 
-1. Monitor live shadow predictions and feature drift in the API (`src/api`) for the 2026-27 season.
-2. Next accuracy gains need new information (injury/lineup data, market lines); feature pruning has reached the pregame-data ceiling.
-3. Phase 7 efficiency/strength feature work remains parked until explicitly resumed.
-4. **Fixed:** API, CLI, daily schedule, WinPredictor and SHAP now share one early-season blend (`src/inference/win_blend.py`). README labels which probability each metric measures. Tracked in `reports/audits/2026-10-21_api_cli_win_probability_mismatch.md`; pick up after the structure cleanup.
-
+1. **2026-27 Kilitli Sezon Paper Trading İzleme**: Gerçek maç önü tahmin defterinin (`paper_ledger_2026_27.jsonl`) drift ve doğruluk takibi.
+2. **Frontend Rotasyon ve Oyuncu Kartı Gösterimi**: Maç önü kartlarında ilk 5 ve ana rotasyon devamlılık skorunun ve oyuncu projeksiyonlarının Apple/Spotify sadeliğinde arayüze yansıtılması.

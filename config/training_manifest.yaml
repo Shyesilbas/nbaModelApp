@@ -1,6 +1,6 @@
 # Release stamped into every model's metadata by this training run. Bump it before
 # retraining; promotion copies it to config/production_artifacts.yaml.
-release: v11
+release: v15
 
 train_seasons:
   - "2020-21"

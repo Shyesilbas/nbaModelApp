@@ -700,6 +700,19 @@ def get_player_predictions(
     """
     home_X, away_X, is_preseason = _roster_frames(home_team, away_team, prediction_date, is_preseason)
 
+    # Attach live pre-game rotation absence & continuity features for train-serve parity
+    from src.features.roster_absence import live_roster_metrics
+    from src.features.build_matchup_features import _load_absence_logs, current_roster_ids, _parse_player_overrides
+    pred_dt_obj = pd.to_datetime(prediction_date)
+    season_key = date_to_season(pred_dt_obj)
+    player_logs = _load_absence_logs(season_key)
+    parsed_overrides = _parse_player_overrides(player_status_overrides)
+    home_metrics = live_roster_metrics(player_logs, home_team, pred_dt_obj, parsed_overrides, bool(is_preseason), current_roster_ids(home_team, pred_dt_obj))
+    away_metrics = live_roster_metrics(player_logs, away_team, pred_dt_obj, parsed_overrides, bool(is_preseason), current_roster_ids(away_team, pred_dt_obj))
+    for rot_col in ("MISSING_ROT_MINS", "ROT_CONTINUITY", "ACTIVE_WT_GS"):
+        home_X[rot_col] = home_metrics.get(rot_col, 0.0)
+        away_X[rot_col] = away_metrics.get(rot_col, 0.0)
+
     full_X = add_player_matchup_features(pd.concat([home_X, away_X], ignore_index=True))
     full_X["IS_PRESEASON"] = 1 if is_preseason else 0
     features = player_loader.feature_cols

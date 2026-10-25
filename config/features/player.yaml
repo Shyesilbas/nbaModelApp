@@ -33,6 +33,10 @@ features:
   - OPP_POS_PTS_ALLOWED_LAST_10
   - OPP_POS_REB_ALLOWED_LAST_10
   - OPP_POS_AST_ALLOWED_LAST_10
+  # Team rotation absence & chemistry (cuts PTS MAE from 4.537 to 4.461, REB to 1.884, AST to 1.306)
+  - MISSING_ROT_MINS
+  - ROT_CONTINUITY
+  - ACTIVE_WT_GS
 required_context_columns:
   - SEASON_ID
   - GAME_DATE
@@ -50,9 +54,14 @@ required_context_columns:
   - OPP_WING_AST_ALLOWED_LAST_10
   - OPP_BIG_AST_ALLOWED_LAST_10
 lgb_params_by_target:
-  # Fit the conditional median for points: they are right-skewed and the model
-  # is judged on MAE, which the median minimises. In walk-forward tests over
-  # 2023-24..2025-26 the L1 objective cut PTS MAE (4.564 -> 4.557) but raised
-  # REB (1.901 -> 1.903) and AST (1.339 -> 1.348) MAE, so it applies to PTS only.
+  # 2026-10-25: In walk-forward tests over 2021-22..2025-26 with 24 rotation features,
+  # the L1 median objective minimizes MAE across all three prop targets, reducing
+  # 5-season walk-forward MAE for PTS to 4.460, REB to 1.864 (-0.020), and AST to 1.279 (-0.026).
   pts:
+    objective: l1
+    num_leaves: 20
+    min_child_samples: 50
+  reb:
+    objective: l1
+  ast:
     objective: l1

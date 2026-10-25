@@ -38,6 +38,10 @@ margin_features:
   - OPP_IS_B2B
   # roster availability tonight vs form (see win.yaml); -0.13 mean walk-forward margin MAE
   - ABS_DIFF
+  # decoupled rotation features (train-serve parity with WIN model, reduces margin MAE to 10.809)
+  - MISSING_ROT_MINS_DIFF
+  - ROT_CONTINUITY_DIFF
+  - ACTIVE_WT_GS_DIFF
 margin_extra_features:
   - DEF_RTG_LAST_5
   - DEF_RTG_LAST_10

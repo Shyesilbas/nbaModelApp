@@ -1,34 +1,17 @@
 {
   "model_name": "logistic_regression",
-  "version": "v11",
-  "training_date": "2026-10-20T10:52:31.757744Z",
+  "version": "v15",
+  "training_date": "2026-10-25T09:51:57.043564Z",
   "number_of_rows": 14780,
-  "number_of_features": 8,
-  "training_manifest": {
-    "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
-    "train_seasons": [
-      "2020-21",
-      "2021-22",
-      "2022-23",
-      "2023-24"
-    ],
-    "calibration_season": "2024-25",
-    "validation_season": "2025-26",
-    "holdout": {
-      "strategy": "season_holdout",
-      "test_size": 0.2,
-      "date_col": "GAME_DATE",
-      "calibration_season": "2024-25",
-      "final_refit_scope": "all_eligible_rows"
-    }
-  },
+  "number_of_features": 11,
+  "training_manifest": {},
   "feature_contract": {
-    "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/win_v10.yaml",
-    "schema_version": "win_v10",
+    "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/win.yaml",
+    "schema_version": "win",
     "config": {
-      "schema_version": "win_v10",
+      "schema_version": "win",
       "target": "WIN",
-      "base_feature_file": "models/production/feature_columns_v8.json",
+      "base_feature_file": "config/features/win_base_columns.json",
       "derived_features": [
         "PRE_GAME_ELO",
         "OPP_PRE_GAME_ELO",
@@ -54,7 +37,10 @@
         "HAVOC_RATE_DIFF_LAST_5",
         "FT_MARGIN_DIFF_LAST_5",
         "FG3_REGRESSION_DIFF",
-        "SCORE_PRED_MARGIN"
+        "SCORE_PRED_MARGIN",
+        "MISSING_ROT_MINS_DIFF",
+        "ROT_CONTINUITY_DIFF",
+        "ACTIVE_WT_GS_DIFF"
       ],
       "static_venue_split_features": [
         "HOME_WINRATE_LAST_5",
@@ -71,7 +57,10 @@
         "OPP_AWAY_PTS_ALLOWED_LAST_5"
       ],
       "required_features": [
-        "ABS_DIFF"
+        "ABS_DIFF",
+        "MISSING_ROT_MINS_DIFF",
+        "ROT_CONTINUITY_DIFF",
+        "ACTIVE_WT_GS_DIFF"
       ],
       "excluded_features": [
         "DAYS_REST",
@@ -155,6 +144,9 @@
       ],
       "defaultable_features": {
         "ABS_DIFF": 0.0,
+        "MISSING_ROT_MINS_DIFF": 0.0,
+        "ROT_CONTINUITY_DIFF": 0.0,
+        "ACTIVE_WT_GS_DIFF": 0.0,
         "IS_ELIMINATION_GAME": 0,
         "CAN_CLINCH_SERIES": 0,
         "H2H_GAMES_LAST_5": 0,
@@ -191,7 +183,7 @@
     }
   },
   "provenance": {
-    "code_revision": "4226796410fc56882adc114fecdf15e262b1ef0e",
+    "code_revision": "6c00c2eebd68a9e5fc245a47f798ef0071d695e2",
     "python_version": "3.12.4",
     "packages": {
       "numpy": "1.26.4",
@@ -201,80 +193,81 @@
       "lightgbm": "4.6.0"
     },
     "feature_contract": {
-      "path": "config/features/win_v10.yaml",
-      "sha256": "dd6bbec2de9e814ae3bf4f860094dedcfecb168be63956f922ea433c3aa1c4b9",
-      "bytes": 5513
+      "path": "config/features/win.yaml",
+      "sha256": "503eb5cec1a981c4ec643656d3eaa77bb0a60ed451057203aa560639c6c322e1",
+      "bytes": 5626
     },
     "input_snapshots": [
       {
-        "path": "data/processed/team_model_ready_v3_2020_21.csv",
-        "sha256": "a5f16e878003123a08657cee2c161dd1607b4cd681f49ee768221dba78421606",
-        "bytes": 4986416
+        "path": "data/training/team_model_ready_2020_21.csv",
+        "sha256": "36f7689ffee109e6e89121b004675393659dbe06fccf5b8a9b77508c779465f2",
+        "bytes": 4066009
       },
       {
-        "path": "data/processed/team_model_ready_v3_2021_22.csv",
-        "sha256": "47a45a5f822da2fe3e42d7aecbb411c845dc0b4e782f86ab6543194a07679906",
-        "bytes": 5674351
+        "path": "data/training/team_model_ready_2022_23.csv",
+        "sha256": "d0488ec0524c58a1fa2b26165003f0448bb7ffdddd2e766b46c23362b0023cb8",
+        "bytes": 4615769
       },
       {
-        "path": "data/processed/team_model_ready_v3_2022_23.csv",
-        "sha256": "82f223f04c9079138aa87f3c278941c317f458b7deea3265f2faeb9f36ab4705",
-        "bytes": 5651115
+        "path": "data/training/team_model_ready_2024_25.csv",
+        "sha256": "b06a1897ed498e76f1611a8cb711b2a1e894b06c4e22e5226faa256795f871e0",
+        "bytes": 4763158
       },
       {
-        "path": "data/processed/team_model_ready_v3_2023_24.csv",
-        "sha256": "41394fb4a90d787cf1d0610d33120501f0c47e35be21567462f560bf66d65b29",
-        "bytes": 5729996
+        "path": "data/training/team_model_ready_2026_27.csv",
+        "sha256": "06e758a87314a59a31fcd604c76d66fa98f1bd429b80cb612da61c2c90792c27",
+        "bytes": 4318
       },
       {
-        "path": "data/processed/team_model_ready_v3_2024_25.csv",
-        "sha256": "1dc20608ce11f469a9de03b3c37a2c9dafd7892a008c492da5ec0715ef0df665",
-        "bytes": 5803338
+        "path": "data/training/team_model_ready_2023_24.csv",
+        "sha256": "da03804413e89f1b15564646073e063fe5dccf70450f014675d83865e03e2010",
+        "bytes": 4681462
       },
       {
-        "path": "data/processed/team_model_ready_v3_2025_26.csv",
-        "sha256": "90065c500a0d40d7953b72033ea1377251d1088d568550c57aaf85bed5fabbcd",
-        "bytes": 5764561
+        "path": "data/training/team_model_ready_2021_22.csv",
+        "sha256": "5498e6242cc24f1e2e1d8a2dfdb03ef513fa0727fbb74fa11d5240b0195dbbe5",
+        "bytes": 4630109
+      },
+      {
+        "path": "data/training/team_model_ready_2025_26.csv",
+        "sha256": "a0dfb4e21c343d9444cbde1f66c9919184f562b7dd2b48c2e54e3e0b4f4c91c4",
+        "bytes": 4722484
       }
     ],
-    "training_manifest": {
-      "path": "config/training_manifest.yaml",
-      "sha256": "23960c8cb5f2bf3b633b4de7735408d5a54231e15b32f59e9fa90b803c70e86b",
-      "bytes": 1190
-    },
     "trainer_source": {
       "path": "src/training/win_trainer.py",
-      "sha256": "146fd877021abc041c11dc2a92ca0830f165fb6da626a1f05c8b590b421a6fe4",
-      "bytes": 36317
+      "sha256": "99f1023dd7ae17c2bf069d643ac7c4b23e81d39ed8251533150b22826f4ee3bb",
+      "bytes": 34270
     },
     "artifacts": [
       {
-        "path": "models/experimental/win_probability_model_v10.pkl",
-        "sha256": "ce17d5d3ba6c086f0ae839ae63d0713fda11a1013a6732a035369b2497e77526",
-        "bytes": 2334
+        "path": "models/production/win_model.pkl",
+        "sha256": "ce94afb4dadd6211c2313db3bad1577651dd554bf61dfd73512e0b9e0409295b",
+        "bytes": 2542
       },
       {
-        "path": "models/experimental/feature_columns_v10.json",
-        "sha256": "aca0336749156a708baf505b3fbde748a12a24caac1fa4adfd5be0f630a22550",
-        "bytes": 144
+        "path": "models/production/win_features.json",
+        "sha256": "43cbe502585a8d71c13ffdde758b0710baf5b14efc96c2ecc830472859308e6e",
+        "bytes": 219
       }
     ]
   },
   "input_files": [
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv",
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv",
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv",
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv",
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv",
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv"
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2020_21.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2022_23.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2024_25.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2026_27.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2023_24.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2021_22.csv",
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2025_26.csv"
   ],
   "row_counts_by_file": {
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv": 2210,
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv": 2512,
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv": 2496,
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv": 2518,
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv": 2522,
-    "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv": 2522
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2020_21.csv": 2210,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2022_23.csv": 2496,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2024_25.csv": 2522,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2023_24.csv": 2518,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2021_22.csv": 2512,
+    "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2025_26.csv": 2522
   },
   "player_projection_enrichment": {
     "applied": false,
@@ -290,20 +283,12 @@
   },
   "evaluation": "inner_temporal_model_selection_then_locked_season_holdout",
   "split": {
-    "strategy": "season_holdout",
-    "split_date": null,
-    "train_rows": 12258,
-    "test_rows": 2522,
-    "train_seasons": [
-      "2020-21",
-      "2021-22",
-      "2022-23",
-      "2023-24",
-      "2024-25"
-    ],
-    "test_seasons": [
-      "2025-26"
-    ]
+    "strategy": "chronological_quantile",
+    "split_date": "2025-03-29",
+    "train_rows": 11836,
+    "test_rows": 2944,
+    "train_seasons": null,
+    "test_seasons": null
   },
   "dropped_static_venue_split_features": [
     "AWAY_PTS_ALLOWED_LAST_5",
@@ -321,104 +306,104 @@
   ],
   "model_selection_metrics_inner_holdout": {
     "logistic_regression_uncalibrated": {
-      "accuracy": 0.684596577017115,
-      "precision": 0.684596577017115,
-      "recall": 0.684596577017115,
-      "f1": 0.684596577017115,
-      "roc_auc": 0.7472928120281974,
-      "brier_score": 0.20407640593869975
+      "accuracy": 0.6781305114638448,
+      "precision": 0.6781305114638448,
+      "recall": 0.6781305114638448,
+      "f1": 0.6781305114638448,
+      "roc_auc": 0.7449345078680764,
+      "brier_score": 0.2049502113759228
     },
     "logistic_regression_sigmoid": {
-      "accuracy": 0.6821515892420538,
-      "precision": 0.6821515892420538,
-      "recall": 0.6821515892420538,
-      "f1": 0.6821515892420538,
-      "roc_auc": 0.7468796682096459,
-      "brier_score": 0.2042949482771951
+      "accuracy": 0.6754850088183422,
+      "precision": 0.6754850088183422,
+      "recall": 0.6754850088183422,
+      "f1": 0.6754850088183422,
+      "roc_auc": 0.7430456407528719,
+      "brier_score": 0.20545833280796252
     },
     "logistic_regression_isotonic": {
-      "accuracy": 0.6813365933170334,
-      "precision": 0.675611681136543,
-      "recall": 0.6976365118174409,
-      "f1": 0.6864474739374499,
-      "roc_auc": 0.7469142075642515,
-      "brier_score": 0.20418016317980547
+      "accuracy": 0.6785714285714286,
+      "precision": 0.6732249786142002,
+      "recall": 0.6940035273368607,
+      "f1": 0.6834563612679114,
+      "roc_auc": 0.7431642295692855,
+      "brier_score": 0.2054168339090698
     },
     "logistic_l1_uncalibrated": {
-      "accuracy": 0.6813365933170334,
-      "precision": 0.6813365933170334,
-      "recall": 0.6813365933170334,
-      "f1": 0.6813365933170334,
-      "roc_auc": 0.7466166377399571,
-      "brier_score": 0.20434704015179647
+      "accuracy": 0.6772486772486772,
+      "precision": 0.6772486772486772,
+      "recall": 0.6772486772486772,
+      "f1": 0.6772486772486772,
+      "roc_auc": 0.7434391223338901,
+      "brier_score": 0.20541206320881533
     },
     "logistic_l1_sigmoid": {
-      "accuracy": 0.6748166259168704,
-      "precision": 0.6748166259168704,
-      "recall": 0.6748166259168704,
-      "f1": 0.6748166259168704,
-      "roc_auc": 0.7449600771556045,
-      "brier_score": 0.20491580284446403
+      "accuracy": 0.6763668430335097,
+      "precision": 0.6763668430335097,
+      "recall": 0.6763668430335097,
+      "f1": 0.6763668430335097,
+      "roc_auc": 0.7404685696866765,
+      "brier_score": 0.20640558819237648
     },
     "logistic_l1_isotonic": {
-      "accuracy": 0.6797066014669927,
-      "precision": 0.6797066014669927,
-      "recall": 0.6797066014669927,
-      "f1": 0.6797066014669927,
-      "roc_auc": 0.7452885331335365,
-      "brier_score": 0.20447294736446947
+      "accuracy": 0.673721340388007,
+      "precision": 0.6630794701986755,
+      "recall": 0.7063492063492064,
+      "f1": 0.6840307429547395,
+      "roc_auc": 0.7401649045534996,
+      "brier_score": 0.20642513153886202
     },
     "lightgbm_uncalibrated": {
-      "accuracy": 0.6744091279543603,
-      "precision": 0.6748366013071896,
-      "recall": 0.6731866340668297,
-      "f1": 0.6740106079151367,
-      "roc_auc": 0.7418588416430371,
-      "brier_score": 0.20620514831051873
+      "accuracy": 0.6794532627865961,
+      "precision": 0.6786654960491659,
+      "recall": 0.681657848324515,
+      "f1": 0.6801583809942807,
+      "roc_auc": 0.7370742078267064,
+      "brier_score": 0.2079594070621881
     },
     "lightgbm_sigmoid": {
-      "accuracy": 0.6768541157294213,
-      "precision": 0.6775777414075287,
-      "recall": 0.6748166259168704,
-      "f1": 0.676194365046958,
-      "roc_auc": 0.740199956294432,
-      "brier_score": 0.20727482060823407
+      "accuracy": 0.6684303350970018,
+      "precision": 0.6690265486725664,
+      "recall": 0.6666666666666666,
+      "f1": 0.6678445229681979,
+      "roc_auc": 0.7329115459626924,
+      "brier_score": 0.20946181689636556
     },
     "lightgbm_isotonic": {
-      "accuracy": 0.6776691116544418,
-      "precision": 0.6804635761589404,
-      "recall": 0.6699266503667481,
-      "f1": 0.6751540041067762,
-      "roc_auc": 0.7390993464755578,
-      "brier_score": 0.20733625440355039
+      "accuracy": 0.6688712522045855,
+      "precision": 0.6705253784505788,
+      "recall": 0.6640211640211641,
+      "f1": 0.667257421355782,
+      "roc_auc": 0.731112495295329,
+      "brier_score": 0.20984807903140437
     }
   },
   "model_family_selection_fold_brier": {
-    "logistic_regression": 0.2119628633346682,
-    "logistic_l1": 0.2125514610113131,
-    "lightgbm": 0.21572772285508707
+    "logistic_regression": 0.21202277505973194,
+    "logistic_l1": 0.21248552761144088,
+    "lightgbm": 0.21547220527851768
   },
   "holdout_metrics": {
-    "accuracy": 0.6859635210150674,
-    "precision": 0.6862589356632248,
-    "recall": 0.6851704996034893,
-    "f1": 0.6857142857142857,
-    "roc_auc": 0.7534344870610475,
-    "brier_score": 0.2017205198996118
+    "accuracy": 0.6841032608695652,
+    "precision": 0.6843537414965987,
+    "recall": 0.6834239130434783,
+    "f1": 0.6838885112168592,
+    "roc_auc": 0.7556613857218809,
+    "brier_score": 0.20053280076539495
   },
   "selected_model": "logistic_regression_uncalibrated",
   "selected_family": "logistic_regression",
   "selected_calibration": "uncalibrated",
   "selected_metrics": {
-    "accuracy": 0.6859635210150674,
-    "precision": 0.6862589356632248,
-    "recall": 0.6851704996034893,
-    "f1": 0.6857142857142857,
-    "roc_auc": 0.7534344870610475,
-    "brier_score": 0.2017205198996118
+    "accuracy": 0.6841032608695652,
+    "precision": 0.6843537414965987,
+    "recall": 0.6834239130434783,
+    "f1": 0.6838885112168592,
+    "roc_auc": 0.7556613857218809,
+    "brier_score": 0.20053280076539495
   },
   "feature_guard": {
-    "n_features": 8,
+    "n_features": 11,
     "constant_features": [],
     "mostly_missing_features": [],
     "near_duplicate_pairs": [],
@@ -427,46 +412,60 @@
     "holdout_permutation_log_loss": [
       {
         "feature": "ELO_DIFF",
-        "loss_increase": 0.166243,
-        "std": 0.004758
+        "loss_increase": 0.147868,
+        "std": 0.005003
       },
       {
         "feature": "CLEAN_NET_RTG_DIFF_LAST_10",
-        "loss_increase": 0.026541,
-        "std": 0.003157
-      },
-      {
-        "feature": "ABS_DIFF",
-        "loss_increase": 0.016737,
-        "std": 0.002031
+        "loss_increase": 0.019132,
+        "std": 0.001388
       },
       {
         "feature": "IS_HOME",
-        "loss_increase": 0.011172,
-        "std": 0.000659
+        "loss_increase": 0.010187,
+        "std": 0.001391
+      },
+      {
+        "feature": "MISSING_ROT_MINS_DIFF",
+        "loss_increase": 0.009467,
+        "std": 0.001512
       },
       {
         "feature": "WINRATE_DIFF_LAST_10",
-        "loss_increase": 0.00709,
-        "std": 0.002743
+        "loss_increase": 0.007373,
+        "std": 0.001458
       },
       {
-        "feature": "REST_DIFF",
-        "loss_increase": -0.000116,
-        "std": 6.6e-05
+        "feature": "ACTIVE_WT_GS_DIFF",
+        "loss_increase": 0.006856,
+        "std": 0.001497
       },
       {
-        "feature": "OPP_IS_B2B",
-        "loss_increase": -0.000697,
-        "std": 0.00069
+        "feature": "ABS_DIFF",
+        "loss_increase": 0.002026,
+        "std": 0.000211
       },
       {
         "feature": "IS_B2B",
-        "loss_increase": -0.000709,
-        "std": 0.000609
+        "loss_increase": 0.000401,
+        "std": 0.00037
+      },
+      {
+        "feature": "OPP_IS_B2B",
+        "loss_increase": 0.0003,
+        "std": 0.000502
+      },
+      {
+        "feature": "ROT_CONTINUITY_DIFF",
+        "loss_increase": 0.000179,
+        "std": 6.5e-05
+      },
+      {
+        "feature": "REST_DIFF",
+        "loss_increase": -0.000245,
+        "std": 0.000185
       }
     ]
   },
-  "target_column": "WIN",
-  "legacy_version": "10.2-temporal-candidate"
+  "target_column": "WIN"
 }

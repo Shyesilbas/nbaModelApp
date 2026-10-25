@@ -1,0 +1,312 @@
+{
+    "version": "v15",
+    "updated_at": "2026-10-25T11:01:57.467925Z",
+    "training_manifest": {
+        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
+        "train_seasons": [
+            "2020-21",
+            "2021-22",
+            "2022-23",
+            "2023-24"
+        ],
+        "calibration_season": "2024-25",
+        "validation_season": "2025-26",
+        "holdout": {
+            "strategy": "season_holdout",
+            "test_size": 0.2,
+            "date_col": "GAME_DATE",
+            "calibration_season": "2024-25",
+            "final_refit_scope": "all_eligible_rows"
+        }
+    },
+    "feature_contract": {
+        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/player.yaml",
+        "schema_version": "player",
+        "config": {
+            "schema_version": "player",
+            "targets": {
+                "TARGET_PTS": "pts",
+                "TARGET_REB": "reb",
+                "TARGET_AST": "ast"
+            },
+            "features": [
+                "IS_HOME",
+                "IS_PLAYOFF",
+                "DAYS_REST",
+                "IS_GUARD",
+                "IS_BIG",
+                "PTS_LAST_5",
+                "PTS_EMA_10",
+                "PTS_PER_MIN_LAST_10",
+                "REB_LAST_5",
+                "REB_EMA_10",
+                "REB_PER_MIN_LAST_10",
+                "AST_LAST_5",
+                "AST_EMA_10",
+                "AST_PER_MIN_LAST_10",
+                "MIN_LAST_3",
+                "MIN_EMA_10",
+                "MIN_TREND",
+                "USG_PCT_EMA_10",
+                "OPP_POS_PTS_ALLOWED_LAST_10",
+                "OPP_POS_REB_ALLOWED_LAST_10",
+                "OPP_POS_AST_ALLOWED_LAST_10",
+                "MISSING_ROT_MINS",
+                "ROT_CONTINUITY",
+                "ACTIVE_WT_GS"
+            ],
+            "required_context_columns": [
+                "SEASON_ID",
+                "GAME_DATE",
+                "IS_PLAYOFF",
+                "IS_HOME",
+                "PLAYER_POSITION_GROUP",
+                "MIN_EMA_10",
+                "OPP_GUARD_PTS_ALLOWED_LAST_10",
+                "OPP_WING_PTS_ALLOWED_LAST_10",
+                "OPP_BIG_PTS_ALLOWED_LAST_10",
+                "OPP_GUARD_REB_ALLOWED_LAST_10",
+                "OPP_WING_REB_ALLOWED_LAST_10",
+                "OPP_BIG_REB_ALLOWED_LAST_10",
+                "OPP_GUARD_AST_ALLOWED_LAST_10",
+                "OPP_WING_AST_ALLOWED_LAST_10",
+                "OPP_BIG_AST_ALLOWED_LAST_10"
+            ],
+            "lgb_params_by_target": {
+                "pts": {
+                    "objective": "l1",
+                    "num_leaves": 20,
+                    "min_child_samples": 50
+                },
+                "reb": {
+                    "objective": "l1"
+                },
+                "ast": {
+                    "objective": "l1"
+                }
+            }
+        }
+    },
+    "provenance": {
+        "code_revision": "6c00c2eebd68a9e5fc245a47f798ef0071d695e2",
+        "python_version": "3.12.4",
+        "packages": {
+            "numpy": "1.26.4",
+            "pandas": "2.2.3",
+            "scikit-learn": "1.5.2",
+            "xgboost": "3.2.0",
+            "lightgbm": "4.6.0"
+        },
+        "feature_contract": {
+            "path": "config/features/player.yaml",
+            "sha256": "e2352ce76b7378573b688564f3ce7ddb06b2c2bb96852498fa47817445c123d7",
+            "bytes": 2053
+        },
+        "input_snapshots": [
+            {
+                "path": "data/training/player_model_ready.csv",
+                "sha256": "cd76b5b1e272a30ddfd0c8fcdf173cf87de9fd371223906535526a634395a0ab",
+                "bytes": 119518796
+            }
+        ],
+        "training_manifest": {
+            "path": "config/training_manifest.yaml",
+            "sha256": "7e50e72a5436c45a2a7d866d2624e633ee13d35420a62878019419ee87de4da4",
+            "bytes": 1347
+        },
+        "trainer_source": {
+            "path": "src/training/player_trainer.py",
+            "sha256": "4570fe1943aa741ec5573aca22426d777e073ad93f5e5c584a815db8bc3b2855",
+            "bytes": 11399
+        },
+        "artifacts": [
+            {
+                "path": "models/experimental/player_model_pts.pkl",
+                "sha256": "ed5982d9bc1e3147bcd86caebbc89440ae00a75bb9820880e198f1d7b2a0a4e2",
+                "bytes": 305334
+            },
+            {
+                "path": "models/experimental/player_model_reb.pkl",
+                "sha256": "7a3c8fab2cbe6e2ca2f77d14fd73b7c5a85caffdafdc352749b0c5817c89a91d",
+                "bytes": 437548
+            },
+            {
+                "path": "models/experimental/player_model_ast.pkl",
+                "sha256": "297c12f525c3b2804bbb751da65bec476bb67973df35eb61c5076c07260bd0ab",
+                "bytes": 458684
+            },
+            {
+                "path": "models/experimental/player_features.pkl",
+                "sha256": "e2371d9997accd949f381a0e40e6c73811266992929b1f5693e7cf43a7451eb0",
+                "bytes": 411
+            }
+        ]
+    },
+    "input_file": "/Users/serhat/PycharmProjects/nbaModelApp/data/training/player_model_ready.csv",
+    "number_of_rows": 165988,
+    "training_rows": 165988,
+    "evaluation_training_rows": 165988,
+    "training_season_ids": [
+        22020,
+        22021,
+        22022,
+        22023,
+        22024,
+        22025,
+        42020,
+        42021,
+        42022,
+        42023,
+        42024,
+        42025,
+        52020,
+        52021,
+        52022,
+        52023,
+        52024,
+        52025
+    ],
+    "season_coverage": [
+        22020,
+        22021,
+        22022,
+        22023,
+        22024,
+        22025,
+        42020,
+        42021,
+        42022,
+        42023,
+        42024,
+        42025,
+        52020,
+        52021,
+        52022,
+        52023,
+        52024,
+        52025
+    ],
+    "feature_guard": {
+        "n_features": 24,
+        "constant_features": [],
+        "mostly_missing_features": [],
+        "near_duplicate_pairs": [
+            [
+                "PTS_LAST_5",
+                "PTS_EMA_10",
+                0.9832
+            ],
+            [
+                "AST_LAST_5",
+                "AST_EMA_10",
+                0.9827
+            ]
+        ],
+        "near_duplicate_threshold": 0.98,
+        "linear_dependent_features": []
+    },
+    "final_refit": {
+        "enabled": true,
+        "rows": 165988,
+        "scope": "all_eligible_rows",
+        "note": "Holdout metrics come from the model fit before the holdout season; the shipped model is then refit on this scope."
+    },
+    "features_count": 24,
+    "targets": [
+        "TARGET_PTS",
+        "TARGET_REB",
+        "TARGET_AST"
+    ],
+    "features": [
+        "IS_HOME",
+        "IS_PLAYOFF",
+        "DAYS_REST",
+        "IS_GUARD",
+        "IS_BIG",
+        "PTS_LAST_5",
+        "PTS_EMA_10",
+        "PTS_PER_MIN_LAST_10",
+        "REB_LAST_5",
+        "REB_EMA_10",
+        "REB_PER_MIN_LAST_10",
+        "AST_LAST_5",
+        "AST_EMA_10",
+        "AST_PER_MIN_LAST_10",
+        "MIN_LAST_3",
+        "MIN_EMA_10",
+        "MIN_TREND",
+        "USG_PCT_EMA_10",
+        "OPP_POS_PTS_ALLOWED_LAST_10",
+        "OPP_POS_REB_ALLOWED_LAST_10",
+        "OPP_POS_AST_ALLOWED_LAST_10",
+        "MISSING_ROT_MINS",
+        "ROT_CONTINUITY",
+        "ACTIVE_WT_GS"
+    ],
+    "evaluation": "chronological_holdout",
+    "evaluation_metrics": {
+        "pts": {
+            "mae": 4.470154808472066,
+            "baseline_ema10_mae": 4.675234071796703,
+            "rmse": 5.955002376077685,
+            "r2": 0.5466472738591132,
+            "split": {
+                "strategy": "season_holdout",
+                "split_date": null,
+                "train_rows": 109050,
+                "test_rows": 28240,
+                "train_seasons": [
+                    "2020-21",
+                    "2021-22",
+                    "2022-23",
+                    "2023-24"
+                ],
+                "test_seasons": [
+                    "2024-25"
+                ]
+            }
+        },
+        "reb": {
+            "mae": 1.8661253431501503,
+            "baseline_ema10_mae": 1.9460396224740215,
+            "rmse": 2.516435734733685,
+            "r2": 0.47437954376241676,
+            "split": {
+                "strategy": "season_holdout",
+                "split_date": null,
+                "train_rows": 109050,
+                "test_rows": 28240,
+                "train_seasons": [
+                    "2020-21",
+                    "2021-22",
+                    "2022-23",
+                    "2023-24"
+                ],
+                "test_seasons": [
+                    "2024-25"
+                ]
+            }
+        },
+        "ast": {
+            "mae": 1.2916520744005542,
+            "baseline_ema10_mae": 1.3507971753029429,
+            "rmse": 1.832682598360025,
+            "r2": 0.5085461116960731,
+            "split": {
+                "strategy": "season_holdout",
+                "split_date": null,
+                "train_rows": 109050,
+                "test_rows": 28240,
+                "train_seasons": [
+                    "2020-21",
+                    "2021-22",
+                    "2022-23",
+                    "2023-24"
+                ],
+                "test_seasons": [
+                    "2024-25"
+                ]
+            }
+        }
+    }
+}

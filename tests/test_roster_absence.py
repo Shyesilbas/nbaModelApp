@@ -1,6 +1,12 @@
 import pandas as pd
 
-from src.features.roster_absence import add_absence_columns, assumed_out_players, build_absence_deltas, live_absence_delta
+from src.features.roster_absence import (
+    add_absence_columns,
+    assumed_out_players,
+    build_absence_deltas,
+    live_absence_delta,
+    live_roster_metrics,
+)
 
 
 def _logs(n_games=8, star_plays_last=True):
@@ -99,3 +105,47 @@ def test_new_signing_is_not_a_returning_star_after_the_first_game_of_a_season():
     history = pd.concat([old, new, signing], ignore_index=True)
     date = new["GAME_DATE"].max() + pd.Timedelta(days=2)
     assert live_absence_delta(history, "AAA", date) == 0.0
+
+
+def test_rotation_continuity_and_missing_mins_parity():
+    logs = _logs(n_games=8, star_plays_last=False)
+    deltas = build_absence_deltas(logs).set_index("GAME_ID")
+    last_gid = deltas.index[-1]
+    
+    # In the 8th game, player 1 (Star, 30 min) is missing
+    assert deltas.loc[last_gid, "MISSING_ROT_MINS"] == 30.0
+    assert abs(deltas.loc[last_gid, "ROT_CONTINUITY"] - (100.0 / 130.0)) < 1e-5
+    assert deltas.loc[last_gid, "ACTIVE_WT_GS"] == 4.6
+
+    # Live inference with override must reproduce these exact values
+    pred_date = logs["GAME_DATE"].max() + pd.Timedelta(days=1)
+    history = _logs(n_games=7)
+    live_res = live_roster_metrics(history, "AAA", pred_date, {1: {"factor": 0.0}})
+    
+    assert abs(live_res["MISSING_ROT_MINS"] - deltas.loc[last_gid, "MISSING_ROT_MINS"]) < 1e-6
+    assert abs(live_res["ROT_CONTINUITY"] - deltas.loc[last_gid, "ROT_CONTINUITY"]) < 1e-6
+    assert abs(live_res["ACTIVE_WT_GS"] - deltas.loc[last_gid, "ACTIVE_WT_GS"]) < 1e-6
+
+
+def test_add_absence_columns_rotation_antisymmetry():
+    logs = _logs(star_plays_last=False)
+    healthy = _logs(star_plays_last=True)
+    other = healthy.assign(MATCHUP="BBB @ AAA", Player_ID=healthy["Player_ID"] + 100)
+    games = pd.concat([logs, other])
+    model = pd.DataFrame({
+        "GAME_ID": ["0022400007"] * 2,
+        "TEAM_ABBREVIATION": ["AAA", "BBB"],
+        "OPPONENT_ABBREVIATION": ["BBB", "AAA"],
+    })
+    out = add_absence_columns(model, games).set_index("TEAM_ABBREVIATION")
+    
+    # Continuity diff is antisymmetric
+    assert abs(out.loc["AAA", "ROT_CONTINUITY_DIFF"] + out.loc["BBB", "ROT_CONTINUITY_DIFF"]) < 1e-6
+    assert out.loc["AAA", "ROT_CONTINUITY_DIFF"] < 0
+    assert out.loc["BBB", "ROT_CONTINUITY_DIFF"] > 0
+
+    # Missing rotation mins diff is antisymmetric (positive is good: opponent missing more than us)
+    assert abs(out.loc["AAA", "MISSING_ROT_MINS_DIFF"] + out.loc["BBB", "MISSING_ROT_MINS_DIFF"]) < 1e-6
+    assert out.loc["AAA", "MISSING_ROT_MINS_DIFF"] < 0
+    assert out.loc["BBB", "MISSING_ROT_MINS_DIFF"] > 0
+

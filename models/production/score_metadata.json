@@ -1,6 +1,6 @@
 {
-    "version": "v11",
-    "updated_at": "2026-10-20T10:52:26.852449Z",
+    "version": "v15",
+    "updated_at": "2026-10-25T10:08:51.131101Z",
     "training_manifest": {
         "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/training_manifest.yaml",
         "train_seasons": [
@@ -20,10 +20,10 @@
         }
     },
     "feature_contract": {
-        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/score_v10.yaml",
-        "schema_version": "score_v10",
+        "path": "/Users/serhat/PycharmProjects/nbaModelApp/config/features/score.yaml",
+        "schema_version": "score",
         "config": {
-            "schema_version": "score_v10",
+            "schema_version": "score",
             "estimator": "ridge",
             "targets": {
                 "pace": "TARGET_PACE",
@@ -50,7 +50,10 @@
                 "OPP_DAYS_REST",
                 "IS_B2B",
                 "OPP_IS_B2B",
-                "ABS_DIFF"
+                "ABS_DIFF",
+                "MISSING_ROT_MINS_DIFF",
+                "ROT_CONTINUITY_DIFF",
+                "ACTIVE_WT_GS_DIFF"
             ],
             "margin_extra_features": [
                 "DEF_RTG_LAST_5",
@@ -69,7 +72,7 @@
         }
     },
     "provenance": {
-        "code_revision": "4226796410fc56882adc114fecdf15e262b1ef0e",
+        "code_revision": "6c00c2eebd68a9e5fc245a47f798ef0071d695e2",
         "python_version": "3.12.4",
         "packages": {
             "numpy": "1.26.4",
@@ -79,105 +82,105 @@
             "lightgbm": "4.6.0"
         },
         "feature_contract": {
-            "path": "config/features/score_v10.yaml",
-            "sha256": "7189331644fa01c2567bba471923f7b28c823ae90f895dab06c1ce2501a21c6f",
-            "bytes": 1960
+            "path": "config/features/score.yaml",
+            "sha256": "670cc758f084c790a5efd1f1d0625f83c9f83cacb37d426b4d713e0109c8ba34",
+            "bytes": 2122
         },
         "input_snapshots": [
             {
-                "path": "data/processed/team_model_ready_v3_2020_21.csv",
-                "sha256": "a5f16e878003123a08657cee2c161dd1607b4cd681f49ee768221dba78421606",
-                "bytes": 4986416
+                "path": "data/training/team_model_ready_2020_21.csv",
+                "sha256": "36f7689ffee109e6e89121b004675393659dbe06fccf5b8a9b77508c779465f2",
+                "bytes": 4066009
             },
             {
-                "path": "data/processed/team_model_ready_v3_2021_22.csv",
-                "sha256": "47a45a5f822da2fe3e42d7aecbb411c845dc0b4e782f86ab6543194a07679906",
-                "bytes": 5674351
+                "path": "data/training/team_model_ready_2021_22.csv",
+                "sha256": "5498e6242cc24f1e2e1d8a2dfdb03ef513fa0727fbb74fa11d5240b0195dbbe5",
+                "bytes": 4630109
             },
             {
-                "path": "data/processed/team_model_ready_v3_2022_23.csv",
-                "sha256": "82f223f04c9079138aa87f3c278941c317f458b7deea3265f2faeb9f36ab4705",
-                "bytes": 5651115
+                "path": "data/training/team_model_ready_2022_23.csv",
+                "sha256": "d0488ec0524c58a1fa2b26165003f0448bb7ffdddd2e766b46c23362b0023cb8",
+                "bytes": 4615769
             },
             {
-                "path": "data/processed/team_model_ready_v3_2023_24.csv",
-                "sha256": "41394fb4a90d787cf1d0610d33120501f0c47e35be21567462f560bf66d65b29",
-                "bytes": 5729996
+                "path": "data/training/team_model_ready_2023_24.csv",
+                "sha256": "da03804413e89f1b15564646073e063fe5dccf70450f014675d83865e03e2010",
+                "bytes": 4681462
             },
             {
-                "path": "data/processed/team_model_ready_v3_2024_25.csv",
-                "sha256": "1dc20608ce11f469a9de03b3c37a2c9dafd7892a008c492da5ec0715ef0df665",
-                "bytes": 5803338
+                "path": "data/training/team_model_ready_2024_25.csv",
+                "sha256": "b06a1897ed498e76f1611a8cb711b2a1e894b06c4e22e5226faa256795f871e0",
+                "bytes": 4763158
             },
             {
-                "path": "data/processed/team_model_ready_v3_2025_26.csv",
-                "sha256": "90065c500a0d40d7953b72033ea1377251d1088d568550c57aaf85bed5fabbcd",
-                "bytes": 5764561
+                "path": "data/training/team_model_ready_2025_26.csv",
+                "sha256": "a0dfb4e21c343d9444cbde1f66c9919184f562b7dd2b48c2e54e3e0b4f4c91c4",
+                "bytes": 4722484
             }
         ],
         "training_manifest": {
             "path": "config/training_manifest.yaml",
-            "sha256": "23960c8cb5f2bf3b633b4de7735408d5a54231e15b32f59e9fa90b803c70e86b",
-            "bytes": 1190
+            "sha256": "6febb1035ebd18388043859a3f7d79cb27b42fcaf21bcf56a2e91ade02656825",
+            "bytes": 1347
         },
         "trainer_source": {
             "path": "src/training/score_trainer.py",
-            "sha256": "ac0f1a2deafce29a2479533a772888f90473cd7748ebaf82026b23a4e657f3ab",
-            "bytes": 32832
+            "sha256": "8fd36efb7049b680f82cdad5344c8c80af62c80529d14e684cf34f3115994b4c",
+            "bytes": 31917
         },
         "artifacts": [
             {
-                "path": "models/experimental/score_model_v10_pace.pkl",
+                "path": "models/experimental/score_model_pace.pkl",
                 "sha256": "c74527d349af29a787f622a7a60f1d8af32abe08f5172f649fc33b9828ce3211",
                 "bytes": 2018
             },
             {
-                "path": "models/experimental/score_model_v10_home_rtg.pkl",
+                "path": "models/experimental/score_model_home_rtg.pkl",
                 "sha256": "4e5fd0f2838fadcf71bfbc7fd762e72a2fc3bfe702966f308032a2f86aaf0142",
                 "bytes": 2130
             },
             {
-                "path": "models/experimental/score_model_v10_away_rtg.pkl",
+                "path": "models/experimental/score_model_away_rtg.pkl",
                 "sha256": "1618fa207ac046cb5abbd702aec48d486d2117d42d49e3dd125d6cd0c86ef062",
                 "bytes": 2130
             },
             {
-                "path": "models/experimental/score_model_v10_margin.pkl",
-                "sha256": "927cbbe490ecf2030cf200dcd7a66f903529d4dfa32f3536e5e3656af8273861",
-                "bytes": 2370
+                "path": "models/experimental/score_model_margin.pkl",
+                "sha256": "41b46eb590d9f3370b5d67a02539e5538278b1b31ad2a5648b2016b1d47906ad",
+                "bytes": 2554
             },
             {
-                "path": "models/experimental/score_model_v10_ridge_total.pkl",
+                "path": "models/experimental/score_model_ridge_total.pkl",
                 "sha256": "7b732ab1cd415127be4cd076b9279b7607cb2fee2dbf1d817e2feef1cf94d4f5",
                 "bytes": 992
             },
             {
-                "path": "models/experimental/score_model_v10_ridge_margin.pkl",
-                "sha256": "da60724b827336ca9ce2014f5a92b3c68f0b0fa930272d0834ba6e58c7092734",
+                "path": "models/experimental/score_model_ridge_margin.pkl",
+                "sha256": "cb77789adc9f5f85a266789189fce165ed7b643d84d634900a20aef2986919ae",
                 "bytes": 992
             },
             {
-                "path": "models/experimental/score_model_v10_oof_margins.parquet",
-                "sha256": "9debf098da1c52714bdecc254635efd374feca5fa67c3c0934785177bad58eb5",
+                "path": "models/experimental/score_oof_margins.parquet",
+                "sha256": "41258f34a8088cf4105a7443f114d4c0f848297a59ff518ea8c7766010392cca",
                 "bytes": 75645
             }
         ]
     },
     "input_files": [
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv",
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv",
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv",
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv",
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv",
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv"
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2020_21.csv",
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2021_22.csv",
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2022_23.csv",
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2023_24.csv",
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2024_25.csv",
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2025_26.csv"
     ],
     "row_counts_by_file": {
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2020_21.csv": 2210,
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2021_22.csv": 2512,
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2022_23.csv": 2496,
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2023_24.csv": 2518,
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2024_25.csv": 2522,
-        "/Users/serhat/PycharmProjects/nbaModelApp/data/processed/team_model_ready_v3_2025_26.csv": 2522
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2020_21.csv": 2210,
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2021_22.csv": 2512,
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2022_23.csv": 2496,
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2023_24.csv": 2518,
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2024_25.csv": 2522,
+        "/Users/serhat/PycharmProjects/nbaModelApp/data/training/team_model_ready_2025_26.csv": 2522
     },
     "final_refit": {
         "enabled": true,
@@ -191,7 +194,7 @@
     "pace_mae": 3.5446544168848466,
     "home_rtg_mae": 8.993649028626864,
     "away_rtg_mae": 9.080614537797727,
-    "margin_mae": 10.851590242009978,
+    "margin_mae": 10.820709737203567,
     "derived_home_score_mae": 9.426219312120242,
     "derived_away_score_mae": 9.54100076130679,
     "splits": {
@@ -267,13 +270,13 @@
         ],
         "total_intercept": -1.8225265689697283,
         "margin": [
-            -1.59917462444702,
-            0.652155722258039,
-            -1.1916994615818766,
-            0.6381955798725805,
-            0.008856420726280925
+            -1.650609035322046,
+            0.64586777614277,
+            -1.0339642131496525,
+            0.5532085537767243,
+            0.09186742580343245
         ],
-        "margin_intercept": -0.11082582740843268,
+        "margin_intercept": -0.09613369165921176,
         "features": [
             "is_playoff",
             "home_b2b",
@@ -306,7 +309,10 @@
         "OPP_DAYS_REST",
         "IS_B2B",
         "OPP_IS_B2B",
-        "ABS_DIFF"
+        "ABS_DIFF",
+        "MISSING_ROT_MINS_DIFF",
+        "ROT_CONTINUITY_DIFF",
+        "ACTIVE_WT_GS_DIFF"
     ],
     "feature_guard": {
         "pace": {
@@ -334,7 +340,7 @@
             "linear_dependent_features": []
         },
         "margin": {
-            "n_features": 8,
+            "n_features": 11,
             "constant_features": [],
             "mostly_missing_features": [],
             "near_duplicate_pairs": [],
@@ -349,12 +355,12 @@
             24.0
         ],
         "margin": [
-            -17.3,
-            17.3
+            -17.1,
+            17.1
         ],
         "home": [
-            -15.1,
-            15.1
+            -15.0,
+            15.0
         ],
         "away": [
             -14.8,
@@ -367,12 +373,12 @@
             30.7
         ],
         "margin": [
-            -22.7,
-            22.7
+            -22.5,
+            22.5
         ],
         "home": [
-            -19.3,
-            19.3
+            -19.1,
+            19.1
         ],
         "away": [
             -19.1,
@@ -389,12 +395,12 @@
             8.8
         ],
         "home": [
-            -8.0,
-            8.0
+            -8.1,
+            8.1
         ],
         "away": [
-            -7.7,
-            7.7
+            -7.6,
+            7.6
         ]
     },
     "conformal_prediction_intervals": {
@@ -404,12 +410,12 @@
                 24.0
             ],
             "margin": [
-                -17.3,
-                17.3
+                -17.1,
+                17.1
             ],
             "home": [
-                -15.1,
-                15.1
+                -15.0,
+                15.0
             ],
             "away": [
                 -14.8,
@@ -422,12 +428,12 @@
                 30.7
             ],
             "margin": [
-                -22.7,
-                22.7
+                -22.5,
+                22.5
             ],
             "home": [
-                -19.3,
-                19.3
+                -19.1,
+                19.1
             ],
             "away": [
                 -19.1,
@@ -444,12 +450,12 @@
                 8.8
             ],
             "home": [
-                -8.0,
-                8.0
+                -8.1,
+                8.1
             ],
             "away": [
-                -7.7,
-                7.7
+                -7.6,
+                7.6
             ]
         },
         "empirical_quantiles_80pct": {
@@ -459,15 +465,15 @@
             ],
             "margin": [
                 -17.3,
-                17.2
+                17.0
             ],
             "home": [
-                -15.1,
-                14.9
+                -15.0,
+                15.0
             ],
             "away": [
-                -14.6,
-                14.9
+                -14.8,
+                14.8
             ]
         },
         "empirical_quantiles_90pct": {
@@ -476,16 +482,16 @@
                 31.7
             ],
             "margin": [
-                -22.6,
-                22.8
+                -22.4,
+                22.4
             ],
             "home": [
-                -18.9,
-                19.6
+                -18.8,
+                19.4
             ],
             "away": [
                 -19.0,
-                19.1
+                19.2
             ]
         },
         "coverage_report": {
@@ -501,40 +507,39 @@
                 "conformal_50_empirical_coverage": 50.0
             },
             "margin": {
-                "std_dev": 13.85,
-                "mae": 10.81,
+                "std_dev": 13.81,
+                "mae": 10.8,
                 "bias": -0.0,
-                "conformal_80_radius": 17.3,
+                "conformal_80_radius": 17.1,
                 "conformal_80_empirical_coverage": 80.0,
-                "conformal_90_radius": 22.7,
+                "conformal_90_radius": 22.5,
                 "conformal_90_empirical_coverage": 90.0,
                 "conformal_50_radius": 8.8,
                 "conformal_50_empirical_coverage": 50.0
             },
             "home": {
-                "std_dev": 11.68,
-                "mae": 9.33,
+                "std_dev": 11.66,
+                "mae": 9.31,
                 "bias": 0.0,
-                "conformal_80_radius": 15.1,
+                "conformal_80_radius": 15.0,
                 "conformal_80_empirical_coverage": 80.0,
-                "conformal_90_radius": 19.3,
+                "conformal_90_radius": 19.1,
                 "conformal_90_empirical_coverage": 90.0,
-                "conformal_50_radius": 8.0,
+                "conformal_50_radius": 8.1,
                 "conformal_50_empirical_coverage": 50.0
             },
             "away": {
-                "std_dev": 11.65,
-                "mae": 9.27,
+                "std_dev": 11.64,
+                "mae": 9.26,
                 "bias": 0.0,
                 "conformal_80_radius": 14.8,
                 "conformal_80_empirical_coverage": 80.0,
                 "conformal_90_radius": 19.1,
                 "conformal_90_empirical_coverage": 90.0,
-                "conformal_50_radius": 7.7,
+                "conformal_50_radius": 7.6,
                 "conformal_50_empirical_coverage": 50.0
             }
         },
         "calibration_samples": 4781
-    },
-    "legacy_version": "v10_temporal_Ridge_candidate"
+    }
 }

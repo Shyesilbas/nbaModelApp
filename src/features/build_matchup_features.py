@@ -23,7 +23,7 @@ from src.core.data_paths import get_data_paths
 from src.core.season_utils import SEASON_START_MONTH, date_to_season
 from src.core.artifact_paths import resolve_artifact_path
 from src.features.win_strength_features import build_matchup_strength_features, compute_current_elo_state
-from src.features.roster_absence import current_roster_ids, live_absence_delta
+from src.features.roster_absence import current_roster_ids, live_absence_delta, live_roster_metrics
 
 from functools import lru_cache
 import math
@@ -612,7 +612,12 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
 
     # Final mapping and missing-column handling for the original required cols
     # (roster absence features are filled in further down, from player logs and overrides)
-    LIVE_ROSTER_FEATURES = {"ABS_DELTA", "OPP_ABS_DELTA", "ABS_DIFF"}
+    LIVE_ROSTER_FEATURES = {
+        "ABS_DELTA", "OPP_ABS_DELTA", "ABS_DIFF",
+        "MISSING_ROT_MINS", "OPP_MISSING_ROT_MINS", "MISSING_ROT_MINS_DIFF",
+        "ROT_CONTINUITY", "OPP_ROT_CONTINUITY", "ROT_CONTINUITY_DIFF",
+        "ACTIVE_WT_GS", "OPP_ACTIVE_WT_GS", "ACTIVE_WT_GS_DIFF",
+    }
     res = {}
     missing_cols = []
     for c in feat_cols:
@@ -748,9 +753,20 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     player_logs = _load_player_games(season)
     player_logs = _load_absence_logs(season)
     pre = bool(res.get("IS_PRESEASON"))
-    res["ABS_DELTA"] = live_absence_delta(player_logs, home_team, pred_dt, overrides, pre, current_roster_ids(home_team, pred_dt))
-    res["OPP_ABS_DELTA"] = live_absence_delta(player_logs, away_team, pred_dt, overrides, pre, current_roster_ids(away_team, pred_dt))
+    home_roster_metrics = live_roster_metrics(player_logs, home_team, pred_dt, overrides, pre, current_roster_ids(home_team, pred_dt))
+    away_roster_metrics = live_roster_metrics(player_logs, away_team, pred_dt, overrides, pre, current_roster_ids(away_team, pred_dt))
+    res["ABS_DELTA"] = home_roster_metrics["ABS_DELTA"]
+    res["OPP_ABS_DELTA"] = away_roster_metrics["ABS_DELTA"]
     res["ABS_DIFF"] = res["ABS_DELTA"] - res["OPP_ABS_DELTA"]
+    res["MISSING_ROT_MINS"] = home_roster_metrics["MISSING_ROT_MINS"]
+    res["OPP_MISSING_ROT_MINS"] = away_roster_metrics["MISSING_ROT_MINS"]
+    res["MISSING_ROT_MINS_DIFF"] = res["OPP_MISSING_ROT_MINS"] - res["MISSING_ROT_MINS"]
+    res["ROT_CONTINUITY"] = home_roster_metrics["ROT_CONTINUITY"]
+    res["OPP_ROT_CONTINUITY"] = away_roster_metrics["ROT_CONTINUITY"]
+    res["ROT_CONTINUITY_DIFF"] = res["ROT_CONTINUITY"] - res["OPP_ROT_CONTINUITY"]
+    res["ACTIVE_WT_GS"] = home_roster_metrics["ACTIVE_WT_GS"]
+    res["OPP_ACTIVE_WT_GS"] = away_roster_metrics["ACTIVE_WT_GS"]
+    res["ACTIVE_WT_GS_DIFF"] = res["ACTIVE_WT_GS"] - res["OPP_ACTIVE_WT_GS"]
 
     # Validation: ensure all values derived from rows have GAME_DATE < prediction_date
     # (we filtered at top; assert again)

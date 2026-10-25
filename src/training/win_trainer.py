@@ -60,6 +60,10 @@ WIN_STRENGTH_FEATURES = [
 ]
 
 DEFAULTABLE_REQUIRED_FEATURES = {
+    "ABS_DIFF": 0.0,
+    "MISSING_ROT_MINS_DIFF": 0.0,
+    "ROT_CONTINUITY_DIFF": 0.0,
+    "ACTIVE_WT_GS_DIFF": 0.0,
     "IS_ELIMINATION_GAME": 0,
     "CAN_CLINCH_SERIES": 0,
     "H2H_GAMES_LAST_5": 0,
@@ -184,6 +188,8 @@ class WinModelTrainer:
         for f in files:
             if os.path.exists(f):
                 f_df = pd.read_csv(f)
+                if f_df.empty or self.target_col not in f_df.columns:
+                    continue
                 row_counts_by_file[str(f)] = int(len(f_df))
                 df_list.append(f_df)
         if not df_list:
