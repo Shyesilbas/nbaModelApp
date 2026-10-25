@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { Card } from "../common";
+import { fill } from "../../lib/fill";
+import { useLanguage } from "../../context/LanguageContext";
 
 export interface ChartGame {
   game_date: string;
@@ -89,6 +91,8 @@ function Legend({ items }: { items: { label: string; className: string }[] }) {
 }
 
 export function RollingAccuracyChart({ games }: { games: ChartGame[] }) {
+  const { t } = useLanguage();
+  const p = t.paper;
   const points = useMemo<RollingPoint[]>(() => {
     const graded = games
       .filter((g) => g.status === "final" && g.valid && g.correct != null)
@@ -114,11 +118,8 @@ export function RollingAccuracyChart({ games }: { games: ChartGame[] }) {
   if (points.length < 2) {
     return (
       <Card padding="md" className="space-y-1">
-        <h2 className="text-sm font-semibold text-text-primary">Rolling accuracy ({WINDOW_DAYS} days)</h2>
-        <p className="text-xs text-text-secondary">
-          The trend appears once at least two game days have {MIN_GAMES} or more graded games in their trailing
-          {" "}{WINDOW_DAYS}-day window.
-        </p>
+        <h2 className="text-sm font-semibold text-text-primary">{fill(p.chartRollingTitle, { days: WINDOW_DAYS })}</h2>
+        <p className="text-xs text-text-secondary">{fill(p.chartRollingEmpty, { min: MIN_GAMES, days: WINDOW_DAYS })}</p>
       </Card>
     );
   }
@@ -136,16 +137,16 @@ export function RollingAccuracyChart({ games }: { games: ChartGame[] }) {
 
   return (
     <ChartFrame
-      title={`Rolling accuracy (${WINDOW_DAYS} days)`}
-      description={`Share of correct winner picks in the trailing ${WINDOW_DAYS} days, against always picking the home team.`}
-      summary={`Latest (${last.date}, ${last.games} games): model ${pct(last.model, 1)}, home baseline ${pct(last.home, 1)}, edge ${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)} points.`}
+      title={fill(p.chartRollingTitle, { days: WINDOW_DAYS })}
+      description={fill(p.chartRollingDesc, { days: WINDOW_DAYS })}
+      summary={fill(p.chartRollingSummary, { date: last.date, games: last.games, model: pct(last.model, 1), home: pct(last.home, 1), edge: `${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}` })}
       yTicks={[pct(hi), pct((hi + lo) / 2), pct(lo)]}
       xTicks={[points[0].date, last.date]}
       legend={
         <Legend
           items={[
-            { label: "Model", className: "bg-primary" },
-            { label: "Home baseline", className: "bg-text-muted" },
+            { label: p.chartModel, className: "bg-primary" },
+            { label: p.chartHome, className: "bg-text-muted" },
           ]}
         />
       }
@@ -168,6 +169,8 @@ export function RollingAccuracyChart({ games }: { games: ChartGame[] }) {
 }
 
 export function CalibrationChart({ bands }: { bands: ChartBand[] }) {
+  const { t } = useLanguage();
+  const p = t.paper;
   const usable = bands.filter((b) => b.games > 0);
   if (usable.length === 0) return null;
 
@@ -179,9 +182,9 @@ export function CalibrationChart({ bands }: { bands: ChartBand[] }) {
 
   return (
     <ChartFrame
-      title="Calibration"
-      description="Each point is a confidence band: what the model said against how often it was right. On the diagonal means calibrated."
-      summary={`${usable.length} bands over ${total} graded games; average gap between stated confidence and actual hit rate is ${(gap * 100).toFixed(1)} points.`}
+      title={p.chartCalTitle}
+      description={p.chartCalDesc}
+      summary={fill(p.chartCalSummary, { bands: usable.length, games: total, gap: (gap * 100).toFixed(1) })}
       yTicks={[pct(hi), pct((hi + lo) / 2), pct(lo)]}
       xTicks={[pct(lo), pct((hi + lo) / 2), pct(hi)]}
     >

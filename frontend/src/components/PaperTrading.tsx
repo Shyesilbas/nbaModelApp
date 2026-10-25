@@ -6,6 +6,7 @@ import { CalibrationChart, RollingAccuracyChart } from "./paper/PaperCharts";
 import PublishSnapshotButton from "./PublishSnapshotButton";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
+import { fill } from "../lib/fill";
 import { useLanguage } from "../context/LanguageContext";
 
 type PaperGame = {
@@ -55,27 +56,20 @@ type Summary = {
 
 type Report = { season: string; summary: Summary; games: PaperGame[] };
 
+type PaperTab = "winner" | "score";
+
 const pct = (v: number | null, digits = 1) => (v == null ? "-" : `${(v * 100).toFixed(digits)}%`);
 const num = (v: number | null | undefined, digits = 2) => (v == null ? "-" : v.toFixed(digits));
-const injurySummary = (g: PaperGame) => {
-  const r = g.injury_report;
-  if (!r) return "No injury report";
-  const out = r.players.filter((p) => p.status === "Out").length;
-  const uncertain = r.players.length - out;
-  const missing = Object.entries(r.submitted).filter(([, ok]) => !ok).map(([t]) => t);
-  const time = r.published_et.split(" ").slice(1).join(" ");
-  return `Report ${time}: ${out} out, ${uncertain} uncertain${missing.length ? `, ${missing.join("/")} not filed` : ""}`;
-};
+const signed = (v: number) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1));
 const injuryTitle = (g: PaperGame) =>
   g.injury_report?.players.map((p) => `${p.team} ${p.player_name}: ${p.status} (${p.reason})`).join("\n") ?? "";
-const signed = (v: number) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1));
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
     <Card padding="sm">
-      <p className="text-xs text-text-muted">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-text-primary">{value}</p>
-      {hint && <p className="mt-0.5 text-xs text-text-secondary">{hint}</p>}
+      <p className="text-xs text-text-secondary">{label}</p>
+      <p className="mt-1 text-lg font-semibold tabular-nums text-text-primary">{value}</p>
+      <p className="mt-0.5 text-xs text-text-muted">{hint}</p>
     </Card>
   );
 }
@@ -89,13 +83,25 @@ function TeamCell({ abbr, bold }: { abbr: string; bold: boolean }) {
   );
 }
 
+function MatchupCell({ game, highlightWinner }: { game: PaperGame; highlightWinner: boolean }) {
+  const won = (abbr: string) => highlightWinner && game.status === "final" && game.actual_winner === abbr;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <TeamCell abbr={game.away_team} bold={won(game.away_team)} />
+      <span className="text-text-muted">@</span>
+      <TeamCell abbr={game.home_team} bold={won(game.home_team)} />
+    </span>
+  );
+}
+
 export default function PaperTrading() {
-  const { t, language, formatDate } = useLanguage();
+  const { t, formatDate } = useLanguage();
+  const p = t.paper;
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"score" | "winner">("score");
+  const [activeTab, setActiveTab] = useState<PaperTab>("winner");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -127,14 +133,18 @@ export default function PaperTrading() {
   const dayGraded = dayGames.filter((g) => g.status === "final" && g.valid);
   const dayCorrect = dayGraded.filter((g) => g.correct).length;
 
+  const injurySummary = (g: PaperGame) => {
+    const r = g.injury_report;
+    if (!r) return p.noInjuryReport;
+    const out = r.players.filter((x) => x.status === "Out").length;
+    const missing = Object.entries(r.submitted).filter(([, ok]) => !ok).map(([team]) => team);
+    const time = r.published_et.split(" ").slice(1).join(" ");
+    const base = fill(p.injurySummary, { time, out, uncertain: r.players.length - out });
+    return missing.length ? `${base}, ${fill(p.injuryNotFiled, { teams: missing.join("/") })}` : base;
+  };
+
   if (error) {
-    return (
-      <InlineError
-        title={t.common.loadFailed}
-        message={error}
-        onRetry={load}
-      />
-    );
+    return <InlineError title={t.common.loadFailed} message={error} onRetry={load} />;
   }
 
   if (loading || !report) {
@@ -156,227 +166,164 @@ export default function PaperTrading() {
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-lg font-semibold text-text-primary">{t.paper.title}</h1>
+          <h1 className="text-2xl font-semibold text-text-primary">{p.title}</h1>
           <PublishSnapshotButton />
         </div>
-        <EmptyState
-          icon={<ClipboardCheck size={32} strokeWidth={1.5} />}
-          title={language === "tr" ? "Henüz kayıtlı tahmin bulunmuyor" : "No predictions logged yet"}
-          description={
-            language === "tr"
-              ? `Model tahminleri maç başlamadan önce dondurulup kaydedilir. Maçlar tamamlandıkça sonuçlar burada değerlendirilir.`
-              : `Predictions are frozen before tip-off. They are graded here once the game is final.`
-          }
-        />
+        <EmptyState icon={<ClipboardCheck size={32} strokeWidth={1.5} />} title={p.emptyTitle} description={p.emptyBody} />
       </div>
     );
   }
 
   const edge = s.accuracy != null && s.home_baseline_accuracy != null ? s.accuracy - s.home_baseline_accuracy : null;
+  const tabs: { id: PaperTab; label: string; hint: string }[] = [
+    { id: "winner", label: p.winnerTab, hint: p.winnerTabHint },
+    { id: "score", label: p.scoreTab, hint: p.scoreTabHint },
+  ];
+
+  const resultBadges = (g: PaperGame) => {
+    if (!g.valid) return <Badge variant="warning" size="sm">{p.resultLate}</Badge>;
+    if (g.status === "pending") return <Badge variant="neutral" size="sm">{p.resultPending}</Badge>;
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <Badge variant={g.correct ? "success" : "error"} size="sm">{g.correct ? p.resultCorrect : p.resultWrong}</Badge>
+        {g.origin === "backfill" && <Badge variant="info" size="sm">{p.resultBackfill}</Badge>}
+      </span>
+    );
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">{t.paper.title}</h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            {language === "tr"
-              ? `${report.season} sezonu. Her tahmin maç başlangıcından önce kilitlenir ve asla değiştirilmez; maç bittiğinde sonuç eklenir.`
-              : `Season ${report.season}. Each prediction is frozen before tip-off and never rewritten; the result is attached once the game is final.`}
-          </p>
+          <h1 className="text-2xl font-semibold text-text-primary">{p.title}</h1>
+          <p className="mt-1 text-sm text-text-secondary">{fill(p.subtitle, { season: report.season })}</p>
         </div>
         <PublishSnapshotButton />
       </div>
 
-      {/* Dynamic Top Stat Bar Based on Active Tab */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {activeTab === "score" ? (
-          <>
-            <Stat
-              label={t.paper.totalMse}
-              value={`${num(s.mae_total, 1)} ${t.common.ptsUnit}`}
-              hint={language === "tr" ? "Toplam maç skorundaki ortalama hata" : "Average absolute error on game total"}
-            />
-            <Stat
-              label={language === "tr" ? "Fark hatası (MAE)" : "Margin error (MAE)"}
-              value={`${num(s.mae_margin, 1)} ${t.common.ptsUnit}`}
-              hint={language === "tr" ? "Skor farkı tahminindeki ortalama mutlak hata" : "Average absolute error of predicted margin"}
-            />
-            <Stat
-              label={language === "tr" ? "Değerlendirilen maç" : "Games graded"}
-              value={`${s.games_graded}`}
-              hint={language === "tr" ? `${s.games_pending} bekleniyor` : `${s.games_pending} pending`}
-            />
-          </>
-        ) : (
-          <>
-            <Stat
-              label={t.paper.winRate}
-              value={pct(s.accuracy)}
-              hint={
-                s.games_graded
-                  ? (language === "tr" ? `${s.games_graded} maçta ${Math.round((s.accuracy ?? 0) * s.games_graded)} doğru` : `${Math.round((s.accuracy ?? 0) * s.games_graded)} of ${s.games_graded} graded`)
-                  : (language === "tr" ? "Henüz sonuçlanmış maç yok" : "No graded games yet")
-              }
-            />
-            <Stat
-              label="Brier / log loss"
-              value={`${num(s.brier, 3)} / ${num(s.log_loss, 3)}`}
-              hint={language === "tr" ? "Düşük değer daha iyi kalibrasyon" : "Lower is better"}
-            />
-            <Stat
-              label={language === "tr" ? "Ev sahibi bazına göre model farkı" : "Model edge vs home"}
-              value={edge == null ? "—" : `${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}%`}
-              hint={`${language === "tr" ? "Ev sahibi bazı: " : "Home baseline: "}${pct(s.home_baseline_accuracy)}`}
-            />
-            <Stat
-              label={language === "tr" ? "Fark hatası (MAE)" : "Margin error (MAE)"}
-              value={`${num(s.mae_margin, 1)} ${t.common.ptsUnit}`}
-              hint={language === "tr" ? "Ortalama skor farkı hatası" : "Average margin prediction error"}
-            />
-          </>
-        )}
-      </div>
-
-      {/* Tabs Header */}
-      <div className="flex border-b border-border">
-        <button
-          type="button"
-          onClick={() => setActiveTab("score")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-medium transition-colors ${
-            activeTab === "score"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
-          }`}
-        >
-          {t.paper.scoreAndTotalTab}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("winner")}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs font-medium transition-colors ${
-            activeTab === "winner"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
-          }`}
-        >
-          {t.paper.winnerTab}
-          {s.games_graded > 0 && (
-            <span className="rounded-full bg-background-tertiary px-1.5 py-0.5 text-xs text-text-muted">
-              {s.games_graded}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Date Navigation */}
-      <div className="flex flex-wrap items-center gap-2">
-        <DatePicker
-          dates={dates}
-          value={activeDate ?? ""}
-          onChange={setSelectedDate}
-          counts={dateCounts}
-          formatDate={formatDate}
-        />
-        <span className="text-xs text-text-secondary">
-          {dayGames.length} {language === "tr" ? "maç" : "games"}
-          {activeTab === "winner" &&
-            dayGraded.length > 0 &&
-            (language === "tr"
-              ? `, ${dayGraded.length} maçtan ${dayCorrect} tanesi doğru bilindi`
-              : `, ${dayCorrect} of ${dayGraded.length} picked correctly`)}
-        </span>
-      </div>
-
-      {/* TAB CONTENT: Score & Total */}
-      {activeTab === "score" && (
-        <Card padding="none" className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold text-text-primary">
-              Predicted vs final score, {activeDate}
-            </caption>
-            <thead className="bg-background-tertiary text-xs text-text-muted">
-              <tr>
-                <th className="px-4 py-2 font-medium">Game</th>
-                <th className="px-4 py-2 font-medium">Model score</th>
-                <th className="px-4 py-2 font-medium">Final score</th>
-                <th className="px-4 py-2 font-medium">Total error</th>
-                <th className="px-4 py-2 font-medium">Margin error</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dayGames.map((g) => {
-                const final = g.status === "final";
-                const predTotal = g.predicted_home_score + g.predicted_away_score;
-                return (
-                  <tr key={g.game_id} className="border-t border-border-light align-top">
-                    <td className="whitespace-nowrap px-4 py-2">
-                      <span className="inline-flex items-center gap-2">
-                        <TeamCell abbr={g.away_team} bold={false} />
-                        <span className="text-text-muted">@</span>
-                        <TeamCell abbr={g.home_team} bold={false} />
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2">
-                      <p className="text-text-primary">
-                        {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
-                      </p>
-                      <p className="text-xs text-text-secondary">Total {predTotal.toFixed(1)}</p>
-                      <p className="text-xs text-text-muted" title={injuryTitle(g)}>{injurySummary(g)}</p>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2">
-                      {final ? (
-                        <>
-                          <p className="text-text-primary">{g.actual_away_score} - {g.actual_home_score}</p>
-                          <p className="text-xs text-text-secondary">Total {g.actual_total}</p>
-                        </>
-                      ) : (
-                        <span className="text-text-muted">-</span>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2 text-text-secondary">
-                      {final && g.predicted_total != null && g.actual_total != null ? signed(g.predicted_total - g.actual_total) : "-"}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2 text-text-secondary">
-                      {final && g.predicted_margin != null && g.actual_margin != null ? signed(g.predicted_margin - g.actual_margin) : "-"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </Card>
-      )}
-
-      {/* TAB CONTENT: Winner */}
-      {activeTab === "winner" && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <RollingAccuracyChart games={games} />
-            <CalibrationChart bands={s.bands} />
+      <Card padding="md" className="space-y-3">
+        <h2 className="text-sm font-semibold text-text-primary">{p.howTitle}</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div>
+            <h3 className="text-sm font-medium text-text-primary">{p.howFrozenTitle}</h3>
+            <p className="mt-1 text-xs text-text-secondary">{p.howFrozen}</p>
           </div>
+          <div>
+            <h3 className="text-sm font-medium text-text-primary">{p.howGradedTitle}</h3>
+            <p className="mt-1 text-xs text-text-secondary">{p.howGraded}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-text-primary">{p.howLabelsTitle}</h3>
+            <ul className="mt-1 space-y-1 text-xs text-text-secondary">
+              <li className="flex items-start gap-2">
+                <Badge variant="warning" size="sm" className="shrink-0">{p.resultLate}</Badge>
+                <span>{p.howLate}</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Badge variant="info" size="sm" className="shrink-0">{p.resultBackfill}</Badge>
+                <span>{p.howBackfill}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </Card>
 
-          {s.bands.length > 0 && (
+      <section className="space-y-3" aria-labelledby="paper-season-summary">
+        <h2 id="paper-season-summary" className="text-lg font-semibold text-text-primary">{p.seasonSummary}</h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat
+            label={p.gamesLogged}
+            value={`${s.games_logged}`}
+            hint={fill(p.gamesLoggedHint, { graded: s.games_graded, pending: s.games_pending })}
+          />
+          <Stat
+            label={p.accuracy}
+            value={pct(s.accuracy)}
+            hint={
+              s.games_graded
+                ? fill(p.accuracyHint, { correct: Math.round((s.accuracy ?? 0) * s.games_graded), graded: s.games_graded })
+                : p.accuracyNone
+            }
+          />
+          <Stat label={p.homeBaseline} value={pct(s.home_baseline_accuracy)} hint={p.homeBaselineHint} />
+          <Stat
+            label={p.edge}
+            value={edge == null ? "-" : `${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}%`}
+            hint={p.edgeHint}
+          />
+        </div>
+        {(s.backfilled_graded > 0 || s.invalid_late > 0) && (
+          <p className="text-xs text-text-muted">
+            {fill(p.gamesGradedExtra, { backfill: s.backfilled_graded, late: s.invalid_late })}
+          </p>
+        )}
+      </section>
+
+      <div className="space-y-3">
+        <div role="tablist" className="flex border-b border-border">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              id={`paper-tab-${tab.id}`}
+              aria-selected={activeTab === tab.id}
+              aria-controls="paper-tabpanel"
+              onClick={() => setActiveTab(tab.id)}
+              className={`border-b-2 px-4 py-2.5 text-left transition-colors duration-150 ${
+                activeTab === tab.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
+              }`}
+            >
+              <span className="block text-sm font-medium">{tab.label}</span>
+              <span className="hidden text-xs font-normal text-text-muted sm:block">{tab.hint}</span>
+            </button>
+          ))}
+        </div>
+
+        <div id="paper-tabpanel" role="tabpanel" aria-labelledby={`paper-tab-${activeTab}`} className="space-y-4">
+          {activeTab === "winner" ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Stat label={p.brier} value={num(s.brier, 3)} hint={p.brierHint} />
+              <Stat label={p.logLoss} value={num(s.log_loss, 3)} hint={p.logLossHint} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Stat label={p.totalMae} value={`${num(s.mae_total, 1)} ${t.common.ptsUnit}`} hint={p.totalMaeHint} />
+              <Stat label={p.marginMae} value={`${num(s.mae_margin, 1)} ${t.common.ptsUnit}`} hint={p.marginMaeHint} />
+            </div>
+          )}
+
+          {activeTab === "winner" && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <RollingAccuracyChart games={games} />
+              <CalibrationChart bands={s.bands} />
+            </div>
+          )}
+
+          {activeTab === "winner" && s.bands.length > 0 && (
             <Card padding="none" className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold text-text-primary">
-                  Accuracy by model confidence
+                <caption className="border-b border-border-light px-4 py-3 text-left">
+                  <span className="block text-sm font-semibold text-text-primary">{p.bandsTitle}</span>
+                  <span className="mt-0.5 block text-xs font-normal text-text-secondary">{p.bandsHint}</span>
                 </caption>
                 <thead className="bg-background-tertiary text-xs text-text-muted">
                   <tr>
-                    <th className="px-4 py-2 font-medium">Confidence</th>
-                    <th className="px-4 py-2 font-medium">Games</th>
-                    <th className="px-4 py-2 font-medium">Model said</th>
-                    <th className="px-4 py-2 font-medium">Actual hit rate</th>
+                    <th scope="col" className="px-4 py-2 font-medium">{p.colConfidence}</th>
+                    <th scope="col" className="px-4 py-2 text-right font-medium">{p.colGames}</th>
+                    <th scope="col" className="px-4 py-2 text-right font-medium">{p.colModelSaid}</th>
+                    <th scope="col" className="px-4 py-2 text-right font-medium">{p.colHitRate}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {s.bands.map((b) => (
                     <tr key={b.label} className="border-t border-border-light">
-                      <td className="px-4 py-2 text-text-primary">{b.label}</td>
-                      <td className="px-4 py-2 text-text-secondary">{b.games}</td>
-                      <td className="px-4 py-2 text-text-secondary">{pct(b.mean_confidence)}</td>
-                      <td className="px-4 py-2 text-text-primary">{pct(b.accuracy)}</td>
+                      <td className="px-4 py-2 tabular-nums text-text-primary">{b.label}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{b.games}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{pct(b.mean_confidence)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-text-primary">{pct(b.accuracy)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -384,78 +331,133 @@ export default function PaperTrading() {
             </Card>
           )}
 
-          <Card padding="none" className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold text-text-primary">
-                {activeDate} ({s.games_logged} logged this season, {s.games_pending} pending)
-              </caption>
-              <thead className="bg-background-tertiary text-xs text-text-muted">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Game</th>
-                  <th className="px-4 py-2 font-medium">Model</th>
-                  <th className="px-4 py-2 font-medium">Final</th>
-                  <th className="px-4 py-2 font-medium">Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dayGames.map((g) => {
-                  const conf = Math.max(g.home_win_probability, 1 - g.home_win_probability);
-                  return (
-                    <tr key={g.game_id} className="border-t border-border-light align-top">
-                      <td className="whitespace-nowrap px-4 py-2">
-                        <span className="inline-flex items-center gap-2">
-                          <TeamCell abbr={g.away_team} bold={g.status === "final" && g.actual_winner === g.away_team} />
-                          <span className="text-text-muted">@</span>
-                          <TeamCell abbr={g.home_team} bold={g.status === "final" && g.actual_winner === g.home_team} />
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2">
-                        <p className="text-text-primary">
-                          {g.predicted_winner} <span className="text-text-muted">{pct(conf, 0)}</span>
-                        </p>
-                        <p className="text-xs text-text-secondary">
-                          Score {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
-                        </p>
-                        <p className="text-xs text-text-muted" title={injuryTitle(g)}>{injurySummary(g)}</p>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2">
-                        {g.status === "final" ? (
-                          <>
-                            <p className="text-text-primary">{g.actual_away_score} - {g.actual_home_score}</p>
-                            {g.predicted_margin != null && g.actual_margin != null && (
-                              <p className="text-xs text-text-secondary">
-                                Margin error {signed(g.predicted_margin - g.actual_margin)}
-                              </p>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-text-muted">-</span>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2">
-                        {!g.valid ? (
-                          <Badge variant="warning" size="sm">Logged late</Badge>
-                        ) : g.status === "pending" ? (
-                          <Badge variant="neutral" size="sm">Pending</Badge>
-                        ) : g.origin === "backfill" && g.correct != null ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <Badge variant={g.correct ? "success" : "error"} size="sm">{g.correct ? "Correct" : "Wrong"}</Badge>
-                            <Badge variant="info" size="sm">Backfill</Badge>
-                          </span>
-                        ) : g.correct ? (
-                          <Badge variant="success" size="sm">Correct</Badge>
-                        ) : (
-                          <Badge variant="error" size="sm">Wrong</Badge>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </Card>
+          <div className="flex flex-wrap items-center gap-2">
+            <DatePicker
+              dates={dates}
+              value={activeDate ?? ""}
+              onChange={setSelectedDate}
+              counts={dateCounts}
+              formatDate={formatDate}
+            />
+            <span className="text-xs tabular-nums text-text-secondary">
+              {fill(p.dayGames, { n: dayGames.length })}
+              {activeTab === "winner" &&
+                dayGraded.length > 0 &&
+                `, ${fill(p.dayCorrect, { correct: dayCorrect, graded: dayGraded.length })}`}
+            </span>
+          </div>
+
+          {activeTab === "score" ? (
+            <Card padding="none" className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <caption className="border-b border-border-light px-4 py-3 text-left">
+                  <span className="block text-sm font-semibold tabular-nums text-text-primary">
+                    {fill(p.scoreTableTitle, { date: activeDate ?? "" })}
+                  </span>
+                  <span className="mt-0.5 block text-xs font-normal text-text-secondary">{p.errorHint}</span>
+                </caption>
+                <thead className="bg-background-tertiary text-xs text-text-muted">
+                  <tr>
+                    <th scope="col" className="px-4 py-2 font-medium">{p.colGame}</th>
+                    <th scope="col" className="px-4 py-2 font-medium">{p.colPrediction}</th>
+                    <th scope="col" className="px-4 py-2 font-medium">{p.colFinal}</th>
+                    <th scope="col" className="px-4 py-2 text-right font-medium">{p.colTotalError}</th>
+                    <th scope="col" className="px-4 py-2 text-right font-medium">{p.colMarginError}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dayGames.map((g) => {
+                    const final = g.status === "final";
+                    const predTotal = g.predicted_home_score + g.predicted_away_score;
+                    return (
+                      <tr key={g.game_id} className="border-t border-border-light align-top">
+                        <td className="whitespace-nowrap px-4 py-2">
+                          <MatchupCell game={g} highlightWinner={false} />
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">
+                          <p className="text-text-primary">
+                            {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
+                          </p>
+                          <p className="text-xs text-text-secondary">{p.total} {predTotal.toFixed(1)}</p>
+                          <p className="text-xs text-text-muted" title={injuryTitle(g)}>{injurySummary(g)}</p>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">
+                          {final ? (
+                            <>
+                              <p className="text-text-primary">{g.actual_away_score} - {g.actual_home_score}</p>
+                              <p className="text-xs text-text-secondary">{p.total} {g.actual_total}</p>
+                            </>
+                          ) : (
+                            <span className="text-text-muted">-</span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-text-secondary">
+                          {final && g.predicted_total != null && g.actual_total != null ? signed(g.predicted_total - g.actual_total) : "-"}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-text-secondary">
+                          {final && g.predicted_margin != null && g.actual_margin != null ? signed(g.predicted_margin - g.actual_margin) : "-"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Card>
+          ) : (
+            <Card padding="none" className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold tabular-nums text-text-primary">
+                  {fill(p.winnerTableTitle, { date: activeDate ?? "", logged: s.games_logged, pending: s.games_pending })}
+                </caption>
+                <thead className="bg-background-tertiary text-xs text-text-muted">
+                  <tr>
+                    <th scope="col" className="px-4 py-2 font-medium">{p.colGame}</th>
+                    <th scope="col" className="px-4 py-2 font-medium">{p.colPrediction}</th>
+                    <th scope="col" className="px-4 py-2 font-medium">{p.colFinal}</th>
+                    <th scope="col" className="px-4 py-2 font-medium">{p.colResult}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dayGames.map((g) => {
+                    const conf = Math.max(g.home_win_probability, 1 - g.home_win_probability);
+                    return (
+                      <tr key={g.game_id} className="border-t border-border-light align-top">
+                        <td className="whitespace-nowrap px-4 py-2">
+                          <MatchupCell game={g} highlightWinner />
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">
+                          <p className="text-text-primary">
+                            {g.predicted_winner} <span className="text-text-muted">{pct(conf, 0)}</span>
+                          </p>
+                          <p className="text-xs text-text-secondary">
+                            {p.score} {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
+                          </p>
+                          <p className="text-xs text-text-muted" title={injuryTitle(g)}>{injurySummary(g)}</p>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">
+                          {g.status === "final" ? (
+                            <>
+                              <p className="text-text-primary">{g.actual_away_score} - {g.actual_home_score}</p>
+                              {g.predicted_margin != null && g.actual_margin != null && (
+                                <p className="text-xs text-text-secondary">
+                                  {fill(p.marginErrorInline, { v: signed(g.predicted_margin - g.actual_margin) })}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-text-muted">-</span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2">{resultBadges(g)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Card>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
