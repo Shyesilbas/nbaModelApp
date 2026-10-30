@@ -134,3 +134,6 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600141,2026-10-28,UTA,Jazz,111,SAS,Spurs,117,SAS,UTA,Regular Season,False,Final,2.0,,,0,0,False,False,Delta Center,"Salt Lake City, UT"
 0022600142,2026-10-28,DAL,Mavericks,120,OKC,Thunder,96,DAL,OKC,Regular Season,False,Final,2.0,,,0,0,False,False,American Airlines Center,"Dallas, TX"
 0022600143,2026-10-28,LAC,Clippers,87,LAL,Lakers,103,LAL,LAC,Regular Season,False,Final,2.0,,,0,0,False,False,Intuit Dome,"Inglewood, CA"
+0022600144,2026-10-29,ATL,Hawks,114,CLE,Cavaliers,111,ATL,CLE,Regular Season,False,Final,2.0,,,0,0,False,False,State Farm Arena,"Atlanta, GA"
+0022600145,2026-10-29,NOP,Pelicans,132,SAC,Kings,120,NOP,SAC,Regular Season,False,Final,2.0,,,0,0,False,False,Smoothie King Center,"New Orleans, LA"
+0022600146,2026-10-29,POR,Trail Blazers,103,MEM,Grizzlies,124,MEM,POR,Regular Season,False,Final,2.0,,,0,0,False,False,Moda Center,"Portland, OR"
