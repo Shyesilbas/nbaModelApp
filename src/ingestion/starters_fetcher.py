@@ -10,7 +10,6 @@ from typing import Iterable, Optional
 
 import pandas as pd
 
-from src.ingestion.nba_api_client import call_nba_api
 from src.ingestion.atomic_io import write_csv_atomic
 
 logger = logging.getLogger(__name__)
@@ -27,8 +26,8 @@ def fetch_game_starters(game_id: str) -> pd.DataFrame:
     """Starter flag for every player listed in the game's box score; empty if unavailable."""
     gid = str(game_id).zfill(10)
     try:
-        from nba_api.stats.endpoints import boxscoretraditionalv3
-        frames = call_nba_api(boxscoretraditionalv3.BoxScoreTraditionalV3, max_retries=3, timeout=30, game_id=gid).get_data_frames()
+        from src.ingestion.nba_api_client import fetch_boxscore_v3_frames
+        frames = fetch_boxscore_v3_frames(gid)
     except Exception as exc:
         logger.warning(f"Starter fetch failed for {gid}: {exc}")
         return pd.DataFrame(columns=STARTER_COLUMNS)

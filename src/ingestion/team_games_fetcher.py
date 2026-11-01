@@ -90,9 +90,8 @@ def fetch_team_games_from_boxscore(game_id: str, schedule_df: Optional[pd.DataFr
     
     df = None
     try:
-        from nba_api.stats.endpoints import boxscoretraditionalv3
-        bs3 = call_nba_api(boxscoretraditionalv3.BoxScoreTraditionalV3, game_id=game_id_str)
-        frames3 = bs3.get_data_frames()
+        from src.ingestion.nba_api_client import fetch_boxscore_v3_frames
+        frames3 = fetch_boxscore_v3_frames(game_id_str)
         if len(frames3) >= 3 and not frames3[2].empty:
             raw_t = frames3[2]
             rename_map = {

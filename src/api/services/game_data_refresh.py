@@ -128,9 +128,12 @@ def start_batch_refresh(game_ids: list[str], season: str | None = None) -> dict[
             _jobs[g] = {"status": "queued", "detail": None, "error": None}
 
     def _worker():
+        resolved = []
         for g in todo:
-            _, resolved, home, away = _resolve_game(g, season)
-            _run_refresh(g, resolved, home, away)
+            _, season_key, home, away = _resolve_game(g, season)
+            resolved.append((g, season_key, home, away))
+        with _ingest_lock:
+            _refresh_many_locked(resolved)
 
     if todo:
         threading.Thread(target=_worker, daemon=True).start()
@@ -183,86 +186,131 @@ def _run_refresh(game_id: str, season: str, home_team: str | None, away_team: st
         _refresh_locked(game_id, season, home_team, away_team)
 
 
+def _ingest_raw(game_id: str, season_key: str) -> None:
+    """Fetch one game's team and player box scores and starters into the season's raw files."""
+    from src.ingestion.team_games_fetcher import (
+        append_team_games_to_raw_dataset,
+        fetch_missing_team_games_by_game_ids,
+    )
+    from src.ingestion.player_games_fetcher import (
+        append_player_games_to_raw_dataset,
+        fetch_missing_player_games_by_game_ids,
+    )
+
+    team = fetch_missing_team_games_by_game_ids([game_id], season=season_key)
+    if team.empty:
+        raise RuntimeError("NBA API returned no team boxscore rows; retry later")
+    append_team_games_to_raw_dataset(team, season=season_key)
+
+    players = fetch_missing_player_games_by_game_ids([game_id], season=season_key)
+    if players.empty:
+        raise RuntimeError("NBA API returned no player boxscore rows; retry later")
+    append_player_games_to_raw_dataset(players, season=season_key)
+
+    try:
+        from src.ingestion.starters_fetcher import collect_starters
+        collect_starters([game_id], season=season_key)
+    except Exception as exc:  # starters are a side record; never fail the refresh over them
+        logger.warning("Starter recording failed for %s: %s", game_id, exc)
+
+
+def _write_play_by_play(game_id: str, season_key: str, home_team: str | None, away_team: str | None, team_bs: pd.DataFrame):
+    """Play-by-play payload and situational row for one game. Returns the payload or None."""
+    from src.processing.build_play_by_play import build_play_by_play_payload, write_payload
+    from src.ingestion.atomic_io import write_csv_atomic
+
+    # Team abbreviations for the payload when the schedule had none
+    teams = team_bs[team_bs["GAME_ID"].astype(str).str.zfill(10) == game_id]
+    if not home_team or not away_team:
+        for _, trow in teams.iterrows():
+            m = str(trow.get("MATCHUP", ""))
+            if "vs." in m:
+                home_team = home_team or trow.get("TEAM_ABBREVIATION")
+            elif "@" in m:
+                away_team = away_team or trow.get("TEAM_ABBREVIATION")
+
+    try:
+        payload = build_play_by_play_payload(game_id, home_team, away_team, 1, 10)
+        pbp_dir = REPO_ROOT / "data" / f"season={season_key}" / "raw" / "play_by_play"
+        write_payload(payload, pbp_dir)
+        try:
+            from src.features.pbp_situational import parse_pbp_file
+
+            pbp_rec = parse_pbp_file(str(pbp_dir / f"{game_id}.json"))
+            if pbp_rec:
+                from src.core.data_paths import PBP_SITUATIONAL_CSV
+
+                sit_path = PBP_SITUATIONAL_CSV
+                if sit_path.exists():
+                    sit_df = pd.read_csv(sit_path)
+                    sit_df = sit_df[sit_df["GAME_ID"].astype(str).str.zfill(10) != game_id]
+                    new_row = pd.DataFrame([pbp_rec])
+                    sit_df = pd.concat([sit_df, new_row], ignore_index=True)
+                    write_csv_atomic(sit_df, sit_path)
+        except Exception as exc:
+            logger.warning("PBP situational features failed for %s: %s", game_id, exc)
+        return payload
+    except Exception as exc:
+        logger.warning("Play-by-play fetch failed for %s: %s", game_id, exc)
+        return None
+
+
+def _finalize(games: list[tuple[str, str | None, str | None]], season_key: str) -> None:
+    """Rebuild the season once for games whose raw rows are in, then publish each game's result.
+
+    The season rebuild, the frontend store and the global store do not depend on how many games
+    were added, so a batch pays for them once instead of once per game."""
+    from src.core.season_utils import normalize_season
+    from src.ingestion.boxscore_service import BoxscoreService
+    from .frontend_data import game_detail_payload
+
+    season_key = normalize_season(season_key)
+    # Rebuilds the season's box scores and game_results.csv (status, scores, winner) atomically.
+    team_bs, _, _ = BoxscoreService(save=True, season=season_key).run_and_export()
+    payloads = {gid: _write_play_by_play(gid, season_key, home, away, team_bs) for gid, home, away in games}
+    _rebuild_frontend_store(season_key)
+    for gid, _, _ in games:
+        detail = game_detail_payload(gid, season_key)
+        with _lock:
+            _jobs[gid] = {"status": "complete", "detail": detail, "play_by_play": payloads[gid], "error": None}
+
+
+def _fail(game_id: str, exc: Exception) -> None:
+    logger.error("Error during on-demand game data refresh for %s: %s", game_id, exc, exc_info=exc)
+    with _lock:
+        _jobs[game_id] = {"status": "failed", "detail": None, "error": str(exc)}
+
+
 def _refresh_locked(game_id: str, season: str, home_team: str | None, away_team: str | None) -> None:
+    from src.core.season_utils import normalize_season
+
     with _lock:
         _jobs[game_id]["status"] = "running"
     try:
-        from src.ingestion.team_games_fetcher import (
-            append_team_games_to_raw_dataset,
-            fetch_missing_team_games_by_game_ids,
-        )
-        from src.ingestion.player_games_fetcher import (
-            append_player_games_to_raw_dataset,
-            fetch_missing_player_games_by_game_ids,
-        )
-        from src.ingestion.boxscore_service import BoxscoreService
-        from src.processing.build_play_by_play import build_play_by_play_payload, write_payload
-        from src.core.season_utils import normalize_season
-        from src.ingestion.atomic_io import write_csv_atomic
-
         season_key = normalize_season(season)
-        team = fetch_missing_team_games_by_game_ids([game_id], season=season_key)
-        if team.empty:
-            raise RuntimeError("NBA API returned no team boxscore rows; retry later")
-        append_team_games_to_raw_dataset(team, season=season_key)
-
-        players = fetch_missing_player_games_by_game_ids([game_id], season=season_key)
-        if players.empty:
-            raise RuntimeError("NBA API returned no player boxscore rows; retry later")
-        append_player_games_to_raw_dataset(players, season=season_key)
-
-        try:
-            from src.ingestion.starters_fetcher import collect_starters
-            collect_starters([game_id], season=season_key)
-        except Exception as exc:  # starters are a side record; never fail the refresh over them
-            logger.warning("Starter recording failed for %s: %s", game_id, exc)
-
-        # Rebuilds the season's box scores and game_results.csv (status, scores, winner) atomically.
-        team_bs, player_bs, _ = BoxscoreService(save=True, season=season_key).run_and_export()
-
-        # Team abbreviations for the play-by-play payload when the schedule had none
-        teams = team_bs[team_bs["GAME_ID"].astype(str).str.zfill(10) == game_id]
-        if not home_team or not away_team:
-            for _, trow in teams.iterrows():
-                m = str(trow.get("MATCHUP", ""))
-                if "vs." in m:
-                    home_team = home_team or trow.get("TEAM_ABBREVIATION")
-                elif "@" in m:
-                    away_team = away_team or trow.get("TEAM_ABBREVIATION")
-
-        payload = None
-        try:
-            payload = build_play_by_play_payload(game_id, home_team, away_team, 1, 10)
-            pbp_dir = REPO_ROOT / "data" / f"season={season_key}" / "raw" / "play_by_play"
-            write_payload(payload, pbp_dir)
-            try:
-                from src.features.pbp_situational import parse_pbp_file
-
-                pbp_rec = parse_pbp_file(str(pbp_dir / f"{game_id}.json"))
-                if pbp_rec:
-                    from src.core.data_paths import PBP_SITUATIONAL_CSV
-
-                    sit_path = PBP_SITUATIONAL_CSV
-                    if sit_path.exists():
-                        sit_df = pd.read_csv(sit_path)
-                        sit_df = sit_df[sit_df["GAME_ID"].astype(str).str.zfill(10) != game_id]
-                        new_row = pd.DataFrame([pbp_rec])
-                        sit_df = pd.concat([sit_df, new_row], ignore_index=True)
-                        write_csv_atomic(sit_df, sit_path)
-            except Exception as exc:
-                logger.warning("PBP situational features failed for %s: %s", game_id, exc)
-        except Exception as exc:
-            logger.warning("Play-by-play fetch failed for %s: %s", game_id, exc)
-
-        _rebuild_frontend_store(season_key)
-        from .frontend_data import game_detail_payload
-
-        detail = game_detail_payload(game_id, season_key)
-
-        with _lock:
-            _jobs[game_id] = {"status": "complete", "detail": detail, "play_by_play": payload, "error": None}
+        _ingest_raw(game_id, season_key)
+        _finalize([(game_id, home_team, away_team)], season_key)
     except Exception as exc:
-        logger.exception("Error during on-demand game data refresh for %s: %s", game_id, exc)
-        with _lock:
-            _jobs[game_id] = {"status": "failed", "detail": None, "error": str(exc)}
+        _fail(game_id, exc)
 
+
+def _refresh_many_locked(todo: list[tuple[str, str, str | None, str | None]]) -> None:
+    """Games of a batch: raw rows one by one, then one rebuild per season."""
+    from src.core.season_utils import normalize_season
+
+    ingested: dict[str, list[tuple[str, str | None, str | None]]] = {}
+    for gid, season, home, away in todo:
+        with _lock:
+            _jobs[gid]["status"] = "running"
+        try:
+            season_key = normalize_season(season)
+            _ingest_raw(gid, season_key)
+            ingested.setdefault(season_key, []).append((gid, home, away))
+        except Exception as exc:
+            _fail(gid, exc)
+    for season_key, games in ingested.items():
+        try:
+            _finalize(games, season_key)
+        except Exception as exc:
+            for gid, _, _ in games:
+                _fail(gid, exc)

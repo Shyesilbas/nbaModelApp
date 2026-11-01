@@ -102,9 +102,8 @@ def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.Data
 
     # Attempt BoxScoreTraditionalV3 first (active official endpoint)
     try:
-        from nba_api.stats.endpoints import boxscoretraditionalv3
-        bs3 = call_nba_api(boxscoretraditionalv3.BoxScoreTraditionalV3, game_id=game_id_str)
-        frames3 = bs3.get_data_frames()
+        from src.ingestion.nba_api_client import fetch_boxscore_v3_frames
+        frames3 = fetch_boxscore_v3_frames(game_id_str)
         if len(frames3) >= 1 and not frames3[0].empty:
             raw_p = frames3[0].copy()
             rename_map = {
@@ -288,13 +287,26 @@ def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.Data
         logger.error(f"Fallback fetch failed for player game {game_id_str}: {e}")
         return pd.DataFrame()
 
+# Up to this many games a per-game box score is cheaper than downloading the whole season's log.
+PER_GAME_FETCH_LIMIT = 5
+
+
 def fetch_missing_player_games_by_game_ids(game_ids: List[str], season: str = None, schedule_df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
     """
     Fetches player game logs specifically for missing game IDs.
+
+    A few games are read from their own box scores; many go through the season game log in one call.
     """
     if not game_ids:
         return pd.DataFrame(columns=EXPECTED_COLUMNS)
-        
+
+    if len(game_ids) <= PER_GAME_FETCH_LIMIT:
+        frames = [fetch_player_games_from_boxscore(g, schedule_df, season=season) for g in game_ids]
+        frames = [f for f in frames if not f.empty]
+        if frames:
+            return pd.concat(frames, ignore_index=True)
+        # Nothing recovered per game: let the season log have a try before giving up.
+
     # Group missing game IDs by API season type based on prefix
     api_queries = set()
     for gid in game_ids:

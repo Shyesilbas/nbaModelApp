@@ -8,6 +8,7 @@ retry logic (exponential backoff), and rate limit handling.
 import time
 import random
 import logging
+import threading
 from typing import Any
 
 # Set up logging
@@ -52,3 +53,29 @@ def call_nba_api(endpoint_class: Any, *args, max_retries: int = 5, initial_backo
             retry_sleep = backoff * (2 ** (attempt - 1)) + random.uniform(0.1, 1.0)
             logger.info(f"Retrying in {retry_sleep:.2f} seconds...")
             time.sleep(retry_sleep)
+
+
+_BOXSCORE_TTL_SECONDS = 120
+_boxscore_cache: dict[str, tuple[float, list]] = {}
+_boxscore_lock = threading.Lock()
+
+
+def fetch_boxscore_v3_frames(game_id: str, **kwargs) -> list:
+    """BoxScoreTraditionalV3 data frames for one game, shared by the team, player and starter fetchers.
+
+    One game ingest needs the same response three times; it is kept for a short time so it is
+    requested once. Short, because a box score fetched while the game is live must not be reused."""
+    from nba_api.stats.endpoints import boxscoretraditionalv3
+
+    gid = str(game_id).zfill(10)
+    now = time.time()
+    with _boxscore_lock:
+        hit = _boxscore_cache.get(gid)
+        if hit and now - hit[0] < _BOXSCORE_TTL_SECONDS:
+            return [f.copy() for f in hit[1]]
+    frames = call_nba_api(boxscoretraditionalv3.BoxScoreTraditionalV3, game_id=gid, **kwargs).get_data_frames()
+    with _boxscore_lock:
+        for key in [k for k, (t, _) in _boxscore_cache.items() if now - t >= _BOXSCORE_TTL_SECONDS]:
+            del _boxscore_cache[key]
+        _boxscore_cache[gid] = (now, frames)
+    return [f.copy() for f in frames]
