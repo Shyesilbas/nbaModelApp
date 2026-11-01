@@ -1,5 +1,4 @@
 import React from "react";
-import { Calendar } from "lucide-react";
 import type { DayGroup, DisplayMode } from "./types";
 import { FixtureMatchRow } from "./FixtureMatchRow";
 import { FixtureMatchCard } from "./FixtureMatchCard";
@@ -60,15 +59,11 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
   return (
     <div className="space-y-6">
       {dayGroups.map((dayGroup) => (
-        <div key={dayGroup.date} className="space-y-2.5">
-          {/* Day Subheader */}
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary">
-              <Calendar className="h-3.5 w-3.5 text-primary" />
-              <span>{dayGroup.formattedDate}</span>
-            </div>
-            <span className="rounded-full bg-background-tertiary px-2 py-0.5 text-xs font-semibold text-text-muted">
-              {dayGroup.games.length} {language === "tr" ? "maç" : (dayGroup.games.length === 1 ? "game" : "games")}
+        <div key={dayGroup.date} className="space-y-2">
+          <div className="flex items-baseline justify-between px-1">
+            <h3 className="text-sm font-semibold text-text-primary">{dayGroup.formattedDate}</h3>
+            <span className="text-xs text-text-muted">
+              {dayGroup.games.length} {language === "tr" ? "maç" : dayGroup.games.length === 1 ? "game" : "games"}
             </span>
           </div>
 
@@ -92,7 +87,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
               })}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               {dayGroup.games.map((game) => {
                 const awayAbbr = game.AWAY_TEAM_ABBREVIATION ?? "";
                 const homeAbbr = game.HOME_TEAM_ABBREVIATION ?? "";

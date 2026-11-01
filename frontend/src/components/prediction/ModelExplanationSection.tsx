@@ -1,15 +1,6 @@
 import { useMemo, useState } from "react";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  Eye,
-  EyeOff,
-  Info,
-  Lightbulb,
-  Sparkles,
-  Trophy,
-  Zap,
-} from "lucide-react";
+import { Info } from "lucide-react";
+import TeamLogo from "../TeamLogo";
 import type { TeamInfo } from "./types";
 import { formatFeatureInsight, type ExplanationContext } from "./featureLabels";
 import { useLanguage } from "../../context/LanguageContext";
@@ -23,39 +14,8 @@ type FeatureImpact = {
   influence?: "FAVORS_HOME" | "FAVORS_AWAY" | "NEUTRAL" | string;
 };
 
-// Takım lehine ibaresi
-function TeamAdvantageBadge({
-  influence,
-  homeInfo,
-  awayInfo,
-}: {
-  influence?: string;
-  homeInfo: TeamInfo;
-  awayInfo: TeamInfo;
-}) {
-  const { language } = useLanguage();
-  const isHome = influence === "FAVORS_HOME";
-  const isAway = influence === "FAVORS_AWAY";
-  const team = isHome ? homeInfo : isAway ? awayInfo : null;
-
-  if (!team) {
-    return (
-      <span className="text-xs font-medium text-text-muted">
-        {language === "tr" ? "Nötr" : "Neutral"}
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-text-primary">
-      {isHome ? <ArrowUpRight size={16} className="text-text-secondary" /> : <ArrowDownRight size={16} className="text-text-secondary" />}
-      <span>{team.name} ({team.abbr}) {language === "tr" ? "Lehine" : "Advantage"}</span>
-    </span>
-  );
-}
-
-// Tek bir sebebi gosteren sade ve ferah editoryal satir
-function ReasonCard({
+// Tek bir sebep: lehine olan takım solda, açıklama ortada, etki payı sağda
+function ReasonRow({
   feature,
   rank,
   totalImpact,
@@ -72,6 +32,8 @@ function ReasonCard({
   showTech: boolean;
   ctx?: ExplanationContext;
 }) {
+  const { language } = useLanguage();
+  const tr = language === "tr";
   const formatted = formatFeatureInsight(
     feature.feature_name,
     feature.value,
@@ -80,67 +42,53 @@ function ReasonCard({
     awayInfo,
     ctx
   );
-
-  const contributionAbs = Math.abs(feature.contribution);
-  const share = Math.round((contributionAbs / totalImpact) * 100);
+  const influence = formatted.neutralBadge ? "NEUTRAL" : feature.influence;
+  const team = influence === "FAVORS_HOME" ? homeInfo : influence === "FAVORS_AWAY" ? awayInfo : null;
+  const share = Math.round((Math.abs(feature.contribution) / totalImpact) * 100);
 
   return (
-    <article className="py-3 first:pt-1 last:pb-1">
-      {/* 1. Baslik, sira ve lehte olan takim */}
-      <div className="flex items-center justify-between gap-3 mb-1.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-semibold tabular-nums text-text-muted">
-            {rank}.
-          </span>
-          <h4 className="text-xs font-semibold text-text-primary truncate">
-            {formatted.title}
-          </h4>
-          <span className="text-xs text-text-muted">·</span>
-          <span className="text-xs text-text-secondary">
-            {formatted.category}
-          </span>
-        </div>
+    <li className="grid grid-cols-[auto_1fr_auto] items-start gap-x-4 gap-y-1 py-4">
+      <span className="w-5 pt-0.5 text-right text-xs font-semibold tabular-nums text-text-muted">{rank}</span>
 
-        <TeamAdvantageBadge
-          influence={formatted.neutralBadge ? "NEUTRAL" : feature.influence}
-          homeInfo={homeInfo}
-          awayInfo={awayInfo}
-        />
-      </div>
-
-      {/* 2. Sade Aciklama Metni */}
-      <p className="text-xs leading-relaxed text-text-secondary pl-4">
-        {formatted.insight}
-      </p>
-
-      {/* 3. Bar yerine Guc Puani ve Olculen Deger Bilgisi */}
-      <div className="pl-4 pt-1.5 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2 text-text-muted">
-          <span className="tabular-nums">Etki Payı: %{share}</span>
-        </div>
-
-        {formatted.simpleValue && (
-          <span className="text-text-secondary font-medium tabular-nums text-xs">
-            {formatted.simpleValue}
-          </span>
+      <div className="min-w-0">
+        <h4 className="text-sm font-semibold text-text-primary">{formatted.title}</h4>
+        <p className="mt-1 text-sm leading-relaxed text-text-secondary">{formatted.insight}</p>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-3 text-xs text-text-muted">
+          <span>{formatted.category}</span>
+          {formatted.simpleValue && <span className="tabular-nums text-text-secondary">{formatted.simpleValue}</span>}
+        </p>
+        {showTech && (
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded border border-border bg-background-tertiary/40 px-2.5 py-1.5 text-xs tabular-nums text-text-secondary">
+            <span>{tr ? "Değişken" : "Feature"}: <strong>{feature.feature_name}</strong></span>
+            <span>{tr ? "Ham değer" : "Raw value"}: <strong>{feature.value}</strong></span>
+            <span>
+              SHAP:{" "}
+              <strong className={feature.contribution >= 0 ? "text-status-success" : "text-status-error"}>
+                {feature.contribution >= 0 ? "+" : ""}
+                {feature.contribution.toFixed(4)}
+              </strong>
+            </span>
+          </p>
         )}
       </div>
 
-      {/* Opsiyonel Teknik Detay Alani */}
-      {showTech && (
-        <div className="ml-4 mt-2 rounded border border-border bg-background-tertiary/40 px-2.5 py-1.5 text-xs text-text-secondary flex flex-wrap items-center justify-between gap-2 tabular-nums">
-          <span>Değişken: <strong>{feature.feature_name}</strong></span>
-          <span>Ham Değer: <strong>{feature.value}</strong></span>
-          <span>
-            SHAP:{" "}
-            <strong className={feature.contribution >= 0 ? "text-status-success" : "text-status-error"}>
-              {feature.contribution >= 0 ? "+" : ""}
-              {feature.contribution.toFixed(4)}
-            </strong>
+      <div className="flex w-24 shrink-0 flex-col items-end gap-1.5 text-right">
+        {team ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-text-primary">
+            <TeamLogo abbr={team.abbr} name={team.name} size={20} />
+            {team.abbr}
           </span>
+        ) : (
+          <span className="text-xs text-text-muted">{tr ? "Nötr" : "Neutral"}</span>
+        )}
+        <div className="h-1 w-full overflow-hidden rounded-full bg-background-tertiary" aria-hidden="true">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${share}%` }} />
         </div>
-      )}
-    </article>
+        <span className="text-xs tabular-nums text-text-muted">
+          {tr ? "Etki" : "Impact"} %{share}
+        </span>
+      </div>
+    </li>
   );
 }
 
@@ -263,101 +211,67 @@ export function ModelExplanationSection({
       )
     : null;
 
+  const tr = language === "tr";
+  const tabBtn = (id: "win" | "score", label: string) => (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={activeTab === id}
+      onClick={() => setActiveTab(id)}
+      className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
+        activeTab === id
+          ? "border-primary font-semibold text-text-primary"
+          : "border-transparent text-text-secondary hover:text-text-primary"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <section className="space-y-4">
-      {/* 1. Baslik Alani */}
-      <header className="rounded border border-border bg-background-primary p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-background-secondary text-primary">
-              <Sparkles size={18} />
-            </span>
-            <div>
-              <h3 className="text-sm font-semibold text-text-primary">
-                {language === "tr" ? "Modelin Karar Gerekçeleri" : "Model Decision Drivers"}
-              </h3>
-              <p className="mt-0.5 text-xs text-text-secondary">
-                {language === "tr" ? (
-                  <>
-                    Modelin bu maçı değerlendirirken en çok ağırlık verdiği ve tercihi belirleyen <strong>5 temel neden</strong>:
-                  </>
-                ) : (
-                  <>
-                    The top <strong>5 primary drivers</strong> weighted by the model for this matchup:
-                  </>
-                )}
-              </p>
-            </div>
+    <section className="space-y-5">
+      {top1Insight && top2Insight && (
+        <div className="flex items-start gap-4">
+          <TeamLogo abbr={favoredTeam.abbr} name={favoredTeam.name} size={44} />
+          <div className="min-w-0">
+            <p className="text-xs text-text-muted">{tr ? "Modelin özeti" : "Model summary"}</p>
+            <p className="mt-0.5 text-base leading-relaxed text-text-primary">
+              {tr ? (
+                <>
+                  Model <strong>{favoredTeam.name}</strong> tarafını tutuyor; en belirleyici nedenler{" "}
+                  <strong>{top1Insight.title}</strong> ve <strong>{top2Insight.title}</strong>.
+                </>
+              ) : (
+                <>
+                  The model leans <strong>{favoredTeam.name}</strong>, mainly because of{" "}
+                  <strong>{top1Insight.title}</strong> and <strong>{top2Insight.title}</strong>.
+                </>
+              )}
+            </p>
           </div>
-
-          {winnerName && (
-            <div className="inline-flex shrink-0 items-center gap-1.5 rounded-sm border border-border bg-background-secondary px-2.5 py-1 text-xs font-semibold text-text-primary">
-              <span className="text-text-secondary font-normal">{language === "tr" ? "Favori:" : "Favored:"}</span>
-              <span>{favoredTeam.name}</span>
-            </div>
-          )}
         </div>
-      </header>
+      )}
 
-      {/* 2. Sekme Seçici */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div
-          role="tablist"
-          aria-label={language === "tr" ? "Sebep kategorileri" : "Driver categories"}
-          className="inline-flex rounded border border-border bg-background-secondary p-0.5 gap-1"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "win"}
-            onClick={() => setActiveTab("win")}
-            className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-              activeTab === "win"
-                ? "bg-background-primary text-text-primary border border-border "
-                : "text-text-secondary hover:text-text-primary"
-            }`}
-          >
-            <Trophy size={16} />
-            <span>{language === "tr" ? "Kazanma Tercihi (5 Sebep)" : "Win Probability (5 Factors)"}</span>
-          </button>
-
-          {scoreTop5.length > 0 && (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "score"}
-              onClick={() => setActiveTab("score")}
-              className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                activeTab === "score"
-                  ? "bg-background-primary text-text-primary border border-border "
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              <Zap size={16} />
-              <span>{language === "tr" ? "Skor ve Sayı Beklentisi (5 Sebep)" : "Score & Pace Profile (5 Factors)"}</span>
-            </button>
-          )}
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border">
+        <div role="tablist" aria-label={tr ? "Sebep kategorileri" : "Driver categories"} className="flex">
+          {tabBtn("win", tr ? "Kazanma tercihi" : "Win probability")}
+          {scoreTop5.length > 0 && tabBtn("score", tr ? "Skor ve tempo" : "Score and pace")}
         </div>
-
-        {/* Teknik Değerleri Göster / Gizle */}
         <button
           type="button"
           onClick={() => setShowTechDetails((prev) => !prev)}
-          className="inline-flex items-center gap-1.5 rounded border border-border bg-background-primary px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+          aria-pressed={showTechDetails}
+          className="pb-2 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary cursor-pointer"
         >
-          {showTechDetails ? <EyeOff size={16} /> : <Eye size={16} />}
-          <span>
-            {showTechDetails
-              ? (language === "tr" ? "Teknik Değerleri Gizle" : "Hide Technical Values")
-              : (language === "tr" ? "Teknik Verileri Göster" : "Show Technical Details")}
-          </span>
+          {showTechDetails
+            ? (tr ? "Teknik verileri gizle" : "Hide technical details")
+            : (tr ? "Teknik verileri göster" : "Show technical details")}
         </button>
       </div>
 
-      {/* 3. Tam 5 Tane Öne Çıkan Sebep (Çizgili Editoryal Liste) */}
-      <div className="rounded border border-border bg-background-primary divide-y divide-border-light px-4">
+      <ol className="divide-y divide-border-light">
         {activeFeatures.map((feature, index) => (
-          <ReasonCard
+          <ReasonRow
             key={`${feature.feature_name}-${index}`}
             feature={feature}
             rank={index + 1}
@@ -368,39 +282,7 @@ export function ModelExplanationSection({
             ctx={winContext}
           />
         ))}
-      </div>
-
-      {/* 4. Özet Değerlendirme Kutusu */}
-      {top1Insight && top2Insight && (
-        <footer className="rounded border border-border bg-background-secondary p-4">
-          <div className="flex items-start gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-background-primary text-primary">
-              <Lightbulb size={16} />
-            </span>
-            <div className="min-w-0">
-              <h5 className="text-xs font-semibold text-text-primary">
-                {language === "tr" ? "Genel Değerlendirme" : "Model Verdict"}
-              </h5>
-              <p className="mt-1 text-xs sm:text-sm leading-relaxed text-text-secondary">
-                {language === "tr" ? (
-                  <>
-                    Modelimiz bu karşılaşmada özellikle <strong>{favoredTeam.name}</strong> lehine olan{" "}
-                    <strong className="text-text-primary font-medium">{top1Insight.title}</strong> ve{" "}
-                    <strong className="text-text-primary font-medium">{top2Insight.title}</strong> avantajları sayesinde
-                    bu takımın galibiyete daha yakın olduğunu değerlendirmektedir.
-                  </>
-                ) : (
-                  <>
-                    The model evaluates <strong>{favoredTeam.name}</strong> as favored in this matchup, primarily driven by{" "}
-                    <strong className="text-text-primary font-medium">{top1Insight.title}</strong> and{" "}
-                    <strong className="text-text-primary font-medium">{top2Insight.title}</strong> advantages.
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-        </footer>
-      )}
+      </ol>
     </section>
   );
 }

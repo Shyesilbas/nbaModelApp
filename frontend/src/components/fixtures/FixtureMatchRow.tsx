@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronRight, Clock, Sparkles } from "lucide-react";
+import { ChevronRight, Sparkles } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { fmtTipoffTR } from "../game-results/utils";
@@ -24,6 +24,7 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
   awayRecord,
 }) => {
   const { language } = useLanguage();
+  const tr = language === "tr";
   const isCompleted =
     game.GAME_STATUS === "Final" ||
     game.GAME_STATUS === "FINAL" ||
@@ -34,119 +35,72 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
   const homeAbbr = game.HOME_TEAM_ABBREVIATION ?? "HOME";
   const awayFullName = (isKnownTeamAbbr(awayAbbr) ? TEAM_NAME_BY_ABBR[awayAbbr] : null) || game.AWAY_TEAM_NAME || awayAbbr;
   const homeFullName = (isKnownTeamAbbr(homeAbbr) ? TEAM_NAME_BY_ABBR[homeAbbr] : null) || game.HOME_TEAM_NAME || homeAbbr;
-  const awayName = getTeamShortName(awayAbbr, awayFullName);
-  const homeName = getTeamShortName(homeAbbr, homeFullName);
 
   const awayWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === awayAbbr;
   const homeWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === homeAbbr;
   const margin = isCompleted ? Math.abs((Number(game.HOME_SCORE) || 0) - (Number(game.AWAY_SCORE) || 0)) : 0;
 
+  const side = (abbr: string, fullName: string, record: string | undefined, won: boolean, align: "right" | "left") => (
+    <div className={`flex min-w-0 flex-1 items-center gap-2.5 ${align === "right" ? "justify-end text-right" : "justify-start text-left"}`}>
+      {align === "left" && <TeamLogo abbr={abbr} name={fullName} size={28} className="shrink-0" />}
+      <div className="min-w-0">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelectTeam?.(abbr);
+          }}
+          className={`block max-w-full truncate text-sm transition-colors hover:underline ${
+            align === "right" ? "ml-auto" : ""
+          } ${won ? "font-semibold text-text-primary" : "text-text-secondary hover:text-text-primary"}`}
+          title={fullName}
+        >
+          <span className="hidden md:inline">{fullName}</span>
+          <span className="md:hidden">{getTeamShortName(abbr, fullName)}</span>
+        </button>
+        {record && <p className="hidden text-xs tabular-nums text-text-muted sm:block">{record}</p>}
+      </div>
+      {align === "right" && <TeamLogo abbr={abbr} name={fullName} size={28} className="shrink-0" />}
+    </div>
+  );
+
+  const extra = [
+    game.SERIES_GAME_NUMBER != null ? `${tr ? "Maç" : "Game"} ${game.SERIES_GAME_NUMBER}` : null,
+    game.IS_ELIMINATION_GAME ? (tr ? "Eleme" : "Elimination") : null,
+  ].filter(Boolean);
+
   return (
     <div
       onClick={onOpen}
-      className="group flex cursor-pointer items-center justify-between gap-2 px-3.5 py-2.5 text-xs transition-colors hover:bg-background-tertiary/70 sm:gap-4 sm:px-4 sm:py-3"
+      className="group flex cursor-pointer items-center gap-3 px-3.5 py-3 transition-colors hover:bg-background-tertiary/70 sm:gap-4 sm:px-4"
     >
-      {/* 1. Status / Time */}
-      <div className="w-16 shrink-0 text-left sm:w-20">
-        {isCompleted ? (
-          <div className="flex items-center gap-1.5 tabular-nums text-xs font-semibold text-text-secondary">
-            <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
-            <span>{language === "tr" ? "MS" : "Final"}</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1 text-xs font-semibold text-text-secondary sm:text-xs">
-            <Clock className="hidden h-3 w-3 shrink-0 text-text-muted sm:inline" />
-            <span className="truncate">{fmtTipoffTR(game.GAME_START_UTC, language) ?? (game.GAME_STATUS || "vs")}</span>
-          </div>
-        )}
+      <div className="w-14 shrink-0 text-xs text-text-muted sm:w-20">
+        {isCompleted ? (tr ? "Bitti" : "Final") : (fmtTipoffTR(game.GAME_START_UTC, language) ?? (game.GAME_STATUS || "-"))}
       </div>
 
-      {/* 2. Teams & Score Center */}
-      <div className="flex flex-1 min-w-0 items-center justify-center gap-2 sm:gap-4">
-        {/* Away Team */}
-        <div className="flex flex-1 min-w-0 items-center justify-end gap-2 text-right">
-          {awayRecord && (
-            <span className="hidden sm:inline shrink-0 text-xs tabular-nums text-text-muted">
-              ({awayRecord})
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelectTeam?.(awayAbbr);
-            }}
-            className={`truncate text-xs font-semibold transition-colors hover:underline sm:text-sm ${
-              awayWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
-            }`}
-            title={awayFullName}
-          >
-            <span className="hidden md:inline">{awayName}</span>
-            <span className="inline md:hidden">{awayAbbr}</span>
-          </button>
-          <TeamLogo abbr={awayAbbr} name={awayName} size={24} className="shrink-0" />
-        </div>
+      <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-5">
+        {side(awayAbbr, awayFullName, awayRecord, awayWon, "right")}
 
-        {/* Score / VS Display (Clean text, no box for VS) */}
-        <div className="flex shrink-0 min-w-[58px] items-center justify-center sm:min-w-[70px]">
+        <div className="w-16 shrink-0 text-center tabular-nums sm:w-20">
           {isCompleted ? (
-            <div className="rounded bg-primary px-2.5 py-1 text-center tabular-nums text-xs font-semibold text-white sm:text-sm">
-              <span>{game.AWAY_SCORE}</span>
-              <span className="mx-1 text-white/70">-</span>
-              <span>{game.HOME_SCORE}</span>
-            </div>
+            <p className="text-base">
+              <span className={awayWon ? "font-semibold text-text-primary" : "text-text-secondary"}>{game.AWAY_SCORE}</span>
+              <span className="mx-1.5 text-text-muted">-</span>
+              <span className={homeWon ? "font-semibold text-text-primary" : "text-text-secondary"}>{game.HOME_SCORE}</span>
+            </p>
           ) : (
-            <span className="text-xs font-medium text-text-muted">
-              VS
-            </span>
+            <span className="text-xs text-text-muted">{tr ? "karşı" : "vs"}</span>
           )}
         </div>
 
-        {/* Home Team */}
-        <div className="flex flex-1 min-w-0 items-center justify-start gap-2 text-left">
-          <TeamLogo abbr={homeAbbr} name={homeName} size={24} className="shrink-0" />
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelectTeam?.(homeAbbr);
-            }}
-            className={`truncate text-xs font-semibold transition-colors hover:underline sm:text-sm ${
-              homeWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
-            }`}
-            title={homeFullName}
-          >
-            <span className="hidden md:inline">{homeName}</span>
-            <span className="inline md:hidden">{homeAbbr}</span>
-          </button>
-          {homeRecord && (
-            <span className="hidden sm:inline shrink-0 text-xs tabular-nums text-text-muted">
-              ({homeRecord})
-            </span>
-          )}
-        </div>
+        {side(homeAbbr, homeFullName, homeRecord, homeWon, "left")}
       </div>
 
-      {/* 3. Prediction / Margin Badge & Chevron */}
-      <div className="flex shrink-0 min-w-[75px] items-center justify-end gap-2 sm:min-w-[130px]">
+      <div className="flex shrink-0 items-center justify-end gap-3 sm:w-36">
         {isCompleted ? (
-          <div className="hidden items-center gap-1 text-xs text-text-muted sm:flex">
-            {margin > 0 && (
-              <span className="rounded border border-border bg-background-tertiary px-1.5 py-0.5 tabular-nums text-xs font-semibold text-text-secondary">
-                +{margin}
-              </span>
-            )}
-            {game.SERIES_GAME_NUMBER != null && (
-              <span className="rounded border border-border bg-background-tertiary px-1.5 py-0.5 text-xs font-medium text-text-secondary">
-                G{game.SERIES_GAME_NUMBER}
-              </span>
-            )}
-            {game.IS_ELIMINATION_GAME && (
-              <span className="rounded border border-border bg-background-tertiary px-1.5 py-0.5 text-xs font-semibold text-status-error">
-                Elim
-              </span>
-            )}
-          </div>
+          <p className="hidden text-right text-xs text-text-muted sm:block">
+            {[margin > 0 ? `+${margin}` : null, ...extra].filter(Boolean).join(" · ")}
+          </p>
         ) : onPredict ? (
           <button
             type="button"
@@ -154,16 +108,13 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
               event.stopPropagation();
               onPredict();
             }}
-            className="hidden items-center gap-1 rounded-full border border-border bg-background-tertiary px-2 py-0.5 text-xs font-semibold text-text-primary transition-colors hover:border-primary sm:inline-flex"
+            className="hidden items-center gap-1 text-xs font-medium text-primary hover:underline sm:inline-flex"
           >
-            <Sparkles size={16} className="text-primary" />
-            <span>Model</span>
+            <Sparkles size={14} />
+            {tr ? "Tahmin" : "Predict"}
           </button>
         ) : null}
-
-        <span className="flex items-center rounded border border-border/80 bg-background-primary p-1 text-text-secondary transition-all group-hover:bg-background-tertiary group-hover:text-text-primary group-hover:translate-x-0.5">
-          <ChevronRight className="h-3.5 w-3.5" />
-        </span>
+        <ChevronRight size={16} className="text-text-muted transition-colors group-hover:text-text-primary" />
       </div>
     </div>
   );

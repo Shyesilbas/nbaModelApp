@@ -3,7 +3,7 @@ import { ArrowRight, Flame, Search, Stethoscope } from "lucide-react";
 import { Badge, Button, Card, DatePicker, EmptyState, InlineError, Input, Select, Skeleton } from "./common";
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
-import { loadPrivateApiFresh } from "../lib/dataCache";
+import { loadPrivateApi, loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
 import { reportStampText } from "../lib/injuryTime";
 import { useLanguage } from "../context/LanguageContext";
@@ -64,6 +64,9 @@ const STATUS_VARIANT: Record<string, "error" | "warning" | "neutral" | "success"
 
 const isUncertain = (status: string) => status === "Questionable" || status === "Doubtful";
 
+const normName = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
+
 const todayEt = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
 function StatusBadge({ status }: { status: string | null }) {
@@ -108,6 +111,21 @@ export default function InjuriesTab() {
   const [rotationOnly, setRotationOnly] = useState(false);
 
   const requestKey = `${date}|${reloadKey}`;
+
+  // The report only carries ids for some rows; profiles let every row show a headshot.
+  const [idByName, setIdByName] = useState<Record<string, number>>({});
+  useEffect(() => {
+    loadPrivateApi<Array<{ PLAYER_ID: number; PLAYER_NAME: string }>>("/frontend-data-api/player-profiles")
+      .then((profiles) => {
+        const map: Record<string, number> = {};
+        (profiles ?? []).forEach((p) => {
+          map[normName(p.PLAYER_NAME)] = p.PLAYER_ID;
+        });
+        setIdByName(map);
+      })
+      .catch(() => {});
+  }, []);
+  const idFor = (name: string, id?: number | null) => id || idByName[normName(name)] || 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -275,7 +293,7 @@ export default function InjuriesTab() {
                     className="flex items-center justify-between gap-3 rounded border border-border bg-background-primary p-3"
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      <TeamLogo abbr={c.team} name="" size={24} />
+                      <PlayerPhoto playerId={idFor(c.player_name)} name={c.player_name} size={36} className="shrink-0" />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-text-primary">{c.player_name}</p>
                         <p className="truncate text-xs text-text-secondary">
@@ -427,7 +445,7 @@ export default function InjuriesTab() {
                             <tr key={`${p.team}-${p.player_name}`} className="hover:bg-background-secondary">
                               <td className="whitespace-nowrap px-4 py-3">
                                 <div className="flex items-center gap-3">
-                                  <PlayerPhoto playerId={p.player_id ?? 0} name={p.player_name} size={32} className="shrink-0" />
+                                  <PlayerPhoto playerId={idFor(p.player_name, p.player_id)} name={p.player_name} size={36} className="shrink-0" />
                                   <div>
                                     <div className="flex items-center gap-2">
                                       <span className="font-semibold text-text-primary">{p.player_name}</span>
@@ -482,9 +500,10 @@ export default function InjuriesTab() {
                     {data.recent_returns.map((r) => (
                       <tr key={`${r.team}-${r.player_name}`} className="hover:bg-background-secondary">
                         <td className="whitespace-nowrap px-4 py-3">
-                          <span className="inline-flex items-center gap-2">
-                            <TeamLogo abbr={r.team} name="" size={20} />
+                          <span className="inline-flex items-center gap-2.5">
+                            <PlayerPhoto playerId={idFor(r.player_name)} name={r.player_name} size={32} className="shrink-0" />
                             <span className="font-semibold text-text-primary">{r.player_name}</span>
+                            <span className="text-xs text-text-muted">{r.team}</span>
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 tabular-nums text-status-success">{r.returned_on}</td>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
-import { X, TrendingUp, TrendingDown, Minus, Shield, Trophy, Users, Clock, Flame, BarChart2, Info } from "lucide-react";
+import { X, Clock } from "lucide-react";
 import PlayerPhoto from "../PlayerPhoto";
-import { Badge, Button, EmptyState, InlineError, Skeleton } from "../common";
+import { EmptyState, InlineError, Skeleton } from "../common";
 import { loadPrivateApi } from "../../lib/dataCache";
 import type { TeamInfo } from "./types";
 import { useLanguage } from "../../context/LanguageContext";
@@ -279,12 +279,34 @@ export function PlayerMatchupModal({
 
   if (!player) return null;
 
-  const kpis = [
-    { label: "Öngörülen sayı", val: player.predicted_pts, unit: "PTS", icon: <Trophy size={16} strokeWidth={1.5} /> },
-    { label: "Öngörülen ribaund", val: player.predicted_reb, unit: "REB", icon: <Shield size={16} strokeWidth={1.5} /> },
-    { label: "Öngörülen asist", val: player.predicted_ast, unit: "AST", icon: <Users size={16} strokeWidth={1.5} /> },
-    { label: "Toplam PRA", val: player.predicted_pra, unit: "PRA", icon: <Flame size={16} strokeWidth={1.5} /> },
+  const tr = language === "tr";
+  const statusText =
+    player.status === "OUT" ? { text: "OUT", cls: "text-status-error" }
+    : player.status === "RESTRICTED" ? { text: tr ? "Kısıtlı" : "Restricted", cls: "text-status-warning" }
+    : player.status === "DOUBTFUL" ? { text: tr ? "Şüpheli" : "Doubtful", cls: "text-status-warning" }
+    : player.status === "QUESTIONABLE" ? { text: tr ? "Belirsiz" : "Questionable", cls: "text-status-warning" }
+    : null;
+
+  const projection = [
+    { unit: "PTS", val: player.predicted_pts, strong: true },
+    { unit: "REB", val: player.predicted_reb, strong: false },
+    { unit: "AST", val: player.predicted_ast, strong: false },
+    { unit: "PRA", val: player.predicted_pra, strong: true },
   ];
+
+  const compareRows = stats5
+    ? [
+        { metric: "PTS", season: seasonAverages?.PTS, l5: stats5.pts, model: player.predicted_pts },
+        { metric: "REB", season: seasonAverages?.REB, l5: stats5.reb, model: player.predicted_reb },
+        { metric: "AST", season: seasonAverages?.AST, l5: stats5.ast, model: player.predicted_ast },
+        {
+          metric: "PRA",
+          season: (seasonAverages?.PTS || 0) + (seasonAverages?.REB || 0) + (seasonAverages?.AST || 0),
+          l5: stats5.pra,
+          model: player.predicted_pra,
+        },
+      ]
+    : [];
 
   return (
     <div
@@ -299,26 +321,22 @@ export function PlayerMatchupModal({
         className="relative flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-md border border-border bg-background-primary text-text-primary shadow-md"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-border-light bg-background-secondary px-4 py-4 sm:px-6">
+        <div className="flex items-start justify-between gap-4 border-b border-border-light px-5 py-5 sm:px-6">
           <div className="flex min-w-0 items-center gap-4">
             <PlayerPhoto
               playerId={player.player_id}
               name={player.player_name}
-              size={52}
+              size={64}
               className="shrink-0 rounded-full border border-border"
             />
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="neutral">{player.position_group}</Badge>
-                <span className="text-xs font-medium text-text-secondary">
-                  {teamInfo.abbr} vs {opponentInfo.abbr}
-                </span>
-              </div>
-              <h2 id="player-matchup-title" className="mt-1 truncate text-lg font-semibold leading-tight text-text-primary">
+              <h2 id="player-matchup-title" className="truncate text-xl font-semibold leading-tight text-text-primary">
                 {player.player_name}
               </h2>
-              <p className="text-xs text-text-secondary">Maç raporu ve projeksiyon detayı</p>
+              <p className="mt-1 text-xs text-text-secondary">
+                {[player.position_group, `${teamInfo.abbr} vs ${opponentInfo.abbr}`].filter(Boolean).join(" · ")}
+                {statusText && <span className={`font-medium ${statusText.cls}`}> · {statusText.text}</span>}
+              </p>
             </div>
           </div>
 
@@ -326,51 +344,39 @@ export function PlayerMatchupModal({
             ref={closeRef}
             type="button"
             onClick={onClose}
-            aria-label="Kapat"
-            title="Kapat (Esc)"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            aria-label={tr ? "Kapat" : "Close"}
+            title={tr ? "Kapat (Esc)" : "Close (Esc)"}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-border text-text-secondary hover:bg-background-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus cursor-pointer"
           >
             <X size={16} strokeWidth={1.5} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
-          {/* KPI cards */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {kpis.map((kpi) => (
-              <div
-                key={kpi.unit}
-                className="flex flex-col items-center justify-center rounded border border-border bg-background-secondary p-3 text-center"
-              >
-                <div className="mb-1 flex items-center gap-1 text-text-secondary">
-                  {kpi.icon}
-                  <span className="text-xs font-medium">{kpi.unit}</span>
+        <div className="flex-1 space-y-8 overflow-y-auto p-5 sm:p-6">
+          <section aria-label={tr ? "Model projeksiyonu" : "Model projection"}>
+            <h3 className="text-xs font-medium text-text-muted">{tr ? "Model projeksiyonu" : "Model projection"}</h3>
+            <dl className="mt-2 grid grid-cols-4 divide-x divide-border-light">
+              {projection.map((s) => (
+                <div key={s.unit} className="px-3 first:pl-0">
+                  <dd className={`text-2xl font-semibold tabular-nums sm:text-3xl ${s.strong ? "text-text-primary" : "text-text-secondary"}`}>
+                    {s.val?.toFixed(1)}
+                  </dd>
+                  <dt className="mt-0.5 text-xs text-text-muted">{s.unit}</dt>
                 </div>
-                <p className="text-2xl font-semibold leading-none tabular-nums text-text-primary">
-                  {kpi.val?.toFixed(1)}
-                </p>
-                <span className="mt-1 text-xs text-text-secondary">{kpi.label}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </dl>
+          </section>
 
-          {/* Narrative */}
-          <section className="space-y-2 rounded border border-border bg-background-secondary p-4" aria-label={language === "tr" ? "Maç ve form analizi" : "Matchup and form analysis"}>
-            <div className="flex items-center gap-2">
-              <Info size={16} strokeWidth={1.5} className="text-primary" />
-              <h3 className="text-sm font-semibold text-text-primary">
-                {language === "tr" ? "Maç ve form analizi" : "Matchup & Form Analysis"}
-              </h3>
-            </div>
+          <section aria-label={tr ? "Maç ve form analizi" : "Matchup and form analysis"}>
+            <h3 className="text-sm font-semibold text-text-primary">{tr ? "Özet" : "Summary"}</h3>
             {loading ? (
-              <div className="space-y-2" aria-busy="true">
+              <div className="mt-2 space-y-2" aria-busy="true">
                 <Skeleton variant="text" />
                 <Skeleton variant="text" />
                 <Skeleton variant="text" className="w-2/3" />
               </div>
             ) : (
-              <div className="space-y-1.5 text-xs leading-relaxed text-text-secondary">
+              <div className="mt-2 space-y-2 text-sm leading-relaxed text-text-secondary">
                 {narrative.map((paragraph, i) => (
                   <p key={i} className="m-0">
                     {paragraph}
@@ -380,76 +386,39 @@ export function PlayerMatchupModal({
             )}
           </section>
 
-          {/* Stat comparison */}
-          <section className="space-y-3" aria-label={language === "tr" ? "İstatistiksel karşılaştırma" : "Statistical Comparison"}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <BarChart2 size={16} strokeWidth={1.5} className="text-text-primary" />
-                <h3 className="text-sm font-semibold text-text-primary">
-                  {language === "tr" ? "İstatistiksel karşılaştırma" : "Statistical Comparison"}
-                </h3>
-              </div>
-              <span className="text-xs text-text-secondary">
-                {language === "tr" ? "Son maçlar, sezon ortalaması ve model" : "Recent games, season benchmark, and projections"}
-              </span>
-            </div>
-
+          <section aria-label={tr ? "İstatistiksel karşılaştırma" : "Statistical comparison"}>
+            <h3 className="text-sm font-semibold text-text-primary">{tr ? "Model, form ve sezon" : "Model, form and season"}</h3>
             {loading ? (
-              <Skeleton className="h-32 w-full" />
+              <Skeleton className="mt-2 h-32 w-full" />
             ) : stats5 ? (
-              <div className="overflow-x-auto rounded border border-border bg-background-primary">
+              <div className="mt-2 overflow-x-auto rounded border border-border">
                 <table className="w-full text-xs">
-                  <thead className="whitespace-nowrap border-b border-border bg-background-tertiary text-xs font-medium text-text-secondary">
+                  <thead className="whitespace-nowrap border-b border-border bg-background-tertiary text-text-secondary">
                     <tr>
-                      <th scope="col" className="px-3 py-2 text-left">{language === "tr" ? "Metrik" : "Metric"}</th>
-                      <th scope="col" className="px-3 py-2 text-right">{language === "tr" ? "Sezon ort." : "Season Avg"}</th>
-                      <th scope="col" className="px-3 py-2 text-right">
-                        {language === "tr" ? `Son ${stats5.count} maç` : `Last ${stats5.count}`}
+                      <th scope="col" className="px-3 py-2 text-left font-medium"> </th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">{tr ? "Sezon" : "Season"}</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">
+                        {tr ? `Son ${stats5.count}` : `Last ${stats5.count}`}
                       </th>
-                      <th scope="col" className="px-3 py-2 text-right text-primary">Model</th>
-                      <th scope="col" className="px-3 py-2 text-right">{language === "tr" ? "Fark" : "Diff"}</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium text-text-primary">Model</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">{tr ? "Fark" : "Diff"}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border-light">
-                    {[
-                      { metric: language === "tr" ? "Sayı (PTS)" : "Points (PTS)", season: seasonAverages?.PTS, l5: stats5.pts, model: player.predicted_pts },
-                      { metric: language === "tr" ? "Ribaund (REB)" : "Rebounds (REB)", season: seasonAverages?.REB, l5: stats5.reb, model: player.predicted_reb },
-                      { metric: language === "tr" ? "Asist (AST)" : "Assists (AST)", season: seasonAverages?.AST, l5: stats5.ast, model: player.predicted_ast },
-                      {
-                        metric: language === "tr" ? "Toplam PRA" : "Total PRA",
-                        season: (seasonAverages?.PTS || 0) + (seasonAverages?.REB || 0) + (seasonAverages?.AST || 0),
-                        l5: stats5.pra,
-                        model: player.predicted_pra,
-                      },
-                    ].map((row) => {
+                  <tbody className="divide-y divide-border-light tabular-nums">
+                    {compareRows.map((row) => {
                       const base = row.season ?? row.l5;
                       const diff = base ? row.model - base : 0;
-                      const isUp = diff > 0.5;
-                      const isDown = diff < -0.5;
-
+                      const tone = diff > 0.5 ? "text-status-success" : diff < -0.5 ? "text-status-error" : "text-text-muted";
                       return (
-                        <tr key={row.metric} className="hover:bg-background-secondary">
-                          <th scope="row" className="px-3 py-2 text-left font-medium text-text-primary">{row.metric}</th>
-                          <td className="px-3 py-2 text-right tabular-nums text-text-secondary">
-                            {row.season != null ? row.season.toFixed(1) : "-"}
+                        <tr key={row.metric}>
+                          <th scope="row" className="px-3 py-2.5 text-left font-medium text-text-primary">{row.metric}</th>
+                          <td className="px-3 py-2.5 text-right text-text-secondary">
+                            {row.season != null ? row.season.toFixed(1) : "–"}
                           </td>
-                          <td className="px-3 py-2 text-right font-medium tabular-nums text-text-primary">
-                            {row.l5.toFixed(1)}
-                          </td>
-                          <td className="px-3 py-2 text-right font-semibold tabular-nums text-primary">
-                            {row.model.toFixed(1)}
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums">
-                            <Badge variant={isUp ? "success" : isDown ? "error" : "neutral"}>
-                              {isUp ? (
-                                <TrendingUp size={16} strokeWidth={1.5} aria-hidden="true" />
-                              ) : isDown ? (
-                                <TrendingDown size={16} strokeWidth={1.5} aria-hidden="true" />
-                              ) : (
-                                <Minus size={16} strokeWidth={1.5} aria-hidden="true" />
-                              )}
-                              {diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1)}
-                            </Badge>
+                          <td className="px-3 py-2.5 text-right text-text-secondary">{row.l5.toFixed(1)}</td>
+                          <td className="px-3 py-2.5 text-right text-sm font-semibold text-text-primary">{row.model.toFixed(1)}</td>
+                          <td className={`px-3 py-2.5 text-right font-medium ${tone}`}>
+                            {diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1)}
                           </td>
                         </tr>
                       );
@@ -460,102 +429,77 @@ export function PlayerMatchupModal({
             ) : null}
           </section>
 
-          {/* Recent games */}
-          <section className="space-y-3" aria-label={language === "tr" ? "Son maç performansları" : "Recent Game Performances"}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Clock size={16} strokeWidth={1.5} className="text-text-primary" />
-                <h3 className="text-sm font-semibold text-text-primary">
-                  {language === "tr" ? "Son maç performansları" : "Recent Game Performances"}
-                  {!loading && !error ? ` (${recentGames.length} ${language === "tr" ? "maç" : "games"})` : ""}
-                </h3>
-              </div>
-              <span className="text-xs text-text-secondary">
-                {language === "tr" ? "Bu sezonun gerçekleşen istatistikleri" : "Actual box scores from this season"}
-              </span>
-            </div>
-
+          <section aria-label={tr ? "Son maçlar" : "Recent games"}>
+            <h3 className="text-sm font-semibold text-text-primary">
+              {tr ? "Son maçlar" : "Recent games"}
+              {!loading && !error ? ` (${recentGames.length})` : ""}
+            </h3>
             {loading ? (
-              <div className="space-y-2" aria-busy="true">
+              <div className="mt-2 space-y-2" aria-busy="true">
                 <Skeleton className="h-8 w-full" />
                 <Skeleton className="h-8 w-full" />
                 <Skeleton className="h-8 w-full" />
               </div>
             ) : error ? (
-              <InlineError
-                title={language === "tr" ? "Oyuncu verisi yüklenemedi" : "Failed to load player data"}
-                message={error}
-                onRetry={() => setReloadKey((k) => k + 1)}
-              />
+              <div className="mt-2">
+                <InlineError
+                  title={tr ? "Oyuncu verisi yüklenemedi" : "Failed to load player data"}
+                  message={error}
+                  onRetry={() => setReloadKey((k) => k + 1)}
+                />
+              </div>
             ) : recentGames.length === 0 ? (
-              <EmptyState
-                title={language === "tr" ? "Maç kaydı yok" : "No games recorded"}
-                description={language === "tr" ? "Bu sezon için oynanmış maç kaydı bulunamadı." : "No played game records found for this season."}
-                icon={<Clock size={32} strokeWidth={1.5} />}
-                className="p-6 sm:p-6"
-              />
+              <div className="mt-2">
+                <EmptyState
+                  title={tr ? "Maç kaydı yok" : "No games recorded"}
+                  description={tr ? "Bu sezon için oynanmış maç kaydı bulunamadı." : "No played game records found for this season."}
+                  icon={<Clock size={32} strokeWidth={1.5} />}
+                  className="p-6 sm:p-6"
+                />
+              </div>
             ) : (
-              <div className="overflow-x-auto rounded border border-border bg-background-primary">
-                <table className="w-full text-xs">
-                  <thead className="whitespace-nowrap border-b border-border bg-background-tertiary text-xs font-medium text-text-secondary">
+              <div className="mt-2 overflow-x-auto rounded border border-border">
+                <table className="w-full min-w-[480px] text-xs">
+                  <thead className="whitespace-nowrap border-b border-border bg-background-tertiary text-text-secondary">
                     <tr>
-                      <th scope="col" className="px-3 py-2 text-left">{language === "tr" ? "Tarih" : "Date"}</th>
-                      <th scope="col" className="px-3 py-2 text-left">{language === "tr" ? "Eşleşme" : "Matchup"}</th>
-                      <th scope="col" className="px-2 py-2 text-center">{language === "tr" ? "Sonuç" : "Result"}</th>
-                      <th scope="col" className="px-2 py-2 text-right">{language === "tr" ? "Dk" : "Min"}</th>
-                      <th scope="col" className="px-3 py-2 text-right text-text-primary">PTS</th>
-                      <th scope="col" className="px-2 py-2 text-right">REB</th>
-                      <th scope="col" className="px-2 py-2 text-right">AST</th>
-                      <th scope="col" className="px-2 py-2 text-right text-primary">PRA</th>
-                      <th scope="col" className="px-2 py-2 text-right">FG%</th>
-                      <th scope="col" className="px-2 py-2 text-right">+/-</th>
+                      <th scope="col" className="px-3 py-2 text-left font-medium">{tr ? "Maç" : "Game"}</th>
+                      <th scope="col" className="px-2 py-2 text-right font-medium">{tr ? "Dk" : "Min"}</th>
+                      <th scope="col" className="px-2 py-2 text-right font-medium text-text-primary">PTS</th>
+                      <th scope="col" className="px-2 py-2 text-right font-medium">REB</th>
+                      <th scope="col" className="px-2 py-2 text-right font-medium">AST</th>
+                      <th scope="col" className="px-2 py-2 text-right font-medium">FG%</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">+/-</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border-light">
-                    {recentGames.map((g) => {
-                      const fgPctText = g.FG_PCT != null ? `%${(g.FG_PCT * 100).toFixed(0)}` : "-";
-                      const praVal = (g.PTS ?? 0) + (g.REB ?? 0) + (g.AST ?? 0);
-
-                      return (
-                        <tr key={g.GAME_ID ?? g.GAME_DATE} className="hover:bg-background-secondary">
-                          <td className="whitespace-nowrap px-3 py-2 tabular-nums text-text-secondary">{g.GAME_DATE}</td>
-                          <td className="whitespace-nowrap px-3 py-2 font-medium text-text-primary">{g.MATCHUP || "-"}</td>
-                          <td className="px-2 py-2 text-center">
-                            {g.WL ? (
-                              <Badge variant={g.WL === "W" ? "success" : "error"} size="sm">
-                                {g.WL}
-                              </Badge>
-                            ) : (
-                              "-"
+                  <tbody className="divide-y divide-border-light tabular-nums">
+                    {recentGames.map((g) => (
+                      <tr key={g.GAME_ID ?? g.GAME_DATE}>
+                        <td className="whitespace-nowrap px-3 py-2.5">
+                          <span className="font-medium text-text-primary">{g.MATCHUP || "–"}</span>
+                          <span className="block text-text-muted">
+                            {g.GAME_DATE}
+                            {g.WL && (
+                              <span className={`font-medium ${g.WL === "W" ? "text-status-success" : "text-status-error"}`}> · {g.WL}</span>
                             )}
-                          </td>
-                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">{g.MIN ?? "-"}</td>
-                          <td className="px-3 py-2 text-right font-semibold tabular-nums text-text-primary">{g.PTS ?? "-"}</td>
-                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">{g.REB ?? "-"}</td>
-                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">{g.AST ?? "-"}</td>
-                          <td className="px-2 py-2 text-right font-semibold tabular-nums text-primary">{praVal}</td>
-                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">{fgPctText}</td>
-                          <td className="px-2 py-2 text-right tabular-nums text-text-secondary">
-                            {g.PLUS_MINUS != null ? (g.PLUS_MINUS > 0 ? `+${g.PLUS_MINUS}` : g.PLUS_MINUS) : "-"}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2.5 text-right text-text-secondary">{g.MIN ?? "–"}</td>
+                        <td className="px-2 py-2.5 text-right font-semibold text-text-primary">{g.PTS ?? "–"}</td>
+                        <td className="px-2 py-2.5 text-right text-text-secondary">{g.REB ?? "–"}</td>
+                        <td className="px-2 py-2.5 text-right text-text-secondary">{g.AST ?? "–"}</td>
+                        <td className="px-2 py-2.5 text-right text-text-secondary">
+                          {g.FG_PCT != null ? `${(g.FG_PCT * 100).toFixed(0)}%` : "–"}
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-text-secondary">
+                          {g.PLUS_MINUS != null ? (g.PLUS_MINUS > 0 ? `+${g.PLUS_MINUS}` : g.PLUS_MINUS) : "–"}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             )}
           </section>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-3 border-t border-border-light bg-background-secondary px-4 py-3 sm:px-6">
-          <span className="text-xs text-text-secondary">
-            Veriler resmi NBA maç kayıtları ve LightGBM model tahminlerine dayanır.
-          </span>
-          <Button variant="secondary" size="sm" onClick={onClose} className="shrink-0">
-            Kapat
-          </Button>
         </div>
       </div>
     </div>

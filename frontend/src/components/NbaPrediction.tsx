@@ -6,13 +6,11 @@ import {
   ChevronDown,
   ChevronUp,
   Calendar,
-  UsersRound,
-  LayoutDashboard,
-  HelpCircle,
+  Search,
 } from "lucide-react";
 
 import TeamLogo from "./TeamLogo";
-import { DatePicker, EmptyState, InlineError, Skeleton } from "./common";
+import { DatePicker, EmptyState, InlineError, Input, Skeleton } from "./common";
 import {
   normalizeGameFullPrediction,
   predictGameFull,
@@ -50,6 +48,7 @@ const etDate = (offsetDays: number) =>
 
 export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPredictionProps = {}) {
   const { t, language, formatDate } = useLanguage();
+  const tr = language === "tr";
   const [home, setHome] = useState(initialGame?.home || "");
   const [away, setAway] = useState(initialGame?.away || "");
   const [date, setDate] = useState(initialGame?.date || "");
@@ -62,8 +61,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
 
-  const [filterTeam1, setFilterTeam1] = useState("");
-  const [filterTeam2, setFilterTeam2] = useState("");
+  const [teamQuery, setTeamQuery] = useState("");
   const [injuryChanges, setInjuryChanges] = useState<InjuryChange[]>([]);
   const [latestReport, setLatestReport] = useState<InjuryReportSummary | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(!initialGame);
@@ -235,19 +233,12 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   }, [submitGame, home, away, date]);
 
   const filteredSchedule = dateGames.filter((g: any) => {
-    if (!filterTeam1) return true;
-    if (filterTeam1 && !filterTeam2) {
-      return (
-        g.HOME_TEAM_ABBREVIATION?.toUpperCase() === filterTeam1.toUpperCase() ||
-        g.AWAY_TEAM_ABBREVIATION?.toUpperCase() === filterTeam1.toUpperCase()
-      );
-    }
-    return (
-      (g.HOME_TEAM_ABBREVIATION?.toUpperCase() === filterTeam1.toUpperCase() &&
-        g.AWAY_TEAM_ABBREVIATION?.toUpperCase() === filterTeam2.toUpperCase()) ||
-      (g.HOME_TEAM_ABBREVIATION?.toUpperCase() === filterTeam2.toUpperCase() &&
-        g.AWAY_TEAM_ABBREVIATION?.toUpperCase() === filterTeam1.toUpperCase())
-    );
+    const q = teamQuery.trim().toLowerCase();
+    if (!q) return true;
+    return [g.HOME_TEAM_ABBREVIATION, g.AWAY_TEAM_ABBREVIATION].some((abbr: string) => {
+      const info = getTeamInfo(teamAbbr(abbr));
+      return abbr?.toLowerCase().includes(q) || info.name.toLowerCase().includes(q);
+    });
   });
 
   const homeInfo = getTeamInfo(home);
@@ -276,211 +267,128 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
       )}
 
       {/* SECTION 1: SELECTION PANEL */}
-      <div className="bg-background-primary border border-border rounded overflow-hidden">
-        <div
+      <div className="overflow-hidden rounded border border-border bg-background-primary">
+        <button
           id="selector-toggle"
+          type="button"
+          aria-expanded={selectorOpen}
           onClick={() => setSelectorOpen((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-background-secondary/50 transition-colors"
+          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-background-secondary/50 cursor-pointer"
         >
-          <div className="flex items-center gap-3">
-            <Calendar size={16} className="text-text-secondary" />
-            <div className="text-left">
-              <p className="text-xs font-semibold text-text-primary">
-                Karşılaşma seçimi
-              </p>
+          <div className="flex min-w-0 items-center gap-3">
+            <Calendar size={16} className="shrink-0 text-text-secondary" />
+            <div className="min-w-0">
+              <p className="text-xs text-text-muted">{tr ? "Karşılaşma seçimi" : "Select matchup"}</p>
               {home && away && date ? (
-                <p className="text-sm font-semibold text-text-primary mt-0.5">
-                  {homeInfo.name} vs {awayInfo.name} · {formatDate(date)}
+                <p className="mt-0.5 truncate text-sm font-semibold text-text-primary">
+                  {awayInfo.name} @ {homeInfo.name} · {formatDate(date)}
                 </p>
               ) : (
-                <p className="text-sm text-text-secondary mt-0.5">Henüz maç seçilmedi</p>
+                <p className="mt-0.5 text-sm text-text-secondary">{tr ? "Henüz maç seçilmedi" : "No game selected"}</p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {home && away && date && !result && !loading && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); submit(); }}
-                id="run-prediction-btn"
-                className="flex items-center gap-1.5 h-8 px-3 rounded bg-primary hover:bg-primary/90 text-white text-xs font-medium transition-colors cursor-pointer"
-              >
-                <span>Tahmin Üret</span>
-              </button>
-            )}
-            {selectorOpen ? <ChevronUp size={16} className="text-text-secondary" /> : <ChevronDown size={16} className="text-text-secondary" />}
-          </div>
-        </div>
+          {selectorOpen ? <ChevronUp size={16} className="shrink-0 text-text-secondary" /> : <ChevronDown size={16} className="shrink-0 text-text-secondary" />}
+        </button>
 
         {selectorOpen && (
-          <div className="border-t border-border-light px-5 pb-5 pt-4 space-y-4">
-            <div className="space-y-4">
-              {/* Date Stepper Bar (Fixtures Tab Style) */}
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-background-secondary p-3">
-                <DatePicker
-                  dates={uniqueDates}
-                  value={selectedDate}
-                  onChange={setSelectedDate}
-                  todayStr={todayStr}
-                  formatDate={formatDate}
-                  order="asc"
-                  className="shrink-0"
+          <div className="space-y-4 border-t border-border-light px-5 pb-5 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <DatePicker
+                dates={uniqueDates}
+                value={selectedDate}
+                onChange={setSelectedDate}
+                todayStr={todayStr}
+                formatDate={formatDate}
+                order="asc"
+                className="shrink-0"
+              />
+              <div className="w-full sm:w-64">
+                <Input
+                  type="text"
+                  autoComplete="off"
+                  aria-label={tr ? "Takım ara" : "Search team"}
+                  placeholder={tr ? "Takım ara" : "Search team"}
+                  leftIcon={<Search size={16} strokeWidth={1.5} />}
+                  value={teamQuery}
+                  onChange={(e) => setTeamQuery(e.target.value)}
+                  className="h-9"
                 />
-
-                <div className="flex items-center gap-2 text-xs text-text-secondary">
-                  <span className="text-xs text-text-secondary">
-                    {dateGames.length} {language === "tr" ? "Karşılaşma" : "Games"} ({selectedDate ? formatDate(selectedDate) : (language === "tr" ? "Tarih" : "Date")})
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Upcoming games quick list */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-text-primary">
-                      {selectedDate ? formatDate(selectedDate) : ""} {language === "tr" ? "Karşılaşmaları" : "Matchups"}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                    {dateGames.length === 0 ? (
-                      <div className="rounded border border-border bg-background-secondary p-6 text-center text-xs text-text-secondary">
-                        {language === "tr" ? "Bu tarih için henüz oynanmamış maç bulunamadı." : "No upcoming games found for this date."}
-                      </div>
-                    ) : (
-                      dateGames.map((g: any) => {
-                        const isSelected = home === g.HOME_TEAM_ABBREVIATION && away === g.AWAY_TEAM_ABBREVIATION && date === g.GAME_DATE;
-                        return (
-                          <button
-                            key={g.GAME_ID}
-                            type="button"
-                            onClick={() => handleSelectGame(g)}
-                            className={`w-full text-left p-2.5 rounded border transition-colors flex items-center justify-between gap-3 cursor-pointer ${
-                              isSelected
-                                ? "bg-background-secondary border-primary"
-                                : "bg-background-primary border-border hover:border-card-border-hover"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <div className="flex items-center -space-x-1">
-                                <TeamLogo abbr={teamAbbr(g.HOME_TEAM_ABBREVIATION)} name={g.HOME_TEAM_ABBREVIATION} size={20} />
-                                <TeamLogo abbr={teamAbbr(g.AWAY_TEAM_ABBREVIATION)} name={g.AWAY_TEAM_ABBREVIATION} size={20} />
-                              </div>
-                              <span className="text-xs font-semibold text-text-primary">
-                                {g.HOME_TEAM_ABBREVIATION} vs {g.AWAY_TEAM_ABBREVIATION}
-                              </span>
-                              <span className="text-xs px-1.5 py-0.5 rounded-sm bg-background-secondary border border-border text-text-secondary">
-                                {g.SEASON_TYPE}
-                              </span>
-                            </div>
-                            <span className="text-xs tabular-nums text-text-secondary">{g.GAME_DATE}</span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
-                {/* Filter by team */}
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-text-primary">Takıma göre filtrele</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      className="w-full h-8 rounded border border-border bg-background-primary px-2.5 text-xs font-medium text-text-primary focus:border-border-focus focus:outline-none"
-                      value={filterTeam1}
-                      onChange={(e) => { setFilterTeam1(e.target.value); if (!e.target.value) setFilterTeam2(""); }}
-                    >
-                      <option value="">Takım 1</option>
-                      {NBA_TEAMS.map((t) => <option key={t.abbr} value={t.abbr}>{t.abbr} — {t.name}</option>)}
-                    </select>
-                    <select
-                      className="w-full h-8 rounded border border-border bg-background-primary px-2.5 text-xs font-medium text-text-primary focus:border-border-focus focus:outline-none disabled:opacity-50"
-                      value={filterTeam2}
-                      onChange={(e) => setFilterTeam2(e.target.value)}
-                      disabled={!filterTeam1}
-                    >
-                      <option value="">Takım 2 (isteğe bağlı)</option>
-                      {NBA_TEAMS.map((t) => <option key={t.abbr} value={t.abbr} disabled={t.abbr === filterTeam1}>{t.abbr} — {t.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="border border-border rounded overflow-hidden bg-background-primary max-h-56 overflow-y-auto divide-y divide-border-light">
-                    {!filterTeam1 ? (
-                      <div className="p-4 text-center text-xs text-text-secondary">
-                        Günün maçlarını filtrelemek için takım seçin
-                      </div>
-                    ) : filteredSchedule.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-text-secondary">
-                        Bu tarihte {filterTeam1} için eşleşme bulunamadı
-                      </div>
-                    ) : (
-                      filteredSchedule.map((g: any) => {
-                        const isSelected = home === g.HOME_TEAM_ABBREVIATION && away === g.AWAY_TEAM_ABBREVIATION && date === g.GAME_DATE;
-                        return (
-                          <button
-                            key={g.GAME_ID}
-                            type="button"
-                            onClick={() => handleSelectGame(g)}
-                            className={`w-full text-left px-3.5 py-2 hover:bg-background-secondary transition-colors flex items-center justify-between text-xs cursor-pointer ${
-                              isSelected ? "bg-background-secondary text-text-primary font-semibold" : "text-text-secondary"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-text-primary">{g.HOME_TEAM_ABBREVIATION}</span>
-                              <span className="text-text-muted">vs</span>
-                              <span className="font-semibold text-text-primary">{g.AWAY_TEAM_ABBREVIATION}</span>
-                              <span className="text-xs px-1 py-0.5 rounded-sm bg-background-secondary border border-border text-text-secondary">
-                                {g.SEASON_TYPE === "NBA Finals" ? "Finals" : (g.SEASON_TYPE === "Pre Season" || g.SEASON_TYPE === "Preseason" ? "Preseason" : "Normal")}
-                              </span>
-                            </div>
-                            <span className="text-xs text-text-secondary tabular-nums">{g.GAME_DATE}</span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
+
+            {filteredSchedule.length === 0 ? (
+              <div className="rounded border border-border bg-background-secondary p-6 text-center text-xs text-text-secondary">
+                {teamQuery
+                  ? (tr ? "Aramaya uyan maç bulunamadı." : "No games match your search.")
+                  : (tr ? "Bu tarih için henüz oynanmamış maç bulunamadı." : "No upcoming games found for this date.")}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                {filteredSchedule.map((g: any) => {
+                  const isSelected = home === g.HOME_TEAM_ABBREVIATION && away === g.AWAY_TEAM_ABBREVIATION && date === g.GAME_DATE;
+                  const h = getTeamInfo(teamAbbr(g.HOME_TEAM_ABBREVIATION));
+                  const a = getTeamInfo(teamAbbr(g.AWAY_TEAM_ABBREVIATION));
+                  return (
+                    <button
+                      key={g.GAME_ID}
+                      type="button"
+                      onClick={() => handleSelectGame(g)}
+                      aria-pressed={isSelected}
+                      className={`flex items-center justify-between gap-3 rounded border p-3 text-left transition-colors cursor-pointer ${
+                        isSelected
+                          ? "border-primary bg-background-secondary"
+                          : "border-border bg-background-primary hover:border-card-border-hover"
+                      }`}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex shrink-0 items-center gap-1">
+                          <TeamLogo abbr={a.abbr} name={a.name} size={28} />
+                          <TeamLogo abbr={h.abbr} name={h.name} size={28} />
+                        </div>
+                        <span className="truncate text-sm font-semibold text-text-primary">
+                          {a.name} @ {h.name}
+                        </span>
+                      </div>
+                      {g.SEASON_TYPE && g.SEASON_TYPE !== "Regular Season" && (
+                        <span className="shrink-0 text-xs text-text-muted">{g.SEASON_TYPE}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {home && away && date && home !== away && date >= etDate(0) && date <= etDate(1) && (
               <div className="space-y-2">
                 <InjuryReportStamp published={latestReport?.published_et} mode="latest" />
                 {latestReport && <InjuryReportPanel report={latestReport} homeInfo={getTeamInfo(home)} awayInfo={getTeamInfo(away)} />}
                 {latestReport && injuryChanges.length === 0 && (
-                  <p className="text-xs text-text-secondary">Bugünkü raporlarda bu iki takımın oyuncularında durum değişikliği yok.</p>
+                  <p className="text-xs text-text-secondary">
+                    {tr
+                      ? "Bugünkü raporlarda bu iki takımın oyuncularında durum değişikliği yok."
+                      : "No status changes for these teams in today's reports."}
+                  </p>
                 )}
                 {injuryChanges.length > 0 && <InjuryChangesList changes={injuryChanges} />}
               </div>
             )}
 
-            {/* CTA Buttons */}
             {home && away && date && (
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={submit}
-                  disabled={loading}
-                  id="run-prediction-main-btn"
-                  className="flex items-center gap-2 h-9 px-5 rounded bg-primary hover:bg-primary/90 disabled:opacity-60 text-white text-xs font-medium transition-colors cursor-pointer"
-                >
-                  {loading && <RefreshCw size={16} className="animate-spin" />}
-                  <span>
-                    {loading ? "Hesaplanıyor..." : "Tahmin Modelini Çalıştır"}
-                  </span>
-                </button>
-                {result && (
-                  <button
-                    type="button"
-                    onClick={submit}
-                    disabled={loading}
-                    className="flex items-center gap-1.5 h-9 px-3.5 rounded border border-border bg-background-primary hover:bg-background-secondary text-text-primary text-xs font-medium transition-colors cursor-pointer"
-                  >
-                    <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                    <span>Yenile</span>
-                  </button>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={submit}
+                disabled={loading}
+                id="run-prediction-main-btn"
+                className="flex h-9 items-center gap-2 rounded bg-primary px-5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-60 cursor-pointer"
+              >
+                {loading && <RefreshCw size={16} className="animate-spin" />}
+                <span>
+                  {loading
+                    ? (tr ? "Hesaplanıyor..." : "Calculating...")
+                    : result ? (tr ? "Tahmini Yenile" : "Rerun Prediction") : (tr ? "Tahmin Üret" : "Run Prediction")}
+                </span>
+              </button>
             )}
           </div>
         )}
@@ -488,7 +396,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
       {error && (
         <InlineError
-          title="Tahmin oluşturulamadı"
+          title={tr ? "Tahmin oluşturulamadı" : "Prediction failed"}
           message={error}
           onRetry={home && away && date ? submit : undefined}
         />
@@ -504,8 +412,8 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
       {!loading && !error && (!home || !away || !date) && (
         <EmptyState
           icon={<Activity size={24} strokeWidth={1.5} />}
-          title="Karşılaşma seç"
-          description="Model simülasyonunu çalıştırmak için yukarıdaki fikstürden bir maç seç veya özel takım eşleşmesi belirle."
+          title={tr ? "Karşılaşma seç" : "Select a matchup"}
+          description={tr ? "Model simülasyonunu çalıştırmak için yukarıdaki fikstürden bir maç seç." : "Pick a game from the schedule above to run the model."}
         />
       )}
 
@@ -568,35 +476,27 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
           {/* Result Tabs Panel */}
           <section className="overflow-hidden rounded border border-border bg-background-primary">
-            <div role="tablist" aria-label="Tahmin raporu bölümleri" className="grid grid-cols-3 border-b border-border bg-background-secondary">
+            <div role="tablist" aria-label={tr ? "Tahmin raporu bölümleri" : "Prediction report sections"} className="flex border-b border-border bg-background-primary px-3 sm:px-4">
               {([
-                { id: "overview", label: "Genel Bakış", icon: LayoutDashboard, detail: "Maç senaryosu" },
-                { id: "explanation", label: "Modelin Gerekçesi", icon: HelpCircle, detail: "Öne çıkan nedenler" },
-                { id: "players", label: "Oyuncular ve Kadro", icon: UsersRound, detail: "Rotasyonlar" },
-              ] as const).map((tab) => {
-                const Icon = tab.icon;
-                const selected = activeResultTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={selected}
-                    onClick={() => setActiveResultTab(tab.id)}
-                    className={`flex min-h-14 items-center gap-2.5 border-b-2 px-3 py-2.5 text-left transition-colors sm:px-4 cursor-pointer ${
-                      selected
-                        ? "border-primary bg-background-primary text-text-primary"
-                        : "border-transparent text-text-secondary hover:text-text-primary"
-                    }`}
-                  >
-                    <Icon size={16} className={selected ? "shrink-0 text-primary" : "shrink-0 text-text-secondary"} />
-                    <span className="min-w-0">
-                      <span className="block text-xs font-semibold leading-tight">{tab.label}</span>
-                      <span className="mt-0.5 block text-xs text-text-secondary">{tab.detail}</span>
-                    </span>
-                  </button>
-                );
-              })}
+                { id: "overview", label: tr ? "Genel Bakış" : "Overview" },
+                { id: "explanation", label: tr ? "Gerekçe" : "Rationale" },
+                { id: "players", label: tr ? "Oyuncular" : "Players" },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeResultTab === tab.id}
+                  onClick={() => setActiveResultTab(tab.id)}
+                  className={`border-b-2 px-3 py-3 text-xs font-medium transition-colors sm:text-sm cursor-pointer ${
+                    activeResultTab === tab.id
+                      ? "border-primary font-semibold text-text-primary"
+                      : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
             <div role="tabpanel" className="space-y-5 p-4 sm:p-5 lg:p-6">
@@ -622,15 +522,13 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                 result.player_predictions && !result.player_predictions.error ? (
                   <div className="space-y-5">
                     <InjuryReportPanel report={result.injury_report} homeInfo={homeInfo} awayInfo={awayInfo} />
-                    <div className="bg-background-primary border border-border rounded p-5">
-                      <PlayerSpotlight
-                        players={result.player_predictions}
-                        homeInfo={homeInfo}
-                        awayInfo={awayInfo}
-                        gameDate={date}
-                        season={CURRENT_SEASON}
-                      />
-                    </div>
+                    <PlayerSpotlight
+                      players={result.player_predictions}
+                      homeInfo={homeInfo}
+                      awayInfo={awayInfo}
+                      gameDate={date}
+                      season={CURRENT_SEASON}
+                    />
                   </div>
                 ) : (
                   <div className="rounded border border-border bg-background-secondary p-6 text-center text-xs text-text-secondary">

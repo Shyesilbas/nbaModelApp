@@ -2,13 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { isGameEligibleForRefresh } from "./game-results/utils";
 import {
   AlertTriangle,
-  Calendar,
-  ChevronDown,
   LayoutGrid,
   List,
   RefreshCw,
   Search,
-  Trophy,
 } from "lucide-react";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 import { loadPrivateApi, loadPrivateApiFresh, postPrivateApi } from "../lib/dataCache";
@@ -27,21 +24,13 @@ import {
 } from "./game-results";
 import { parseUrlRoute, updateUrlRoute } from "../lib/router";
 import type { ActiveView, DayGroup, DisplayMode } from "./fixtures/types";
-import { DatePicker } from "./common";
+import { DatePicker, Select } from "./common";
 import { FixturesScheduleView } from "./fixtures/FixturesScheduleView";
 import { FixturesStandingsView } from "./fixtures/FixturesStandingsView";
 import { computeSeasonTeamRecords } from "../lib/teamRecords";
 import { useLanguage } from "../context/LanguageContext";
 
-type SeasonTypeFilter = "all" | "regular" | "playin" | "playoffs" | "finals";
 
-const SEASON_TYPE_FILTERS: { id: SeasonTypeFilter; label: string; values: string[] }[] = [
-  { id: "all", label: "Tumu", values: [] },
-  { id: "regular", label: "Normal Sezon", values: ["Regular Season"] },
-  { id: "playoffs", label: "Play-Off", values: ["Playoffs"] },
-  { id: "playin", label: "Play-In", values: ["PlayIn"] },
-  { id: "finals", label: "NBA Finals", values: ["NBA Finals"] },
-];
 
 export interface FixturesTabProps {
   onNavigateToPrediction?: (game: {
@@ -94,9 +83,6 @@ export default function FixturesTab({
   };
 
   const [search, setSearch] = useState<string>(() => sessionStorage.getItem("nba-results-search") ?? "");
-  const [seasonTypeFilter, setSeasonTypeFilter] = useState<SeasonTypeFilter>(
-    () => (sessionStorage.getItem("nba-results-type") as SeasonTypeFilter | null) ?? "all"
-  );
   const [pickedDate, setSelectedDate] = useState<string>(
     () => sessionStorage.getItem("nba-results-date") ?? ""
   );
@@ -128,17 +114,10 @@ export default function FixturesTab({
   const [refreshDone, setRefreshDone] = useState<boolean>(false);
   const [freshPlayByPlay, setFreshPlayByPlay] = useState<any>(null);
 
-  const seasonTypeFilters: { id: SeasonTypeFilter; label: string; values: string[] }[] = useMemo(() => [
-    { id: "all", label: language === "tr" ? "Tümü" : "All", values: [] },
-    { id: "regular", label: language === "tr" ? "Normal Sezon" : "Regular Season", values: ["Regular Season"] },
-    { id: "playoffs", label: language === "tr" ? "Play-Off" : "Playoffs", values: ["Playoffs"] },
-    { id: "playin", label: "Play-In", values: ["PlayIn"] },
-    { id: "finals", label: "NBA Finals", values: ["NBA Finals"] },
-  ], [language]);
+
   useEffect(() => {
     sessionStorage.setItem("nba-fixtures-active-view", activeView);
     sessionStorage.setItem("nba-results-search", search);
-    sessionStorage.setItem("nba-results-type", seasonTypeFilter);
     sessionStorage.setItem("nba-results-date", pickedDate);
     sessionStorage.setItem("nba-results-season", selectedSeason);
     if (selectedGameId) sessionStorage.setItem("nba-results-game", selectedGameId);
@@ -155,7 +134,7 @@ export default function FixturesTab({
         true
       );
     }
-  }, [activeView, search, seasonTypeFilter, pickedDate, selectedSeason, selectedGameId, initialDetailTab]);
+  }, [activeView, search, pickedDate, selectedSeason, selectedGameId, initialDetailTab]);
 
   // Load available seasons
   useEffect(() => {
@@ -218,9 +197,7 @@ export default function FixturesTab({
 
   const sortedResults = useMemo(() => {
     const q = search.trim().toUpperCase();
-    const typeFilter = SEASON_TYPE_FILTERS.find((f) => f.id === seasonTypeFilter);
     return [...seasonPool]
-      .filter((x) => !typeFilter || typeFilter.id === "all" || typeFilter.values.includes(x.SEASON_TYPE ?? ""))
       .filter(
         (x) =>
           !q ||
@@ -232,7 +209,7 @@ export default function FixturesTab({
           x.GAME_ID.includes(q)
       )
       .sort((a, b) => (a.GAME_DATE ?? "").localeCompare(b.GAME_DATE ?? ""));
-  }, [seasonPool, seasonTypeFilter, search]);
+  }, [seasonPool, search]);
 
   const uniqueDates = useMemo(
     () => Array.from(new Set(sortedResults.map((g) => g.GAME_DATE ?? "").filter(Boolean))).sort((a, b) => a.localeCompare(b)),
@@ -326,19 +303,7 @@ export default function FixturesTab({
     return simpleMap;
   }, [seasonPool]);
 
-  // Season type counts for filter buttons
-  const seasonTypeCounts = useMemo(() => {
-    return SEASON_TYPE_FILTERS.reduce<Record<SeasonTypeFilter, number>>(
-      (acc, filter) => {
-        acc[filter.id] =
-          filter.id === "all"
-            ? seasonPool.length
-            : seasonPool.filter((g) => filter.values.includes(g.SEASON_TYPE ?? "")).length;
-        return acc;
-      },
-      { all: 0, regular: 0, playoffs: 0, playin: 0, finals: 0 }
-    );
-  }, [seasonPool]);
+
 
   const handleOpenGame = (gameId: string, startTab: "game" | "home" | "away" | "pbp" = "game") => {
     if (gameId !== selectedGameId) {
@@ -592,41 +557,50 @@ export default function FixturesTab({
 
   return (
     <div className="space-y-5">
-      {/* Consolidated Control Bar matching Premier League App format */}
-      <div className="rounded border border-border bg-background-primary p-3 ">
-        <div className="flex flex-col items-stretch justify-between gap-2.5 lg:flex-row lg:items-center">
-          
-          {/* Left: View Tabs (Fikstür ve Puan Tablosu) + Date Stepper */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* View Mode Toggle: Fikstür ve Puan Tablosu */}
-            <div className="flex items-center rounded border border-border bg-background-tertiary p-0.5 shrink-0">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border">
+          <div role="tablist" className="flex gap-6">
+            {([
+              ["fixtures", language === "tr" ? "Fikstür" : "Schedule"],
+              ["table", language === "tr" ? "Puan tablosu" : "Standings"],
+            ] as const).map(([id, label]) => (
               <button
+                key={id}
                 type="button"
-                onClick={() => setActiveView("fixtures")}
-                className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition-all ${
-                  activeView === "fixtures"
-                    ? "bg-primary text-white "
-                    : "text-text-secondary hover:text-text-primary"
+                role="tab"
+                aria-selected={activeView === id}
+                onClick={() => setActiveView(id)}
+                className={`-mb-px border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+                  activeView === id
+                    ? "border-primary text-text-primary"
+                    : "border-transparent text-text-secondary hover:text-text-primary"
                 }`}
               >
-                <Calendar className="h-3.5 w-3.5" />
-                <span>{language === "tr" ? "Fikstür" : "Schedule"}</span>
+                {label}
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveView("table")}
-                className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition-all ${
-                  activeView === "table"
-                    ? "bg-primary text-white "
-                    : "text-text-secondary hover:text-text-primary"
-                }`}
-              >
-                <Trophy className="h-3.5 w-3.5 text-amber-500" />
-                <span>{language === "tr" ? "Puan Tablosu" : "Standings"}</span>
-              </button>
-            </div>
+            ))}
+          </div>
+          <div className="mb-2 w-28">
+            <Select
+              aria-label={t.common.season}
+              value={selectedSeason}
+              onChange={(e) => {
+                setSelectedSeason(e.target.value);
+                setSelectedGameId(null);
+              }}
+            >
+              {seasonsList.map((season) => (
+                <option key={season} value={season}>
+                  {season}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
 
-            {activeView === "fixtures" && uniqueDates.length > 0 && (
+        {activeView === "fixtures" && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            {uniqueDates.length > 0 && (
               <DatePicker
                 dates={uniqueDates}
                 value={selectedDate}
@@ -638,177 +612,94 @@ export default function FixturesTab({
                 className="shrink-0"
               />
             )}
+            {selectedDate && selectedDate !== todayStr && uniqueDates.includes(todayStr) && (
+              <button
+                type="button"
+                onClick={() => setSelectedDate(todayStr)}
+                className="text-xs font-medium text-primary hover:underline"
+                title={t.fixtures.goToToday}
+              >
+                {t.common.today}
+              </button>
+            )}
 
             {/* Fetch every finished game of the day that has no data yet */}
-            {activeView === "fixtures" && selectedDate && (pendingDateGames.length > 0 || batchRunning || batchProgress) && (
-              <div className="flex shrink-0 items-center gap-2">
+            {selectedDate && (pendingDateGames.length > 0 || batchRunning || batchProgress) && (
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={refreshDateGames}
                   disabled={batchRunning}
-                  className="inline-flex items-center gap-1.5 rounded border border-border bg-background-tertiary px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:border-primary disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
                   title={language === "tr" ? `${pendingDateGames.length} tamamlanan maçın kutu puanını çek` : `Fetch box scores for ${pendingDateGames.length} finished games`}
                 >
-                  <RefreshCw size={16} className={batchRunning ? "animate-spin text-primary" : "text-text-muted"} />
-                  <span>{batchRunning ? (language === "tr" ? "Çekiliyor..." : "Fetching...") : (language === "tr" ? "Yenile" : "Refresh")}</span>
-                  <span className="rounded-sm border border-border bg-background-primary px-1 py-0.5 text-xs text-text-muted">
-                    {batchProgress ? `${batchProgress.current}/${batchProgress.total}` : pendingDateGames.length}
-                  </span>
+                  <RefreshCw size={14} className={batchRunning ? "animate-spin text-primary" : ""} />
+                  {batchRunning
+                    ? language === "tr" ? "Çekiliyor..." : "Fetching..."
+                    : language === "tr" ? `Eksik kutu puanlarını çek (${pendingDateGames.length})` : `Fetch missing box scores (${pendingDateGames.length})`}
                 </button>
-
-                {/* Progress Bar & Status */}
                 {batchProgress && (
-                  <div className="flex items-center gap-2 rounded border border-border bg-background-primary px-2 py-1">
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center justify-between gap-3 text-xs font-medium text-text-secondary">
-                        <span>{batchMsg || `${batchProgress.current}/${batchProgress.total}`}</span>
-                        <span>{Math.round((batchProgress.current / (batchProgress.total || 1)) * 100)}%</span>
-                      </div>
-                      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-background-tertiary">
-                        <div
-                          className="h-full bg-primary transition-all duration-300"
-                          style={{
-                            width: `${Math.round((batchProgress.current / (batchProgress.total || 1)) * 100)}%`,
-                          }}
-                        />
-                      </div>
+                  <div className="flex items-center gap-2 text-xs text-text-muted">
+                    <div className="h-1 w-24 overflow-hidden rounded-full bg-background-tertiary">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${Math.round((batchProgress.current / (batchProgress.total || 1)) * 100)}%` }}
+                      />
                     </div>
+                    <span className="tabular-nums">{batchMsg || `${batchProgress.current}/${batchProgress.total}`}</span>
                   </div>
                 )}
-
                 {!batchRunning && !batchProgress && batchMsg && (
                   <span className="text-xs text-text-muted">{batchMsg}</span>
                 )}
               </div>
             )}
 
-            {/* Quick jump to Today or Latest */}
-            {activeView === "fixtures" && selectedDate && selectedDate !== todayStr && uniqueDates.includes(todayStr) && (
-              <button
-                type="button"
-                onClick={() => setSelectedDate(todayStr)}
-                className="flex shrink-0 items-center gap-1.5 rounded border border-border bg-background-tertiary px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:border-primary"
-                title={t.fixtures.goToToday}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
-                <span>{t.common.today}</span>
-              </button>
-            )}
-          </div>
-
-          {/* Right: Search + View Mode (List/Card) + Season Select */}
-          <div className="flex flex-wrap items-center gap-2">
-            
-            {/* Search Input (fixtures view) */}
-            {activeView === "fixtures" && (
-              <div className="relative min-w-[170px] flex-1 sm:min-w-[210px] sm:flex-initial">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t.fixtures.searchPlaceholder}
-                  className="w-full rounded border border-border bg-background-tertiary py-1.5 pl-8 pr-7 text-xs font-medium text-text-primary placeholder:text-text-muted outline-none transition-all focus:border-border-focus focus:bg-background-primary"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 px-1 text-xs font-semibold text-text-muted hover:text-text-primary"
-                    title={t.fixtures.clearSearch}
-                  >
-                    x
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* View Mode Toggle: List <-> Cards */}
-            {activeView === "fixtures" && (
-              <div className="flex items-center rounded border border-border bg-background-tertiary p-0.5 shrink-0">
+            <div className="relative ml-auto min-w-[170px] flex-1 sm:max-w-[240px] sm:flex-initial">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t.fixtures.searchPlaceholder}
+                className="w-full rounded border border-border bg-background-primary py-1.5 pl-8 pr-7 text-xs text-text-primary outline-none placeholder:text-text-muted focus:border-border-focus"
+              />
+              {search && (
                 <button
                   type="button"
-                  onClick={() => handleDisplayModeChange("list")}
-                  className={`flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-semibold transition-all ${
-                    displayMode === "list"
-                      ? "bg-primary text-white "
-                      : "text-text-secondary hover:text-text-primary"
-                  }`}
-                  title={language === "tr" ? "Kompakt liste" : "Compact list"}
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-1 text-xs text-text-muted hover:text-text-primary"
+                  title={t.fixtures.clearSearch}
                 >
-                  <List className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{language === "tr" ? "Liste" : "List"}</span>
+                  x
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleDisplayModeChange("cards")}
-                  className={`flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-semibold transition-all ${
-                    displayMode === "cards"
-                      ? "bg-primary text-white "
-                      : "text-text-secondary hover:text-text-primary"
-                  }`}
-                  title={language === "tr" ? "Ayrıntılı kartlar" : "Detailed cards"}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{language === "tr" ? "Kart" : "Cards"}</span>
-                </button>
-              </div>
-            )}
-
-            {/* Season Selector Dropdown */}
-            <div className="relative shrink-0">
-              <label htmlFor="fixtures-season-select" className="sr-only">
-                {t.common.season}
-              </label>
-              <select
-                id="fixtures-season-select"
-                value={selectedSeason}
-                onChange={(e) => {
-                  setSelectedSeason(e.target.value);
-                  setSelectedGameId(null);
-                }}
-                className="appearance-none rounded border border-border bg-background-tertiary py-1.5 pl-2.5 pr-7 text-xs font-semibold text-text-primary hover:bg-background-tertiary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
-              >
-                {seasonsList.map((season) => (
-                  <option key={season} value={season}>
-                    {season}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
+              )}
             </div>
 
+            <div className="flex items-center gap-3 text-xs font-medium">
+              {([
+                ["list", List, language === "tr" ? "Liste" : "List"],
+                ["cards", LayoutGrid, language === "tr" ? "Kart" : "Cards"],
+              ] as const).map(([mode, Icon, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => handleDisplayModeChange(mode)}
+                  aria-pressed={displayMode === mode}
+                  className={`inline-flex items-center gap-1 transition-colors ${
+                    displayMode === mode ? "text-text-primary" : "text-text-muted hover:text-text-primary"
+                  }`}
+                >
+                  <Icon size={14} />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
+        )}
 
-        </div>
+
       </div>
-
-      {/* Season Type Pills (in fixtures view) */}
-      {activeView === "fixtures" && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {seasonTypeFilters.map((filter) => {
-            const count = seasonTypeCounts[filter.id];
-            const isSelected = seasonTypeFilter === filter.id;
-            return (
-              <button
-                key={filter.id}
-                onClick={() => setSeasonTypeFilter(filter.id)}
-                disabled={count === 0}
-                className={`inline-flex items-center gap-1 rounded border px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-30 ${
-                  isSelected
-                    ? "border-primary bg-primary text-white "
-                    : "border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
-                }`}
-              >
-                <span>{filter.label}</span>
-                <span className={`text-xs tabular-nums ${isSelected ? "text-white/80" : "text-text-muted"}`}>
-                  ({count})
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {/* Error alert if any */}
       {error && (

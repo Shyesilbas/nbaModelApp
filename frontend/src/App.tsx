@@ -215,7 +215,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background-secondary text-text-primary">
+    <div className="min-h-screen bg-background-primary text-text-primary">
       <div className="flex min-h-screen">
         {/* ── Sidebar ── */}
         <aside

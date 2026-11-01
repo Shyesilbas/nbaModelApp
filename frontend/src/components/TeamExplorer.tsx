@@ -1,9 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  ChevronDown,
-  Search,
   Users,
-  ChevronRight,
 } from "lucide-react";
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
@@ -17,6 +14,7 @@ import {
   Skeleton,
   EmptyState,
   InlineError,
+  Select,
 } from "./common";
 import { useLanguage } from "../context/LanguageContext";
 
@@ -161,6 +159,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
   }, []);
 
   const [view, setView] = useState<"team" | "league">("team");
+  const [posFilter, setPosFilter] = useState<"all" | "guard" | "forward" | "center">("all");
 
   const seasonsList = useMemo(
     () => ["2026-27", "2025-26", "2024-25", "2023-24", "2022-23", "2021-22", "2020-21"],
@@ -284,6 +283,75 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
   }, [activeRosters]);
 
 
+  const posLabel = (k: "all" | "guard" | "forward" | "center") =>
+    k === "all"
+      ? (language === "tr" ? "Hepsi" : "All")
+      : k === "guard" ? "Guard" : k === "forward" ? "Forward" : "Center";
+
+  const filteredRoster = sortedTeamRoster.filter(
+    (p) => posFilter === "all" || (playerPositions[p.PLAYER_ID] || "forward") === posFilter
+  );
+
+  const renderRosterTable = (players: TeamRosterItem[], ranked: boolean) => (
+    <div className="overflow-x-auto rounded border border-border bg-background-primary">
+      <table className="w-full min-w-[560px] border-collapse text-xs">
+        <thead>
+          <tr className="border-b border-border-light bg-background-tertiary text-text-secondary">
+            <th scope="col" className="w-8 px-3 py-2 text-right font-medium">#</th>
+            <th scope="col" className="px-2 py-2 text-left font-medium">{language === "tr" ? "Oyuncu" : "Player"}</th>
+            {!ranked && <th scope="col" className="px-2 py-2 text-left font-medium">{language === "tr" ? "Poz" : "Pos"}</th>}
+            <th scope="col" className="px-2 py-2 text-right font-medium">GP</th>
+            <th scope="col" className="px-2 py-2 text-right font-medium">MIN</th>
+            <th scope="col" className="px-2 py-2 text-right font-medium">PTS</th>
+            <th scope="col" className="px-2 py-2 text-right font-medium">REB</th>
+            <th scope="col" className="px-2 py-2 text-right font-medium">AST</th>
+            <th scope="col" className="px-3 py-2 text-right font-medium">{language === "tr" ? "Etki" : "Impact"}</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border-light tabular-nums">
+          {players.map((p, idx) => {
+            const played = p.GP > 0;
+            const dash = (v: string) => (played ? v : "—");
+            return (
+              <tr
+                key={p.PLAYER_ID}
+                onClick={() => onSelectPlayer(p.PLAYER_ID)}
+                className="group cursor-pointer transition-colors hover:bg-background-tertiary/40"
+              >
+                <td className="px-3 py-2 text-right text-text-muted">{idx + 1}</td>
+                <td className="px-2 py-2">
+                  <div className="flex items-center gap-2.5">
+                    <PlayerPhoto
+                      playerId={p.PLAYER_ID}
+                      name={p.PLAYER_NAME}
+                      size={32}
+                      className="shrink-0 rounded-full border border-border"
+                    />
+                    <span className="truncate text-sm font-semibold text-text-primary transition-colors group-hover:text-primary">
+                      {p.PLAYER_NAME}
+                    </span>
+                  </div>
+                </td>
+                {!ranked && (
+                  <td className="px-2 py-2 text-text-secondary">
+                    {posLabel(playerPositions[p.PLAYER_ID] || "forward")}
+                  </td>
+                )}
+                <td className="px-2 py-2 text-right text-text-muted">{p.GP}</td>
+                <td className="px-2 py-2 text-right text-text-secondary">{dash(p.AVG_MIN.toFixed(0))}</td>
+                <td className="px-2 py-2 text-right font-semibold text-text-primary">{dash(p.AVG_PTS.toFixed(1))}</td>
+                <td className="px-2 py-2 text-right text-text-secondary">{dash(p.AVG_REB.toFixed(1))}</td>
+                <td className="px-2 py-2 text-right text-text-secondary">{dash(p.AVG_AST.toFixed(1))}</td>
+                <td className="px-3 py-2 text-right font-semibold text-text-primary">{p.IMPORTANCE_SCORE.toFixed(1)}%</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+
+
   if (loadingSeason && activeRosters.length === 0) {
     return <TeamExplorerSkeleton />;
   }
@@ -292,89 +360,45 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
     <div className="space-y-4">
       {/* Page Header */}
       <Card padding="md">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-1.5 text-xs text-text-secondary">
-              <Search size={16} strokeWidth={1.5} />
-              <span className="font-medium">Franchise deep lens</span>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <TeamLogo abbr={activeTeam} name={TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR]} size={56} />
+            <div>
+              <h1 className="text-xl font-semibold text-text-primary sm:text-2xl">
+                {TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR] || activeTeam}
+              </h1>
+              <p className="mt-0.5 text-xs text-text-secondary tabular-nums">
+                {[teamRecords?.get(activeTeam)?.recordFormatted, selectedSeason].filter(Boolean).join(" · ")}
+              </p>
             </div>
-            <div className="mt-2 flex items-center gap-3">
-              <TeamLogo
-                abbr={activeTeam}
-                name={TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR]}
-                size={40}
-              />
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-semibold text-text-primary sm:text-2xl">
-                    {TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR] || activeTeam}
-                  </h1>
-                  {teamRecords?.get(activeTeam) && (
-                    <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-semibold tabular-nums text-text-primary">
-                      {teamRecords.get(activeTeam)!.recordFormatted}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-text-secondary">
-                  {language === "tr" ? `Takım Keşfi · ${selectedSeason} Sezonu` : `Team Explorer · ${selectedSeason} Season`}
-                </p>
-              </div>
-            </div>
-            <p className="mt-2 max-w-2xl text-xs text-text-secondary">
-              {t.team.subtitle}
-            </p>
           </div>
 
-          {/* Selectors: Season & Team Dropdowns */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {/* Team Dropdown */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="team-explorer-team-select" className="text-xs font-medium text-text-secondary">
-                {t.team.selectTeam}
-              </label>
-              <div className="relative">
-                <select
-                  id="team-explorer-team-select"
-                  value={activeTeam}
-                  onChange={(e) => setSelectedTeam(e.target.value)}
-                  className="appearance-none rounded border border-border bg-background-primary py-1.5 pl-3 pr-8 text-xs font-semibold tabular-nums text-text-primary outline-none transition-colors hover:bg-background-tertiary focus:border-border-focus cursor-pointer"
-                >
-                  {teamsList.map((team) => (
-                    <option key={team} value={team}>
-                      {team} - {TEAM_NAME_BY_ABBR[team as keyof typeof TEAM_NAME_BY_ABBR] || team}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted"
-                />
-              </div>
+          <div className="flex gap-3">
+            <div className="w-48">
+              <Select
+                label={t.team.selectTeam}
+                value={activeTeam}
+                onChange={(e) => setSelectedTeam(e.target.value)}
+              >
+                {teamsList.map((team) => (
+                  <option key={team} value={team}>
+                    {TEAM_NAME_BY_ABBR[team as keyof typeof TEAM_NAME_BY_ABBR] || team}
+                  </option>
+                ))}
+              </Select>
             </div>
-
-            {/* Season Dropdown */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="team-explorer-season-select" className="text-xs font-medium text-text-secondary">
-                {t.team.selectSeason}
-              </label>
-              <div className="relative">
-                <select
-                  id="team-explorer-season-select"
-                  value={selectedSeason}
-                  onChange={(e) => setSelectedSeason(e.target.value)}
-                  className="appearance-none rounded border border-border bg-background-primary py-1.5 pl-3 pr-8 text-xs font-semibold tabular-nums text-text-primary outline-none transition-colors hover:bg-background-tertiary focus:border-border-focus cursor-pointer"
-                >
-                  {seasonsList.map((season) => (
-                    <option key={season} value={season}>
-                      {season} {language === "tr" ? "Sezonu" : "Season"}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted"
-                />
-              </div>
+            <div className="w-32">
+              <Select
+                label={t.team.selectSeason}
+                value={selectedSeason}
+                onChange={(e) => setSelectedSeason(e.target.value)}
+              >
+                {seasonsList.map((season) => (
+                  <option key={season} value={season}>
+                    {season}
+                  </option>
+                ))}
+              </Select>
             </div>
           </div>
         </div>
@@ -431,204 +455,68 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
 
       {view === "team" ? (
         <>
-          {/* Franchise Hierarchy Overview */}
-          <div className="space-y-4">
+          <section className="space-y-3">
             <div>
               <h2 className="text-sm font-semibold text-text-primary">
-                {language === "tr" ? "Çekirdek Rotasyon (Top 5)" : "Core Rotation (Top 5)"}
+                {language === "tr" ? "Çekirdek Rotasyon" : "Core Rotation"}
               </h2>
               <p className="mt-0.5 text-xs text-text-secondary">
                 {language === "tr"
-                  ? "Model etki puanına göre takımın en belirleyici ilk 5 oyuncusu"
-                  : "Top 5 decisive players by model impact score"}
+                  ? "Model etki puanına göre en belirleyici 5 oyuncu"
+                  : "Top 5 players by model impact score"}
               </p>
             </div>
-
             {corePlayers.length > 0 ? (
-              <div className="max-w-3xl rounded border border-border bg-background-primary divide-y divide-border-light">
-                {corePlayers.map((player, idx) => {
-                  return (
-                    <div
-                      key={player.PLAYER_ID}
-                      onClick={() => onSelectPlayer(player.PLAYER_ID)}
-                      className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 transition-colors hover:bg-background-tertiary/40 cursor-pointer"
-                    >
-                      {/* Left: Player Info */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xs font-semibold tabular-nums text-text-muted w-4">
-                          #{idx + 1}
-                        </span>
-                        <PlayerPhoto
-                          playerId={player.PLAYER_ID}
-                          name={player.PLAYER_NAME}
-                          size={38}
-                          className="shrink-0 rounded-full border border-border ring-1 ring-border"
-                        />
-                        <div className="min-w-0">
-                          <span className="truncate text-sm font-semibold text-text-primary group-hover:text-primary transition-colors block">
-                            {player.PLAYER_NAME}
-                          </span>
-                          <p className="text-xs tabular-nums text-text-muted">
-                            {player.GP > 0
-                              ? (language === "tr" ? `${player.GP} maç oynadı` : `${player.GP} games played`)
-                              : (language === "tr" ? "Henüz maça çıkmadı" : "No games yet")}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Right: Model Score + Stats */}
-                      <div className="flex items-center gap-4 sm:gap-5 shrink-0 self-end sm:self-center">
-                        {/* Model Score */}
-                        <div className="text-right">
-                          <span className="text-sm font-semibold tabular-nums text-text-primary">
-                            {player.IMPORTANCE_SCORE.toFixed(1)}%
-                          </span>
-                          <p className="text-xs text-text-muted">
-                            {language === "tr" ? "Model Etki" : "Model Impact"}
-                          </p>
-                        </div>
-
-                        {/* Traditional Stats */}
-                        <div className="flex items-center gap-3 sm:gap-4 border-l border-border-light pl-4 tabular-nums text-right">
-                          <div className="min-w-7">
-                            <span className="text-xs font-semibold text-text-primary">
-                              {player.AVG_PTS.toFixed(1)}
-                            </span>
-                            <p className="text-xs text-text-muted">PTS</p>
-                          </div>
-                          <div className="min-w-7">
-                            <span className="text-xs font-semibold text-text-secondary">
-                              {player.AVG_REB.toFixed(1)}
-                            </span>
-                            <p className="text-xs text-text-muted">REB</p>
-                          </div>
-                          <div className="min-w-7">
-                            <span className="text-xs font-semibold text-text-secondary">
-                              {player.AVG_AST.toFixed(1)}
-                            </span>
-                            <p className="text-xs text-text-muted">AST</p>
-                          </div>
-                          <div className="min-w-7">
-                            <span className="text-xs font-medium text-text-muted">
-                              {player.AVG_MIN.toFixed(0)}m
-                            </span>
-                            <p className="text-xs text-text-muted">MIN</p>
-                          </div>
-                        </div>
-
-                        <ChevronRight size={16} className="text-text-muted group-hover:text-primary transition-colors hidden sm:block" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              renderRosterTable(corePlayers, true)
             ) : (
               <EmptyState
                 icon={<Users size={28} strokeWidth={1.5} />}
                 title={language === "tr" ? "Kadro bulunamadı" : "No roster found"}
                 description={
                   language === "tr"
-                    ? `${activeTeam} takımı için ${selectedSeason} sezonunda kayıtlı oyuncu bulunamadı.`
-                    : `No registered players found for ${activeTeam} in the ${selectedSeason} season.`
+                    ? `${TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR] || activeTeam} için ${selectedSeason} sezonunda kayıtlı oyuncu bulunamadı.`
+                    : `No registered players found for ${TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR] || activeTeam} in the ${selectedSeason} season.`
                 }
               />
             )}
-          </div>
+          </section>
 
-          {/* Full Discovered Roster Grouped by Position */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-text-primary">
-                {language === "tr" ? "Tam Takım Kadrosu" : "Full Team Roster"}
-              </h3>
-              <p className="text-xs text-text-secondary">
-                {language === "tr"
-                  ? "Pozisyon bazında (Guard, Forvet, Center) ayrılmış oyuncu listesi ve sezon istatistikleri"
-                  : "Roster breakdown by position (Guard, Forward, Center) with season statistics"}
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-text-primary">
+                  {language === "tr" ? "Tam Kadro" : "Full Roster"}
+                </h2>
+                <p className="mt-0.5 text-xs text-text-secondary">
+                  {language === "tr" ? "Sezon ortalamaları, etki puanına göre sıralı" : "Season averages, sorted by impact score"}
+                </p>
+              </div>
+              <div role="group" aria-label="Position filter" className="flex gap-1">
+                {(["all", "guard", "forward", "center"] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setPosFilter(k)}
+                    aria-pressed={posFilter === k}
+                    className={`rounded border px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                      posFilter === k
+                        ? "border-primary text-text-primary"
+                        : "border-border text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    {posLabel(k)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {filteredRoster.length > 0 ? (
+              renderRosterTable(filteredRoster, false)
+            ) : (
+              <p className="py-6 text-center text-xs italic text-text-muted">
+                {language === "tr" ? "Kayıtlı oyuncu bulunamadı" : "No players found"}
               </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {(["guard", "forward", "center"] as const).map((posKey) => {
-                const title = posKey === "guard" ? "Guards" : posKey === "forward" ? "Forwards" : "Centers";
-                const players = sortedTeamRoster.filter((p) => {
-                  const pos = playerPositions[p.PLAYER_ID] || "forward";
-                  return pos === posKey;
-                });
-
-                return (
-                  <div key={posKey} className="rounded border border-border bg-background-primary p-4 flex flex-col">
-                    <div className="flex items-center justify-between border-b border-border-light pb-2.5 mb-3">
-                      <span className="text-xs font-semibold text-text-secondary">
-                        {title}
-                      </span>
-                      <span className="text-xs font-medium text-text-muted tabular-nums">
-                        {players.length} {language === "tr" ? "oyuncu" : "players"}
-                      </span>
-                    </div>
-
-                    {players.length === 0 ? (
-                      <p className="text-xs text-text-muted py-6 text-center italic">
-                        {language === "tr" ? "Kayıtlı oyuncu bulunamadı" : "No players found"}
-                      </p>
-                    ) : (
-                      <div className="divide-y divide-border-light">
-                        {players.map((p) => {
-                          return (
-                            <div
-                              key={p.PLAYER_ID}
-                              onClick={() => onSelectPlayer(p.PLAYER_ID)}
-                              className="group flex items-center justify-between py-2.5 px-1 transition-colors hover:bg-background-tertiary/40 cursor-pointer"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <PlayerPhoto
-                                  playerId={p.PLAYER_ID}
-                                  name={p.PLAYER_NAME}
-                                  size={34}
-                                  className="shrink-0 rounded-full border border-border ring-1 ring-border"
-                                />
-                                <div className="min-w-0">
-                                  <span className="truncate text-xs font-semibold text-text-primary group-hover:text-primary transition-colors block">
-                                    {p.PLAYER_NAME}
-                                  </span>
-                                  <p className="text-xs tabular-nums text-text-muted">
-                                    {p.GP > 0
-                                      ? (language === "tr" ? `${p.GP} maç · ${p.AVG_MIN.toFixed(0)} dk` : `${p.GP} GP · ${p.AVG_MIN.toFixed(0)}m`)
-                                      : (language === "tr" ? "Henüz oynamadı" : "No minutes yet")}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-3 tabular-nums text-right shrink-0">
-                                <div>
-                                  <span className="text-xs font-semibold text-text-primary">
-                                    {p.AVG_PTS.toFixed(1)}
-                                  </span>
-                                  <span className="ml-1 text-xs text-text-muted">PTS</span>
-                                </div>
-                                <div>
-                                  <span className="text-xs font-medium text-text-secondary">
-                                    {p.AVG_REB.toFixed(1)}
-                                  </span>
-                                  <span className="ml-1 text-xs text-text-muted">REB</span>
-                                </div>
-                                <div>
-                                  <span className="text-xs font-medium text-text-secondary">
-                                    {p.AVG_AST.toFixed(1)}
-                                  </span>
-                                  <span className="ml-1 text-xs text-text-muted">AST</span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+            )}
+          </section>
         </>
       ) : (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -662,7 +550,9 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                       {index + 1}
                     </span>
                     <TeamLogo abbr={item.team} size={22} />
-                    <span className="w-10 font-semibold text-text-primary">{item.team}</span>
+                    <span className="w-36 truncate font-semibold text-text-primary">
+                      {TEAM_NAME_BY_ABBR[item.team as keyof typeof TEAM_NAME_BY_ABBR] || item.team}
+                    </span>
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-background-tertiary">
                       <div
                         className="h-full rounded-full bg-primary"

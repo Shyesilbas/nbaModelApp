@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClipboardCheck } from "lucide-react";
-import { Badge, Card, DatePicker, EmptyState, InlineError, Skeleton } from "./common";
+import { Card, DatePicker, EmptyState, InlineError, Skeleton } from "./common";
 import TeamLogo from "./TeamLogo";
+import { TEAM_NAME_BY_ABBR } from "../lib/nbaTeams";
 import { CalibrationChart, RollingAccuracyChart } from "./paper/PaperCharts";
 import PublishSnapshotButton from "./PublishSnapshotButton";
 import { loadPrivateApiFresh } from "../lib/dataCache";
@@ -56,27 +57,28 @@ type Summary = {
 
 type Report = { season: string; summary: Summary; games: PaperGame[] };
 
+const teamName = (abbr: string) => TEAM_NAME_BY_ABBR[abbr as keyof typeof TEAM_NAME_BY_ABBR] || abbr;
 const pct = (v: number | null, digits = 1) => (v == null ? "-" : `${(v * 100).toFixed(digits)}%`);
 const num = (v: number | null | undefined, digits = 2) => (v == null ? "-" : v.toFixed(digits));
 const signed = (v: number) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1));
 const injuryTitle = (g: PaperGame) =>
   g.injury_report?.players.map((p) => `${p.team} ${p.player_name}: ${p.status} (${p.reason})`).join("\n") ?? "";
 
-function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
+function Stat({ label, value, hint, strong = false }: { label: string; value: string; hint: string; strong?: boolean }) {
   return (
-    <Card padding="sm">
-      <p className="text-xs text-text-secondary">{label}</p>
-      <p className="mt-1 text-lg font-semibold tabular-nums text-text-primary">{value}</p>
-      <p className="mt-0.5 text-xs text-text-muted">{hint}</p>
-    </Card>
+    <div>
+      <dt className="text-xs text-text-secondary">{label}</dt>
+      <dd className={`mt-1 font-semibold tabular-nums text-text-primary ${strong ? "text-3xl" : "text-xl"}`}>{value}</dd>
+      <p className="mt-1 text-xs leading-snug text-text-muted">{hint}</p>
+    </div>
   );
 }
 
 function TeamCell({ abbr, bold }: { abbr: string; bold: boolean }) {
   return (
-    <span className="inline-flex items-center gap-2">
-      <TeamLogo abbr={abbr} size={20} />
-      <span className={bold ? "font-semibold text-text-primary" : "text-text-secondary"}>{abbr}</span>
+    <span className="flex items-center gap-2">
+      <TeamLogo abbr={abbr} name={teamName(abbr)} size={24} />
+      <span className={bold ? "font-semibold text-text-primary" : "text-text-secondary"}>{teamName(abbr)}</span>
     </span>
   );
 }
@@ -84,9 +86,8 @@ function TeamCell({ abbr, bold }: { abbr: string; bold: boolean }) {
 function MatchupCell({ game, highlightWinner }: { game: PaperGame; highlightWinner: boolean }) {
   const won = (abbr: string) => highlightWinner && game.status === "final" && game.actual_winner === abbr;
   return (
-    <div className="flex items-center gap-2">
+    <div className="space-y-1.5">
       <TeamCell abbr={game.away_team} bold={won(game.away_team)} />
-      <span className="text-xs text-text-muted">@</span>
       <TeamCell abbr={game.home_team} bold={won(game.home_team)} />
     </div>
   );
@@ -174,13 +175,15 @@ export default function PaperTrading() {
   const edge = s.accuracy != null && s.home_baseline_accuracy != null ? s.accuracy - s.home_baseline_accuracy : null;
 
   const resultBadges = (g: PaperGame) => {
-    if (!g.valid) return <Badge variant="warning" size="sm">{p.resultLate}</Badge>;
-    if (g.status === "pending") return <Badge variant="neutral" size="sm">{p.resultPending}</Badge>;
+    if (!g.valid) return <span className="text-xs font-medium text-status-warning">{p.resultLate}</span>;
+    if (g.status === "pending") return <span className="text-xs text-text-muted">{p.resultPending}</span>;
     return (
-      <span className="inline-flex items-center gap-1.5">
-        <Badge variant={g.correct ? "success" : "error"} size="sm">{g.correct ? p.resultCorrect : p.resultWrong}</Badge>
-        {g.origin === "backfill" && <Badge variant="info" size="sm">{p.resultBackfill}</Badge>}
-      </span>
+      <div>
+        <span className={`text-sm font-semibold ${g.correct ? "text-status-success" : "text-status-error"}`}>
+          {g.correct ? p.resultCorrect : p.resultWrong}
+        </span>
+        {g.origin === "backfill" && <p className="mt-0.5 text-xs text-text-muted">{p.resultBackfill}</p>}
+      </div>
     );
   };
 
@@ -194,70 +197,66 @@ export default function PaperTrading() {
         <PublishSnapshotButton />
       </div>
 
-      <Card padding="md" className="space-y-3">
-        <h2 className="text-sm font-semibold text-text-primary">{p.howTitle}</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <details className="group rounded border border-border bg-background-primary">
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
+          {p.howTitle}
+        </summary>
+        <div className="grid grid-cols-1 gap-5 border-t border-border-light px-4 py-4 md:grid-cols-3">
           <div>
             <h3 className="text-sm font-medium text-text-primary">{p.howFrozenTitle}</h3>
-            <p className="mt-1 text-xs text-text-secondary">{p.howFrozen}</p>
+            <p className="mt-1 text-xs leading-relaxed text-text-secondary">{p.howFrozen}</p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-text-primary">{p.howGradedTitle}</h3>
-            <p className="mt-1 text-xs text-text-secondary">{p.howGraded}</p>
+            <p className="mt-1 text-xs leading-relaxed text-text-secondary">{p.howGraded}</p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-text-primary">{p.howLabelsTitle}</h3>
-            <ul className="mt-1 space-y-1 text-xs text-text-secondary">
-              <li className="flex items-start gap-2">
-                <Badge variant="warning" size="sm" className="shrink-0">{p.resultLate}</Badge>
-                <span>{p.howLate}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Badge variant="info" size="sm" className="shrink-0">{p.resultBackfill}</Badge>
-                <span>{p.howBackfill}</span>
-              </li>
+            <ul className="mt-1 space-y-1.5 text-xs leading-relaxed text-text-secondary">
+              <li><span className="font-medium text-status-warning">{p.resultLate}:</span> {p.howLate}</li>
+              <li><span className="font-medium text-text-primary">{p.resultBackfill}:</span> {p.howBackfill}</li>
             </ul>
           </div>
         </div>
-      </Card>
+      </details>
 
-      <section className="space-y-3" aria-labelledby="paper-season-summary">
-        <h2 id="paper-season-summary" className="text-lg font-semibold text-text-primary">{p.seasonSummary}</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat
-            label={p.gamesLogged}
-            value={`${s.games_logged}`}
-            hint={fill(p.gamesLoggedHint, { graded: s.games_graded, pending: s.games_pending })}
-          />
-          <Stat
-            label={p.accuracy}
-            value={pct(s.accuracy)}
-            hint={
-              s.games_graded
-                ? fill(p.accuracyHint, { correct: Math.round((s.accuracy ?? 0) * s.games_graded), graded: s.games_graded })
-                : p.accuracyNone
-            }
-          />
-          <Stat label={p.homeBaseline} value={pct(s.home_baseline_accuracy)} hint={p.homeBaselineHint} />
-          <Stat
-            label={p.edge}
-            value={edge == null ? "-" : `${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}%`}
-            hint={p.edgeHint}
-          />
-        </div>
+      <section aria-labelledby="paper-season-summary">
+        <h2 id="paper-season-summary" className="mb-3 text-sm font-semibold text-text-primary">{p.seasonSummary}</h2>
+        <Card padding="md">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-6 lg:grid-cols-3">
+            <Stat
+              strong
+              label={p.accuracy}
+              value={pct(s.accuracy)}
+              hint={
+                s.games_graded
+                  ? fill(p.accuracyHint, { correct: Math.round((s.accuracy ?? 0) * s.games_graded), graded: s.games_graded })
+                  : p.accuracyNone
+              }
+            />
+            <Stat label={p.homeBaseline} value={pct(s.home_baseline_accuracy)} hint={p.homeBaselineHint} />
+            <Stat
+              label={p.edge}
+              value={edge == null ? "-" : `${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}%`}
+              hint={p.edgeHint}
+            />
+            <Stat
+              label={p.gamesLogged}
+              value={`${s.games_logged}`}
+              hint={fill(p.gamesLoggedHint, { graded: s.games_graded, pending: s.games_pending })}
+            />
+            <Stat label={p.brier} value={num(s.brier, 3)} hint={p.brierHint} />
+            <Stat label={p.logLoss} value={num(s.log_loss, 3)} hint={p.logLossHint} />
+          </dl>
+        </Card>
         {(s.backfilled_graded > 0 || s.invalid_late > 0) && (
-          <p className="text-xs text-text-muted">
+          <p className="mt-2 text-xs text-text-muted">
             {fill(p.gamesGradedExtra, { backfill: s.backfilled_graded, late: s.invalid_late })}
           </p>
         )}
       </section>
 
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Stat label={p.brier} value={num(s.brier, 3)} hint={p.brierHint} />
-          <Stat label={p.logLoss} value={num(s.log_loss, 3)} hint={p.logLossHint} />
-        </div>
-
+      <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <RollingAccuracyChart games={games} />
           <CalibrationChart bands={s.bands} />
@@ -325,16 +324,14 @@ export default function PaperTrading() {
                 const conf = Math.max(g.home_win_probability, 1 - g.home_win_probability);
                 return (
                   <tr key={g.game_id} className="hover:bg-background-secondary/50">
-                    <td className="whitespace-nowrap px-4 py-3">
+                    <td className="whitespace-nowrap px-4 py-3 pr-8">
                       <MatchupCell game={g} highlightWinner />
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 tabular-nums">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-text-primary">{g.predicted_winner}</span>
-                        <span className="rounded-sm border border-border bg-background-tertiary px-1 py-0.5 text-xs font-medium text-text-secondary">
-                          {pct(conf, 0)}
-                        </span>
-                      </div>
+                      <p className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold text-text-primary">{teamName(g.predicted_winner)}</span>
+                        <span className="text-xs text-text-secondary">{pct(conf, 0)}</span>
+                      </p>
                       <p className="mt-1 text-xs text-text-secondary">
                         {p.score} {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
                       </p>

@@ -1,4 +1,4 @@
-import { Badge } from "../common";
+import { ArrowRight } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext";
 
 export type InjuryChange = {
@@ -7,12 +7,12 @@ export type InjuryChange = {
   steps: { status: string | null; at: string }[];
 };
 
-const VARIANT: Record<string, "error" | "warning" | "neutral" | "success"> = {
-  Out: "error",
-  Doubtful: "warning",
-  Questionable: "warning",
-  Probable: "neutral",
-  Available: "success",
+export const INJURY_TONE: Record<string, string> = {
+  Out: "text-status-error",
+  Doubtful: "text-status-warning",
+  Questionable: "text-status-warning",
+  Probable: "text-text-secondary",
+  Available: "text-status-success",
 };
 
 const clock = (published: string) => published.split(" ").slice(1).join(" ");
@@ -22,25 +22,31 @@ export function InjuryChangesList({ changes }: { changes: InjuryChange[] }) {
   const { language } = useLanguage();
   if (changes.length === 0) return null;
   return (
-    <div className="rounded border border-status-warning/30 bg-status-warning/10 p-3">
-      <p className="mb-2 text-xs font-medium text-text-primary">
-        {language === "tr" ? "Bugünkü sakatlık raporu değişimleri" : "Injury report changes today"}
-      </p>
-      <ul className="space-y-1.5">
+    <section aria-label={language === "tr" ? "Rapor değişimleri" : "Report changes"}>
+      <h4 className="text-xs font-medium text-text-muted">
+        {language === "tr" ? "Bugünkü rapor değişimleri" : "Report changes today"}
+      </h4>
+      <ul className="mt-1 divide-y divide-border-light">
         {changes.map((c) => (
-          <li key={`${c.team}-${c.player_name}`} className="flex flex-wrap items-center gap-1.5 text-xs text-text-secondary">
-            <span className="text-text-primary">{c.player_name}</span>
-            <span>({c.team})</span>
-            {c.steps.map((s, i) => (
-              <span key={`${s.at}-${i}`} className="inline-flex items-center gap-1.5">
-                {i > 0 && <span className="text-text-muted">{language === "tr" ? "ardından" : "then"}</span>}
-                <Badge variant={VARIANT[s.status ?? "Available"] ?? "neutral"} size="sm">{s.status ?? "Available"}</Badge>
-                <span className="text-text-muted">{clock(s.at)}</span>
-              </span>
-            ))}
+          <li key={`${c.team}-${c.player_name}`} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2 text-xs">
+            <span className="text-sm font-medium text-text-primary">
+              {c.player_name} <span className="text-xs font-normal text-text-muted">{c.team}</span>
+            </span>
+            <span className="flex flex-wrap items-center gap-1.5 tabular-nums">
+              {c.steps.map((s, i) => {
+                const status = s.status ?? "Available";
+                return (
+                  <span key={`${s.at}-${i}`} className="inline-flex items-center gap-1.5">
+                    {i > 0 && <ArrowRight size={14} className="text-text-muted" aria-hidden="true" />}
+                    <span className={`font-medium ${INJURY_TONE[status] ?? "text-text-secondary"}`}>{status}</span>
+                    <span className="text-text-muted">{clock(s.at)}</span>
+                  </span>
+                );
+              })}
+            </span>
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }

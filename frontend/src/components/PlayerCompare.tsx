@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeftRight, Check, Search, UserRound } from "lucide-react";
+import { ArrowLeftRight, Search, UserRound } from "lucide-react";
 import { loadPrivateApi } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
 import PlayerPhoto from "./PlayerPhoto";
-import { Badge, Button, Card, EmptyState, InlineError, Input, Select, Skeleton } from "./common";
+import { Button, Card, EmptyState, InlineError, Input, Select, Skeleton } from "./common";
 import { useLanguage } from "../context/LanguageContext";
 
 interface PlayerProfile {
@@ -113,9 +113,9 @@ function PlayerPicker({
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           {player ? (
-            <PlayerPhoto playerId={player.PLAYER_ID} name={player.PLAYER_NAME} size={56} className="shrink-0" />
+            <PlayerPhoto playerId={player.PLAYER_ID} name={player.PLAYER_NAME} size={72} className="shrink-0" />
           ) : (
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border bg-background-tertiary text-text-muted">
+            <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full border border-border bg-background-tertiary text-text-muted">
               <UserRound size={20} strokeWidth={1.5} aria-hidden="true" />
             </span>
           )}
@@ -125,6 +125,15 @@ function PlayerPicker({
               {player?.PLAYER_NAME ?? (language === "tr" ? "Oyuncu seçilmedi" : "No player selected")}
             </h2>
             {meta.length > 0 && <p className="truncate text-xs text-text-secondary">{meta.join(" · ")}</p>}
+            {player && onOpenProfile && (
+              <button
+                type="button"
+                onClick={() => onOpenProfile(player.PLAYER_ID)}
+                className="mt-1 text-xs font-medium text-primary hover:underline cursor-pointer"
+              >
+                {language === "tr" ? "Profili aç" : "View profile"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -138,14 +147,6 @@ function PlayerPicker({
           {language === "tr" ? "Değiştir" : "Change"}
         </Button>
       </div>
-
-      {player && onOpenProfile && (
-        <div className="mt-4 border-t border-border-light pt-3">
-          <Button variant="ghost" size="sm" onClick={() => onOpenProfile(player.PLAYER_ID)}>
-            {language === "tr" ? "Profili aç" : "View profile"}
-          </Button>
-        </div>
-      )}
 
       {open && (
         <div className="absolute inset-x-3 top-full z-20 mt-1 rounded border border-border bg-background-primary p-2 shadow-md">
@@ -194,35 +195,52 @@ function PlayerPicker({
 
 /* ─────────── Comparison table ─────────── */
 
-function ValueCell({
-  value,
+const GROUPS: { id: string; tr: string; en: string; keys: MetricKey[] }[] = [
+  { id: "scoring", tr: "Skor ve oyun kurma", en: "Scoring and playmaking", keys: ["PTS", "AST", "REB"] },
+  { id: "defense", tr: "Savunma ve top kaybı", en: "Defense and turnovers", keys: ["STL", "BLK", "TOV"] },
+  { id: "efficiency", tr: "Verimlilik", en: "Efficiency", keys: ["FG_PCT", "FG3_PCT", "FT_PCT", "PLUS_MINUS"] },
+];
+
+function CompareRow({
   metric,
-  leads,
-  align,
+  v1,
+  v2,
+  lead,
 }: {
-  value: number | null | undefined;
   metric: Metric;
-  leads: boolean;
-  align: "left" | "right";
+  v1: number | null | undefined;
+  v2: number | null | undefined;
+  lead: 1 | 2 | null;
 }) {
-  const alignClass = align === "left" ? "text-right" : "text-left";
-  const justify = align === "left" ? "justify-end" : "justify-start";
-  if (value == null) {
-    return <td className={`px-4 py-3 text-sm text-text-muted ${alignClass}`}>—</td>;
-  }
-  return (
-    <td className={`px-4 py-3 text-sm tabular-nums ${alignClass}`}>
+  const showBars = v1 != null && v2 != null && v1 >= 0 && v2 >= 0 && Math.max(v1, v2) > 0;
+  const max = showBars ? Math.max(v1, v2) : 1;
+  const side = (v: number | null | undefined, mine: boolean, align: "right" | "left") => (
+    <div className={align === "right" ? "text-right" : "text-left"}>
       <span
-        className={`inline-flex items-center gap-1.5 ${justify} ${
-          leads ? "font-semibold text-status-success" : "text-text-primary"
+        className={`text-sm tabular-nums ${
+          v == null ? "text-text-muted" : mine ? "font-semibold text-text-primary" : "text-text-secondary"
         }`}
       >
-        {leads && align === "left" && <Check size={16} strokeWidth={1.5} aria-hidden="true" />}
-        {metric.format(value)}
-        {leads && align === "right" && <Check size={16} strokeWidth={1.5} aria-hidden="true" />}
-        {leads && <span className="sr-only">(önde)</span>}
+        {v == null ? "—" : metric.format(v)}
       </span>
-    </td>
+      {showBars && v != null && (
+        <div className={`mt-1 flex ${align === "right" ? "justify-end" : "justify-start"}`}>
+          <div className="h-1 w-full overflow-hidden rounded-full bg-background-tertiary">
+            <div
+              className={`h-full rounded-full ${mine ? "bg-primary" : "bg-border"} ${align === "right" ? "ml-auto" : ""}`}
+              style={{ width: `${(v / max) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+  return (
+    <div className="grid grid-cols-[1fr_minmax(88px,auto)_1fr] items-center gap-3 px-4 py-2.5 sm:gap-6">
+      {side(v1, lead === 1, "right")}
+      <span className="text-center text-xs font-medium text-text-secondary">{metric.label}</span>
+      {side(v2, lead === 2, "left")}
+    </div>
   );
 }
 
@@ -378,7 +396,7 @@ export const PlayerCompare: React.FC<PlayerCompareProps> = ({
         />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
             <PlayerPicker
               slot={t.compare.slot1}
               player={p1}
@@ -387,6 +405,11 @@ export const PlayerCompare: React.FC<PlayerCompareProps> = ({
               onPick={setP1Choice}
               onOpenProfile={onSelectPlayerProfile}
             />
+            <div className="flex items-baseline justify-center gap-3 text-4xl font-semibold tabular-nums">
+              <span className={lead.a >= lead.b ? "text-text-primary" : "text-text-muted"}>{lead.a}</span>
+              <span className="text-2xl font-normal text-text-muted">–</span>
+              <span className={lead.b >= lead.a ? "text-text-primary" : "text-text-muted"}>{lead.b}</span>
+            </div>
             <PlayerPicker
               slot={t.compare.slot2}
               player={p2}
@@ -410,62 +433,39 @@ export const PlayerCompare: React.FC<PlayerCompareProps> = ({
           ) : (
             <Card padding="none" className="overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light px-4 py-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-text-primary">
-                    <span className="tabular-nums">{season}</span> {language === "tr" ? "maç başına karşılaştırma" : "per game head-to-head"}
-                  </h2>
-                  <p className="text-xs text-text-secondary">
-                    {language === "tr" ? "Önde olan değer yeşil ve onay işaretiyle gösterilir." : "Leader value is highlighted in green."}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="neutral" size="sm">
-                    <span className="max-w-24 truncate">{p1?.PLAYER_NAME}</span>{" "}
-                    <span className="tabular-nums">{lead.a}</span>
-                  </Badge>
-                  <Badge variant="neutral" size="sm">
-                    <span className="max-w-24 truncate">{p2?.PLAYER_NAME}</span>{" "}
-                    <span className="tabular-nums">{lead.b}</span>
-                  </Badge>
-                </div>
+                <h2 className="text-sm font-semibold text-text-primary">
+                  <span className="tabular-nums">{season}</span> {language === "tr" ? "maç başına karşılaştırma" : "per game head-to-head"}
+                </h2>
+                <p className="text-xs tabular-nums text-text-secondary">
+                  {[
+                    s1 ? `${p1?.PLAYER_NAME}: ${s1.games_played} ${language === "tr" ? "maç" : "GP"}, ${s1.MIN != null ? one(s1.MIN) : "—"} ${language === "tr" ? "dk" : "min"}` : null,
+                    s2 ? `${p2?.PLAYER_NAME}: ${s2.games_played} ${language === "tr" ? "maç" : "GP"}, ${s2.MIN != null ? one(s2.MIN) : "—"} ${language === "tr" ? "dk" : "min"}` : null,
+                  ].filter(Boolean).join("  ·  ")}
+                </p>
               </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full table-fixed border-collapse">
-                  <caption className="sr-only">
-                    {p1?.PLAYER_NAME} {language === "tr" ? "ve" : "and"} {p2?.PLAYER_NAME} {season}
-                  </caption>
-                  <thead>
-                    <tr className="bg-background-tertiary text-xs text-text-secondary">
-                      <th scope="col" className="w-[38%] px-4 py-2 text-right font-medium">
-                        {p1?.PLAYER_NAME}
-                      </th>
-                      <th scope="col" className="w-[24%] px-2 py-2 text-center font-medium">
-                        {t.compare.metrics}
-                      </th>
-                      <th scope="col" className="w-[38%] px-4 py-2 text-left font-medium">
-                        {p2?.PLAYER_NAME}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-light">
-                    {metrics.map((m) => {
-                      const v1 = s1?.[m.key];
-                      const v2 = s2?.[m.key];
-                      const w = leader(m, v1, v2);
-                      return (
-                        <tr key={m.key} className="hover:bg-background-secondary">
-                          <ValueCell value={v1} metric={m} leads={w === 1} align="left" />
-                          <th scope="row" className="px-2 py-3 text-center text-xs font-medium text-text-secondary">
-                            {m.label}
-                            {m.hint && <span className="block font-normal text-text-muted">{m.hint}</span>}
-                          </th>
-                          <ValueCell value={v2} metric={m} leads={w === 2} align="right" />
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="divide-y divide-border">
+                {GROUPS.map((g) => (
+                  <section key={g.id} aria-label={language === "tr" ? g.tr : g.en}>
+                    <h3 className="bg-background-tertiary px-4 py-1.5 text-xs font-medium text-text-secondary">
+                      {language === "tr" ? g.tr : g.en}
+                    </h3>
+                    <div className="divide-y divide-border-light">
+                      {g.keys.map((k) => {
+                        const m = metrics.find((x) => x.key === k);
+                        if (!m) return null;
+                        return (
+                          <CompareRow
+                            key={k}
+                            metric={m}
+                            v1={s1?.[k]}
+                            v2={s2?.[k]}
+                            lead={leader(m, s1?.[k], s2?.[k])}
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
               </div>
             </Card>
           )}

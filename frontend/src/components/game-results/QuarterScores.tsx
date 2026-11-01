@@ -1,4 +1,5 @@
 import TeamLogo from "../TeamLogo";
+import { teamFull } from "./utils";
 import { useLanguage } from "../../context/LanguageContext";
 
 export interface QuarterScoresProps {
@@ -54,7 +55,7 @@ export function QuarterScores({
         </div>
         {winnerAbbr && margin != null && margin > 0 && (
           <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-text-secondary">
-            {winnerAbbr} +{margin} {language === "tr" ? "farkla kazandı" : "pts win"}
+            {teamFull(winnerAbbr, null)} +{margin}
           </span>
         )}
       </div>
@@ -84,10 +85,7 @@ export function QuarterScores({
                 <div className="flex items-center gap-2">
                   <TeamLogo abbr={awayAbbr} name={awayName} size={20} />
                   <span className={`text-xs font-semibold ${awayWon ? "text-text-primary" : "text-text-secondary"}`}>
-                    {awayAbbr}
-                  </span>
-                  <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-muted">
-                    {language === "tr" ? "Dep" : "Away"}
+                    {teamFull(awayAbbr, awayName)}
                   </span>
                 </div>
               </td>
@@ -117,10 +115,7 @@ export function QuarterScores({
                 <div className="flex items-center gap-2">
                   <TeamLogo abbr={homeAbbr} name={homeName} size={20} />
                   <span className={`text-xs font-semibold ${homeWon ? "text-text-primary" : "text-text-secondary"}`}>
-                    {homeAbbr}
-                  </span>
-                  <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-muted">
-                    {language === "tr" ? "Ev" : "Home"}
+                    {teamFull(homeAbbr, homeName)}
                   </span>
                 </div>
               </td>

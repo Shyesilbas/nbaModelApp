@@ -75,7 +75,7 @@
     margin: 0;
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     color: var(--color-text-primary);
-    background-color: var(--color-bg-secondary);
+    background-color: var(--color-bg-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

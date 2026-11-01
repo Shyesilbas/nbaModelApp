@@ -3,9 +3,6 @@ import {
   Clock,
   RefreshCw,
   MapPin,
-  LayoutGrid,
-  Users,
-  Flame,
   ArrowLeft,
   Calendar,
 } from "lucide-react";
@@ -329,30 +326,75 @@ export function GameCardDetail({
   const homeQS = gameDetail?.home_team?.quarter_scores;
   const awayQS = gameDetail?.away_team?.quarter_scores;
 
-  const tabs = [
+  const nick = (abbr: string, name?: string | null) => {
+    const full = teamFull(abbr, name);
+    return full.endsWith("Trail Blazers") ? "Trail Blazers" : full.split(" ").slice(-1)[0];
+  };
+
+  const tabs: { id: "game" | "home" | "away" | "highlights"; label: string }[] = [
     ...(isCompleted
-      ? [
-          {
-            id: "game" as const,
-            label: language === "tr" ? "Özet ve İstatistikler" : "Recap & Stats",
-            icon: <LayoutGrid size={16} />,
-          },
-        ]
+      ? [{ id: "game" as const, label: language === "tr" ? "Özet" : "Recap" }]
       : []),
-    {
-      id: "away" as const,
-      label: `${game.AWAY_TEAM_ABBREVIATION} ${isCompleted ? (language === "tr" ? "Kutu Puanı" : "Box Score") : (language === "tr" ? "Kadro" : "Roster")}`,
-      icon: <Users size={16} />,
-    },
-    {
-      id: "home" as const,
-      label: `${game.HOME_TEAM_ABBREVIATION} ${isCompleted ? (language === "tr" ? "Kutu Puanı" : "Box Score") : (language === "tr" ? "Kadro" : "Roster")}`,
-      icon: <Users size={16} />,
-    },
+    { id: "away" as const, label: nick(game.AWAY_TEAM_ABBREVIATION, game.AWAY_TEAM_NAME) },
+    { id: "home" as const, label: nick(game.HOME_TEAM_ABBREVIATION, game.HOME_TEAM_NAME) },
     ...(isCompleted
-      ? [{ id: "highlights" as const, label: language === "tr" ? "Önemli Anlar" : "Highlights", icon: <Flame size={16} /> }]
+      ? [{ id: "highlights" as const, label: language === "tr" ? "Önemli Anlar" : "Highlights" }]
       : []),
   ];
+
+  const renderTeamPanel = (side: "home" | "away") => {
+    const abbr = (side === "home" ? game.HOME_TEAM_ABBREVIATION : game.AWAY_TEAM_ABBREVIATION) ?? "";
+    const name = side === "home" ? game.HOME_TEAM_NAME : game.AWAY_TEAM_NAME;
+    const detailName = side === "home" ? gameDetail?.home_team?.team_name : gameDetail?.away_team?.team_name;
+    const bs = side === "home" ? homeBS : awayBS;
+    const score = side === "home" ? homeScore : awayScore;
+    const players = side === "home" ? topHome : topAway;
+    const roster = side === "home" ? homeRoster : awayRoster;
+    const stats = [
+      { k: "PTS", v: score ?? "—" },
+      { k: "REB", v: fmtInt(bs?.REB ?? null) },
+      { k: "AST", v: fmtInt(bs?.AST ?? null) },
+      { k: "TOV", v: fmtInt(bs?.TOV ?? null) },
+    ];
+    return (
+      <Card>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <TeamLogo abbr={abbr} name={name} size={32} />
+            <h3 className="text-sm font-semibold text-text-primary">
+              {detailName || teamFull(abbr, name)}
+            </h3>
+          </div>
+          {isCompleted && (
+            <p className="flex items-center gap-4 text-xs text-text-muted">
+              {stats.map((s) => (
+                <span key={s.k}>
+                  <span className="text-sm font-semibold tabular-nums text-text-primary">{s.v}</span> {s.k}
+                </span>
+              ))}
+            </p>
+          )}
+        </div>
+        {isCompleted && players.length > 0 ? (
+          <PlayerBoxTable players={players} />
+        ) : loadingRosters ? (
+          <div className="grid grid-cols-2 gap-2 py-2 sm:grid-cols-3 md:grid-cols-4">
+            {[...Array(8)].map((_, i) => (
+              <Skeleton key={i} className="h-9 w-full rounded" />
+            ))}
+          </div>
+        ) : roster.length > 0 ? (
+          renderRosterByPositions(roster, abbr)
+        ) : (
+          <div className="rounded border border-border bg-background-tertiary p-6 text-center">
+            <p className="text-xs font-medium text-text-secondary">
+              {language === "tr" ? "Kadro bilgisi bulunamadı." : "Roster not available."}
+            </p>
+          </div>
+        )}
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -367,54 +409,21 @@ export function GameCardDetail({
 
       {/* ── SCOREBOARD HERO CARD ── */}
       <Card padding="none" className="overflow-hidden">
-        {/* Meta Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light bg-background-tertiary px-4 py-2 text-xs text-text-secondary">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 px-4 pt-3">
+          <div className="min-w-0">
             {onBack && (
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={onBack}
                 leftIcon={<ArrowLeft size={16} />}
-                className="mr-1 h-7 px-2 text-xs"
+                className="h-7 px-2 text-xs"
               >
                 {language === "tr" ? "Geri" : "Back"}
               </Button>
             )}
-            <Calendar size={16} className="text-text-muted" />
-            <span className="font-medium text-text-primary">
-              {formatDate(game.GAME_DATE)}
-            </span>
-            <span className="text-text-muted">•</span>
-            <Badge variant="neutral">{seasonLabel}</Badge>
-            {game.SERIES_GAME_NUMBER != null && (
-              <Badge variant="neutral">Game {game.SERIES_GAME_NUMBER}</Badge>
-            )}
-            {game.IS_ELIMINATION_GAME && (
-              <Badge variant="error">{language === "tr" ? "Eleme Maçı" : "Elimination Match"}</Badge>
-            )}
-            <span className="text-text-muted">•</span>
-            {isCompleted ? (
-              <Badge variant="success" size="sm" dot>
-                {game.GAME_STATUS || "Final"}
-              </Badge>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-text-secondary">
-                <Clock size={16} className="text-text-muted" />
-                {fmtTipoffTR(game.GAME_START_UTC, language) ?? (game.GAME_STATUS || (language === "tr" ? "Gelecek" : "Upcoming"))}
-              </span>
-            )}
           </div>
-
           <div className="flex items-center gap-2">
-            {arenaName && (
-              <div className="hidden sm:flex items-center gap-1.5 text-text-muted mr-1">
-                <MapPin size={16} />
-                <span className="truncate max-w-sm">
-                  {[arenaName, arenaCity].filter(Boolean).join(" · ")}
-                </span>
-              </div>
-            )}
             {canRefresh && (
               <Button
                 variant="secondary"
@@ -433,165 +442,96 @@ export function GameCardDetail({
               </Button>
             )}
             {!isCompleted && onPredict && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={onPredict}
-                className="h-7 px-2.5 text-xs"
-              >
+              <Button variant="primary" size="sm" onClick={onPredict} className="h-7 px-2.5 text-xs">
                 {language === "tr" ? "Model Tahmini" : "Model Prediction"}
               </Button>
             )}
           </div>
         </div>
 
-        {/* Primary Matchup Board */}
-        <div className="p-4 sm:p-6">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-8">
-            {/* Away Team */}
-            <div
-              className={`flex items-center gap-3 sm:gap-4 ${
-                awayWon ? "" : isCompleted ? "opacity-75" : ""
-              }`}
-            >
-              <TeamLogo
-                abbr={game.AWAY_TEAM_ABBREVIATION}
-                name={game.AWAY_TEAM_NAME}
-                size={44}
-              />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-base sm:text-lg font-semibold ${
-                      awayWon ? "text-text-primary" : "text-text-secondary"
-                    }`}
-                  >
-                    {game.AWAY_TEAM_ABBREVIATION}
-                  </span>
-                  {awayRecord && (
-                    <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs font-semibold tabular-nums text-text-primary">
-                      {awayRecord}
-                    </span>
-                  )}
-                  <Badge variant="neutral" size="sm">
-                    {language === "tr" ? "Deplasman" : "Away"}
-                  </Badge>
-                  {awayWon && (
-                    <Badge variant="success" size="sm">
-                      {language === "tr" ? "Galibiyet" : "Win"}
-                    </Badge>
-                  )}
-                </div>
-                <p
-                  className="truncate text-xs text-text-muted mt-0.5"
-                  title={game.AWAY_TEAM_NAME ?? ""}
+        <div className="px-4 pb-5 pt-3 sm:px-8 sm:pb-7">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-10">
+            {(["away", "home"] as const).map((side) => {
+              const abbr = side === "away" ? game.AWAY_TEAM_ABBREVIATION : game.HOME_TEAM_ABBREVIATION;
+              const name = side === "away" ? game.AWAY_TEAM_NAME : game.HOME_TEAM_NAME;
+              const record = side === "away" ? awayRecord : homeRecord;
+              const won = side === "away" ? awayWon : homeWon;
+              const sideLabel = side === "away"
+                ? (language === "tr" ? "Deplasman" : "Away")
+                : (language === "tr" ? "Ev Sahibi" : "Home");
+              return (
+                <div
+                  key={side}
+                  className={`flex flex-col items-center gap-2 text-center ${
+                    side === "home" ? "order-3" : "order-1"
+                  } ${isCompleted && !won ? "opacity-70" : ""}`}
                 >
-                  {teamFull(game.AWAY_TEAM_ABBREVIATION, game.AWAY_TEAM_NAME)}
-                </p>
-              </div>
-            </div>
-
-            {/* Score / Center Display */}
-            <div className="flex flex-col items-center justify-center min-w-[90px] sm:min-w-[130px] text-center">
-              {isCompleted ? (
-                <div>
-                  <div className="flex items-baseline justify-center gap-2 text-2xl sm:text-3xl font-semibold tabular-nums">
-                    <span
-                      className={
-                        awayWon ? "text-text-primary font-semibold" : "text-text-secondary"
-                      }
-                    >
-                      {awayScore ?? "—"}
-                    </span>
-                    <span className="text-text-muted font-normal text-lg sm:text-xl">
-                      :
-                    </span>
-                    <span
-                      className={
-                        homeWon ? "text-text-primary font-semibold" : "text-text-secondary"
-                      }
-                    >
-                      {homeScore ?? "—"}
-                    </span>
-                  </div>
-                  {margin > 0 && winnerAbbr && (
-                    <p className="mt-1 text-xs font-medium text-text-muted">
-                      {winnerAbbr} +{margin}
+                  <TeamLogo abbr={abbr} name={name} size={56} />
+                  <div className="min-w-0 max-w-full">
+                    <p className="truncate text-sm font-semibold text-text-primary sm:text-base" title={name ?? ""}>
+                      {teamFull(abbr, name)}
                     </p>
-                  )}
+                    <p className="mt-0.5 text-xs text-text-muted">
+                      {[record, sideLabel].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center">
-                  <span className="text-sm font-semibold text-text-secondary">
-                    VS
-                  </span>
-                  {fmtTipoffTR(game.GAME_START_UTC, language) && (
-                    <span className="mt-1 text-xs font-medium tabular-nums text-text-primary">
-                      {fmtTipoffTR(game.GAME_START_UTC, language)}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+              );
+            })}
 
-            {/* Home Team */}
-            <div
-              className={`flex items-center justify-end gap-3 sm:gap-4 text-right ${
-                homeWon ? "" : isCompleted ? "opacity-75" : ""
-              }`}
-            >
-              <div className="min-w-0">
-                <div className="flex items-center justify-end gap-2">
-                  {homeWon && (
-                    <Badge variant="success" size="sm">
-                      {language === "tr" ? "Galibiyet" : "Win"}
-                    </Badge>
-                  )}
-                  <Badge variant="neutral" size="sm">
-                    {language === "tr" ? "Ev Sahibi" : "Home"}
-                  </Badge>
-                  {homeRecord && (
-                    <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs font-semibold tabular-nums text-text-primary">
-                      {homeRecord}
-                    </span>
-                  )}
-                  <span
-                    className={`text-base sm:text-lg font-semibold ${
-                      homeWon ? "text-text-primary" : "text-text-secondary"
-                    }`}
-                  >
-                    {game.HOME_TEAM_ABBREVIATION}
+            <div className="order-2 flex flex-col items-center text-center">
+              {isCompleted ? (
+                <>
+                  <div className="flex items-baseline justify-center gap-2 text-4xl font-semibold tabular-nums sm:gap-3 sm:text-5xl">
+                    <span className={awayWon ? "text-text-primary" : "text-text-muted"}>{awayScore ?? "—"}</span>
+                    <span className="text-2xl font-normal text-text-muted sm:text-3xl">–</span>
+                    <span className={homeWon ? "text-text-primary" : "text-text-muted"}>{homeScore ?? "—"}</span>
+                  </div>
+                  <p className="mt-2 text-xs font-medium text-text-muted">
+                    {game.GAME_STATUS || "Final"}
+                    {margin > 0 && winnerAbbr
+                      ? ` · ${winnerAbbr} ${language === "tr" ? `${margin} farkla` : `by ${margin}`}`
+                      : ""}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm font-semibold text-text-secondary">VS</span>
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium tabular-nums text-text-primary">
+                    <Clock size={14} className="text-text-muted" />
+                    {fmtTipoffTR(game.GAME_START_UTC, language) ??
+                      (game.GAME_STATUS || (language === "tr" ? "Gelecek" : "Upcoming"))}
                   </span>
-                </div>
-                <p
-                  className="truncate text-xs text-text-muted mt-0.5"
-                  title={game.HOME_TEAM_NAME ?? ""}
-                >
-                  {teamFull(game.HOME_TEAM_ABBREVIATION, game.HOME_TEAM_NAME)}
-                </p>
-              </div>
-              <TeamLogo
-                abbr={game.HOME_TEAM_ABBREVIATION}
-                name={game.HOME_TEAM_NAME}
-                size={44}
-              />
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Referees Bar (if available) */}
-        {officials.length > 0 && (
-          <div className="border-t border-border-light bg-background-tertiary/50 px-4 py-2 text-center text-xs text-text-secondary">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-border-light px-4 py-2.5 text-xs text-text-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <Calendar size={14} />
+            {formatDate(game.GAME_DATE)}
+          </span>
+          <span>{seasonLabel}</span>
+          {game.SERIES_GAME_NUMBER != null && <span>Game {game.SERIES_GAME_NUMBER}</span>}
+          {game.IS_ELIMINATION_GAME && (
+            <Badge variant="error" size="sm">{language === "tr" ? "Eleme Maçı" : "Elimination Match"}</Badge>
+          )}
+          {arenaName && (
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin size={14} />
+              {[arenaName, arenaCity].filter(Boolean).join(" · ")}
+            </span>
+          )}
+          {officials.length > 0 && (
             <span>
               {language === "tr" ? "Hakemler: " : "Officials: "}
-              <span className="text-text-primary font-medium">
-                {officials.map((o) => o.cleanName).join(", ")}
-              </span>
+              {officials.map((o) => o.cleanName).join(", ")}
             </span>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Tab Navigation attached seamlessly to the card */}
         <nav
           aria-label="Game detail sections"
           role="tablist"
@@ -605,17 +545,14 @@ export function GameCardDetail({
                 type="button"
                 role="tab"
                 aria-selected={isTabActive}
-                onClick={() =>
-                  setActiveTab(t.id as "game" | "home" | "away" | "highlights")
-                }
-                className={`inline-flex items-center gap-2 border-b-2 px-3 py-3 text-xs sm:text-sm font-medium transition-colors ${
+                onClick={() => setActiveTab(t.id)}
+                className={`border-b-2 px-3 py-3 text-xs font-medium transition-colors sm:text-sm ${
                   isTabActive
                     ? "border-primary text-text-primary font-semibold"
                     : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
                 }`}
               >
-                {t.icon}
-                <span>{t.label}</span>
+                {t.label}
               </button>
             );
           })}
@@ -665,134 +602,9 @@ export function GameCardDetail({
         </div>
       )}
 
-      {/* ── HOME TEAM TAB ── */}
-      {activeTab === "home" && (
-        <div role="tabpanel" className="space-y-4">
-          <Card>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-text-primary">
-                  {gameDetail?.home_team?.team_name ||
-                    game.HOME_TEAM_NAME ||
-                    game.HOME_TEAM_ABBREVIATION}
-                </h3>
-                <p className="mt-0.5 text-xs text-text-secondary">
-                  {game.HOME_TEAM_ABBREVIATION} · Home Team
-                </p>
-              </div>
-              {isCompleted && (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">
-                      {homeScore ?? "—"}
-                    </p>
-                    <p className="text-xs font-medium text-text-muted">PTS</p>
-                  </div>
-                  <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">
-                      {fmtInt(homeBS?.REB ?? null)}
-                    </p>
-                    <p className="text-xs font-medium text-text-muted">REB</p>
-                  </div>
-                  <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">
-                      {fmtInt(homeBS?.AST ?? null)}
-                    </p>
-                    <p className="text-xs font-medium text-text-muted">AST</p>
-                  </div>
-                  <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">
-                      {fmtInt(homeBS?.TOV ?? null)}
-                    </p>
-                    <p className="text-xs font-medium text-text-muted">TOV</p>
-                  </div>
-                </div>
-              )}
-            </div>
-            {isCompleted && topHome.length > 0 ? (
-              <PlayerBoxTable players={topHome} />
-            ) : loadingRosters ? (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 py-2">
-                {[...Array(8)].map((_, i) => (
-                  <Skeleton key={i} className="h-9 w-full rounded" />
-                ))}
-              </div>
-            ) : homeRoster.length > 0 ? (
-              renderRosterByPositions(homeRoster, game.HOME_TEAM_ABBREVIATION ?? "")
-            ) : (
-              <div className="rounded border border-border bg-background-tertiary p-6 text-center">
-                <p className="text-xs font-medium text-text-secondary">
-                  Kadro bilgisi bulunamadı.
-                </p>
-              </div>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {/* ── AWAY TEAM TAB ── */}
-      {activeTab === "away" && (
-        <div role="tabpanel" className="space-y-4">
-          <Card>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-text-primary">
-                  {gameDetail?.away_team?.team_name ||
-                    game.AWAY_TEAM_NAME ||
-                    game.AWAY_TEAM_ABBREVIATION}
-                </h3>
-                <p className="mt-0.5 text-xs text-text-secondary">
-                  {game.AWAY_TEAM_ABBREVIATION} · Away Team
-                </p>
-              </div>
-              {isCompleted && (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">
-                      {awayScore ?? "—"}
-                    </p>
-                    <p className="text-xs font-medium text-text-muted">PTS</p>
-                  </div>
-                  <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">
-                      {fmtInt(awayBS?.REB ?? null)}
-                    </p>
-                    <p className="text-xs font-medium text-text-muted">REB</p>
-                  </div>
-                  <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">
-                      {fmtInt(awayBS?.AST ?? null)}
-                    </p>
-                    <p className="text-xs font-medium text-text-muted">AST</p>
-                  </div>
-                  <div className="rounded border border-border bg-background-tertiary px-3 py-1.5 text-center">
-                    <p className="text-base font-semibold tabular-nums text-text-primary">
-                      {fmtInt(awayBS?.TOV ?? null)}
-                    </p>
-                    <p className="text-xs font-medium text-text-muted">TOV</p>
-                  </div>
-                </div>
-              )}
-            </div>
-            {isCompleted && topAway.length > 0 ? (
-              <PlayerBoxTable players={topAway} />
-            ) : loadingRosters ? (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 py-2">
-                {[...Array(8)].map((_, i) => (
-                  <Skeleton key={i} className="h-9 w-full rounded" />
-                ))}
-              </div>
-            ) : awayRoster.length > 0 ? (
-              renderRosterByPositions(awayRoster, game.AWAY_TEAM_ABBREVIATION ?? "")
-            ) : (
-              <div className="rounded border border-border bg-background-tertiary p-6 text-center">
-                <p className="text-xs font-medium text-text-secondary">
-                  Kadro bilgisi bulunamadı.
-                </p>
-              </div>
-            )}
-          </Card>
-        </div>
+      {/* ── TEAM TABS ── */}
+      {(activeTab === "home" || activeTab === "away") && (
+        <div role="tabpanel">{renderTeamPanel(activeTab)}</div>
       )}
 
       {/* ── HIGHLIGHTS TAB ── */}
