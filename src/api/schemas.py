@@ -6,7 +6,7 @@ from datetime import date
 class PlayerStatusOverride(BaseModel):
     player_id: Optional[int] = None
     player_name: Optional[str] = None
-    status: str = "ACTIVE"  # "ACTIVE", "RESTRICTED", "OUT"
+    status: str = "ACTIVE"  # "ACTIVE", "RESTRICTED" (minutes limit), "QUESTIONABLE"/"DOUBTFUL" (factor = P(plays)), "OUT"
     minute_limit: Optional[float] = None
     status_factor: Optional[float] = None
     is_starter: Optional[bool] = None  # None = use the model's own guess

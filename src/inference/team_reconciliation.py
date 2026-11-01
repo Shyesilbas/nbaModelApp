@@ -27,11 +27,18 @@ def play_probability(minutes: pd.Series) -> np.ndarray:
     return probs[np.searchsorted(bounds, m, side="left").clip(max=len(probs) - 1)]
 
 
-def reconciliation_factors(points: pd.Series, minutes: pd.Series, team_score: float) -> np.ndarray:
-    """Per-player multipliers that bring the summed points down to ``team_score`` (never up)."""
+def reconciliation_factors(points: pd.Series, minutes: pd.Series, team_score: float, play_prob=None) -> np.ndarray:
+    """Per-player multipliers that bring the summed points down to ``team_score`` (never up).
+
+    ``play_prob`` carries the reported probability for players listed Questionable or Doubtful (NaN
+    elsewhere); everyone else uses the minutes-based rate."""
     p = pd.to_numeric(points, errors="coerce").fillna(0.0).to_numpy(dtype=float)
     excess = p.sum() - float(team_score)
-    weight = (1.0 - play_probability(minutes)) * p
+    prob = play_probability(minutes)
+    if play_prob is not None:
+        given = pd.to_numeric(pd.Series(np.asarray(play_prob, dtype=object)), errors="coerce").to_numpy(dtype=float)
+        prob = np.where(np.isnan(given), prob, given)
+    weight = (1.0 - prob) * p
     if excess <= 0 or weight.sum() <= 0:
         return np.ones_like(p)
     cut = excess * weight / weight.sum()
@@ -42,10 +49,11 @@ def reconciliation_factors(points: pd.Series, minutes: pd.Series, team_score: fl
 def team_reconciliation(players_df: pd.DataFrame, team_score: float):
     """Per-player factors bringing the team's projected points down to its score (team-level ratio too)."""
     factors = np.ones(len(players_df))
-    playing = players_df["STATUS"].astype(str).str.upper().isin(["ACTIVE", "RESTRICTED"]).to_numpy() if "STATUS" in players_df.columns else np.ones(len(players_df), bool)
+    playing = players_df["STATUS"].astype(str).str.upper().isin(["ACTIVE", "RESTRICTED", "QUESTIONABLE", "DOUBTFUL"]).to_numpy() if "STATUS" in players_df.columns else np.ones(len(players_df), bool)
     if team_score is not None and playing.any():
         rows = players_df[playing]
-        factors[playing] = reconciliation_factors(rows["RAW_PROJ_PTS"], rows["MIN_EMA_10"], team_score)
+        factors[playing] = reconciliation_factors(rows["RAW_PROJ_PTS"], rows["MIN_EMA_10"], team_score,
+                                                  rows["PLAY_PROB"] if "PLAY_PROB" in rows.columns else None)
     pts = players_df["RAW_PROJ_PTS"].to_numpy(dtype=float) * playing
     scale = float((pts * factors).sum() / pts.sum()) if pts.sum() > 0 else 1.0
     return factors, scale

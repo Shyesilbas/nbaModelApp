@@ -1,8 +1,9 @@
 """Player status overrides from the official NBA injury report, with the starting five adjusted.
 
 Used by the prediction endpoints when the caller sends no overrides, and by the paper trading
-snapshot, so both predict from the same roster status. Out players become OUT, Questionable and
-Doubtful become restricted (placeholder weights in nba_injury_report.STATUS_FACTOR). When a starter
+snapshot, so both predict from the same roster status. Out players become OUT; Questionable and
+Doubtful keep their own labels, with the measured probability of playing as factor
+(nba_injury_report.STATUS_FACTOR). RESTRICTED is left to minute limits set by hand. When a starter
 of the team's previous game is out, the best remaining players from that game move into the lineup.
 """
 from __future__ import annotations

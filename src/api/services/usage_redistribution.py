@@ -33,6 +33,21 @@ def _normalize_position(pos: Any) -> str:
     return "WING"
 
 
+PLAY_PROBABILITY_STATUSES = ("QUESTIONABLE", "DOUBTFUL")
+
+
+def _lost_production(df: pd.DataFrame, base: pd.Series, column: str, mask: pd.Series) -> float:
+    """Production teammates inherit from the overridden players in ``mask``.
+
+    A restricted or benched player loses what his minutes cut; a Questionable or Doubtful one is
+    expected to lose (1 - P(plays)) of his line."""
+    probabilistic = mask & df["PLAY_PROB"].notna()
+    fixed = mask & ~probabilistic
+    cut = float(base[fixed].sum() - df.loc[fixed, column].sum())
+    expected = float(((1.0 - df.loc[probabilistic, "PLAY_PROB"]) * df.loc[probabilistic, column]).sum())
+    return max(0.0, cut) + expected
+
+
 def redistribute_usage_and_minutes(
     roster_df: pd.DataFrame,
     override_lookup: Dict[Any, Dict[str, Any]],
@@ -73,6 +88,9 @@ def redistribute_usage_and_minutes(
     df["STATUS_FACTOR"] = 1.0
     df["MINUTE_LIMIT"] = None
     df["HAS_USER_OVERRIDE"] = False
+    # P(plays) for Questionable/Doubtful players, NaN for everyone else. Their own line is the one for
+    # a game in which they play; what their teammates inherit is the expected loss, (1 - P) x minutes.
+    df["PLAY_PROB"] = np.nan
     df["STARTER_OVERRIDE"] = pd.Series([None] * len(df), index=df.index, dtype=object)
 
     for idx, row in df.iterrows():
@@ -91,6 +109,8 @@ def redistribute_usage_and_minutes(
             df.at[idx, "HAS_USER_OVERRIDE"] = True
             df.at[idx, "STATUS"] = str(entry.get("status", "ACTIVE")).upper()
             df.at[idx, "STATUS_FACTOR"] = float(entry.get("factor", 1.0))
+            if df.at[idx, "STATUS"] in PLAY_PROBABILITY_STATUSES:
+                df.at[idx, "PLAY_PROB"] = min(1.0, max(0.0, float(entry.get("factor", 1.0))))
             df.at[idx, "MINUTE_LIMIT"] = entry.get("minute_limit")
             df.at[idx, "STARTER_OVERRIDE"] = entry.get("is_starter")
 
@@ -151,7 +171,7 @@ def redistribute_usage_and_minutes(
                     b_min = min(b_min, BENCH_MIN_CAP)
                 else:
                     b_min = max(b_min, STARTER_MIN_FLOOR)
-            factor = float(df.at[idx, "STATUS_FACTOR"])
+            factor = 1.0 if pd.notna(df.at[idx, "PLAY_PROB"]) else float(df.at[idx, "STATUS_FACTOR"])
             min_limit = df.at[idx, "MINUTE_LIMIT"]
 
             if min_limit is not None and pd.notna(min_limit):
@@ -181,7 +201,11 @@ def redistribute_usage_and_minutes(
         pos_weights = {"GUARD": 0.0, "WING": 0.0, "BIG": 0.0}
 
         for o_idx in out_players:
-            lost_m = max(0.0, float(df.at[o_idx, "BASE_MIN"]) - float(df.at[o_idx, "PROJ_MIN"]))
+            play_prob = df.at[o_idx, "PLAY_PROB"]
+            if pd.notna(play_prob):
+                lost_m = (1.0 - float(play_prob)) * float(df.at[o_idx, "PROJ_MIN"])
+            else:
+                lost_m = max(0.0, float(df.at[o_idx, "BASE_MIN"]) - float(df.at[o_idx, "PROJ_MIN"]))
             lost_minutes += lost_m
             o_pos = df.at[o_idx, "POS_CLEAN"]
             for p in ["GUARD", "WING", "BIG"]:
@@ -200,6 +224,8 @@ def redistribute_usage_and_minutes(
                 cap_limit = 22.0 if is_preseason else 38.0
                 cap = max(0.0, cap_limit - cur_min)
                 weight = pos_weights.get(a_pos, 0.33) * np.sqrt(max(1.0, a_base_min)) * np.sqrt(max(0.1, cap))
+                if pd.notna(df.at[a_idx, "PLAY_PROB"]):
+                    weight *= float(df.at[a_idx, "PLAY_PROB"])  # he only absorbs minutes if he plays
                 redistrib_weights[a_idx] = weight
 
             w_sum = sum(redistrib_weights.values())
@@ -271,20 +297,20 @@ def redistribute_usage_and_minutes(
     for team in teams:
         team_mask = (df["TEAM_ABBREVIATION"] == team) if team is not None else pd.Series(True, index=df.index)
         override_out_mask = team_mask & (df["HAS_USER_OVERRIDE"]) & ((df["STATUS"] == "OUT") | (df["STATUS_FACTOR"] < 1.0))
-        active_mask = team_mask & (df["STATUS"].isin(["ACTIVE", "RESTRICTED"])) & (df["PROJ_MIN"] > 0.0)
+        active_mask = team_mask & (df["STATUS"].isin(["ACTIVE", "RESTRICTED", *PLAY_PROBABILITY_STATUSES])) & (df["PROJ_MIN"] > 0.0)
 
         if not override_out_mask.any() or not active_mask.any():
             continue
 
-        lost_pts = max(0.0, float(base_raw_pts[override_out_mask].sum() - df.loc[override_out_mask, "RAW_PROJ_PTS"].sum()))
-        lost_reb = max(0.0, float(base_raw_reb[override_out_mask].sum() - df.loc[override_out_mask, "RAW_PROJ_REB"].sum()))
-        lost_ast = max(0.0, float(base_raw_ast[override_out_mask].sum() - df.loc[override_out_mask, "RAW_PROJ_AST"].sum()))
+        lost_pts = _lost_production(df, base_raw_pts, "RAW_PROJ_PTS", override_out_mask)
+        lost_reb = _lost_production(df, base_raw_reb, "RAW_PROJ_REB", override_out_mask)
+        lost_ast = _lost_production(df, base_raw_ast, "RAW_PROJ_AST", override_out_mask)
 
         if lost_pts > 0:
             pts_redistrib_pool = lost_pts * 0.70
             active_usg = df.loc[active_mask, "BASE_USG"].clip(lower=5.0)
             active_min = df.loc[active_mask, "PROJ_MIN"].clip(lower=1.0)
-            scoring_weights = active_usg * np.sqrt(active_min)
+            scoring_weights = active_usg * np.sqrt(active_min) * df.loc[active_mask, "PLAY_PROB"].fillna(1.0)
             w_pts_sum = scoring_weights.sum()
             if w_pts_sum > 0:
                 shares = scoring_weights / w_pts_sum
@@ -293,7 +319,7 @@ def redistribute_usage_and_minutes(
         if lost_reb > 0:
             reb_redistrib_pool = lost_reb * 0.60
             reb_pos_weights = df.loc[active_mask, "POS_CLEAN"].map({"BIG": 1.0, "WING": 0.5, "GUARD": 0.15}).fillna(0.3)
-            reb_weights = reb_pos_weights * df.loc[active_mask, "RAW_PROJ_REB"].clip(lower=1.0)
+            reb_weights = reb_pos_weights * df.loc[active_mask, "RAW_PROJ_REB"].clip(lower=1.0) * df.loc[active_mask, "PLAY_PROB"].fillna(1.0)
             w_reb_sum = reb_weights.sum()
             if w_reb_sum > 0:
                 shares = reb_weights / w_reb_sum
@@ -302,7 +328,7 @@ def redistribute_usage_and_minutes(
         if lost_ast > 0:
             ast_redistrib_pool = lost_ast * 0.60
             ast_pos_weights = df.loc[active_mask, "POS_CLEAN"].map({"GUARD": 1.0, "WING": 0.45, "BIG": 0.15}).fillna(0.3)
-            ast_weights = ast_pos_weights * df.loc[active_mask, "RAW_PROJ_AST"].clip(lower=0.5)
+            ast_weights = ast_pos_weights * df.loc[active_mask, "RAW_PROJ_AST"].clip(lower=0.5) * df.loc[active_mask, "PLAY_PROB"].fillna(1.0)
             w_ast_sum = ast_weights.sum()
             if w_ast_sum > 0:
                 shares = ast_weights / w_ast_sum
@@ -312,6 +338,9 @@ def redistribute_usage_and_minutes(
     df["RAW_PROJ_PTS"] = df["RAW_PROJ_PTS"].clip(lower=0.0, upper=55.0).round(1)
     df["RAW_PROJ_REB"] = df["RAW_PROJ_REB"].clip(lower=0.0, upper=25.0).round(1)
     df["RAW_PROJ_AST"] = df["RAW_PROJ_AST"].clip(lower=0.0, upper=22.0).round(1)
+    # The points above are expected values (the team score they are fitted to already counts who might
+    # sit), so the minutes shown for a Questionable or Doubtful player are expected too.
+    df["PROJ_MIN"] = df["PROJ_MIN"] * df["PLAY_PROB"].fillna(1.0)
     df["PROJ_MIN"] = df["PROJ_MIN"].clip(lower=0.0, upper=44.0).round(1)
 
     return df

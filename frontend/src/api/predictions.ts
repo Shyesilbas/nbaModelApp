@@ -4,7 +4,7 @@ export { API_BASE_URL };
 export type PlayerStatusOverride = {
   player_id?: number | string;
   player_name?: string;
-  status: "ACTIVE" | "RESTRICTED" | "OUT";
+  status: "ACTIVE" | "RESTRICTED" | "QUESTIONABLE" | "DOUBTFUL" | "OUT";
   minute_limit?: number;
   status_factor?: number;
   is_starter?: boolean;

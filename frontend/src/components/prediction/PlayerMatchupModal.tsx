@@ -16,7 +16,7 @@ export interface PlayerMatchupData {
   predicted_pra: number;
   raw_pts?: number;
   scale_factor?: number;
-  status?: "ACTIVE" | "RESTRICTED" | "OUT" | "DNP";
+  status?: "ACTIVE" | "RESTRICTED" | "QUESTIONABLE" | "DOUBTFUL" | "OUT" | "DNP";
   predicted_min?: number;
 }
 

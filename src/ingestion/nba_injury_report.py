@@ -40,10 +40,17 @@ TEAM_ABBR = {
 STATUSES = ("Out", "Doubtful", "Questionable", "Probable", "Available")
 
 # Availability factor per reported status, as used by the roster absence feature
-# (0 = absent, 1 = plays a normal share of minutes). Questionable and Doubtful are placeholders
-# until the real play rate of those statuses is measured.
-STATUS_FACTOR = {"Out": 0.0, "Doubtful": 0.25, "Questionable": 0.6, "Probable": 0.9, "Available": 1.0}
-STATUS_LABEL = {"Out": "OUT", "Doubtful": "RESTRICTED", "Questionable": "RESTRICTED", "Probable": "ACTIVE", "Available": "ACTIVE"}
+# (0 = absent, 1 = plays a normal share of minutes). Measured as the share of rotation players
+# (15+ minutes) who played, from the report published ~15 minutes before tip-off, regular season
+# 2025-12-22 to 2026-04-12 (scripts/measure_status_factors.py): Out 0.001 (n=2385), Doubtful 0.047
+# (169), Questionable 0.564 (1001), Probable 0.900 (290). Reports before that date cannot be fetched.
+STATUS_FACTOR = {"Out": 0.0, "Doubtful": 0.05, "Questionable": 0.56, "Probable": 0.9, "Available": 1.0}
+# RESTRICTED is a different thing: a player who is cleared but on a minutes limit (the factor is then his
+# share of normal minutes). The report carries no such limit, so it only comes from user overrides.
+# For QUESTIONABLE and DOUBTFUL the factor is the probability that he plays at all.
+STATUS_LABEL = {"Out": "OUT", "Doubtful": "DOUBTFUL", "Questionable": "QUESTIONABLE", "Probable": "ACTIVE", "Available": "ACTIVE"}
+PLAY_PROBABILITY_STATUSES = ("QUESTIONABLE", "DOUBTFUL")
+DEFAULT_FACTOR = {STATUS_LABEL[k]: v for k, v in STATUS_FACTOR.items() if STATUS_LABEL[k] in PLAY_PROBABILITY_STATUSES}
 
 _DATE = re.compile(r"^\d{2}/\d{2}/\d{4}$")
 _TIME = re.compile(r"^\d{2}:\d{2} \(ET\)$")

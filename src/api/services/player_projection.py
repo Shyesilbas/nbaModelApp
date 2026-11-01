@@ -583,6 +583,8 @@ def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, predictio
 
 
 def _parse_player_overrides(overrides):
+    from src.ingestion.nba_injury_report import DEFAULT_FACTOR
+
     lookup = {}
     if not overrides:
         return lookup
@@ -605,7 +607,9 @@ def _parse_player_overrides(overrides):
         if factor is None:
             if status in ("OUT", "INACTIVE"):
                 factor = 0.0
-            elif status in ("RESTRICTED", "QUESTIONABLE"):
+            elif status in DEFAULT_FACTOR:
+                factor = DEFAULT_FACTOR[status]
+            elif status == "RESTRICTED":
                 factor = 0.6
             else:
                 factor = 1.0

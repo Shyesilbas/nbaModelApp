@@ -117,6 +117,13 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                       {language === "tr" ? "Kısıtlı" : "Restricted"}
                     </span>
                   )}
+                  {(s.player?.status === "QUESTIONABLE" || s.player?.status === "DOUBTFUL") && (
+                    <span className="text-xs font-medium px-1.5 py-0.5 rounded-sm bg-status-warning/10 text-status-warning">
+                      {s.player.status === "DOUBTFUL"
+                        ? (language === "tr" ? "Şüpheli" : "Doubtful")
+                        : (language === "tr" ? "Belirsiz" : "Questionable")}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -223,6 +230,13 @@ export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season 
                               {isRestricted && (
                                 <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-status-warning/10 text-status-warning">
                                   {language === "tr" ? "Kısıtlı" : "Restricted"}
+                                </span>
+                              )}
+                              {(p.status === "QUESTIONABLE" || p.status === "DOUBTFUL") && (
+                                <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-status-warning/10 text-status-warning">
+                                  {p.status === "DOUBTFUL"
+                                    ? (language === "tr" ? "Şüpheli" : "Doubtful")
+                                    : (language === "tr" ? "Belirsiz" : "Questionable")}
                                 </span>
                               )}
                             </div>
