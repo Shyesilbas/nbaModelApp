@@ -56,8 +56,6 @@ type Summary = {
 
 type Report = { season: string; summary: Summary; games: PaperGame[] };
 
-type PaperTab = "winner" | "score";
-
 const pct = (v: number | null, digits = 1) => (v == null ? "-" : `${(v * 100).toFixed(digits)}%`);
 const num = (v: number | null | undefined, digits = 2) => (v == null ? "-" : v.toFixed(digits));
 const signed = (v: number) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1));
@@ -86,11 +84,11 @@ function TeamCell({ abbr, bold }: { abbr: string; bold: boolean }) {
 function MatchupCell({ game, highlightWinner }: { game: PaperGame; highlightWinner: boolean }) {
   const won = (abbr: string) => highlightWinner && game.status === "final" && game.actual_winner === abbr;
   return (
-    <span className="inline-flex items-center gap-2">
+    <div className="flex items-center gap-2">
       <TeamCell abbr={game.away_team} bold={won(game.away_team)} />
-      <span className="text-text-muted">@</span>
+      <span className="text-xs text-text-muted">@</span>
       <TeamCell abbr={game.home_team} bold={won(game.home_team)} />
-    </span>
+    </div>
   );
 }
 
@@ -101,7 +99,6 @@ export default function PaperTrading() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<PaperTab>("winner");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -175,10 +172,6 @@ export default function PaperTrading() {
   }
 
   const edge = s.accuracy != null && s.home_baseline_accuracy != null ? s.accuracy - s.home_baseline_accuracy : null;
-  const tabs: { id: PaperTab; label: string; hint: string }[] = [
-    { id: "winner", label: p.winnerTab, hint: p.winnerTabHint },
-    { id: "score", label: p.scoreTab, hint: p.scoreTabHint },
-  ];
 
   const resultBadges = (g: PaperGame) => {
     if (!g.valid) return <Badge variant="warning" size="sm">{p.resultLate}</Badge>;
@@ -259,204 +252,119 @@ export default function PaperTrading() {
         )}
       </section>
 
-      <div className="space-y-3">
-        <div role="tablist" className="flex border-b border-border">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              id={`paper-tab-${tab.id}`}
-              aria-selected={activeTab === tab.id}
-              aria-controls="paper-tabpanel"
-              onClick={() => setActiveTab(tab.id)}
-              className={`border-b-2 px-4 py-2.5 text-left transition-colors duration-150 ${
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
-              }`}
-            >
-              <span className="block text-sm font-medium">{tab.label}</span>
-              <span className="hidden text-xs font-normal text-text-muted sm:block">{tab.hint}</span>
-            </button>
-          ))}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Stat label={p.brier} value={num(s.brier, 3)} hint={p.brierHint} />
+          <Stat label={p.logLoss} value={num(s.log_loss, 3)} hint={p.logLossHint} />
         </div>
 
-        <div id="paper-tabpanel" role="tabpanel" aria-labelledby={`paper-tab-${activeTab}`} className="space-y-4">
-          {activeTab === "winner" ? (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Stat label={p.brier} value={num(s.brier, 3)} hint={p.brierHint} />
-              <Stat label={p.logLoss} value={num(s.log_loss, 3)} hint={p.logLossHint} />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Stat label={p.totalMae} value={`${num(s.mae_total, 1)} ${t.common.ptsUnit}`} hint={p.totalMaeHint} />
-              <Stat label={p.marginMae} value={`${num(s.mae_margin, 1)} ${t.common.ptsUnit}`} hint={p.marginMaeHint} />
-            </div>
-          )}
-
-          {activeTab === "winner" && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <RollingAccuracyChart games={games} />
-              <CalibrationChart bands={s.bands} />
-            </div>
-          )}
-
-          {activeTab === "winner" && s.bands.length > 0 && (
-            <Card padding="none" className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <caption className="border-b border-border-light px-4 py-3 text-left">
-                  <span className="block text-sm font-semibold text-text-primary">{p.bandsTitle}</span>
-                  <span className="mt-0.5 block text-xs font-normal text-text-secondary">{p.bandsHint}</span>
-                </caption>
-                <thead className="bg-background-tertiary text-xs text-text-muted">
-                  <tr>
-                    <th scope="col" className="px-4 py-2 font-medium">{p.colConfidence}</th>
-                    <th scope="col" className="px-4 py-2 text-right font-medium">{p.colGames}</th>
-                    <th scope="col" className="px-4 py-2 text-right font-medium">{p.colModelSaid}</th>
-                    <th scope="col" className="px-4 py-2 text-right font-medium">{p.colHitRate}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {s.bands.map((b) => (
-                    <tr key={b.label} className="border-t border-border-light">
-                      <td className="px-4 py-2 tabular-nums text-text-primary">{b.label}</td>
-                      <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{b.games}</td>
-                      <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{pct(b.mean_confidence)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums text-text-primary">{pct(b.accuracy)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
-          )}
-
-          <div className="flex flex-wrap items-center gap-2">
-            <DatePicker
-              dates={dates}
-              value={activeDate ?? ""}
-              onChange={setSelectedDate}
-              counts={dateCounts}
-              formatDate={formatDate}
-            />
-            <span className="text-xs tabular-nums text-text-secondary">
-              {fill(p.dayGames, { n: dayGames.length })}
-              {activeTab === "winner" &&
-                dayGraded.length > 0 &&
-                `, ${fill(p.dayCorrect, { correct: dayCorrect, graded: dayGraded.length })}`}
-            </span>
-          </div>
-
-          {activeTab === "score" ? (
-            <Card padding="none" className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <caption className="border-b border-border-light px-4 py-3 text-left">
-                  <span className="block text-sm font-semibold tabular-nums text-text-primary">
-                    {fill(p.scoreTableTitle, { date: activeDate ?? "" })}
-                  </span>
-                  <span className="mt-0.5 block text-xs font-normal text-text-secondary">{p.errorHint}</span>
-                </caption>
-                <thead className="bg-background-tertiary text-xs text-text-muted">
-                  <tr>
-                    <th scope="col" className="px-4 py-2 font-medium">{p.colGame}</th>
-                    <th scope="col" className="px-4 py-2 font-medium">{p.colPrediction}</th>
-                    <th scope="col" className="px-4 py-2 font-medium">{p.colFinal}</th>
-                    <th scope="col" className="px-4 py-2 text-right font-medium">{p.colTotalError}</th>
-                    <th scope="col" className="px-4 py-2 text-right font-medium">{p.colMarginError}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dayGames.map((g) => {
-                    const final = g.status === "final";
-                    const predTotal = g.predicted_home_score + g.predicted_away_score;
-                    return (
-                      <tr key={g.game_id} className="border-t border-border-light align-top">
-                        <td className="whitespace-nowrap px-4 py-2">
-                          <MatchupCell game={g} highlightWinner={false} />
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">
-                          <p className="text-text-primary">
-                            {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
-                          </p>
-                          <p className="text-xs text-text-secondary">{p.total} {predTotal.toFixed(1)}</p>
-                          <p className="text-xs text-text-muted" title={injuryTitle(g)}>{injurySummary(g)}</p>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">
-                          {final ? (
-                            <>
-                              <p className="text-text-primary">{g.actual_away_score} - {g.actual_home_score}</p>
-                              <p className="text-xs text-text-secondary">{p.total} {g.actual_total}</p>
-                            </>
-                          ) : (
-                            <span className="text-text-muted">-</span>
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-text-secondary">
-                          {final && g.predicted_total != null && g.actual_total != null ? signed(g.predicted_total - g.actual_total) : "-"}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-text-secondary">
-                          {final && g.predicted_margin != null && g.actual_margin != null ? signed(g.predicted_margin - g.actual_margin) : "-"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </Card>
-          ) : (
-            <Card padding="none" className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold tabular-nums text-text-primary">
-                  {fill(p.winnerTableTitle, { date: activeDate ?? "", logged: s.games_logged, pending: s.games_pending })}
-                </caption>
-                <thead className="bg-background-tertiary text-xs text-text-muted">
-                  <tr>
-                    <th scope="col" className="px-4 py-2 font-medium">{p.colGame}</th>
-                    <th scope="col" className="px-4 py-2 font-medium">{p.colPrediction}</th>
-                    <th scope="col" className="px-4 py-2 font-medium">{p.colFinal}</th>
-                    <th scope="col" className="px-4 py-2 font-medium">{p.colResult}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dayGames.map((g) => {
-                    const conf = Math.max(g.home_win_probability, 1 - g.home_win_probability);
-                    return (
-                      <tr key={g.game_id} className="border-t border-border-light align-top">
-                        <td className="whitespace-nowrap px-4 py-2">
-                          <MatchupCell game={g} highlightWinner />
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">
-                          <p className="text-text-primary">
-                            {g.predicted_winner} <span className="text-text-muted">{pct(conf, 0)}</span>
-                          </p>
-                          <p className="text-xs text-text-secondary">
-                            {p.score} {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
-                          </p>
-                          <p className="text-xs text-text-muted" title={injuryTitle(g)}>{injurySummary(g)}</p>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">
-                          {g.status === "final" ? (
-                            <>
-                              <p className="text-text-primary">{g.actual_away_score} - {g.actual_home_score}</p>
-                              {g.predicted_margin != null && g.actual_margin != null && (
-                                <p className="text-xs text-text-secondary">
-                                  {fill(p.marginErrorInline, { v: signed(g.predicted_margin - g.actual_margin) })}
-                                </p>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-text-muted">-</span>
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-2">{resultBadges(g)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </Card>
-          )}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <RollingAccuracyChart games={games} />
+          <CalibrationChart bands={s.bands} />
         </div>
+
+        {s.bands.length > 0 && (
+          <Card padding="none" className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <caption className="border-b border-border-light px-4 py-3 text-left">
+                <span className="block text-sm font-semibold text-text-primary">{p.bandsTitle}</span>
+                <span className="mt-0.5 block text-xs font-normal text-text-secondary">{p.bandsHint}</span>
+              </caption>
+              <thead className="bg-background-tertiary text-xs text-text-muted">
+                <tr>
+                  <th scope="col" className="px-4 py-2 font-medium">{p.colConfidence}</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">{p.colGames}</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">{p.colModelSaid}</th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">{p.colHitRate}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {s.bands.map((b) => (
+                  <tr key={b.label} className="border-t border-border-light">
+                    <td className="px-4 py-2 tabular-nums text-text-primary">{b.label}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{b.games}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{pct(b.mean_confidence)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-text-primary">{pct(b.accuracy)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <DatePicker
+            dates={dates}
+            value={activeDate ?? ""}
+            onChange={setSelectedDate}
+            counts={dateCounts}
+            formatDate={formatDate}
+          />
+          <span className="text-xs tabular-nums text-text-secondary">
+            {fill(p.dayGames, { n: dayGames.length })}
+            {dayGraded.length > 0 &&
+              `, ${fill(p.dayCorrect, { correct: dayCorrect, graded: dayGraded.length })}`}
+          </span>
+        </div>
+
+        <Card padding="none" className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <caption className="border-b border-border-light px-4 py-3 text-left text-sm font-semibold tabular-nums text-text-primary">
+              {fill(p.winnerTableTitle, { date: activeDate ?? "", logged: s.games_logged, pending: s.games_pending })}
+            </caption>
+            <thead className="bg-background-tertiary text-xs text-text-muted">
+              <tr>
+                <th scope="col" className="px-4 py-2 font-medium">{p.colGame}</th>
+                <th scope="col" className="px-4 py-2 font-medium">{p.colPrediction}</th>
+                <th scope="col" className="px-4 py-2 font-medium">{p.colFinal}</th>
+                <th scope="col" className="px-4 py-2 font-medium">{p.colResult}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-light">
+              {dayGames.map((g) => {
+                const conf = Math.max(g.home_win_probability, 1 - g.home_win_probability);
+                return (
+                  <tr key={g.game_id} className="hover:bg-background-secondary/50">
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <MatchupCell game={g} highlightWinner />
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 tabular-nums">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-text-primary">{g.predicted_winner}</span>
+                        <span className="rounded-sm border border-border bg-background-tertiary px-1 py-0.5 text-xs font-medium text-text-secondary">
+                          {pct(conf, 0)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-text-secondary">
+                        {p.score} {g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}
+                      </p>
+                      <p className="mt-0.5 max-w-xs truncate text-xs text-text-muted" title={injuryTitle(g)}>
+                        {injurySummary(g)}
+                      </p>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 tabular-nums">
+                      {g.status === "final" ? (
+                        <>
+                          <p className="font-semibold text-text-primary">
+                            {g.actual_away_score} - {g.actual_home_score}
+                          </p>
+                          {g.predicted_margin != null && g.actual_margin != null && (
+                            <p className="mt-1 text-xs text-text-secondary">
+                              {fill(p.marginErrorInline, { v: signed(g.predicted_margin - g.actual_margin) })}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-text-muted">-</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">{resultBadges(g)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
       </div>
     </div>
   );

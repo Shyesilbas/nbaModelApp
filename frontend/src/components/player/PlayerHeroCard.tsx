@@ -95,61 +95,47 @@ function SeasonSelector({
 
 /* ─────────── Stat blocks ─────────── */
 
-function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="rounded border border-border-light bg-background-secondary p-3">
-      <dt className="text-xs text-text-secondary">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums text-text-primary">{value}</dd>
-      {hint && <p className="mt-0.5 text-xs tabular-nums text-text-muted">{hint}</p>}
-    </div>
-  );
-}
-
-function makesOf(made: number | null, att: number | null, lang: string = "tr"): string | undefined {
-  return made != null && att != null ? `${fmtStat(made)} / ${fmtStat(att)} ${lang === "tr" ? "maç başı" : "per game"}` : undefined;
+function makesOf(made: number | null, att: number | null): string | undefined {
+  return made != null && att != null ? `${fmtStat(made)}/${fmtStat(att)}` : undefined;
 }
 
 function SeasonStats({ avgs }: { avgs: SeasonAverages }) {
   const { language } = useLanguage();
-  const supporting = [
-    { label: language === "tr" ? "Top çalma" : "Steals", value: fmtStat(avgs.STL) },
-    { label: language === "tr" ? "Blok" : "Blocks", value: fmtStat(avgs.BLK) },
-    { label: language === "tr" ? "Top kaybı" : "Turnovers", value: fmtStat(avgs.TOV) },
-    { label: language === "tr" ? "Hücum ribaundu" : "Off. Rebounds", value: fmtStat(avgs.OREB) },
-    { label: language === "tr" ? "Savunma ribaundu" : "Def. Rebounds", value: fmtStat(avgs.DREB) },
-    { label: language === "tr" ? "Artı/eksi" : "+/-", value: fmtStat(avgs.PLUS_MINUS) },
+  const tr = language === "tr";
+  const primary = [
+    { label: tr ? "Sayı" : "PTS", value: fmtStat(avgs.PTS) },
+    { label: tr ? "Ribaund" : "REB", value: fmtStat(avgs.REB) },
+    { label: tr ? "Asist" : "AST", value: fmtStat(avgs.AST) },
+    { label: tr ? "Dakika" : "MIN", value: fmtStat(avgs.MIN) },
+  ];
+  const secondary = [
+    { label: "FG%", value: fmtPct(avgs.FG_PCT), hint: makesOf(avgs.FGM, avgs.FGA) },
+    { label: "3P%", value: fmtPct(avgs.FG3_PCT), hint: makesOf(avgs.FG3M, avgs.FG3A) },
+    { label: "FT%", value: fmtPct(avgs.FT_PCT), hint: makesOf(avgs.FTM, avgs.FTA) },
+    { label: "STL", value: fmtStat(avgs.STL) },
+    { label: "BLK", value: fmtStat(avgs.BLK) },
+    { label: "TOV", value: fmtStat(avgs.TOV) },
+    { label: "OREB", value: fmtStat(avgs.OREB) },
+    { label: "DREB", value: fmtStat(avgs.DREB) },
+    { label: "+/-", value: fmtStat(avgs.PLUS_MINUS) },
   ];
 
   return (
     <div className="space-y-3">
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label={language === "tr" ? "Sayı" : "Points"} value={fmtStat(avgs.PTS)} />
-        <StatTile label={language === "tr" ? "Ribaund" : "Rebounds"} value={fmtStat(avgs.REB)} />
-        <StatTile label={language === "tr" ? "Asist" : "Assists"} value={fmtStat(avgs.AST)} />
-        <StatTile label={language === "tr" ? "Dakika" : "Minutes"} value={fmtStat(avgs.MIN)} />
+      <dl className="grid grid-cols-4 gap-3">
+        {primary.map((s) => (
+          <div key={s.label}>
+            <dt className="text-xs text-text-secondary">{s.label}</dt>
+            <dd className="text-2xl font-semibold tabular-nums text-text-primary">{s.value}</dd>
+          </div>
+        ))}
       </dl>
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatTile
-          label={language === "tr" ? "Saha içi isabet" : "Field Goal %"}
-          value={fmtPct(avgs.FG_PCT)}
-          hint={makesOf(avgs.FGM, avgs.FGA, language)}
-        />
-        <StatTile
-          label={language === "tr" ? "3 sayılık isabet" : "3-Point %"}
-          value={fmtPct(avgs.FG3_PCT)}
-          hint={makesOf(avgs.FG3M, avgs.FG3A, language)}
-        />
-        <StatTile
-          label={language === "tr" ? "Serbest atış isabet" : "Free Throw %"}
-          value={fmtPct(avgs.FT_PCT)}
-          hint={makesOf(avgs.FTM, avgs.FTA, language)}
-        />
-      </dl>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded border border-border-light px-4 py-3 sm:grid-cols-3 lg:grid-cols-6">
-        {supporting.map((s) => (
+      <dl className="grid grid-cols-3 gap-x-4 gap-y-2 border-t border-border-light pt-3 sm:grid-cols-5 lg:grid-cols-9">
+        {secondary.map((s) => (
           <div key={s.label}>
             <dt className="text-xs text-text-muted">{s.label}</dt>
             <dd className="text-sm font-semibold tabular-nums text-text-primary">{s.value}</dd>
+            {s.hint && <p className="text-xs tabular-nums text-text-muted">{s.hint}</p>}
           </div>
         ))}
       </dl>
@@ -160,17 +146,12 @@ function SeasonStats({ avgs }: { avgs: SeasonAverages }) {
 function StatsSkeleton() {
   return (
     <div className="space-y-3" aria-busy="true" aria-label="Sezon ortalamaları yükleniyor">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-4 gap-3">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-20 w-full rounded" />
+          <Skeleton key={i} className="h-10 w-full rounded" />
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-20 w-full rounded" />
-        ))}
-      </div>
-      <Skeleton className="h-16 w-full rounded" />
+      <Skeleton className="h-12 w-full rounded" />
     </div>
   );
 }
@@ -262,7 +243,7 @@ export default function PlayerHeroCard({
         )}
       </div>
 
-      <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border-light pt-4 sm:grid-cols-3 lg:grid-cols-5">
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border-light pt-3 sm:grid-cols-3 lg:grid-cols-5">
         {bio.map((b) => (
           <div key={b.label} className="min-w-0">
             <dt className="text-xs text-text-muted">{b.label}</dt>
@@ -274,7 +255,7 @@ export default function PlayerHeroCard({
       </dl>
 
       {seasons.length > 0 && (
-        <section className="mt-5 space-y-3 border-t border-border-light pt-4" aria-labelledby="player-hero-stats">
+        <section className="mt-4 space-y-3 border-t border-border-light pt-3" aria-labelledby="player-hero-stats">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <h2 id="player-hero-stats" className="text-sm font-semibold text-text-primary">

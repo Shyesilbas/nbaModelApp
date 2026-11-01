@@ -3,13 +3,8 @@ import { Trophy } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { ConferenceFilter, TeamStanding } from "./types";
 import type { GameFeedRow } from "../../types/gameFeed";
-import { NBA_TEAM_ABBRS, TEAM_NAME_BY_ABBR, getTeamShortName, isKnownTeamAbbr } from "../../lib/nbaTeams";
+import { computeSeasonTeamRecords } from "../../lib/teamRecords";
 import { useLanguage } from "../../context/LanguageContext";
-
-const EAST_TEAMS = new Set([
-  "ATL", "BOS", "BKN", "CHA", "CHI", "CLE", "DET", "IND",
-  "MIA", "MIL", "NYK", "ORL", "PHI", "TOR", "WAS",
-]);
 
 interface FixturesStandingsViewProps {
   games: GameFeedRow[];
@@ -26,133 +21,37 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
   const [conferenceFilter, setConferenceFilter] = useState<ConferenceFilter>("all");
 
   const standings = useMemo(() => {
-    const map = new Map<string, {
-      w: number;
-      l: number;
-      hw: number;
-      hl: number;
-      aw: number;
-      al: number;
-      pf: number;
-      pa: number;
-      history: ("W" | "L")[];
-    }>();
-
-    for (const abbr of NBA_TEAM_ABBRS) {
-      map.set(abbr, {
-        w: 0,
-        l: 0,
-        hw: 0,
-        hl: 0,
-        aw: 0,
-        al: 0,
-        pf: 0,
-        pa: 0,
-        history: [],
-      });
-    }
-
-    // Sort games chronologically so streak and form are exact
-    const sorted = [...games].sort((a, b) => (a.GAME_DATE ?? "").localeCompare(b.GAME_DATE ?? ""));
-
-    for (const g of sorted) {
-      // Official 82-game regular season games only
-      if (g.SEASON_TYPE !== "Regular Season") continue;
-
-      const isCompleted =
-        g.GAME_STATUS === "Final" ||
-        g.GAME_STATUS === "FINAL" ||
-        Boolean(g.WINNER_TEAM_ABBREVIATION) ||
-        ((Number(g.HOME_SCORE) || 0) > 0 && (Number(g.AWAY_SCORE) || 0) > 0);
-
-      if (!isCompleted) continue;
-
-      const home = g.HOME_TEAM_ABBREVIATION;
-      const away = g.AWAY_TEAM_ABBREVIATION;
-      if (!home || !away) continue;
-
-      const hStats = map.get(home);
-      const aStats = map.get(away);
-      if (!hStats || !aStats) continue;
-
-      const hScore = Number(g.HOME_SCORE) || 0;
-      const aScore = Number(g.AWAY_SCORE) || 0;
-      const homeWon = g.WINNER_TEAM_ABBREVIATION
-        ? g.WINNER_TEAM_ABBREVIATION === home
-        : hScore > aScore;
-
-      hStats.pf += hScore;
-      hStats.pa += aScore;
-      aStats.pf += aScore;
-      aStats.pa += hScore;
-
-      if (homeWon) {
-        hStats.w += 1;
-        hStats.hw += 1;
-        aStats.l += 1;
-        aStats.al += 1;
-        hStats.history.push("W");
-        aStats.history.push("L");
-      } else {
-        hStats.l += 1;
-        hStats.hl += 1;
-        aStats.w += 1;
-        aStats.aw += 1;
-        hStats.history.push("L");
-        aStats.history.push("W");
-      }
-    }
-
+    const recordsMap = computeSeasonTeamRecords(games);
     const allList: TeamStanding[] = [];
 
-    for (const abbr of NBA_TEAM_ABBRS) {
-      const s = map.get(abbr)!;
-      const gp = s.w + s.l;
-      const pct = gp > 0 ? s.w / gp : 0;
-      const ppgNum = gp > 0 ? s.pf / gp : 0;
-      const oppPpgNum = gp > 0 ? s.pa / gp : 0;
-      const diffNum = gp > 0 ? ppgNum - oppPpgNum : 0;
-
-      // Last 10 games
+    for (const s of recordsMap.values()) {
       const last10 = s.history.slice(-10);
       const l10Wins = last10.filter((x) => x === "W").length;
       const l10Losses = last10.length - l10Wins;
 
-      // Current Streak
-      let streak = "-";
-      if (s.history.length > 0) {
-        const lastRes = s.history[s.history.length - 1];
-        let count = 0;
-        for (let i = s.history.length - 1; i >= 0; i--) {
-          if (s.history[i] === lastRes) count++;
-          else break;
-        }
-        streak = `${lastRes}${count}`;
-      }
-
       allList.push({
         rank: 0,
-        abbr,
-        fullName: isKnownTeamAbbr(abbr) ? TEAM_NAME_BY_ABBR[abbr] : abbr,
-        name: getTeamShortName(abbr, isKnownTeamAbbr(abbr) ? TEAM_NAME_BY_ABBR[abbr] : abbr),
-        conference: EAST_TEAMS.has(abbr) ? "East" : "West",
-        gp,
+        abbr: s.abbr,
+        fullName: s.fullName,
+        name: s.name,
+        conference: s.conference,
+        gp: s.gp,
         w: s.w,
         l: s.l,
-        pct,
-        pctFormatted: pct.toFixed(3).replace(/^0/, ""),
+        pct: s.pct,
+        pctFormatted: s.pctFormatted,
         gb: "-",
-        ptsFor: s.pf,
-        ptsAgainst: s.pa,
-        ppg: ppgNum.toFixed(1),
-        oppPpg: oppPpgNum.toFixed(1),
-        diff: (diffNum > 0 ? `+${diffNum.toFixed(1)}` : diffNum.toFixed(1)),
-        diffNum,
-        homeRecord: `${s.hw}-${s.hl}`,
-        awayRecord: `${s.aw}-${s.al}`,
+        ptsFor: s.ptsFor,
+        ptsAgainst: s.ptsAgainst,
+        ppg: s.ppg,
+        oppPpg: s.oppPpg,
+        diff: s.diff,
+        diffNum: s.diffNum,
+        homeRecord: s.homeRecord,
+        awayRecord: s.awayRecord,
         l10: `${l10Wins}-${l10Losses}`,
-        streak,
-        form: s.history.slice(-5),
+        streak: s.streak,
+        form: s.form,
       });
     }
 

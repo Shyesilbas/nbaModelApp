@@ -30,6 +30,7 @@ import type { ActiveView, DayGroup, DisplayMode } from "./fixtures/types";
 import { DatePicker } from "./common";
 import { FixturesScheduleView } from "./fixtures/FixturesScheduleView";
 import { FixturesStandingsView } from "./fixtures/FixturesStandingsView";
+import { computeSeasonTeamRecords } from "../lib/teamRecords";
 import { useLanguage } from "../context/LanguageContext";
 
 type SeasonTypeFilter = "all" | "regular" | "playin" | "playoffs" | "finals";
@@ -315,6 +316,16 @@ export default function FixturesTab({
     return formMap;
   }, [seasonPool]);
 
+  // Compute regular season team records (W-L) e.g. "4-0"
+  const teamRecords = useMemo(() => {
+    const recordsMap = computeSeasonTeamRecords(seasonPool);
+    const simpleMap = new Map<string, string>();
+    for (const [abbr, stat] of recordsMap.entries()) {
+      simpleMap.set(abbr, stat.recordFormatted);
+    }
+    return simpleMap;
+  }, [seasonPool]);
+
   // Season type counts for filter buttons
   const seasonTypeCounts = useMemo(() => {
     return SEASON_TYPE_FILTERS.reduce<Record<SeasonTypeFilter, number>>(
@@ -562,6 +573,8 @@ export default function FixturesTab({
             freshPlayByPlay={freshPlayByPlay}
             onRefresh={() => refreshGame(selectedGame)}
             onBack={handleBackToFixtures}
+            homeRecord={teamRecords.get(selectedGame.HOME_TEAM_ABBREVIATION)}
+            awayRecord={teamRecords.get(selectedGame.AWAY_TEAM_ABBREVIATION)}
             onPredict={() => {
               if (onNavigateToPrediction) {
                 onNavigateToPrediction({
@@ -818,6 +831,7 @@ export default function FixturesTab({
           dayGroups={displayedDayGroups}
           displayMode={displayMode}
           teamForms={teamForms}
+          teamRecords={teamRecords}
           onOpenGame={(gameId) => handleOpenGame(gameId, "game")}
           onSelectTeam={onSelectTeam}
           onPredict={(game) => {

@@ -11,6 +11,7 @@ interface FixturesScheduleViewProps {
   dayGroups: DayGroup[];
   displayMode: DisplayMode;
   teamForms: Map<string, ("W" | "L")[]>;
+  teamRecords?: Map<string, string>;
   onOpenGame: (gameId: string) => void;
   onSelectTeam?: (abbr: string) => void;
   onPredict?: (game: GameFeedRow) => void;
@@ -23,6 +24,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
   dayGroups,
   displayMode,
   teamForms,
+  teamRecords,
   onOpenGame,
   onSelectTeam,
   onPredict,
@@ -73,15 +75,21 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
           {/* Matches List or Grid for that Day */}
           {displayMode === "list" ? (
             <div className="overflow-hidden rounded border border-border bg-background-primary divide-y divide-border ">
-              {dayGroup.games.map((game) => (
-                <FixtureMatchRow
-                  key={game.GAME_ID}
-                  game={game}
-                  onOpen={() => onOpenGame(game.GAME_ID)}
-                  onSelectTeam={onSelectTeam}
-                  onPredict={onPredict ? () => onPredict(game) : undefined}
-                />
-              ))}
+              {dayGroup.games.map((game) => {
+                const awayAbbr = game.AWAY_TEAM_ABBREVIATION ?? "";
+                const homeAbbr = game.HOME_TEAM_ABBREVIATION ?? "";
+                return (
+                  <FixtureMatchRow
+                    key={game.GAME_ID}
+                    game={game}
+                    onOpen={() => onOpenGame(game.GAME_ID)}
+                    onSelectTeam={onSelectTeam}
+                    onPredict={onPredict ? () => onPredict(game) : undefined}
+                    awayRecord={teamRecords?.get(awayAbbr)}
+                    homeRecord={teamRecords?.get(homeAbbr)}
+                  />
+                );
+              })}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -99,6 +107,8 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
                     isRefreshing={refreshingGameId === game.GAME_ID}
                     awayForm={teamForms.get(awayAbbr) || []}
                     homeForm={teamForms.get(homeAbbr) || []}
+                    awayRecord={teamRecords?.get(awayAbbr)}
+                    homeRecord={teamRecords?.get(homeAbbr)}
                   />
                 );
               })}

@@ -15,6 +15,8 @@ interface FixtureMatchCardProps {
   isRefreshing?: boolean;
   homeForm?: ("W" | "L")[];
   awayForm?: ("W" | "L")[];
+  homeRecord?: string;
+  awayRecord?: string;
 }
 
 export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
@@ -26,6 +28,8 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
   isRefreshing = false,
   homeForm = [],
   awayForm = [],
+  homeRecord,
+  awayRecord,
 }) => {
   const { language } = useLanguage();
   const isCompleted =
@@ -97,19 +101,26 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <TeamLogo abbr={awayAbbr} name={awayName} size={34} className="shrink-0" />
             <div className="min-w-0 flex-1">
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelectTeam?.(awayAbbr);
-                }}
-                className={`block truncate text-xs sm:text-sm font-semibold text-left transition-colors hover:underline ${
-                  awayWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
-                }`}
-                title={awayFullName}
-              >
-                {awayName}
-              </button>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectTeam?.(awayAbbr);
+                  }}
+                  className={`block truncate text-xs sm:text-sm font-semibold text-left transition-colors hover:underline ${
+                    awayWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
+                  }`}
+                  title={awayFullName}
+                >
+                  {awayName}
+                </button>
+                {awayRecord && (
+                  <span className="shrink-0 text-xs tabular-nums text-text-muted">
+                    ({awayRecord})
+                  </span>
+                )}
+              </div>
               <span className="text-xs text-text-muted block">
                 {language === "tr" ? "Deplasman" : "Away"}
               </span>
@@ -145,19 +156,26 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
           {/* Home Team (Right) */}
           <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end text-right">
             <div className="min-w-0 flex-1 text-right">
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelectTeam?.(homeAbbr);
-                }}
-                className={`block truncate text-xs sm:text-sm font-semibold text-right transition-colors hover:underline ml-auto ${
-                  homeWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
-                }`}
-                title={homeFullName}
-              >
-                {homeName}
-              </button>
+              <div className="flex items-center justify-end gap-1.5 min-w-0">
+                {homeRecord && (
+                  <span className="shrink-0 text-xs tabular-nums text-text-muted">
+                    ({homeRecord})
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectTeam?.(homeAbbr);
+                  }}
+                  className={`block truncate text-xs sm:text-sm font-semibold text-right transition-colors hover:underline ${
+                    homeWon ? "text-text-primary font-semibold" : "text-text-secondary hover:text-text-primary"
+                  }`}
+                  title={homeFullName}
+                >
+                  {homeName}
+                </button>
+              </div>
               <span className="text-xs text-text-muted block text-right">
                 {language === "tr" ? "Ev Sahibi" : "Home"}
               </span>

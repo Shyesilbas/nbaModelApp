@@ -105,7 +105,7 @@ export function ShootingSummary({ home, away }: { home: TeamBoxScore | null; awa
         </div>
       </div>
 
-      <div className="space-y-3.5">
+      <div className="flex flex-1 flex-col justify-evenly gap-3.5">
         {rows.map((row) => {
           const totalPct = row.aPctNum + row.hPctNum;
           const awayShare = totalPct > 0 ? (row.aPctNum / totalPct) * 100 : 50;

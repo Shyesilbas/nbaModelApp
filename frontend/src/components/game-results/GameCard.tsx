@@ -10,12 +10,16 @@ export function GameCard({
   onPredict,
   onRefresh,
   isRefreshing,
+  homeRecord,
+  awayRecord,
 }: {
   game: GameFeedRow;
   onOpen: () => void;
   onPredict?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  homeRecord?: string;
+  awayRecord?: string;
 }) {
   const isCompleted =
     game.GAME_STATUS === "Final" ||
@@ -73,12 +77,19 @@ export function GameCard({
           <div className="flex min-w-0 items-center gap-2.5">
             <TeamLogo abbr={game.AWAY_TEAM_ABBREVIATION} name={game.AWAY_TEAM_NAME} size={36} />
             <div className="min-w-0">
-              <p
-                className={`truncate text-xs font-semibold ${awayWon ? "text-text-primary" : "text-text-secondary"}`}
-                title={game.AWAY_TEAM_NAME || game.AWAY_TEAM_ABBREVIATION}
-              >
-                {getTeamShortName(game.AWAY_TEAM_ABBREVIATION, game.AWAY_TEAM_NAME)}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p
+                  className={`truncate text-xs font-semibold ${awayWon ? "text-text-primary" : "text-text-secondary"}`}
+                  title={game.AWAY_TEAM_NAME || game.AWAY_TEAM_ABBREVIATION}
+                >
+                  {getTeamShortName(game.AWAY_TEAM_ABBREVIATION, game.AWAY_TEAM_NAME)}
+                </p>
+                {awayRecord && (
+                  <span className="shrink-0 text-xs tabular-nums text-text-muted">
+                    ({awayRecord})
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-text-muted">Away</p>
             </div>
           </div>
@@ -108,12 +119,19 @@ export function GameCard({
           {/* Home Team */}
           <div className="flex min-w-0 items-center justify-end gap-2.5 text-right">
             <div className="min-w-0">
-              <p
-                className={`truncate text-xs font-semibold ${homeWon ? "text-text-primary" : "text-text-secondary"}`}
-                title={game.HOME_TEAM_NAME || game.HOME_TEAM_ABBREVIATION}
-              >
-                {getTeamShortName(game.HOME_TEAM_ABBREVIATION, game.HOME_TEAM_NAME)}
-              </p>
+              <div className="flex items-center justify-end gap-1.5">
+                {homeRecord && (
+                  <span className="shrink-0 text-xs tabular-nums text-text-muted">
+                    ({homeRecord})
+                  </span>
+                )}
+                <p
+                  className={`truncate text-xs font-semibold ${homeWon ? "text-text-primary" : "text-text-secondary"}`}
+                  title={game.HOME_TEAM_NAME || game.HOME_TEAM_ABBREVIATION}
+                >
+                  {getTeamShortName(game.HOME_TEAM_ABBREVIATION, game.HOME_TEAM_NAME)}
+                </p>
+              </div>
               <p className="text-xs text-text-muted">Home</p>
             </div>
             <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={36} />

@@ -47,6 +47,8 @@ export interface GameCardDetailProps {
   freshPlayByPlay?: PbpData | null;
   season?: string;
   onBack?: () => void;
+  homeRecord?: string;
+  awayRecord?: string;
 }
 
 export function GameCardDetail({
@@ -66,6 +68,8 @@ export function GameCardDetail({
   freshPlayByPlay,
   season,
   onBack,
+  homeRecord,
+  awayRecord,
 }: GameCardDetailProps) {
   const { language, formatDate } = useLanguage();
   const isCompleted =
@@ -464,6 +468,11 @@ export function GameCardDetail({
                   >
                     {game.AWAY_TEAM_ABBREVIATION}
                   </span>
+                  {awayRecord && (
+                    <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs font-semibold tabular-nums text-text-primary">
+                      {awayRecord}
+                    </span>
+                  )}
                   <Badge variant="neutral" size="sm">
                     {language === "tr" ? "Deplasman" : "Away"}
                   </Badge>
@@ -541,6 +550,11 @@ export function GameCardDetail({
                   <Badge variant="neutral" size="sm">
                     {language === "tr" ? "Ev Sahibi" : "Home"}
                   </Badge>
+                  {homeRecord && (
+                    <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs font-semibold tabular-nums text-text-primary">
+                      {homeRecord}
+                    </span>
+                  )}
                   <span
                     className={`text-base sm:text-lg font-semibold ${
                       homeWon ? "text-text-primary" : "text-text-secondary"
@@ -627,12 +641,6 @@ export function GameCardDetail({
                 margin={margin}
               />
 
-              {/* Game Leaders and Key Contributors */}
-              <TopPerformers
-                topGame={topGame}
-                leaders={gameDetail?.game_leaders}
-              />
-
               {/* Symmetrical Team Stats & Shooting Summary */}
               <div className="grid items-stretch gap-4 lg:grid-cols-2">
                 <TeamComparisonBars
@@ -646,6 +654,12 @@ export function GameCardDetail({
                   home={teamStatHome as TeamBoxScore | null}
                 />
               </div>
+
+              {/* Game Leaders and Key Contributors */}
+              <TopPerformers
+                topGame={topGame}
+                leaders={gameDetail?.game_leaders}
+              />
             </>
           ) : null}
         </div>

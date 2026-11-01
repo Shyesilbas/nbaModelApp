@@ -292,7 +292,7 @@ const tr = {
     marginMaeHint: "Tahmin edilen ve gerçek sayı farkı arasındaki ortalama fark",
     dayGames: "{n} maç",
     dayCorrect: "{graded} maçın {correct} tanesi doğru bilindi",
-    colGame: "Maç (deplasman @ ev sahibi)",
+    colGame: "Maç",
     colPrediction: "Tahmin",
     colFinal: "Sonuç",
     colResult: "Değerlendirme",

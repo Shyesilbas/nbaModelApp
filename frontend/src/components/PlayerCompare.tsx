@@ -205,8 +205,8 @@ function ValueCell({
   leads: boolean;
   align: "left" | "right";
 }) {
-  const alignClass = align === "left" ? "text-left" : "text-right";
-  const justify = align === "left" ? "justify-start" : "justify-end";
+  const alignClass = align === "left" ? "text-right" : "text-left";
+  const justify = align === "left" ? "justify-end" : "justify-start";
   if (value == null) {
     return <td className={`px-4 py-3 text-sm text-text-muted ${alignClass}`}>—</td>;
   }
@@ -217,9 +217,9 @@ function ValueCell({
           leads ? "font-semibold text-status-success" : "text-text-primary"
         }`}
       >
-        {leads && align === "right" && <Check size={16} strokeWidth={1.5} aria-hidden="true" />}
-        {metric.format(value)}
         {leads && align === "left" && <Check size={16} strokeWidth={1.5} aria-hidden="true" />}
+        {metric.format(value)}
+        {leads && align === "right" && <Check size={16} strokeWidth={1.5} aria-hidden="true" />}
         {leads && <span className="sr-only">(önde)</span>}
       </span>
     </td>
@@ -266,7 +266,7 @@ export const PlayerCompare: React.FC<PlayerCompareProps> = ({
     { key: "MIN", label: t.compare.minutes, higherIsBetter: true, informational: true, format: one },
     { key: "STL", label: t.compare.steals, higherIsBetter: true, format: one },
     { key: "BLK", label: t.compare.blocks, higherIsBetter: true, format: one },
-    { key: "TOV", label: t.compare.turnovers, hint: language === "tr" ? "düşük olan iyi" : "lower is better", higherIsBetter: false, format: one },
+    { key: "TOV", label: t.compare.turnovers, higherIsBetter: false, format: one },
     { key: "PLUS_MINUS", label: t.compare.plusMinus, higherIsBetter: true, format: signed },
     { key: "FG_PCT", label: t.compare.fieldGoalPct, higherIsBetter: true, format: pct },
     { key: "FG3_PCT", label: t.compare.threePointPct, higherIsBetter: true, format: pct },
@@ -437,13 +437,13 @@ export const PlayerCompare: React.FC<PlayerCompareProps> = ({
                   </caption>
                   <thead>
                     <tr className="bg-background-tertiary text-xs text-text-secondary">
-                      <th scope="col" className="w-1/3 px-4 py-2 text-left font-medium">
+                      <th scope="col" className="w-[38%] px-4 py-2 text-right font-medium">
                         {p1?.PLAYER_NAME}
                       </th>
-                      <th scope="col" className="w-1/3 px-4 py-2 text-center font-medium">
+                      <th scope="col" className="w-[24%] px-2 py-2 text-center font-medium">
                         {t.compare.metrics}
                       </th>
-                      <th scope="col" className="w-1/3 px-4 py-2 text-right font-medium">
+                      <th scope="col" className="w-[38%] px-4 py-2 text-left font-medium">
                         {p2?.PLAYER_NAME}
                       </th>
                     </tr>
@@ -456,7 +456,7 @@ export const PlayerCompare: React.FC<PlayerCompareProps> = ({
                       return (
                         <tr key={m.key} className="hover:bg-background-secondary">
                           <ValueCell value={v1} metric={m} leads={w === 1} align="left" />
-                          <th scope="row" className="px-4 py-3 text-center text-xs font-medium text-text-secondary">
+                          <th scope="row" className="px-2 py-3 text-center text-xs font-medium text-text-secondary">
                             {m.label}
                             {m.hint && <span className="block font-normal text-text-muted">{m.hint}</span>}
                           </th>

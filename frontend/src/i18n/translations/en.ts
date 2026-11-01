@@ -292,7 +292,7 @@ const en = {
     marginMaeHint: "Average gap between predicted and real point difference",
     dayGames: "{n} games",
     dayCorrect: "{correct} of {graded} picked correctly",
-    colGame: "Game (away @ home)",
+    colGame: "Matchup",
     colPrediction: "Prediction",
     colFinal: "Final",
     colResult: "Result",

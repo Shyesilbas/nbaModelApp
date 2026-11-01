@@ -9,9 +9,9 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  ChevronRight,
 } from "lucide-react";
 import { loadPrivateApi } from "../lib/dataCache";
-import { CURRENT_SEASON } from "../lib/constants";
 import { updateUrlRoute, parseUrlRoute } from "../lib/router";
 import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
@@ -88,6 +88,23 @@ type RenderItem =
       dateBefore: string | null;
       dateAfter: string | null;
     };
+
+function ShotCell({
+  made,
+  att,
+  pct,
+}: {
+  made?: number | null;
+  att?: number | null;
+  pct?: number | null;
+}) {
+  if (made == null || att == null) return <>—</>;
+  return (
+    <span title={fmtPct(pct)}>
+      <span className="text-text-primary">{made}</span>/{att}
+    </span>
+  );
+}
 
 function GameLogTable({
   games,
@@ -177,9 +194,9 @@ function GameLogTable({
               <th className="px-2 py-2.5 text-right">STL</th>
               <th className="px-2 py-2.5 text-right">BLK</th>
               <th className="px-2 py-2.5 text-right">TOV</th>
-              <th className="px-2 py-2.5 text-right">FG%</th>
-              <th className="px-2 py-2.5 text-right">3P%</th>
-              <th className="px-2 py-2.5 text-right">FT%</th>
+              <th className="px-2 py-2.5 text-right">FG</th>
+              <th className="px-2 py-2.5 text-right">3P</th>
+              <th className="px-2 py-2.5 text-right">FT</th>
               <th className="px-2 py-2.5 text-right">+/-</th>
               <th className="px-2 py-2.5 text-center">Tür</th>
             </tr>
@@ -228,20 +245,30 @@ function GameLogTable({
                 <tr
                   key={`${g.GAME_ID}-${idx}`}
                   onClick={clickable ? () => onGameClick!(g) : undefined}
+                  onKeyDown={
+                    clickable
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onGameClick!(g);
+                          }
+                        }
+                      : undefined
+                  }
+                  tabIndex={clickable ? 0 : undefined}
+                  aria-label={clickable ? `${g.MATCHUP ?? ""} ${fmtDate(g.GAME_DATE)} - kutu skoru` : undefined}
                   className={`transition-colors duration-150 ${
                     isDnp
                       ? "bg-background-tertiary/40 opacity-70"
                       : "hover:bg-background-tertiary"
-                  } ${clickable ? "cursor-pointer group" : ""}`}
+                  } ${clickable ? "group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus" : ""}`}
                 >
                   <td className="sticky left-0 bg-background-primary px-3 py-2 group-hover:bg-background-tertiary transition-colors">
                     <p className="text-xs font-medium text-text-primary tabular-nums">
                       {fmtDate(g.GAME_DATE)}
                     </p>
-                    {clickable && (
-                      <p className="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                        Kutu skorunu gör
-                      </p>
+                    {g.SEASON_TYPE === "Pre Season" && (
+                      <p className="text-xs text-text-muted">Hazırlık</p>
                     )}
                   </td>
                   <td className="px-2 py-2">
@@ -312,13 +339,13 @@ function GameLogTable({
                         {g.TOV ?? "—"}
                       </td>
                       <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
-                        {fmtPct(g.FG_PCT)}
+                        <ShotCell made={g.FGM} att={g.FGA} pct={g.FG_PCT} />
                       </td>
                       <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
-                        {fmtPct(g.FG3_PCT)}
+                        <ShotCell made={g.FG3M} att={g.FG3A} pct={g.FG3_PCT} />
                       </td>
                       <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
-                        {fmtPct(g.FT_PCT)}
+                        <ShotCell made={g.FTM} att={g.FTA} pct={g.FT_PCT} />
                       </td>
                       <td
                         className={`px-2 py-2 text-right tabular-nums ${pmColor(g.PLUS_MINUS)}`}
@@ -330,9 +357,19 @@ function GameLogTable({
                     </>
                   )}
                   <td className="px-2 py-2 text-center">
-                    <Badge variant={g.IS_PLAYOFF ? "primary" : "neutral"} size="sm">
-                      {g.IS_PLAYOFF ? "PO" : "RS"}
-                    </Badge>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <Badge variant={g.IS_PLAYOFF ? "primary" : "neutral"} size="sm">
+                        {g.IS_PLAYOFF ? "PO" : "RS"}
+                      </Badge>
+                      {clickable && (
+                        <ChevronRight
+                          size={16}
+                          strokeWidth={1.5}
+                          className="text-text-muted transition-colors group-hover:text-text-primary"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -393,9 +430,10 @@ type TrendMetric = "PTS" | "REB" | "AST" | "MIN" | "PLUS_MINUS";
 interface TrendRadarProps {
   games: GameRow[];
   seasonAvgs?: SeasonAverages | null;
+  season: string;
 }
 
-function PlayerTrendRadar({ games, seasonAvgs }: TrendRadarProps) {
+function PlayerTrendRadar({ games, seasonAvgs, season }: TrendRadarProps) {
   const [metric, setMetric] = useState<TrendMetric>("PTS");
 
   // Filter out DNP games and sort chronologically (oldest to newest for charting)
@@ -449,10 +487,6 @@ function PlayerTrendRadar({ games, seasonAvgs }: TrendRadarProps) {
     ? points.reduce((acc, p, i) => `${acc} ${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`, "")
     : "";
 
-  const areaD = points.length > 1
-    ? `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${svgHeight - padY} L ${points[0].x.toFixed(1)} ${svgHeight - padY} Z`
-    : "";
-
   const benchmarkY = padY + chartH - ((seasonBenchmark - minVal) / range) * chartH;
 
   const metricLabels: { id: TrendMetric; label: string }[] = [
@@ -482,7 +516,7 @@ function PlayerTrendRadar({ games, seasonAvgs }: TrendRadarProps) {
           )}
           <div>
             <h3 className="text-sm font-semibold text-text-primary">Form & Trend Radarı</h3>
-            <p className="text-xs text-text-secondary">Son maçlar vs sezon ortalaması gidişatı</p>
+            <p className="text-xs text-text-secondary"><span className="tabular-nums">{season}</span> · son maçlar vs sezon ortalaması</p>
           </div>
         </div>
 
@@ -492,6 +526,7 @@ function PlayerTrendRadar({ games, seasonAvgs }: TrendRadarProps) {
             <button
               key={m.id}
               type="button"
+              aria-pressed={metric === m.id}
               onClick={() => setMetric(m.id)}
               className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 metric === m.id
@@ -560,16 +595,9 @@ function PlayerTrendRadar({ games, seasonAvgs }: TrendRadarProps) {
           <div className="w-full overflow-x-auto">
             <svg
               viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-              className="w-full h-24 overflow-visible"
+              className="h-24 w-full overflow-visible"
               preserveAspectRatio="none"
             >
-              <defs>
-                <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--color-primary, #10b981)" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="var(--color-primary, #10b981)" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-
               {/* Benchmark Reference Line */}
               {benchmarkY >= padY && benchmarkY <= svgHeight - padY && (
                 <line
@@ -584,15 +612,12 @@ function PlayerTrendRadar({ games, seasonAvgs }: TrendRadarProps) {
                 />
               )}
 
-              {/* Fill Area Under Curve */}
-              {areaD && <path d={areaD} fill="url(#trendGradient)" />}
-
               {/* Main Trend Line */}
               {pathD && (
                 <path
                   d={pathD}
                   fill="none"
-                  stroke="var(--color-primary, #10b981)"
+                  className="stroke-primary"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -997,6 +1022,8 @@ export default function PlayerPage({
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerProfile | null>(null);
   const [selectedSeason, setSelectedSeason] = useState("2026-27");
   const [opponentSearch, setOpponentSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "RS" | "PO">("all");
+  const [hideDnp, setHideDnp] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -1128,9 +1155,14 @@ export default function PlayerPage({
     });
 
     const query = opponentSearch.toLowerCase().trim();
-    if (!query) return sorted;
+    const base = sorted.filter(
+      (g) =>
+        (typeFilter === "all" || (typeFilter === "PO" ? g.IS_PLAYOFF : !g.IS_PLAYOFF)) &&
+        (!hideDnp || !g.DID_NOT_PLAY)
+    );
+    if (!query) return base;
 
-    return sorted.filter((g) => {
+    return base.filter((g) => {
       const teamAbbr = g.TEAM_ABBREVIATION ?? "";
       const home = g.HOME_TEAM_ABBREVIATION ?? "";
       const away = g.AWAY_TEAM_ABBREVIATION ?? "";
@@ -1147,7 +1179,7 @@ export default function PlayerPage({
         matchup.toLowerCase().includes(query)
       );
     });
-  }, [playerGames, selectedSeason, opponentSearch]);
+  }, [playerGames, selectedSeason, opponentSearch, typeFilter, hideDnp]);
 
   if (loading) {
     return <PlayerPageSkeleton initialPlayer={initialPlayerId != null} />;
@@ -1285,8 +1317,9 @@ export default function PlayerPage({
             <>
               {/* Performance Trend Radar */}
               <PlayerTrendRadar
-                games={playerGames[CURRENT_SEASON] ?? []}
-                seasonAvgs={playerAvgs[CURRENT_SEASON] ?? null}
+                games={playerGames[selectedSeason] ?? []}
+                seasonAvgs={playerAvgs[selectedSeason] ?? null}
+                season={selectedSeason}
               />
 
               {/* Game Log Section */}
@@ -1342,25 +1375,50 @@ export default function PlayerPage({
                     </div>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-secondary sm:ml-auto">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-status-warning" aria-hidden="true" />
-                      DNP: oynamadı
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Badge variant="primary" size="sm">PO</Badge>
-                      Playoff
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Badge variant="neutral" size="sm">RS</Badge>
-                      Normal sezon
-                    </span>
+                  <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
+                    <div
+                      role="group"
+                      aria-label={language === "tr" ? "Maç türü" : "Game type"}
+                      className="inline-flex rounded border border-border bg-background-tertiary p-0.5"
+                    >
+                      {(
+                        [
+                          ["all", language === "tr" ? "Tümü" : "All"],
+                          ["RS", language === "tr" ? "Normal sezon" : "Regular season"],
+                          ["PO", "Playoff"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          aria-pressed={typeFilter === id}
+                          onClick={() => setTypeFilter(id)}
+                          className={`h-8 cursor-pointer rounded-sm px-3 text-xs font-medium transition-colors ${
+                            typeFilter === id
+                              ? "border border-border bg-background-primary text-text-primary"
+                              : "text-text-secondary hover:text-text-primary"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-text-secondary">
+                      <input
+                        type="checkbox"
+                        checked={hideDnp}
+                        onChange={(e) => setHideDnp(e.target.checked)}
+                        className="h-4 w-4 cursor-pointer rounded-sm border-border accent-primary"
+                      />
+                      {language === "tr" ? "DNP maçlarını gizle" : "Hide DNP games"}
+                    </label>
                   </div>
                 </div>
 
                 {(playerGames[selectedSeason] ?? []).length > 0 ? (
                   currentGames.length > 0 ? (
                     <GameLogTable
+                      key={`${selectedSeason}-${typeFilter}-${hideDnp}-${opponentSearch}`}
                       games={currentGames}
                       onGameClick={(g) => {
                         if (onSelectGame) {

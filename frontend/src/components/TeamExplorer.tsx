@@ -10,6 +10,8 @@ import PlayerPhoto from "./PlayerPhoto";
 import { NBA_TEAM_ABBRS, TEAM_NAME_BY_ABBR } from "../lib/nbaTeams";
 import { loadPrivateApi } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
+import { loadArchivedGameIndex } from "../lib/archiveData";
+import { computeSeasonTeamRecords, type TeamRecordsMap } from "../lib/teamRecords";
 import {
   Card,
   Skeleton,
@@ -125,6 +127,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
   const { t, language } = useLanguage();
   const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
   const [activeRosters, setActiveRosters] = useState<any[]>([]);
+  const [teamRecords, setTeamRecords] = useState<TeamRecordsMap | null>(null);
   const [playerPositions, setPlayerPositions] = useState<Record<number, "guard" | "forward" | "center">>({});
   const [loadingSeason, setLoadingSeason] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -168,13 +171,18 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
     setLoadingSeason(true);
     setLoadError(null);
     try {
-      const data = await loadPrivateApi<any[]>(
-        `/frontend-data-api/team-rosters?season=${encodeURIComponent(selectedSeason)}`
-      );
-      setActiveRosters(data || []);
+      const [rosterData, gamesData] = await Promise.all([
+        loadPrivateApi<any[]>(
+          `/frontend-data-api/team-rosters?season=${encodeURIComponent(selectedSeason)}`
+        ),
+        loadArchivedGameIndex(selectedSeason).catch(() => []),
+      ]);
+      setActiveRosters(rosterData || []);
+      setTeamRecords(computeSeasonTeamRecords(gamesData || []));
     } catch {
       setLoadError(`${selectedSeason} kadro verileri yüklenemedi.`);
       setActiveRosters([]);
+      setTeamRecords(null);
     } finally {
       setLoadingSeason(false);
     }
@@ -297,9 +305,16 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                 size={40}
               />
               <div>
-                <h1 className="text-xl font-semibold text-text-primary sm:text-2xl">
-                  {TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR] || activeTeam}
-                </h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-semibold text-text-primary sm:text-2xl">
+                    {TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR] || activeTeam}
+                  </h1>
+                  {teamRecords?.get(activeTeam) && (
+                    <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-semibold tabular-nums text-text-primary">
+                      {teamRecords.get(activeTeam)!.recordFormatted}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-text-secondary">
                   {language === "tr" ? `Takım Keşfi · ${selectedSeason} Sezonu` : `Team Explorer · ${selectedSeason} Season`}
                 </p>
@@ -430,13 +445,13 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
             </div>
 
             {corePlayers.length > 0 ? (
-              <div className="rounded border border-border bg-background-primary divide-y divide-border-light">
+              <div className="max-w-3xl rounded border border-border bg-background-primary divide-y divide-border-light">
                 {corePlayers.map((player, idx) => {
                   return (
                     <div
                       key={player.PLAYER_ID}
                       onClick={() => onSelectPlayer(player.PLAYER_ID)}
-                      className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 transition-colors hover:bg-background-tertiary/40 cursor-pointer"
+                      className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 transition-colors hover:bg-background-tertiary/40 cursor-pointer"
                     >
                       {/* Left: Player Info */}
                       <div className="flex items-center gap-3 min-w-0">
@@ -446,7 +461,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                         <PlayerPhoto
                           playerId={player.PLAYER_ID}
                           name={player.PLAYER_NAME}
-                          size={40}
+                          size={38}
                           className="shrink-0 rounded-full border border-border ring-1 ring-border"
                         />
                         <div className="min-w-0">
@@ -462,7 +477,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                       </div>
 
                       {/* Right: Model Score + Stats */}
-                      <div className="flex items-center gap-5 sm:gap-6 shrink-0 self-end sm:self-center">
+                      <div className="flex items-center gap-4 sm:gap-5 shrink-0 self-end sm:self-center">
                         {/* Model Score */}
                         <div className="text-right">
                           <span className="text-sm font-semibold tabular-nums text-text-primary">
@@ -475,25 +490,25 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
 
                         {/* Traditional Stats */}
                         <div className="flex items-center gap-3 sm:gap-4 border-l border-border-light pl-4 tabular-nums text-right">
-                          <div>
+                          <div className="min-w-7">
                             <span className="text-xs font-semibold text-text-primary">
                               {player.AVG_PTS.toFixed(1)}
                             </span>
                             <p className="text-xs text-text-muted">PTS</p>
                           </div>
-                          <div>
+                          <div className="min-w-7">
                             <span className="text-xs font-semibold text-text-secondary">
                               {player.AVG_REB.toFixed(1)}
                             </span>
                             <p className="text-xs text-text-muted">REB</p>
                           </div>
-                          <div>
+                          <div className="min-w-7">
                             <span className="text-xs font-semibold text-text-secondary">
                               {player.AVG_AST.toFixed(1)}
                             </span>
                             <p className="text-xs text-text-muted">AST</p>
                           </div>
-                          <div>
+                          <div className="min-w-7">
                             <span className="text-xs font-medium text-text-muted">
                               {player.AVG_MIN.toFixed(0)}m
                             </span>

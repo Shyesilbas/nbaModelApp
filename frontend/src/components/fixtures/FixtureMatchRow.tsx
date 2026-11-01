@@ -11,6 +11,8 @@ interface FixtureMatchRowProps {
   onOpen: () => void;
   onSelectTeam?: (abbr: string) => void;
   onPredict?: () => void;
+  homeRecord?: string;
+  awayRecord?: string;
 }
 
 export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
@@ -18,6 +20,8 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
   onOpen,
   onSelectTeam,
   onPredict,
+  homeRecord,
+  awayRecord,
 }) => {
   const { language } = useLanguage();
   const isCompleted =
@@ -61,6 +65,11 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
       <div className="flex flex-1 min-w-0 items-center justify-center gap-2 sm:gap-4">
         {/* Away Team */}
         <div className="flex flex-1 min-w-0 items-center justify-end gap-2 text-right">
+          {awayRecord && (
+            <span className="hidden sm:inline shrink-0 text-xs tabular-nums text-text-muted">
+              ({awayRecord})
+            </span>
+          )}
           <button
             type="button"
             onClick={(event) => {
@@ -110,6 +119,11 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
             <span className="hidden md:inline">{homeName}</span>
             <span className="inline md:hidden">{homeAbbr}</span>
           </button>
+          {homeRecord && (
+            <span className="hidden sm:inline shrink-0 text-xs tabular-nums text-text-muted">
+              ({homeRecord})
+            </span>
+          )}
         </div>
       </div>
 
