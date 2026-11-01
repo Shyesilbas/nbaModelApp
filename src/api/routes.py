@@ -43,6 +43,7 @@ from .services.frontend_data import (
     get_game_index,
     get_game_results,
     get_multi_team_players,
+    get_game_quarters,
     get_play_by_play,
     get_player_history,
     get_player_profiles,
@@ -209,6 +210,11 @@ def frontend_game_detail(game_id: str, season: str = None):
 @data_router.get("/play-by-play/{game_id}")
 def frontend_play_by_play(game_id: str, season: str = None):
     return _run_endpoint(lambda: get_play_by_play(game_id, season))
+
+
+@data_router.get("/game-quarters/{game_id}")
+def frontend_game_quarters(game_id: str, season: str = None):
+    return _run_endpoint(lambda: get_game_quarters(game_id, season))
 
 
 @data_router.get("/players/{player_id}")

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import PlayerPhoto from "../PlayerPhoto";
 import TeamLogo from "../TeamLogo";
-import { Badge, Card, Skeleton } from "../common";
+import { Card, Skeleton } from "../common";
 import { TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../../lib/nbaTeams";
 import { fmtPct, fmtStat } from "./format";
 import type { PlayerProfile, SeasonAverages } from "./types";
@@ -57,7 +57,7 @@ function SeasonSelector({
         aria-expanded={open}
         aria-label={`Sezon seç, şu an ${selected}`}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex h-10 items-center gap-2 rounded border border-border bg-background-primary px-3 text-sm text-text-primary hover:border-card-border-hover focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus cursor-pointer"
+        className="inline-flex h-9 items-center gap-2 rounded border border-border bg-background-primary px-3 text-sm text-text-primary hover:border-card-border-hover focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus cursor-pointer"
       >
         {label(selected)}
         <ChevronDown size={16} strokeWidth={1.5} className="text-text-muted" aria-hidden="true" />
@@ -121,36 +121,27 @@ function SeasonStats({ avgs }: { avgs: SeasonAverages }) {
   ];
 
   return (
-    <div className="space-y-3">
-      <dl className="grid grid-cols-4 gap-3">
-        {primary.map((s) => (
-          <div key={s.label}>
-            <dt className="text-xs text-text-secondary">{s.label}</dt>
-            <dd className="text-2xl font-semibold tabular-nums text-text-primary">{s.value}</dd>
-          </div>
-        ))}
-      </dl>
-      <dl className="grid grid-cols-3 gap-x-4 gap-y-2 border-t border-border-light pt-3 sm:grid-cols-5 lg:grid-cols-9">
-        {secondary.map((s) => (
-          <div key={s.label}>
-            <dt className="text-xs text-text-muted">{s.label}</dt>
-            <dd className="text-sm font-semibold tabular-nums text-text-primary">{s.value}</dd>
-            {s.hint && <p className="text-xs tabular-nums text-text-muted">{s.hint}</p>}
-          </div>
-        ))}
-      </dl>
-    </div>
+    <dl className="grid grid-cols-3 gap-x-5 gap-y-3 sm:grid-cols-5 lg:grid-cols-[repeat(13,minmax(0,auto))] lg:justify-between">
+      {primary.map((s) => (
+        <div key={s.label}>
+          <dt className="text-xs text-text-secondary">{s.label}</dt>
+          <dd className="text-lg font-semibold tabular-nums text-text-primary">{s.value}</dd>
+        </div>
+      ))}
+      {secondary.map((s) => (
+        <div key={s.label}>
+          <dt className="text-xs text-text-muted">{s.label}</dt>
+          <dd className="text-sm font-medium tabular-nums text-text-primary">{s.value}</dd>
+          {s.hint && <p className="text-xs tabular-nums text-text-muted">{s.hint}</p>}
+        </div>
+      ))}
+    </dl>
   );
 }
 
 function StatsSkeleton() {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Sezon ortalamaları yükleniyor">
-      <div className="grid grid-cols-4 gap-3">
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-10 w-full rounded" />
-        ))}
-      </div>
+    <div aria-busy="true" aria-label="Sezon ortalamaları yükleniyor">
       <Skeleton className="h-12 w-full rounded" />
     </div>
   );
@@ -201,40 +192,38 @@ export default function PlayerHeroCard({
   ];
   const hasAverages = avgs != null && avgs.games_total > 0;
 
+  const bioLine = bio
+    .filter((b) => b.value)
+    .map((b) => (b.label === "Draft" ? `Draft ${b.value}` : b.value))
+    .join(" · ");
+
   return (
     <Card padding="md" aria-labelledby="player-hero-name">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <PlayerPhoto
             playerId={player.PLAYER_ID}
             name={player.PLAYER_NAME ?? ""}
-            size={80}
+            size={56}
             className="shrink-0 border border-border"
           />
-          <div className="min-w-0 space-y-2">
-            <h1 id="player-hero-name" className="text-2xl font-semibold text-text-primary">
+          <div className="min-w-0">
+            <h1 id="player-hero-name" className="text-xl font-semibold text-text-primary">
               {player.PLAYER_NAME}
             </h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              {teams.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
-                  {teams.map((abbr, i) => (
-                    <span key={`${abbr}-${i}`} className="inline-flex items-center gap-2">
-                      {i > 0 && (
-                        <ChevronRight size={16} strokeWidth={1.5} className="text-text-muted" aria-hidden="true" />
-                      )}
-                      <TeamLogo abbr={abbr} name="" size={20} />
-                      <span>{isKnownTeamAbbr(abbr) ? TEAM_NAME_BY_ABBR[abbr] : abbr}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {player.OFFICIAL_POSITION && (
-                <Badge variant="neutral" size="sm">
-                  {player.OFFICIAL_POSITION}
-                </Badge>
-              )}
-            </div>
+            {teams.length > 0 && (
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-secondary">
+                {teams.map((abbr, i) => (
+                  <span key={`${abbr}-${i}`} className="inline-flex items-center gap-1.5">
+                    {i > 0 && <ChevronRight size={14} strokeWidth={1.5} className="text-text-muted" aria-hidden="true" />}
+                    <TeamLogo abbr={abbr} name="" size={18} />
+                    <span>{isKnownTeamAbbr(abbr) ? TEAM_NAME_BY_ABBR[abbr] : abbr}</span>
+                  </span>
+                ))}
+                {player.OFFICIAL_POSITION && <span className="text-text-muted">· {player.OFFICIAL_POSITION}</span>}
+              </div>
+            )}
+            {bioLine && <p className="mt-1 text-xs text-text-muted">{bioLine}</p>}
           </div>
         </div>
 
@@ -243,35 +232,20 @@ export default function PlayerHeroCard({
         )}
       </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border-light pt-3 sm:grid-cols-3 lg:grid-cols-5">
-        {bio.map((b) => (
-          <div key={b.label} className="min-w-0">
-            <dt className="text-xs text-text-muted">{b.label}</dt>
-            <dd className="truncate text-sm text-text-primary" title={b.value ?? undefined}>
-              {b.value || "—"}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
       {seasons.length > 0 && (
         <section className="mt-4 space-y-3 border-t border-border-light pt-3" aria-labelledby="player-hero-stats">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <h2 id="player-hero-stats" className="text-sm font-semibold text-text-primary">
-                <span className="tabular-nums">{season}</span> {language === "tr" ? "sezon ortalamaları" : "Season Averages"}
-              </h2>
-              {hasAverages && (
-                <Badge variant="neutral" size="sm">
-                  <span className="tabular-nums">
-                    {avgs.games_played} / {avgs.games_total}
-                  </span>{" "}
-                  {language === "tr" ? "maç" : "games"}
-                </Badge>
-              )}
-            </div>
-            <span className="text-xs text-text-muted">{language === "tr" ? "Maç başına" : "Per game"}</span>
-          </div>
+          <h2 id="player-hero-stats" className="text-xs text-text-muted">
+            <span className="tabular-nums">{season}</span> {language === "tr" ? "maç başına ortalamalar" : "per-game averages"}
+            {hasAverages && (
+              <>
+                {" · "}
+                <span className="tabular-nums">
+                  {avgs.games_played}/{avgs.games_total}
+                </span>{" "}
+                {language === "tr" ? "maç" : "games"}
+              </>
+            )}
+          </h2>
 
           {loading ? (
             <StatsSkeleton />

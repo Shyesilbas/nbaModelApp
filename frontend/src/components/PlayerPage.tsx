@@ -12,10 +12,12 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { loadPrivateApi } from "../lib/dataCache";
+import { TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../lib/nbaTeams";
 import { updateUrlRoute, parseUrlRoute } from "../lib/router";
 import PlayerPhoto from "./PlayerPhoto";
 import TeamLogo from "./TeamLogo";
 import PlayerHeroCard from "./player/PlayerHeroCard";
+import PlayerGameCard from "./player/PlayerGameCard";
 import { fmtPct, fmtStat } from "./player/format";
 import type { PlayerProfile, SeasonAverages } from "./player/types";
 import {
@@ -144,30 +146,6 @@ function GameLogTable({
   const totalPages = Math.ceil(renderItems.length / PAGE_SIZE);
   const visible = renderItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const wlBadge = (wl: string | null) => {
-    if (wl === "W") {
-      return (
-        <span
-          className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-xs font-semibold text-status-success bg-status-success/10 border border-status-success/30"
-          title="Galibiyet"
-        >
-          G
-        </span>
-      );
-    }
-    if (wl === "L") {
-      return (
-        <span
-          className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-xs font-semibold text-status-error bg-status-error/10 border border-status-error/30"
-          title="Mağlubiyet"
-        >
-          M
-        </span>
-      );
-    }
-    return <span className="text-text-muted">—</span>;
-  };
-
   const pmColor = (pm: number | null | undefined) => {
     if (pm == null) return "text-text-muted";
     if (pm > 0) return "text-status-success font-semibold";
@@ -180,25 +158,24 @@ function GameLogTable({
       <div className="overflow-x-auto rounded border border-border bg-background-primary">
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-background-tertiary border-b border-border text-xs font-semibold text-text-secondary">
-              <th className="sticky left-0 bg-background-tertiary px-3 py-2.5 text-left w-28">
+            <tr className="border-b border-border text-xs font-medium text-text-secondary">
+              <th className="sticky left-0 bg-background-primary px-3 py-2.5 text-left w-28">
                 Tarih
               </th>
-              <th className="px-2 py-2.5 text-left w-36">Eşleşme</th>
-              <th className="px-2 py-2.5 text-center">G/M</th>
-              <th className="px-2 py-2.5 text-right">Skor</th>
+              <th className="px-2 py-2.5 text-left">Rakip</th>
+              <th className="px-2 py-2.5 text-right">Sonuç</th>
               <th className="px-2 py-2.5 text-right">MIN</th>
-              <th className="px-2 py-2.5 text-right">PTS</th>
-              <th className="px-2 py-2.5 text-right">REB</th>
-              <th className="px-2 py-2.5 text-right">AST</th>
-              <th className="px-2 py-2.5 text-right">STL</th>
-              <th className="px-2 py-2.5 text-right">BLK</th>
-              <th className="px-2 py-2.5 text-right">TOV</th>
-              <th className="px-2 py-2.5 text-right">FG</th>
-              <th className="px-2 py-2.5 text-right">3P</th>
-              <th className="px-2 py-2.5 text-right">FT</th>
+              <th className="px-2 py-2.5 text-right text-text-primary">PTS</th>
+              <th className="px-2 py-2.5 text-right text-text-primary">REB</th>
+              <th className="px-2 py-2.5 text-right text-text-primary">AST</th>
+              <th className="px-2 py-2.5 text-right font-normal text-text-muted">STL</th>
+              <th className="px-2 py-2.5 text-right font-normal text-text-muted">BLK</th>
+              <th className="px-2 py-2.5 text-right font-normal text-text-muted">TOV</th>
+              <th className="px-2 py-2.5 text-right font-normal text-text-muted">FG</th>
+              <th className="px-2 py-2.5 text-right font-normal text-text-muted">3P</th>
+              <th className="px-2 py-2.5 text-right font-normal text-text-muted">FT</th>
               <th className="px-2 py-2.5 text-right">+/-</th>
-              <th className="px-2 py-2.5 text-center">Tür</th>
+              <th className="w-8" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light">
@@ -209,7 +186,7 @@ function GameLogTable({
                     key={`trade-${idx}`}
                     className="bg-background-tertiary border-y border-border-light"
                   >
-                    <td colSpan={16} className="px-3 py-2.5">
+                    <td colSpan={15} className="px-3 py-2.5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
                           <Badge variant="neutral" size="sm">
@@ -235,10 +212,11 @@ function GameLogTable({
 
               const g = item.data;
               const isDnp = g.DID_NOT_PLAY;
-              const score =
-                g.HOME_SCORE != null && g.AWAY_SCORE != null
-                  ? `${g.AWAY_SCORE} - ${g.HOME_SCORE}`
-                  : "—";
+              const away = !g.MATCHUP?.includes("vs.");
+              const oppAbbr = away ? g.HOME_TEAM_ABBREVIATION : g.AWAY_TEAM_ABBREVIATION;
+              const ownScore = away ? g.AWAY_SCORE : g.HOME_SCORE;
+              const oppScore = away ? g.HOME_SCORE : g.AWAY_SCORE;
+              const score = ownScore != null && oppScore != null ? `${ownScore} - ${oppScore}` : "—";
               const clickable = !!onGameClick && !!g.GAME_ID;
 
               return (
@@ -259,117 +237,77 @@ function GameLogTable({
                   aria-label={clickable ? `${g.MATCHUP ?? ""} ${fmtDate(g.GAME_DATE)} - kutu skoru` : undefined}
                   className={`transition-colors duration-150 ${
                     isDnp
-                      ? "bg-background-tertiary/40 opacity-70"
+                      ? "opacity-60"
                       : "hover:bg-background-tertiary"
                   } ${clickable ? "group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus" : ""}`}
                 >
-                  <td className="sticky left-0 bg-background-primary px-3 py-2 group-hover:bg-background-tertiary transition-colors">
+                  <td className="sticky left-0 bg-background-primary px-3 py-3 group-hover:bg-background-tertiary transition-colors">
                     <p className="text-xs font-medium text-text-primary tabular-nums">
                       {fmtDate(g.GAME_DATE)}
                     </p>
-                    {g.SEASON_TYPE === "Pre Season" && (
-                      <p className="text-xs text-text-muted">Hazırlık</p>
+                    {(g.SEASON_TYPE === "Pre Season" || g.IS_PLAYOFF) && (
+                      <p className="text-xs text-text-muted">{g.IS_PLAYOFF ? "Playoff" : "Hazırlık"}</p>
                     )}
                   </td>
-                  <td className="px-2 py-2">
-                    <div className="flex items-center gap-1.5">
-                      {g.HOME_TEAM_ABBREVIATION && (
-                        <TeamLogo
-                          abbr={
-                            g.MATCHUP?.includes("vs.")
-                              ? g.AWAY_TEAM_ABBREVIATION ?? ""
-                              : g.HOME_TEAM_ABBREVIATION ?? ""
-                          }
-                          name=""
-                          size={16}
-                        />
-                      )}
-                      <span className="text-xs font-medium text-text-primary whitespace-nowrap">
-                        {g.MATCHUP ?? "—"}
+                  <td className="px-2 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 text-xs text-text-muted">{away ? "@" : "vs"}</span>
+                      {oppAbbr && <TeamLogo abbr={oppAbbr} name="" size={20} />}
+                      <span className="whitespace-nowrap text-sm font-medium text-text-primary">
+                        {oppAbbr && isKnownTeamAbbr(oppAbbr) ? TEAM_NAME_BY_ABBR[oppAbbr] : (oppAbbr ?? g.MATCHUP ?? "—")}
                       </span>
                     </div>
                   </td>
-                  <td className="px-2 py-2 text-center">
-                    {isDnp ? (
-                      <Badge variant="neutral" size="sm">
-                        DNP
-                      </Badge>
-                    ) : (
-                      wlBadge(g.WL)
-                    )}
-                  </td>
-                  <td className="px-2 py-2 text-right">
-                    {isDnp ? (
-                      <span className="text-xs text-text-muted">Oynamadı</span>
-                    ) : (
-                      <span className="text-xs font-medium text-text-secondary tabular-nums">
-                        {score}
-                      </span>
-                    )}
-                  </td>
                   {isDnp ? (
-                    <>
-                      {Array.from({ length: 11 }).map((_, i) => (
-                        <td key={i} className="px-2 py-2 text-right text-text-muted">
-                          —
-                        </td>
-                      ))}
-                    </>
+                    <td colSpan={12} className="px-2 py-3 text-xs text-text-muted">
+                      Oynamadı
+                    </td>
                   ) : (
                     <>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                      <td className="whitespace-nowrap px-2 py-3 text-right tabular-nums">
+                        <span className={`mr-1.5 font-semibold ${g.WL === "W" ? "text-status-success" : g.WL === "L" ? "text-status-error" : "text-text-muted"}`}>
+                          {g.WL === "W" ? "G" : g.WL === "L" ? "M" : "-"}
+                        </span>
+                        <span className="text-text-secondary">{score}</span>
+                      </td>
+                      <td className="px-2 py-3 text-right text-text-secondary tabular-nums">
                         {g.MIN != null ? Math.round(g.MIN) : "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-semibold text-text-primary tabular-nums">
+                      <td className="px-2 py-3 text-right text-base font-semibold text-text-primary tabular-nums">
                         {g.PTS ?? "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-medium text-text-secondary tabular-nums">
+                      <td className="px-2 py-3 text-right text-base font-semibold text-text-primary tabular-nums">
                         {g.REB ?? "—"}
                       </td>
-                      <td className="px-2 py-2 text-right font-medium text-text-secondary tabular-nums">
+                      <td className="px-2 py-3 text-right text-base font-semibold text-text-primary tabular-nums">
                         {g.AST ?? "—"}
                       </td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
-                        {g.STL ?? "—"}
-                      </td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
-                        {g.BLK ?? "—"}
-                      </td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
-                        {g.TOV ?? "—"}
-                      </td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                      <td className="px-2 py-3 text-right text-text-muted tabular-nums">{g.STL ?? "—"}</td>
+                      <td className="px-2 py-3 text-right text-text-muted tabular-nums">{g.BLK ?? "—"}</td>
+                      <td className="px-2 py-3 text-right text-text-muted tabular-nums">{g.TOV ?? "—"}</td>
+                      <td className="px-2 py-3 text-right text-text-muted tabular-nums">
                         <ShotCell made={g.FGM} att={g.FGA} pct={g.FG_PCT} />
                       </td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                      <td className="px-2 py-3 text-right text-text-muted tabular-nums">
                         <ShotCell made={g.FG3M} att={g.FG3A} pct={g.FG3_PCT} />
                       </td>
-                      <td className="px-2 py-2 text-right text-text-secondary tabular-nums">
+                      <td className="px-2 py-3 text-right text-text-muted tabular-nums">
                         <ShotCell made={g.FTM} att={g.FTA} pct={g.FT_PCT} />
                       </td>
-                      <td
-                        className={`px-2 py-2 text-right tabular-nums ${pmColor(g.PLUS_MINUS)}`}
-                      >
-                        {g.PLUS_MINUS != null
-                          ? `${g.PLUS_MINUS > 0 ? "+" : ""}${g.PLUS_MINUS}`
-                          : "—"}
+                      <td className={`px-2 py-3 text-right tabular-nums ${pmColor(g.PLUS_MINUS)}`}>
+                        {g.PLUS_MINUS != null ? `${g.PLUS_MINUS > 0 ? "+" : ""}${g.PLUS_MINUS}` : "—"}
                       </td>
                     </>
                   )}
-                  <td className="px-2 py-2 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <Badge variant={g.IS_PLAYOFF ? "primary" : "neutral"} size="sm">
-                        {g.IS_PLAYOFF ? "PO" : "RS"}
-                      </Badge>
-                      {clickable && (
-                        <ChevronRight
-                          size={16}
-                          strokeWidth={1.5}
-                          className="text-text-muted transition-colors group-hover:text-text-primary"
-                          aria-hidden="true"
-                        />
-                      )}
-                    </div>
+                  <td className="pr-3 text-right">
+                    {clickable && (
+                      <ChevronRight
+                        size={16}
+                        strokeWidth={1.5}
+                        className="inline text-text-muted transition-colors group-hover:text-text-primary"
+                        aria-hidden="true"
+                      />
+                    )}
                   </td>
                 </tr>
               );
@@ -1020,6 +958,7 @@ export default function PlayerPage({
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerProfile | null>(null);
+  const [openGame, setOpenGame] = useState<GameRow | null>(null);
   const [selectedSeason, setSelectedSeason] = useState("2026-27");
   const [opponentSearch, setOpponentSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "RS" | "PO">("all");
@@ -1379,7 +1318,7 @@ export default function PlayerPage({
                     <div
                       role="group"
                       aria-label={language === "tr" ? "Maç türü" : "Game type"}
-                      className="inline-flex rounded border border-border bg-background-tertiary p-0.5"
+                      className="flex items-center gap-4 text-xs"
                     >
                       {(
                         [
@@ -1393,41 +1332,54 @@ export default function PlayerPage({
                           type="button"
                           aria-pressed={typeFilter === id}
                           onClick={() => setTypeFilter(id)}
-                          className={`h-8 cursor-pointer rounded-sm px-3 text-xs font-medium transition-colors ${
+                          className={`cursor-pointer transition-colors ${
                             typeFilter === id
-                              ? "border border-border bg-background-primary text-text-primary"
-                              : "text-text-secondary hover:text-text-primary"
+                              ? "font-semibold text-text-primary"
+                              : "text-text-muted hover:text-text-primary"
                           }`}
                         >
                           {label}
                         </button>
                       ))}
                     </div>
-                    <label className="flex cursor-pointer items-center gap-2 text-xs text-text-secondary">
-                      <input
-                        type="checkbox"
-                        checked={hideDnp}
-                        onChange={(e) => setHideDnp(e.target.checked)}
-                        className="h-4 w-4 cursor-pointer rounded-sm border-border accent-primary"
-                      />
-                      {language === "tr" ? "DNP maçlarını gizle" : "Hide DNP games"}
-                    </label>
+                    <button
+                      type="button"
+                      aria-pressed={hideDnp}
+                      onClick={() => setHideDnp((v) => !v)}
+                      className={`cursor-pointer text-xs transition-colors ${
+                        hideDnp ? "font-semibold text-text-primary" : "text-text-muted hover:text-text-primary"
+                      }`}
+                    >
+                      {language === "tr" ? "Oynamadığı maçları gizle" : "Hide DNP games"}
+                    </button>
                   </div>
                 </div>
 
                 {(playerGames[selectedSeason] ?? []).length > 0 ? (
                   currentGames.length > 0 ? (
+                    <>
+                    {selectedPlayer && (
+                      <PlayerGameCard
+                        game={openGame}
+                        playerId={selectedPlayer.PLAYER_ID}
+                        playerName={selectedPlayer.PLAYER_NAME ?? ""}
+                        onClose={() => setOpenGame(null)}
+                        onOpenGame={(gameId) => {
+                          setOpenGame(null);
+                          if (onSelectGame) {
+                            onSelectGame(gameId);
+                          } else {
+                            updateUrlRoute({ tab: "game-results", gameId });
+                          }
+                        }}
+                      />
+                    )}
                     <GameLogTable
                       key={`${selectedSeason}-${typeFilter}-${hideDnp}-${opponentSearch}`}
                       games={currentGames}
-                      onGameClick={(g) => {
-                        if (onSelectGame) {
-                          onSelectGame(g.GAME_ID);
-                        } else {
-                          updateUrlRoute({ tab: "game-results", gameId: g.GAME_ID });
-                        }
-                      }}
+                      onGameClick={setOpenGame}
                     />
+                    </>
                   ) : (
                     <EmptyState
                       title={language === "tr" ? "Eşleşen maç bulunamadı" : "No matching games"}

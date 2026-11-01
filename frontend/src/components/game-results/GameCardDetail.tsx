@@ -17,6 +17,7 @@ import {
   sortPlayersByMinutes,
 } from "./utils";
 import { QuarterScores } from "./QuarterScores";
+import { PeriodTabs, QuarterPlayerTable, useGameQuarters } from "./QuarterBreakdown";
 import { TeamComparisonBars } from "./TeamComparisonBars";
 import { ShootingSummary } from "./ShootingSummary";
 import { TopPerformers } from "./TopPerformers";
@@ -323,8 +324,17 @@ export function GameCardDetail({
   const homeWon = isCompleted && winnerAbbr === game.HOME_TEAM_ABBREVIATION;
   const awayWon = isCompleted && winnerAbbr === game.AWAY_TEAM_ABBREVIATION;
   const seasonLabel = game.PLAYOFF_ROUND ?? game.SEASON_TYPE ?? "NBA Regular Season";
-  const homeQS = gameDetail?.home_team?.quarter_scores;
-  const awayQS = gameDetail?.away_team?.quarter_scores;
+  const quarterSeason = season ?? game.SEASON ?? gameDetail?.season ?? undefined;
+  const { data: quarterData } = useGameQuarters(isCompleted ? game.GAME_ID : null, quarterSeason);
+  const fromPbp = (key: "home" | "away") =>
+    quarterData?.quarter_scores?.length ? quarterData.quarter_scores.map((q) => q[key]) : undefined;
+  const homeQS = gameDetail?.home_team?.quarter_scores?.length ? gameDetail.home_team.quarter_scores : fromPbp("home");
+  const awayQS = gameDetail?.away_team?.quarter_scores?.length ? gameDetail.away_team.quarter_scores : fromPbp("away");
+  const [period, setPeriod] = useState<number | "total">("total");
+  const nameById: Record<number, string> = {};
+  [...topHome, ...topAway].forEach((p) => {
+    nameById[p.PLAYER_ID] = p.PLAYER_NAME;
+  });
 
   const nick = (abbr: string, name?: string | null) => {
     const full = teamFull(abbr, name);
@@ -375,8 +385,22 @@ export function GameCardDetail({
             </p>
           )}
         </div>
+        {isCompleted && players.length > 0 && quarterData && quarterData.periods.length > 0 && (
+          <div className="mb-3">
+            <PeriodTabs
+              periods={quarterData.periods}
+              value={period}
+              onChange={setPeriod}
+              totalLabel={language === "tr" ? "Toplam" : "Total"}
+            />
+          </div>
+        )}
         {isCompleted && players.length > 0 ? (
-          <PlayerBoxTable players={players} />
+          period !== "total" && quarterData ? (
+            <QuarterPlayerTable data={quarterData} team={abbr} period={period} nameById={nameById} />
+          ) : (
+            <PlayerBoxTable players={players} />
+          )
         ) : loadingRosters ? (
           <div className="grid grid-cols-2 gap-2 py-2 sm:grid-cols-3 md:grid-cols-4">
             {[...Array(8)].map((_, i) => (

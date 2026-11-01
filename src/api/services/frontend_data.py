@@ -219,6 +219,18 @@ def get_play_by_play(game_id: str, season: str | None = None) -> Any:
     return condense_payload(json.loads(path.read_text(encoding="utf-8")))
 
 
+def get_game_quarters(game_id: str, season: str | None = None) -> Any:
+    """Quarter scores and per-player quarter stats from the full raw play-by-play."""
+    from src.frontend_store.quarter_breakdown import build_quarter_breakdown
+
+    gid = _norm_game_id(game_id)
+    season_key = season or _season_from_game_id(gid)
+    path = REPO_ROOT / "data" / f"season={season_key}" / "raw" / "play_by_play" / f"{gid}.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"play_by_play not found for {gid} in {season_key}")
+    return build_quarter_breakdown(json.loads(path.read_text(encoding="utf-8")))
+
+
 def get_player_history(player_id: str) -> Response:
     pid = str(player_id)
     games: list[str] = []
