@@ -79,7 +79,7 @@ export default function FixturesTab({
     setDisplayMode(mode);
     try {
       localStorage.setItem("fixtures_display_mode", mode);
-    } catch {}
+    } catch { }
   };
 
   const [search, setSearch] = useState<string>(() => sessionStorage.getItem("nba-results-search") ?? "");
@@ -144,7 +144,7 @@ export default function FixturesTab({
           setSeasonsList(data);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Listen to browser popstate (back/forward)
@@ -353,39 +353,39 @@ export default function FixturesTab({
   };
 
   const applyRefreshed = (targetGame: GameFeedRow, status: RefreshStatus) => {
-        const gid = normGid(targetGame.GAME_ID);
-        const detailObj = status.detail as unknown as {
-          game_detail: GameDetail;
-          team_boxscores: TeamBoxScore[];
-          player_boxscores: PlayerBoxScore[];
-        };
-        setGameDetailCache((prev) => ({
-          ...prev,
-          [targetGame.GAME_ID]: detailObj,
-          [gid]: detailObj,
-        }));
-        setFreshPlayByPlay(status.play_by_play ?? null);
-        setRefreshDone(true);
-        const home = status.detail?.team_boxscores?.find((row) => row.TEAM_ABBREVIATION === targetGame.HOME_TEAM_ABBREVIATION);
-        const away = status.detail?.team_boxscores?.find((row) => row.TEAM_ABBREVIATION === targetGame.AWAY_TEAM_ABBREVIATION);
-        const markFinal = (row: GameFeedRow): GameFeedRow =>
-          normGid(row.GAME_ID) === gid
-            ? {
-                ...row,
-                GAME_STATUS: "Final",
-                HOME_SCORE: home?.PTS ?? row.HOME_SCORE,
-                AWAY_SCORE: away?.PTS ?? row.AWAY_SCORE,
-                WINNER_TEAM_ABBREVIATION:
-                  home?.WL === "W"
-                    ? row.HOME_TEAM_ABBREVIATION
-                    : away?.WL === "W"
-                    ? row.AWAY_TEAM_ABBREVIATION
-                    : row.WINNER_TEAM_ABBREVIATION,
-              }
-            : row;
-        setAllResults((prev) => prev.map(markFinal));
-        setResults((prev) => prev.map(markFinal));
-        invalidateGameIndexCache();
+    const gid = normGid(targetGame.GAME_ID);
+    const detailObj = status.detail as unknown as {
+      game_detail: GameDetail;
+      team_boxscores: TeamBoxScore[];
+      player_boxscores: PlayerBoxScore[];
+    };
+    setGameDetailCache((prev) => ({
+      ...prev,
+      [targetGame.GAME_ID]: detailObj,
+      [gid]: detailObj,
+    }));
+    setFreshPlayByPlay(status.play_by_play ?? null);
+    setRefreshDone(true);
+    const home = status.detail?.team_boxscores?.find((row) => row.TEAM_ABBREVIATION === targetGame.HOME_TEAM_ABBREVIATION);
+    const away = status.detail?.team_boxscores?.find((row) => row.TEAM_ABBREVIATION === targetGame.AWAY_TEAM_ABBREVIATION);
+    const markFinal = (row: GameFeedRow): GameFeedRow =>
+      normGid(row.GAME_ID) === gid
+        ? {
+          ...row,
+          GAME_STATUS: "Final",
+          HOME_SCORE: home?.PTS ?? row.HOME_SCORE,
+          AWAY_SCORE: away?.PTS ?? row.AWAY_SCORE,
+          WINNER_TEAM_ABBREVIATION:
+            home?.WL === "W"
+              ? row.HOME_TEAM_ABBREVIATION
+              : away?.WL === "W"
+                ? row.AWAY_TEAM_ABBREVIATION
+                : row.WINNER_TEAM_ABBREVIATION,
+        }
+        : row;
+    setAllResults((prev) => prev.map(markFinal));
+    setResults((prev) => prev.map(markFinal));
+    invalidateGameIndexCache();
   };
 
   const refreshGame = useCallback(
@@ -570,11 +570,10 @@ export default function FixturesTab({
                 role="tab"
                 aria-selected={activeView === id}
                 onClick={() => setActiveView(id)}
-                className={`-mb-px border-b-2 pb-2.5 text-sm font-medium transition-colors ${
-                  activeView === id
+                className={`-mb-px border-b-2 pb-2.5 text-sm font-medium transition-colors ${activeView === id
                     ? "border-primary text-text-primary"
                     : "border-transparent text-text-secondary hover:text-text-primary"
-                }`}
+                  }`}
               >
                 {label}
               </button>
@@ -686,9 +685,8 @@ export default function FixturesTab({
                   type="button"
                   onClick={() => handleDisplayModeChange(mode)}
                   aria-pressed={displayMode === mode}
-                  className={`inline-flex items-center gap-1 transition-colors ${
-                    displayMode === mode ? "text-text-primary" : "text-text-muted hover:text-text-primary"
-                  }`}
+                  className={`inline-flex items-center gap-1 transition-colors ${displayMode === mode ? "text-text-primary" : "text-text-muted hover:text-text-primary"
+                    }`}
                 >
                   <Icon size={14} />
                   <span className="hidden sm:inline">{label}</span>

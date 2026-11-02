@@ -330,6 +330,10 @@ export function GameCardDetail({
     quarterData?.quarter_scores?.length ? quarterData.quarter_scores.map((q) => q[key]) : undefined;
   const homeQS = gameDetail?.home_team?.quarter_scores?.length ? gameDetail.home_team.quarter_scores : fromPbp("home");
   const awayQS = gameDetail?.away_team?.quarter_scores?.length ? gameDetail.away_team.quarter_scores : fromPbp("away");
+  const firstHalfScore =
+    awayQS && homeQS && awayQS.length >= 2 && homeQS.length >= 2
+      ? `${awayQS[0] + awayQS[1]} - ${homeQS[0] + homeQS[1]}`
+      : null;
   const [period, setPeriod] = useState<number | "total">("total");
   const nameById: Record<number, string> = {};
   [...topHome, ...topAway].forEach((p) => {
@@ -511,11 +515,8 @@ export function GameCardDetail({
                     <span className="text-2xl font-normal text-text-muted sm:text-3xl">–</span>
                     <span className={homeWon ? "text-text-primary" : "text-text-muted"}>{homeScore ?? "—"}</span>
                   </div>
-                  <p className="mt-2 text-xs font-medium text-text-muted">
-                    {game.GAME_STATUS || "Final"}
-                    {margin > 0 && winnerAbbr
-                      ? ` · ${winnerAbbr} ${language === "tr" ? `${margin} farkla` : `by ${margin}`}`
-                      : ""}
+                  <p className="mt-2 text-xs font-medium tabular-nums text-text-muted">
+                    {firstHalfScore ?? game.GAME_STATUS ?? "Final"}
                   </p>
                 </>
               ) : (
