@@ -18,7 +18,7 @@ score_model:
   ridge_margin_path: models/production/score_model_ridge_margin.pkl
   metadata_path: models/production/score_metadata.json
   status: production
-  notes: "Ridge pace and offensive-rating models (2 features each), Ridge margin model on the WIN inputs, Ridge residual correction; targets are actual points."
+  notes: "Ridge pace model (2 features), offensive-rating models (4 features each), Ridge margin model (11 features), Ridge residual correction; targets are actual points."
 
 player_model:
   pts_model_path: models/production/player_model_pts.pkl
@@ -27,4 +27,4 @@ player_model:
   feature_columns_path: models/production/player_features.pkl
   metadata_path: models/production/player_metadata.json
   status: production
-  notes: "LightGBM per target (L1 objective for PTS) on 21 features including position flags and the opponent allowance to the player position; no residual correction."
+  notes: "LightGBM per target (L1 objective for PTS) on 24 features including position flags and the opponent allowance to the player position; no residual correction."

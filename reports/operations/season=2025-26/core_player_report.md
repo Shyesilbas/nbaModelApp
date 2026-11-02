@@ -8,11 +8,11 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 ### Core Players (Top 3)
 1. **Jalen Johnson** (Importance Score: 52.08 | PTS: 22.3, REB: 10.1, AST: 7.7, MIN: 35.3)
 2. **Nickeil Alexander-Walker** (Importance Score: 41.96 | PTS: 20.3, REB: 3.4, AST: 3.6, MIN: 33.5)
-3. **CJ McCollum** (Importance Score: 38.24 | PTS: 18.7, REB: 3.1, AST: 3.8, MIN: 29.2)
+3. **Trae Young** (Importance Score: 41.27 | PTS: 19.3, REB: 1.5, AST: 8.9, MIN: 27.9)
 
 ### Secondary Players (Top 4-5)
-4. **Onyeka Okongwu** (Importance Score: 37.55 | PTS: 15.0, REB: 7.5, AST: 3.1, MIN: 31.2)
-5. **Dyson Daniels** (Importance Score: 36.66 | PTS: 11.5, REB: 6.8, AST: 5.8, MIN: 32.8)
+4. **CJ McCollum** (Importance Score: 38.24 | PTS: 18.7, REB: 3.1, AST: 3.8, MIN: 29.2)
+5. **Onyeka Okongwu** (Importance Score: 37.55 | PTS: 15.0, REB: 7.5, AST: 3.1, MIN: 31.2)
 
 ---
 
@@ -21,11 +21,11 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 ### Core Players (Top 3)
 1. **Michael Porter Jr.** (Importance Score: 47.13 | PTS: 24.2, REB: 7.1, AST: 3.0, MIN: 32.5)
 2. **Nic Claxton** (Importance Score: 32.74 | PTS: 11.7, REB: 6.9, AST: 3.7, MIN: 27.8)
-3. **Noah Clowney** (Importance Score: 29.55 | PTS: 12.3, REB: 4.1, AST: 1.6, MIN: 27.0)
+3. **Cam Thomas** (Importance Score: 31.31 | PTS: 15.6, REB: 1.8, AST: 3.1, MIN: 24.3)
 
 ### Secondary Players (Top 4-5)
-4. **Trevon Scott** (Importance Score: 27.68 | PTS: 8.0, REB: 5.2, AST: 1.7, MIN: 30.5)
-5. **Egor Dëmin** (Importance Score: 27.42 | PTS: 10.3, REB: 3.2, AST: 3.3, MIN: 25.1)
+4. **Noah Clowney** (Importance Score: 29.55 | PTS: 12.3, REB: 4.1, AST: 1.6, MIN: 27.0)
+5. **Trevon Scott** (Importance Score: 27.68 | PTS: 8.0, REB: 5.2, AST: 1.7, MIN: 30.5)
 
 ---
 
@@ -38,7 +38,7 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 
 ### Secondary Players (Top 4-5)
 4. **Payton Pritchard** (Importance Score: 39.54 | PTS: 16.8, REB: 3.9, AST: 5.2, MIN: 32.5)
-5. **Neemias Queta** (Importance Score: 28.94 | PTS: 10.1, REB: 8.4, AST: 1.6, MIN: 25.0)
+5. **Anfernee Simons** (Importance Score: 29.76 | PTS: 14.2, REB: 2.4, AST: 2.4, MIN: 24.5)
 
 ---
 
@@ -51,7 +51,7 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 
 ### Secondary Players (Top 4-5)
 4. **Miles Bridges** (Importance Score: 38.75 | PTS: 17.2, REB: 5.8, AST: 3.2, MIN: 31.1)
-5. **Coby White** (Importance Score: 29.10 | PTS: 15.3, REB: 2.9, AST: 2.9, MIN: 19.5)
+5. **Collin Sexton** (Importance Score: 29.49 | PTS: 14.2, REB: 1.9, AST: 3.7, MIN: 22.3)
 
 ---
 
@@ -59,12 +59,12 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 
 ### Core Players (Top 3)
 1. **Josh Giddey** (Importance Score: 45.36 | PTS: 17.0, REB: 8.3, AST: 9.1, MIN: 32.1)
-2. **Matas Buzelis** (Importance Score: 35.99 | PTS: 16.3, REB: 5.8, AST: 2.1, MIN: 29.2)
-3. **Collin Sexton** (Importance Score: 34.20 | PTS: 17.5, REB: 2.9, AST: 2.5, MIN: 26.0)
+2. **Nikola Vučević** (Importance Score: 40.71 | PTS: 16.9, REB: 9.0, AST: 3.8, MIN: 30.9)
+3. **Coby White** (Importance Score: 39.14 | PTS: 18.6, REB: 3.7, AST: 4.7, MIN: 29.1)
 
 ### Secondary Players (Top 4-5)
-4. **Tre Jones** (Importance Score: 33.74 | PTS: 14.1, REB: 3.1, AST: 5.4, MIN: 27.0)
-5. **Anfernee Simons** (Importance Score: 33.43 | PTS: 15.2, REB: 2.8, AST: 3.0, MIN: 28.3)
+4. **Matas Buzelis** (Importance Score: 35.99 | PTS: 16.3, REB: 5.8, AST: 2.1, MIN: 29.2)
+5. **Collin Sexton** (Importance Score: 34.20 | PTS: 17.5, REB: 2.9, AST: 2.5, MIN: 26.0)
 
 ---
 
@@ -76,8 +76,8 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 3. **Evan Mobley** (Importance Score: 42.49 | PTS: 17.9, REB: 8.8, AST: 3.7, MIN: 32.7)
 
 ### Secondary Players (Top 4-5)
-4. **Jarrett Allen** (Importance Score: 34.77 | PTS: 14.7, REB: 8.2, AST: 1.6, MIN: 27.7)
-5. **Jaylon Tyson** (Importance Score: 27.77 | PTS: 11.3, REB: 4.6, AST: 2.0, MIN: 24.0)
+4. **Darius Garland** (Importance Score: 40.15 | PTS: 18.0, REB: 2.4, AST: 6.9, MIN: 30.4)
+5. **Jarrett Allen** (Importance Score: 34.77 | PTS: 14.7, REB: 8.2, AST: 1.6, MIN: 27.7)
 
 ---
 
@@ -151,24 +151,24 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 ### Core Players (Top 3)
 1. **Pascal Siakam** (Importance Score: 47.57 | PTS: 24.0, REB: 6.6, AST: 3.8, MIN: 33.2)
 2. **Andrew Nembhard** (Importance Score: 40.43 | PTS: 16.9, REB: 2.8, AST: 7.7, MIN: 31.3)
-3. **Aaron Nesmith** (Importance Score: 32.64 | PTS: 13.8, REB: 4.2, AST: 1.9, MIN: 29.6)
+3. **Bennedict Mathurin** (Importance Score: 38.70 | PTS: 17.8, REB: 5.4, AST: 2.2, MIN: 31.8)
 
 ### Secondary Players (Top 4-5)
-4. **Jarace Walker** (Importance Score: 29.61 | PTS: 11.6, REB: 5.1, AST: 2.5, MIN: 25.7)
-5. **Ivica Zubac** (Importance Score: 29.16 | PTS: 11.6, REB: 7.2, AST: 1.8, MIN: 23.6)
+4. **Aaron Nesmith** (Importance Score: 32.64 | PTS: 13.8, REB: 4.2, AST: 1.9, MIN: 29.6)
+5. **Jarace Walker** (Importance Score: 29.61 | PTS: 11.6, REB: 5.1, AST: 2.5, MIN: 25.7)
 
 ---
 
 ## LAC
 
 ### Core Players (Top 3)
-1. **Kawhi Leonard** (Importance Score: 50.59 | PTS: 27.8, REB: 6.4, AST: 3.6, MIN: 32.2)
-2. **Darius Garland** (Importance Score: 41.16 | PTS: 19.9, REB: 2.5, AST: 6.5, MIN: 29.1)
-3. **Bennedict Mathurin** (Importance Score: 36.85 | PTS: 17.6, REB: 5.4, AST: 2.5, MIN: 28.0)
+1. **James Harden** (Importance Score: 52.57 | PTS: 25.4, REB: 4.8, AST: 8.1, MIN: 35.5)
+2. **Kawhi Leonard** (Importance Score: 50.59 | PTS: 27.8, REB: 6.4, AST: 3.6, MIN: 32.2)
+3. **Darius Garland** (Importance Score: 41.16 | PTS: 19.9, REB: 2.5, AST: 6.5, MIN: 29.1)
 
 ### Secondary Players (Top 4-5)
-4. **John Collins** (Importance Score: 31.04 | PTS: 13.5, REB: 5.4, AST: 1.0, MIN: 27.0)
-5. **Derrick Jones Jr.** (Importance Score: 26.73 | PTS: 10.1, REB: 3.4, AST: 1.4, MIN: 26.9)
+4. **Ivica Zubac** (Importance Score: 38.27 | PTS: 14.4, REB: 11.0, AST: 2.2, MIN: 31.0)
+5. **Bennedict Mathurin** (Importance Score: 36.85 | PTS: 17.6, REB: 5.4, AST: 2.5, MIN: 28.0)
 
 ---
 
@@ -189,12 +189,12 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 
 ### Core Players (Top 3)
 1. **Ja Morant** (Importance Score: 42.04 | PTS: 19.4, REB: 3.2, AST: 8.1, MIN: 28.4)
-2. **Ty Jerome** (Importance Score: 37.25 | PTS: 19.7, REB: 2.8, AST: 5.7, MIN: 22.7)
-3. **Dariq Whitehead** (Importance Score: 35.18 | PTS: 16.3, REB: 4.0, AST: 1.5, MIN: 30.5)
+2. **Jaren Jackson Jr.** (Importance Score: 39.55 | PTS: 19.2, REB: 5.8, AST: 1.9, MIN: 30.7)
+3. **Ty Jerome** (Importance Score: 37.25 | PTS: 19.7, REB: 2.8, AST: 5.7, MIN: 22.7)
 
 ### Secondary Players (Top 4-5)
-4. **Santi Aldama** (Importance Score: 34.27 | PTS: 14.0, REB: 6.7, AST: 2.9, MIN: 27.8)
-5. **Zach Edey** (Importance Score: 34.07 | PTS: 13.6, REB: 11.1, AST: 1.1, MIN: 25.8)
+4. **Dariq Whitehead** (Importance Score: 35.18 | PTS: 16.3, REB: 4.0, AST: 1.5, MIN: 30.5)
+5. **Santi Aldama** (Importance Score: 34.27 | PTS: 14.0, REB: 6.7, AST: 2.9, MIN: 27.8)
 
 ---
 
@@ -383,13 +383,13 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 ## WAS
 
 ### Core Players (Top 3)
-1. **Alex Sarr** (Importance Score: 36.52 | PTS: 16.3, REB: 7.4, AST: 2.7, MIN: 27.2)
-2. **Kyshawn George** (Importance Score: 35.89 | PTS: 14.8, REB: 5.1, AST: 4.5, MIN: 28.9)
-3. **Julian Reese** (Importance Score: 35.11 | PTS: 11.8, REB: 10.5, AST: 1.8, MIN: 30.9)
+1. **CJ McCollum** (Importance Score: 39.26 | PTS: 18.8, REB: 3.5, AST: 3.6, MIN: 30.9)
+2. **Alex Sarr** (Importance Score: 36.52 | PTS: 16.3, REB: 7.4, AST: 2.7, MIN: 27.2)
+3. **Kyshawn George** (Importance Score: 35.89 | PTS: 14.8, REB: 5.1, AST: 4.5, MIN: 28.9)
 
 ### Secondary Players (Top 4-5)
-4. **Trae Young** (Importance Score: 32.26 | PTS: 15.2, REB: 3.0, AST: 6.2, MIN: 20.6)
-5. **Bub Carrington** (Importance Score: 30.30 | PTS: 10.7, REB: 3.4, AST: 4.6, MIN: 27.7)
+4. **Julian Reese** (Importance Score: 35.11 | PTS: 11.8, REB: 10.5, AST: 1.8, MIN: 30.9)
+5. **Trae Young** (Importance Score: 32.26 | PTS: 15.2, REB: 3.0, AST: 6.2, MIN: 20.6)
 
 ---
 

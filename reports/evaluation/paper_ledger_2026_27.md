@@ -3,7 +3,7 @@
 > Bu dosya `scripts/paper_ledger_report.py` tarafından üretilir; elle düzenlenmez.
 > Kilitli sezon: yalnızca prospektif izleme. Bu sonuçlar model seçimi veya ayar için kullanılmaz.
 
-**Rapor Tarihi:** 2026-11-02T19:35:16Z
+**Rapor Tarihi:** 2026-11-02T19:46:55Z
 **Üretim Sürümü:** `v15`
 **Defter:** 91 kayıt, 91 sonuçlanmış ve geçerli, 0 bekleyen, 0 geç (tip-off sonrası, sayılmaz). Son sonuçlanan maç: 2026-11-01
 

@@ -3,14 +3,33 @@
 > **Model Artifact:** `models/production/win_model.pkl`  
 > **Features Manifest:** `models/production/win_features.json` (11 features)  
 > **Metadata:** `models/production/win_metadata.json`  
-> **Active Release:** `v15` (same 11-feature set promoted in `v12`, refit in `v15`; the tables below are the `v12` promotion record. Current walk-forward figures: `reports/evaluation/multi_season_walk_forward_backtest.md`)  
+> **Active Release:** `v15` (same 11-feature set promoted in `v12`, refit in `v15`; sections 1 and 3 below are the `v12` promotion record; the generated block below has the current figures)  
 > **Algorithm:** Uncalibrated Logistic Regression with StandardScaler and Mean Imputer  
 > **Target:** `WIN` (Binary: 1 if team wins, 0 if team loses)  
 > **Evaluation Window:** 5 Unseen Expanding Walk-Forward Seasons (`2021-22` to `2025-26`, $N = 6,276$ games) + Locked `2026-27`
 
+
+<!-- BEGIN GENERATED: walk-forward (scripts/walk_forward_benchmark.py; do not edit) -->
+## Güncel Walk-Forward Sonuçları (`v15`)
+
+Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-02T19:30:56Z, commit `766e2f4`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
+
+| Sezon | Maç | Model Brier | Elo Brier | Fark | Model Log-Loss | Elo Log-Loss | AUC | Doğruluk |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 2021-22 | 1,256 | 0.2156 | 0.2206 | -0.0050 | 0.6205 | 0.6326 | 0.7068 | 65.84% |
+| 2022-23 | 1,248 | 0.2243 | 0.2290 | -0.0047 | 0.6400 | 0.6503 | 0.6676 | 62.02% |
+| 2023-24 | 1,259 | 0.2058 | 0.2114 | -0.0056 | 0.5972 | 0.6094 | 0.7351 | 66.32% |
+| 2024-25 | 1,256 | 0.2028 | 0.2118 | -0.0090 | 0.5901 | 0.6106 | 0.7441 | 68.39% |
+| 2025-26 | 1,257 | 0.2007 | 0.2058 | -0.0051 | 0.5849 | 0.5987 | 0.7493 | 68.66% |
+| **Toplam** | **6,276** | **0.2098** | **0.2157** | **-0.0059** | - | - | **0.7206** | **66.25%** |
+
+Model, saf Elo'dan (ev sahibi avantajlı) 5/5 sezonda daha düşük Brier verdi.
+- Brier, model eksi Elo (tarih blok bootstrap): ortalama fark -0.0059, %95 CI [-0.0079, -0.0038] -> model daha iyi (CI sıfırın altında)
+<!-- END GENERATED: walk-forward -->
+
 ---
 
-## 1. Executive Summary & Headline Benchmarks
+## 1. Executive Summary (v12 promotion record)
 
 In Release `v12`, the WIN model decomposes composite roster absence into decoupled, orthogonal components inspired by the Premier League starting XI continuity and missing player minute weighting architecture.
 
@@ -47,7 +66,7 @@ All features are computed chronologically with strict zero-leakage (`shift(1)` o
 
 ---
 
-## 3. Expanding-Window Walk-Forward Detayları (Sezon Bazında)
+## 3. Sezon Bazında v11 / v12 Karşılaştırması (v12 terfi kaydı)
 
 | Sezon | Test Maçı | Taban Elo Brier | v11 Brier | **v12 Brier** | v11 Log-Loss | **v12 Log-Loss** | $\Delta\text{LL}$ |
 |---|---:|---:|---:|---:|---:|---:|---:|

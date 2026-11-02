@@ -6,13 +6,31 @@
 > - `models/production/player_model_ast.pkl` (Assists LightGBM model, L1 objective)
 > - `models/production/player_features.pkl` (24 explicit features)
 > **Metadata:** `models/production/player_metadata.json`  
-> **Status:** ACTIVE (Production Release `v15`)  
+> **Status:** ACTIVE (Production Release `v15`; sections 1 and 3 are the `v15` promotion record, the generated block below has the current figures)  
 > **Algorithm:** Gradient Boosted Trees (LightGBM) with Unified L1 Median Objectives & Team Rotation Context  
 > **Targets:** Individual player realized box score stats (`PTS`, `REB`, `AST`)
 
+
+<!-- BEGIN GENERATED: walk-forward (scripts/walk_forward_benchmark.py; do not edit) -->
+## Güncel Walk-Forward Sonuçları (`v15`)
+
+Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-02T19:30:56Z, commit `766e2f4`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
+
+| Sezon | Satır | PTS MAE (EMA-10) | REB MAE (EMA-10) | AST MAE (EMA-10) |
+|---|---:|---:|---:|---:|
+| 2021-22 | 27,894 | 4.481 (4.627) | 1.891 (1.945) | 1.256 (1.302) |
+| 2022-23 | 27,651 | 4.501 (4.689) | 1.869 (1.936) | 1.253 (1.308) |
+| 2023-24 | 28,105 | 4.411 (4.572) | 1.842 (1.898) | 1.296 (1.350) |
+| 2024-25 | 28,134 | 4.475 (4.662) | 1.867 (1.942) | 1.293 (1.349) |
+| 2025-26 | 28,594 | 4.434 (4.610) | 1.850 (1.915) | 1.296 (1.348) |
+| **Toplam** | **140,378** | **4.460** (4.632) | **1.864** (1.927) | **1.279** (1.332) |
+
+EMA-10 baseline'ı geçilen sezon sayısı: PTS 5/5, REB 5/5, AST 5/5.
+<!-- END GENERATED: walk-forward -->
+
 ---
 
-## 1. Executive Summary & Walk-Forward Benchmarks
+## 1. Executive Summary (v15 promotion record)
 
 PLAYER modelleri, macta sure almasi beklenen her oyuncunun Sayi (PTS), Ribaund (REB) ve Asist (AST) uretimini tahmin eder.
 
@@ -46,7 +64,7 @@ Release `v15` ile birlikte modeller L1 medyan kayip fonksiyonuna (`objective: l1
 
 ---
 
-## 3. Sezonluk Walk-Forward Ayrintisi (140.378 Satir)
+## 3. Sezonluk v14 / v15 Karsilastirmasi (v15 terfi kaydi, 140,378 satir)
 
 ### Ribaund (REB MAE)
 | Sezon | Test Satiri | EMA-10 Base | v14 Prod (L2) | v15 Cand (L1) | Delta | Kazanan |

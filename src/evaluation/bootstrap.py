@@ -3,7 +3,9 @@
 Games on the same date share league-wide conditions (schedule density, officiating
 trends), so whole dates are resampled instead of single games. The interval is for the
 mean of ``diff = model_loss - baseline_loss``: an upper bound below zero means the
-model is better than the baseline at that confidence level.
+model is better than the baseline at that confidence level. With fewer than ``MIN_BLOCKS``
+dates the resampled means take only a handful of values and the interval is meaningless, so
+no interval is returned.
 """
 from __future__ import annotations
 
@@ -11,6 +13,8 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+
+MIN_BLOCKS = 5
 
 
 def paired_block_bootstrap(
@@ -29,6 +33,8 @@ def paired_block_bootstrap(
         return None
     codes, _ = pd.factorize(blocks)
     n_blocks = int(codes.max()) + 1
+    if n_blocks < MIN_BLOCKS:
+        return None
     sums = np.bincount(codes, weights=diff, minlength=n_blocks)
     counts = np.bincount(codes, minlength=n_blocks).astype(float)
     rng = np.random.default_rng(seed)

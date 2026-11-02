@@ -4,16 +4,24 @@ import os
 def run_roster_analysis_report(season, paths) -> None:
     from src.analysis.roster_analysis import run_roster_analysis
     player_csv = paths.player_games_raw
+    from src.core.season_utils import get_default_season
+
     season_data_dir = os.path.join("data", f"season={season}", "analysis")
+    # The in-progress season's analysis/ holds the signed bootstrap roster (team_rosters.csv) that
+    # live predictions and the opening Elo read; rebuilding it from game logs would overwrite it.
+    in_progress = season == get_default_season()
+    if in_progress:
+        print(f"Season {season} is in progress: writing the markdown reports only, analysis CSVs are left as they are.")
     season_output_dir = os.path.join("reports", "operations", f"season={season}")
     roster_df, core_players_df, star_candidates_df, multi_team_players_df, player_name_lookup_df = run_roster_analysis(
         player_csv,
-        data_dir=season_data_dir,
-        output_dir=season_output_dir
+        data_dir=None if in_progress else season_data_dir,
+        output_dir=season_output_dir,
+        season=season,
     )
     
     print("\n============================================================")
-    print("📊 ROSTER ANALYSIS DATASETS GENERATED SUCCESSFULLY 📊")
+    print("ROSTER ANALYSIS DATASETS GENERATED SUCCESSFULLY")
     print("============================================================\n")
     
     # Shapes & Storage locations
@@ -59,13 +67,13 @@ def run_roster_analysis_report(season, paths) -> None:
     print("\n" + "-"*60 + "\n")
     
     # Check for duplicate PLAYER_ID issues in player_name_lookup
-    print("🔍 INTEGRITY CHECKS:")
+    print("INTEGRITY CHECKS:")
     dup_ids = player_name_lookup_df[player_name_lookup_df.duplicated(subset=["PLAYER_ID"])]
     if len(dup_ids) > 0:
-        print(f"❌ Warning: Found duplicate PLAYER_ID values in name lookup! count={len(dup_ids)}")
+        print(f"Warning: Found duplicate PLAYER_ID values in name lookup! count={len(dup_ids)}")
         print(dup_ids.head(5))
     else:
-        print("✅ Success: No duplicate PLAYER_ID issues detected in name lookup.")
+        print("Success: No duplicate PLAYER_ID issues detected in name lookup.")
         
     # Check for name normalization conflicts: 
     # Same normalized name mapping to different PLAYER_IDs (which can be normal for different players, but useful to report)
@@ -78,6 +86,6 @@ def run_roster_analysis_report(season, paths) -> None:
             raw_names_str = ", ".join(group["RAW_PLAYER_NAME"].tolist())
             print(f"   - '{name}': IDs [{ids_str}] -> Raw names: [{raw_names_str}]")
     else:
-        print("✅ Success: No name normalization conflicts found (all normalized names map to unique PLAYER_IDs).")
+        print("Success: No name normalization conflicts found (all normalized names map to unique PLAYER_IDs).")
         
     print("====================================================\n")

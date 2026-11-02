@@ -1,6 +1,6 @@
 {
   "season": "2026-27",
-  "generated_utc": "2026-11-02T19:35:16Z",
+  "generated_utc": "2026-11-02T19:46:55Z",
   "production_release": "v15",
   "ledger_rows": 91,
   "graded": 91,
@@ -196,15 +196,7 @@
       "elo_games": 12,
       "elo_brier": 0.2227,
       "elo_accuracy": 0.5,
-      "brier_vs_elo": {
-        "mean_diff": 0.01078,
-        "ci_low": -0.00233,
-        "ci_high": 0.02015,
-        "level": 0.95,
-        "n": 12,
-        "blocks": 2,
-        "p_model_better": 0.249
-      },
+      "brier_vs_elo": null,
       "bands": [
         {
           "label": "50-60%",
@@ -243,15 +235,7 @@
       "elo_games": 7,
       "elo_brier": 0.2406,
       "elo_accuracy": 0.5714,
-      "brier_vs_elo": {
-        "mean_diff": 0.05278,
-        "ci_low": 0.05278,
-        "ci_high": 0.05278,
-        "level": 0.95,
-        "n": 7,
-        "blocks": 1,
-        "p_model_better": 0.0
-      },
+      "brier_vs_elo": null,
       "bands": [
         {
           "label": "50-60%",

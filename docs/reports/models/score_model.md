@@ -8,26 +8,46 @@
 > - `models/production/score_model_ridge_total.pkl` (Ridge total points residual correction)
 > - `models/production/score_model_ridge_margin.pkl` (Ridge margin residual correction)
 > **Metadata:** `models/production/score_metadata.json`  
-> **Status:** ACTIVE (Production Release `v13`)  
+> **Status:** ACTIVE (Production Release `v15`; margin feature set promoted in `v13`, refit in `v15`. Sections 1 and 3 below are the `v13` promotion record; the generated block above has the current figures.)  
 > **Algorithm:** Ridge regression on Pace, Offensive Ratings, and Margin with Conformal Prediction  
 > **Targets:** Realized match points (`PTS` actual total, `MARGIN` actual home-away difference)
 
+
+<!-- BEGIN GENERATED: walk-forward (scripts/walk_forward_benchmark.py; do not edit) -->
+## Güncel Walk-Forward Sonuçları (`v15`)
+
+Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-02T19:30:56Z, commit `766e2f4`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
+
+| Sezon | Maç | Toplam MAE | Son-10 Toplam MAE | Fark MAE | Son-10 Fark MAE | %80 Kapsama (toplam / fark) |
+|---|---:|---:|---:|---:|---:|---:|
+| 2021-22 | 1,256 | 14.69 | 14.62 | 10.98 | 11.56 | %80.7 / %79.2 |
+| 2022-23 | 1,248 | 14.88 | 14.97 | 10.10 | 10.57 | %80.3 / %83.2 |
+| 2023-24 | 1,259 | 14.73 | 14.78 | 10.98 | 11.58 | %82.3 / %79.3 |
+| 2024-25 | 1,256 | 14.91 | 15.02 | 10.82 | 11.50 | %80.3 / %79.9 |
+| 2025-26 | 1,257 | 15.29 | 15.38 | 11.18 | 11.86 | %78.7 / %78.0 |
+| **Ortalama** | **6,276** | **14.90** | **14.95** | **10.81** | **11.41** | **%80.5** (toplam) |
+
+Son-10 baseline'ı toplamda 4/5, farkta 5/5 sezonda geçildi. Toplam, ham pace x reyting tahminidir; üretimdeki temporal OOF artık düzeltmesi bu benchmark'ta yoktur.
+- Toplam MAE, model eksi son-10: ortalama fark -0.052, %95 CI [-0.115, +0.014] -> fark anlamlı değil (CI sıfırı kapsıyor)
+- Fark MAE, model eksi son-10: ortalama fark -0.603, %95 CI [-0.705, -0.498] -> model daha iyi (CI sıfırın altında)
+<!-- END GENERATED: walk-forward -->
+
 ---
 
-## 1. Executive Summary & Walk-Forward Benchmarks
+## 1. Executive Summary (v13 promotion record)
 
 SCORE modeli, macin beklenen toplam sayisini (`PRED_TOTAL`), sayi farkini (`PRED_MARGIN`) ve %80 conformal tahmin bantlarini uretir.
 
 Release `v13` ile birlikte fark modeline (`score_model_margin.pkl`) rotasyon dakika kaybi (`MISSING_ROT_MINS_DIFF`), kadro devamliligi (`ROT_CONTINUITY_DIFF`) ve aktif kadro agirlikli Game Score (`ACTIVE_WT_GS_DIFF`) eklenmistir.
 
-5 sezonluk kesintisiz expanding walk-forward testlerinde (6.276 mac):
+v13 terfi deneyinde 5 sezonluk expanding walk-forward (6,276 mac):
 
 | Hedef Metrik | Model Hatasi (MAE v13) | Model Hatasi (MAE v12) | Taban Cizgisi (Son 10 Mac MAE) | Hata Azalmasi |
 |---|---:|---:|---:|---:|
 | **Toplam Skor (Total PTS)** | **14.85 sayi** | 14.90 sayi | 14.95 sayi | -0.10 sayi |
 | **Sayi Farki (Margin)** | **10.809 sayi** | 10.832 sayi | 11.41 sayi | **-0.60 sayi** |
 | **Sayi Farki Kazanan Dogrulugu** | **%66.67** | %66.51 | %61.40 | **+5.27 pp** |
-| **Conformal %80 Kapsama** | **%80.5** | %80.5 | Sabit +/- 12 (~%47) | **Kusursuz Kalibrasyon** |
+| **Conformal %80 Kapsama** | **%80.5** | %80.5 | - | hedef %80 |
 
 ---
 
@@ -46,15 +66,15 @@ Release `v13` ile birlikte fark modeline (`score_model_margin.pkl`) rotasyon dak
 
 ---
 
-## 3. Sezonluk Walk-Forward Performansi (Margin MAE)
+## 3. Sezonluk Margin MAE (v13 terfi kaydi)
 
 | Sezon | Test Maci | v12 Margin MAE | v13 Margin MAE | Delta | Kazanan |
 |---|---:|---:|---:|---:|---|
-| **2021-22** | 1,220 | 11.039 | 10.973 | -0.066 | v13 |
-| **2022-23** | 1,220 | 10.279 | 10.297 | +0.018 | v12 |
-| **2023-24** | 1,220 | 10.978 | 10.974 | -0.004 | v13 |
-| **2024-25** | 1,220 | 10.839 | 10.807 | -0.032 | v13 |
-| **2025-26** | 1,220 | 11.212 | 11.184 | -0.028 | v13 |
+| **2021-22** | 1,256 | 11.039 | 10.973 | -0.066 | v13 |
+| **2022-23** | 1,248 | 10.279 | 10.297 | +0.018 | v12 |
+| **2023-24** | 1,259 | 10.978 | 10.974 | -0.004 | v13 |
+| **2024-25** | 1,256 | 10.839 | 10.807 | -0.032 | v13 |
+| **2025-26** | 1,257 | 11.212 | 11.184 | -0.028 | v13 |
 | **Ortalama** | **6,276** | **10.832** | **10.809** | **-0.023** | **v13 (4/5)** |
 
 ### Uretim Holdout Dogrulamasi (2025-26)

@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import unicodedata
-from typing import Tuple
+from typing import Optional, Tuple
 from src.processing.cleaning import clean_minutes_column
 from src.core.season_utils import get_default_season
 
@@ -34,11 +34,12 @@ def _df_to_markdown_simple(df: pd.DataFrame) -> str:
 def run_roster_analysis(
     player_games_path: str = None,
     output_dir: str = "reports/operations",
-    data_dir: str = "data/analysis"
+    data_dir: Optional[str] = "data/analysis",
+    season: str = None,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Runs the complete NBA roster discovery, core player detection, and star ranking analysis.
-    Saves CSV structured datasets under data_dir.
+    Saves CSV structured datasets under data_dir (skipped when data_dir is None).
     Generates three markdown reports in output_dir.
     
     Returns:
@@ -50,14 +51,15 @@ def run_roster_analysis(
             - player_name_lookup_df
     """
     print("============================================================")
-    print("🏀 RUNNING NBA ROSTER DISCOVERY & IMPORTANCE PIPELINE 🏀")
+    print("RUNNING NBA ROSTER DISCOVERY & IMPORTANCE PIPELINE")
     print("============================================================\n")
     
+    season = season or get_default_season()
     # Load player logs
     if player_games_path is None:
         from src.core.data_paths import get_data_paths
 
-        player_games_path = get_data_paths(get_default_season()).player_games_raw
+        player_games_path = get_data_paths(season).player_games_raw
     if not os.path.exists(player_games_path):
         raise FileNotFoundError(f"Player games dataset not found at: {player_games_path}")
         
@@ -182,24 +184,14 @@ def run_roster_analysis(
     # ------------------------------------------------------------
     # 6. Save Structured Output Datasets (CSV)
     # ------------------------------------------------------------
-    os.makedirs(data_dir, exist_ok=True)
-    
-    # Roster
-    roster_df.to_csv(os.path.join(data_dir, "team_rosters.csv"), index=False)
-    
-    # Core Players
-    core_players_df.to_csv(os.path.join(data_dir, "core_players.csv"), index=False)
-    
-    # Star Candidates
-    star_candidates_df.to_csv(os.path.join(data_dir, "star_candidates.csv"), index=False)
-    
-    # Multi-Team Players
-    multi_team_players_df.to_csv(os.path.join(data_dir, "multi_team_players.csv"), index=False)
-    
-    # Name Lookup
-    player_name_lookup_df.to_csv(os.path.join(data_dir, "player_name_lookup.csv"), index=False)
-    
-    print(f"Structured analysis datasets saved to: {data_dir}/")
+    if data_dir is not None:
+        os.makedirs(data_dir, exist_ok=True)
+        roster_df.to_csv(os.path.join(data_dir, "team_rosters.csv"), index=False)
+        core_players_df.to_csv(os.path.join(data_dir, "core_players.csv"), index=False)
+        star_candidates_df.to_csv(os.path.join(data_dir, "star_candidates.csv"), index=False)
+        multi_team_players_df.to_csv(os.path.join(data_dir, "multi_team_players.csv"), index=False)
+        player_name_lookup_df.to_csv(os.path.join(data_dir, "player_name_lookup.csv"), index=False)
+        print(f"Structured analysis datasets saved to: {data_dir}/")
     
     # ------------------------------------------------------------
     # 7. Generate Human-Readable Markdown Reports
@@ -209,7 +201,7 @@ def run_roster_analysis(
     # Roster Report
     roster_report_path = os.path.join(output_dir, "team_roster_report.md")
     with open(roster_report_path, "w") as f:
-        f.write(f"# NBA Team Rosters & Performance Discovery Report ({get_default_season()})\n\n")
+        f.write(f"# NBA Team Rosters & Performance Discovery Report ({season})\n\n")
         f.write("This report lists all players that appeared for each team, sorted by average minutes played.\n\n")
         
         sorted_teams = sorted(roster_df["TEAM_ABBREVIATION"].unique())
@@ -234,7 +226,7 @@ def run_roster_analysis(
     # Core Player Report
     core_report_path = os.path.join(output_dir, "core_player_report.md")
     with open(core_report_path, "w") as f:
-        f.write(f"# NBA Team Core & Secondary Player Discovery Report ({get_default_season()})\n\n")
+        f.write(f"# NBA Team Core & Secondary Player Discovery Report ({season})\n\n")
         f.write("This report categorizes players for each team based on an automated Importance Score:\n")
         f.write("$$\\text{Importance Score} = (\\text{AVG\\_MIN} \\times 0.5) + (\\text{AVG\\_PTS} \\times 1.0) + (\\text{AVG\\_AST} \\times 0.8) + (\\text{AVG\\_REB} \\times 0.6)$$\n\n")
         
@@ -292,7 +284,7 @@ def run_roster_analysis(
         
     print(f"Star player candidates report saved to: {star_report_path}")
     print("\n============================================================")
-    print("🎉 ROSTER DISCOVERY & PERFORMANCE ANALYSIS PIPELINE COMPLETE! 🎉")
+    print("ROSTER DISCOVERY & PERFORMANCE ANALYSIS PIPELINE COMPLETE!")
     print("============================================================\n")
     
     return roster_df, core_players_df, star_candidates_df, multi_team_players_df, player_name_lookup_df

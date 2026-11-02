@@ -11,9 +11,12 @@ This report lists all players that appeared for each team, sorted by average min
 | Dyson Daniels | 82 | 32.78 | 11.52 | 6.79 | 5.84 |
 | Onyeka Okongwu | 80 | 31.22 | 14.98 | 7.52 | 3.06 |
 | CJ McCollum | 47 | 29.17 | 18.74 | 3.11 | 3.81 |
-| Keshon Gilbert | 1 | 26.0 | 11.0 | 0.0 | 9.0 |
+| Trae Young | 10 | 27.9 | 19.3 | 1.5 | 8.9 |
+| Kristaps Porziņģis | 17 | 24.29 | 17.12 | 5.12 | 2.71 |
 | Jonathan Kuminga | 22 | 23.09 | 12.64 | 4.77 | 1.77 |
+| Vít Krejčí | 46 | 22.28 | 9.0 | 2.11 | 1.48 |
 | Zaccharie Risacher | 70 | 21.74 | 9.31 | 3.8 | 1.09 |
+| Luke Kennard | 46 | 20.54 | 7.91 | 2.15 | 2.09 |
 | Jock Landale | 23 | 19.43 | 9.09 | 4.13 | 1.74 |
 | Corey Kispert | 44 | 17.41 | 8.39 | 2.18 | 1.5 |
 | Mouhamed Gueye | 83 | 14.82 | 4.24 | 3.43 | 0.88 |
@@ -39,6 +42,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Noah Clowney | 66 | 27.0 | 12.26 | 4.14 | 1.64 |
 | Egor Dëmin | 52 | 25.1 | 10.31 | 3.17 | 3.33 |
 | Terance Mann | 63 | 24.3 | 7.22 | 3.17 | 3.02 |
+| Cam Thomas | 24 | 24.29 | 15.62 | 1.79 | 3.08 |
 | Malachi Smith | 15 | 23.93 | 8.27 | 3.4 | 3.27 |
 | Ziaire Williams | 56 | 22.86 | 10.23 | 2.39 | 1.07 |
 | Nolan Traore | 56 | 22.25 | 8.91 | 1.77 | 3.8 |
@@ -47,6 +51,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Ben Saraf | 44 | 20.82 | 7.55 | 2.09 | 3.3 |
 | Chaney Johnson | 17 | 20.29 | 8.18 | 4.65 | 2.12 |
 | Josh Minott | 16 | 19.25 | 10.75 | 2.5 | 0.81 |
+| Tyrese Martin | 37 | 18.78 | 7.3 | 2.86 | 1.86 |
 | Day'Ron Sharpe | 62 | 18.69 | 8.71 | 6.66 | 2.34 |
 | Ochai Agbaji | 20 | 16.15 | 6.65 | 2.3 | 0.85 |
 | Jalen Wilson | 54 | 15.94 | 6.35 | 2.11 | 0.93 |
@@ -65,16 +70,20 @@ This report lists all players that appeared for each team, sorted by average min
 | Payton Pritchard | 86 | 32.45 | 16.83 | 3.93 | 5.16 |
 | Neemias Queta | 83 | 25.05 | 10.13 | 8.39 | 1.57 |
 | Sam Hauser | 85 | 24.67 | 9.09 | 3.88 | 1.41 |
+| Anfernee Simons | 49 | 24.51 | 14.16 | 2.41 | 2.37 |
 | Nikola Vučević | 22 | 20.55 | 8.73 | 6.0 | 2.09 |
 | Baylor Scheierman | 84 | 18.24 | 5.44 | 3.44 | 1.43 |
 | Jordan Walsh | 75 | 17.37 | 5.01 | 3.87 | 0.81 |
+| Josh Minott | 33 | 15.88 | 5.82 | 3.58 | 1.0 |
 | Luka Garza | 76 | 15.43 | 7.74 | 3.86 | 0.95 |
 | Hugo González | 78 | 14.13 | 3.71 | 3.21 | 0.54 |
 | Chris Boucher | 9 | 10.44 | 2.33 | 2.0 | 0.33 |
 | Ron Harper Jr. | 35 | 9.74 | 3.83 | 1.49 | 0.66 |
 | Dalano Banton | 6 | 9.5 | 1.33 | 0.67 | 1.5 |
+| Xavier Tillman | 14 | 8.14 | 2.21 | 1.79 | 0.36 |
 | John Tonje | 6 | 7.0 | 2.5 | 1.0 | 0.33 |
 | Amari Williams | 23 | 6.35 | 1.35 | 1.78 | 0.43 |
+| Charles Bassey | 5 | 3.4 | 2.8 | 1.2 | 0.0 |
 | Max Shulga | 13 | 3.23 | 0.77 | 0.46 | 0.15 |
 
 
@@ -87,16 +96,19 @@ This report lists all players that appeared for each team, sorted by average min
 | Brandon Miller | 67 | 30.37 | 20.12 | 4.88 | 3.33 |
 | LaMelo Ball | 74 | 28.09 | 20.24 | 4.78 | 7.15 |
 | Moussa Diabaté | 75 | 26.04 | 7.8 | 8.76 | 1.92 |
+| Collin Sexton | 42 | 22.33 | 14.19 | 1.9 | 3.74 |
 | Sion James | 84 | 22.27 | 5.35 | 3.48 | 2.0 |
 | Ryan Kalkbrenner | 71 | 21.28 | 7.45 | 5.42 | 0.79 |
 | Grant Williams | 38 | 19.63 | 6.79 | 3.84 | 1.47 |
 | Coby White | 23 | 19.52 | 15.26 | 2.91 | 2.91 |
+| KJ Simpson | 14 | 15.93 | 6.0 | 2.07 | 2.5 |
 | PJ Hall | 12 | 15.67 | 6.08 | 5.5 | 0.67 |
 | Tidjane Salaün | 38 | 15.39 | 5.95 | 3.97 | 0.76 |
 | Josh Green | 60 | 15.37 | 4.15 | 1.75 | 0.78 |
 | Tre Mann | 54 | 12.56 | 5.43 | 1.7 | 1.61 |
 | Liam McNeeley | 32 | 11.62 | 4.19 | 2.28 | 0.75 |
 | Drew Peterson | 6 | 10.83 | 0.83 | 1.5 | 0.33 |
+| Mason Plumlee | 14 | 8.86 | 1.86 | 2.86 | 1.14 |
 | Pat Connaughton | 43 | 6.98 | 2.6 | 1.49 | 0.44 |
 | Antonio Reeves | 10 | 6.9 | 2.7 | 0.8 | 0.3 |
 | Xavier Tillman | 17 | 4.65 | 0.88 | 1.18 | 0.47 |
@@ -107,15 +119,18 @@ This report lists all players that appeared for each team, sorted by average min
 | Player Name | GP | AVG MIN | AVG PTS | AVG REB | AVG AST |
 | --- | --- | --- | --- | --- | --- |
 | Josh Giddey | 54 | 32.09 | 17.02 | 8.3 | 9.15 |
+| Nikola Vučević | 48 | 30.85 | 16.88 | 8.98 | 3.77 |
 | Matas Buzelis | 77 | 29.19 | 16.26 | 5.82 | 2.05 |
+| Coby White | 29 | 29.07 | 18.62 | 3.72 | 4.69 |
 | Jaden Ivey | 4 | 29.0 | 11.5 | 4.75 | 4.0 |
 | Anfernee Simons | 6 | 28.33 | 15.17 | 2.83 | 3.0 |
 | Tre Jones | 65 | 26.97 | 14.06 | 3.14 | 5.38 |
 | Isaac Okoro | 63 | 26.94 | 9.27 | 2.75 | 1.59 |
+| Ayo Dosunmu | 45 | 26.44 | 15.04 | 3.02 | 3.64 |
 | Collin Sexton | 26 | 25.96 | 17.46 | 2.88 | 2.54 |
 | Guerschon Yabusele | 26 | 24.58 | 10.04 | 5.65 | 1.73 |
+| Kevin Huerter | 44 | 23.61 | 10.89 | 3.84 | 2.64 |
 | Leonard Miller | 27 | 23.15 | 11.74 | 5.78 | 1.3 |
-| Mouhamadou Gueye | 2 | 23.0 | 8.0 | 3.0 | 3.0 |
 | Nick Richards | 20 | 22.35 | 9.35 | 7.6 | 0.4 |
 | Rob Dillingham | 30 | 21.4 | 9.6 | 3.0 | 2.83 |
 | Jalen Smith | 53 | 20.64 | 10.21 | 6.7 | 1.23 |
@@ -123,10 +138,11 @@ This report lists all players that appeared for each team, sorted by average min
 | Zach Collins | 10 | 18.4 | 9.7 | 5.6 | 1.5 |
 | Mac McClung | 8 | 12.62 | 6.0 | 0.75 | 1.12 |
 | Yuki Kawamura | 18 | 11.72 | 3.44 | 1.83 | 2.61 |
+| Dalen Terry | 34 | 11.09 | 3.47 | 1.88 | 1.26 |
+| Jevon Carter | 23 | 11.09 | 5.39 | 1.13 | 0.83 |
+| Julian Phillips | 35 | 9.6 | 2.83 | 1.26 | 0.2 |
 | Lachlan Olbrich | 37 | 9.27 | 2.41 | 3.03 | 1.14 |
 | Emanuel Miller | 5 | 6.6 | 3.0 | 0.6 | 0.8 |
-| Noa Essengue | 2 | 3.0 | 0.0 | 0.0 | 0.0 |
-| Trentyn Flowers | 2 | 2.5 | 2.0 | 0.5 | 0.5 |
 
 
 ## CLE
@@ -136,7 +152,9 @@ This report lists all players that appeared for each team, sorted by average min
 | James Harden | 44 | 35.27 | 19.98 | 4.91 | 6.77 |
 | Donovan Mitchell | 88 | 34.0 | 27.5 | 4.58 | 5.15 |
 | Evan Mobley | 83 | 32.75 | 17.9 | 8.81 | 3.66 |
+| Darius Garland | 26 | 30.38 | 17.96 | 2.42 | 6.92 |
 | Jarrett Allen | 74 | 27.72 | 14.72 | 8.18 | 1.61 |
+| De'Andre Hunter | 43 | 26.19 | 13.95 | 4.23 | 2.07 |
 | Max Strus | 30 | 25.7 | 10.2 | 5.07 | 2.07 |
 | Sam Merrill | 69 | 24.86 | 11.52 | 2.23 | 2.09 |
 | Jaylon Tyson | 83 | 24.05 | 11.34 | 4.64 | 2.04 |
@@ -154,7 +172,6 @@ This report lists all players that appeared for each team, sorted by average min
 | Luke Travers | 12 | 8.75 | 2.33 | 2.0 | 0.75 |
 | Riley Minix | 6 | 8.33 | 4.33 | 0.67 | 0.67 |
 | Chris Livingston | 3 | 5.67 | 3.0 | 1.0 | 0.33 |
-| Darius Brown | 1 | 3.0 | 0.0 | 1.0 | 0.0 |
 
 
 ## DAL
@@ -174,11 +191,13 @@ This report lists all players that appeared for each team, sorted by average min
 | John Poulakidas | 13 | 19.54 | 8.85 | 2.31 | 0.85 |
 | Ryan Nembhard | 60 | 19.5 | 6.62 | 2.22 | 5.27 |
 | D'Angelo Russell | 26 | 19.0 | 10.15 | 2.35 | 4.0 |
+| Tyus Jones | 8 | 16.75 | 3.88 | 1.12 | 3.75 |
 | Dereck Lively II | 7 | 16.43 | 4.29 | 5.29 | 1.86 |
 | Caleb Martin | 58 | 14.81 | 3.91 | 2.47 | 1.4 |
 | Dwight Powell | 63 | 14.38 | 3.33 | 4.08 | 1.08 |
 | Moussa Cisse | 38 | 13.95 | 4.47 | 5.68 | 0.24 |
 | Tyler Smith | 12 | 13.92 | 4.67 | 2.75 | 0.42 |
+| Jaden Hardy | 34 | 12.62 | 6.85 | 1.38 | 0.85 |
 | Jeremiah Robinson-Earl | 5 | 12.4 | 4.4 | 3.0 | 0.6 |
 | AJ Johnson | 23 | 10.39 | 3.91 | 1.04 | 1.09 |
 | Miles Kelly | 14 | 9.64 | 3.07 | 1.71 | 0.86 |
@@ -224,12 +243,12 @@ This report lists all players that appeared for each team, sorted by average min
 | Kevin Huerter | 30 | 18.53 | 7.33 | 2.53 | 2.3 |
 | Ronald Holland II | 87 | 18.39 | 7.51 | 3.78 | 1.1 |
 | Javonte Green | 93 | 16.97 | 6.44 | 2.69 | 0.63 |
+| Jaden Ivey | 33 | 16.79 | 8.18 | 2.18 | 1.58 |
 | Paul Reed | 74 | 13.31 | 7.72 | 4.46 | 1.15 |
 | Marcus Sasser | 44 | 11.82 | 5.09 | 1.0 | 1.77 |
 | Wendell Moore Jr. | 6 | 10.0 | 1.67 | 1.0 | 0.67 |
 | Tolu Smith | 18 | 7.94 | 3.33 | 2.83 | 0.72 |
 | Chaz Lanier | 37 | 7.32 | 2.22 | 0.62 | 0.49 |
-| Colby Jones | 1 | 7.0 | 2.0 | 4.0 | 2.0 |
 | Bobi Klintman | 12 | 6.17 | 1.83 | 1.58 | 0.5 |
 | Isaac Jones | 4 | 4.75 | 1.5 | 0.75 | 0.0 |
 
@@ -243,12 +262,14 @@ This report lists all players that appeared for each team, sorted by average min
 | Brandin Podziemski | 84 | 28.74 | 13.96 | 5.19 | 3.64 |
 | Draymond Green | 70 | 27.73 | 8.31 | 5.47 | 5.59 |
 | Moses Moody | 60 | 25.68 | 12.13 | 3.33 | 1.63 |
+| Jonathan Kuminga | 20 | 23.9 | 12.1 | 5.85 | 2.5 |
 | Kristaps Porziņģis | 17 | 23.53 | 16.06 | 5.06 | 2.35 |
 | De'Anthony Melton | 51 | 23.1 | 12.25 | 3.35 | 2.57 |
 | Al Horford | 47 | 21.66 | 8.4 | 4.83 | 2.51 |
 | Gui Santos | 70 | 20.86 | 9.34 | 3.97 | 2.4 |
 | Will Richard | 70 | 19.67 | 6.3 | 2.46 | 1.33 |
 | Pat Spencer | 67 | 18.3 | 7.13 | 2.36 | 3.46 |
+| Buddy Hield | 44 | 17.48 | 8.05 | 2.45 | 1.5 |
 | Quinten Post | 67 | 17.33 | 7.66 | 4.01 | 1.4 |
 | Nate Williams | 14 | 17.21 | 8.0 | 2.14 | 1.0 |
 | Charles Bassey | 6 | 17.0 | 8.83 | 6.0 | 0.83 |
@@ -256,6 +277,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Gary Payton II | 75 | 15.89 | 7.43 | 3.61 | 1.69 |
 | Seth Curry | 11 | 12.09 | 6.45 | 1.09 | 0.91 |
 | Omer Yurtseven | 9 | 11.56 | 3.78 | 3.33 | 0.89 |
+| Trayce Jackson-Davis | 36 | 11.39 | 4.17 | 3.11 | 0.89 |
 | Malevy Leons | 25 | 11.04 | 3.32 | 2.12 | 0.92 |
 
 
@@ -273,7 +295,6 @@ This report lists all players that appeared for each team, sorted by average min
 | Josh Okogie | 84 | 17.43 | 4.55 | 2.55 | 0.88 |
 | Dorian Finney-Smith | 41 | 16.29 | 3.2 | 2.46 | 0.9 |
 | Aaron Holiday | 63 | 13.44 | 5.21 | 0.95 | 1.0 |
-| Tristen Newton | 1 | 12.0 | 12.0 | 3.0 | 0.0 |
 | Clint Capela | 79 | 11.99 | 3.65 | 4.46 | 0.65 |
 | Jae'Sean Tate | 51 | 8.51 | 2.73 | 1.63 | 0.49 |
 | JD Davison | 30 | 7.47 | 2.37 | 1.2 | 1.17 |
@@ -286,6 +307,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Player Name | GP | AVG MIN | AVG PTS | AVG REB | AVG AST |
 | --- | --- | --- | --- | --- | --- |
 | Pascal Siakam | 62 | 33.19 | 23.95 | 6.63 | 3.81 |
+| Bennedict Mathurin | 28 | 31.82 | 17.75 | 5.39 | 2.25 |
 | Andrew Nembhard | 57 | 31.33 | 16.95 | 2.81 | 7.67 |
 | Aaron Nesmith | 45 | 29.64 | 13.8 | 4.16 | 1.91 |
 | Jarace Walker | 76 | 25.74 | 11.63 | 5.14 | 2.53 |
@@ -299,12 +321,17 @@ This report lists all players that appeared for each team, sorted by average min
 | Quenton Jackson | 49 | 18.33 | 9.14 | 2.33 | 2.86 |
 | Johnny Furphy | 35 | 18.29 | 5.14 | 4.37 | 1.17 |
 | Obi Toppin | 24 | 17.71 | 11.62 | 4.42 | 2.29 |
+| Jeremiah Robinson-Earl | 17 | 17.59 | 4.65 | 5.18 | 0.71 |
 | T.J. McConnell | 56 | 17.18 | 9.38 | 2.21 | 5.12 |
+| Isaiah Jackson | 38 | 16.82 | 6.39 | 5.55 | 0.82 |
 | Kam Jones | 37 | 16.65 | 4.38 | 1.62 | 3.22 |
 | James Wiseman | 4 | 14.75 | 3.25 | 2.0 | 0.75 |
 | Cody Martin | 4 | 13.75 | 1.75 | 3.5 | 0.5 |
 | Garrison Mathews | 15 | 13.07 | 5.2 | 1.13 | 0.67 |
 | Taelon Peter | 38 | 12.95 | 4.5 | 1.55 | 1.05 |
+| RayJ Dennis | 13 | 12.85 | 4.92 | 1.62 | 2.0 |
+| Mac McClung | 3 | 11.33 | 6.33 | 1.33 | 0.33 |
+| Tony Bradley | 38 | 11.0 | 3.97 | 2.82 | 0.53 |
 | Monte Morris | 6 | 10.67 | 3.0 | 1.17 | 1.5 |
 
 
@@ -312,7 +339,9 @@ This report lists all players that appeared for each team, sorted by average min
 
 | Player Name | GP | AVG MIN | AVG PTS | AVG REB | AVG AST |
 | --- | --- | --- | --- | --- | --- |
+| James Harden | 44 | 35.52 | 25.41 | 4.82 | 8.14 |
 | Kawhi Leonard | 66 | 32.23 | 27.79 | 6.36 | 3.59 |
+| Ivica Zubac | 43 | 30.98 | 14.4 | 11.0 | 2.23 |
 | Darius Garland | 20 | 29.15 | 19.95 | 2.45 | 6.45 |
 | Bennedict Mathurin | 27 | 28.04 | 17.59 | 5.37 | 2.52 |
 | Kris Dunn | 83 | 27.27 | 7.27 | 3.3 | 3.67 |
@@ -328,6 +357,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Chris Paul | 16 | 14.25 | 2.94 | 1.75 | 3.31 |
 | Yanic Konan Niederhäuser | 41 | 10.37 | 4.29 | 2.85 | 0.29 |
 | Cam Christie | 55 | 8.71 | 2.84 | 1.42 | 0.56 |
+| Kobe Brown | 34 | 8.68 | 2.94 | 1.56 | 0.79 |
 | TyTy Washington Jr. | 16 | 5.38 | 1.31 | 0.38 | 1.06 |
 | Sean Pedulla | 7 | 4.43 | 1.86 | 0.43 | 0.71 |
 | Jahmyl Telfort | 8 | 4.25 | 0.12 | 0.38 | 0.12 |
@@ -346,6 +376,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Deandre Ayton | 82 | 27.41 | 12.16 | 8.18 | 0.83 |
 | Luke Kennard | 42 | 25.29 | 9.6 | 2.81 | 2.4 |
 | Jake LaRavia | 90 | 24.2 | 7.78 | 3.81 | 1.68 |
+| Gabe Vincent | 29 | 19.24 | 4.76 | 0.93 | 1.28 |
 | Jaxson Hayes | 76 | 18.05 | 7.29 | 3.99 | 0.87 |
 | Jarred Vanderbilt | 72 | 16.72 | 4.28 | 4.39 | 1.19 |
 | Nick Smith Jr. | 36 | 10.92 | 5.58 | 0.67 | 0.89 |
@@ -365,6 +396,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Toby Okani | 6 | 36.17 | 10.0 | 3.5 | 1.0 |
 | Lucas Williamson | 7 | 32.0 | 10.43 | 5.43 | 2.57 |
 | Rayan Rupert | 16 | 30.88 | 12.19 | 6.38 | 2.12 |
+| Jaren Jackson Jr. | 45 | 30.73 | 19.2 | 5.76 | 1.91 |
 | Dariq Whitehead | 6 | 30.5 | 16.33 | 4.0 | 1.5 |
 | Adama Bal | 8 | 30.12 | 10.38 | 3.12 | 2.38 |
 | Ja Morant | 20 | 28.4 | 19.45 | 3.25 | 8.05 |
@@ -373,11 +405,13 @@ This report lists all players that appeared for each team, sorted by average min
 | Cedric Coward | 62 | 25.84 | 13.6 | 5.87 | 2.76 |
 | Zach Edey | 11 | 25.82 | 13.64 | 11.09 | 1.09 |
 | Tyler Burton | 12 | 25.5 | 10.75 | 4.17 | 1.0 |
-| Lawson Lovering | 2 | 25.0 | 7.0 | 7.5 | 1.5 |
 | Walter Clayton Jr. | 24 | 24.96 | 9.67 | 2.12 | 5.67 |
 | Taylor Hendricks | 26 | 24.15 | 10.58 | 4.69 | 1.19 |
 | Cam Spencer | 72 | 23.85 | 11.08 | 2.54 | 5.56 |
+| Jock Landale | 45 | 23.6 | 11.31 | 6.49 | 1.67 |
 | Ty Jerome | 15 | 22.73 | 19.67 | 2.8 | 5.67 |
+| Kyle Anderson | 4 | 22.25 | 9.25 | 3.5 | 0.75 |
+| Vince Williams Jr. | 34 | 21.68 | 8.0 | 4.0 | 4.41 |
 | Jahmai Mashack | 31 | 21.61 | 6.19 | 2.61 | 2.23 |
 | GG Jackson | 55 | 21.42 | 12.47 | 4.27 | 1.47 |
 | Kentavious Caldwell-Pope | 51 | 21.25 | 8.39 | 2.45 | 2.73 |
@@ -385,8 +419,10 @@ This report lists all players that appeared for each team, sorted by average min
 | DeJon Jarreau | 11 | 20.91 | 8.0 | 4.64 | 3.27 |
 | Javon Small | 41 | 20.24 | 9.66 | 3.12 | 3.68 |
 | Olivier-Maxence Prosper | 53 | 18.55 | 10.0 | 3.53 | 0.96 |
-| Brandon Clarke | 2 | 10.5 | 4.0 | 3.0 | 0.5 |
+| Christian Koloko | 11 | 17.73 | 2.64 | 4.0 | 0.91 |
+| John Konchar | 30 | 14.57 | 3.17 | 3.07 | 1.33 |
 | Taj Gibson | 10 | 9.7 | 3.4 | 2.7 | 0.6 |
+| PJ Hall | 7 | 3.71 | 1.86 | 1.29 | 0.29 |
 
 
 ## MIA
@@ -432,6 +468,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Pete Nance | 47 | 15.57 | 5.4 | 2.66 | 1.02 |
 | Cole Anthony | 35 | 15.06 | 6.69 | 2.49 | 3.46 |
 | Gary Harris | 48 | 13.83 | 2.67 | 1.27 | 1.06 |
+| Amir Coffey | 30 | 8.83 | 2.4 | 0.87 | 0.37 |
 | Andre Jackson Jr. | 48 | 8.46 | 2.35 | 1.5 | 0.9 |
 | Thanasis Antetokounmpo | 34 | 4.32 | 1.38 | 0.88 | 0.44 |
 | Mark Sears | 7 | 3.71 | 3.14 | 0.29 | 0.29 |
@@ -454,12 +491,14 @@ This report lists all players that appeared for each team, sorted by average min
 | Kyle Anderson | 27 | 15.7 | 3.78 | 2.85 | 2.85 |
 | Terrence Shannon Jr. | 52 | 14.17 | 6.67 | 1.38 | 0.96 |
 | Jaylen Clark | 74 | 12.77 | 3.85 | 1.72 | 0.62 |
+| Rob Dillingham | 35 | 9.34 | 3.46 | 1.17 | 1.66 |
 | Enrique Freeman | 4 | 9.25 | 3.25 | 2.5 | 0.5 |
 | Zyon Pullin | 5 | 8.4 | 4.6 | 0.6 | 1.8 |
 | Joan Beringer | 45 | 7.51 | 3.82 | 2.29 | 0.27 |
 | Rocco Zikarsky | 5 | 7.4 | 2.8 | 2.8 | 0.4 |
 | Julian Phillips | 18 | 6.56 | 2.61 | 0.33 | 0.28 |
 | Joe Ingles | 30 | 5.53 | 1.6 | 0.7 | 1.13 |
+| Leonard Miller | 19 | 5.05 | 2.32 | 1.32 | 0.26 |
 | Johnny Juzang | 21 | 4.14 | 2.05 | 0.81 | 0.29 |
 
 
@@ -476,6 +515,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Jeremiah Fears | 82 | 25.73 | 14.26 | 3.66 | 3.4 |
 | Derik Queen | 81 | 25.04 | 11.7 | 7.06 | 3.68 |
 | Jordan Poole | 39 | 23.97 | 13.44 | 1.97 | 3.05 |
+| Jose Alvarado | 41 | 21.9 | 7.9 | 2.78 | 3.12 |
 | Bryce McGowens | 42 | 20.98 | 8.1 | 2.1 | 1.48 |
 | Yves Missi | 66 | 19.62 | 5.71 | 5.83 | 1.27 |
 | DeAndre Jordan | 12 | 16.5 | 4.42 | 6.33 | 0.92 |
@@ -504,6 +544,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Tyler Kolek | 70 | 11.17 | 4.31 | 1.49 | 2.6 |
 | Mohamed Diawara | 75 | 9.04 | 3.37 | 1.37 | 0.79 |
 | Ariel Hukporti | 64 | 9.02 | 2.09 | 2.98 | 0.5 |
+| Guerschon Yabusele | 41 | 8.9 | 2.73 | 2.12 | 0.44 |
 | Kevin McCullar Jr. | 21 | 7.38 | 2.38 | 1.33 | 0.95 |
 | Trey Jemison III | 13 | 6.31 | 1.0 | 1.38 | 0.38 |
 | Jeremy Sochan | 24 | 5.67 | 2.67 | 1.62 | 0.58 |
@@ -531,8 +572,10 @@ This report lists all players that appeared for each team, sorted by average min
 | Payton Sandfort | 4 | 15.75 | 8.75 | 2.5 | 0.0 |
 | Kenrich Williams | 67 | 13.84 | 5.93 | 3.09 | 1.27 |
 | Branden Carlson | 42 | 11.69 | 5.76 | 2.95 | 0.69 |
+| Ousmane Dieng | 27 | 10.96 | 3.7 | 1.56 | 1.04 |
 | Nikola Topić | 19 | 9.63 | 2.95 | 1.11 | 2.47 |
 | Brooks Barnhizer | 40 | 8.72 | 1.7 | 1.95 | 0.55 |
+| Chris Youngblood | 32 | 5.5 | 2.03 | 0.88 | 0.34 |
 | Buddy Boeheim | 4 | 4.0 | 1.5 | 0.0 | 0.0 |
 
 
@@ -548,6 +591,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Jalen Suggs | 66 | 28.42 | 13.33 | 3.92 | 5.32 |
 | Tristan da Silva | 86 | 23.73 | 9.3 | 3.59 | 1.47 |
 | Jevon Carter | 34 | 18.56 | 6.38 | 1.91 | 2.06 |
+| Tyus Jones | 48 | 15.73 | 3.0 | 1.1 | 2.42 |
 | Goga Bitadze | 72 | 15.06 | 5.57 | 4.86 | 1.22 |
 | Jamal Cain | 49 | 12.94 | 5.33 | 2.14 | 0.69 |
 | Noah Penda | 61 | 12.62 | 3.79 | 3.08 | 1.15 |
@@ -573,6 +617,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Dominick Barlow | 81 | 22.12 | 7.1 | 4.41 | 1.09 |
 | Andre Drummond | 75 | 18.76 | 6.13 | 7.85 | 1.19 |
 | Cameron Payne | 22 | 17.05 | 7.41 | 2.0 | 2.64 |
+| Jared McCain | 37 | 16.84 | 6.62 | 2.03 | 1.68 |
 | Adem Bona | 82 | 16.41 | 4.54 | 4.04 | 0.4 |
 | Trendon Watford | 60 | 15.07 | 6.1 | 2.97 | 2.25 |
 | Justin Edwards | 73 | 14.85 | 5.7 | 1.56 | 1.15 |
@@ -606,6 +651,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Amir Coffey | 21 | 11.1 | 3.67 | 1.48 | 0.76 |
 | CJ Huntley | 4 | 10.0 | 3.0 | 1.25 | 0.5 |
 | Isaiah Livers | 36 | 9.69 | 1.81 | 1.69 | 0.58 |
+| Nick Richards | 28 | 9.14 | 3.18 | 3.25 | 0.29 |
 | Khaman Maluach | 51 | 9.04 | 2.88 | 2.82 | 0.12 |
 | Nigel Hayes-Davis | 27 | 7.19 | 1.26 | 1.22 | 0.26 |
 | Koby Brea | 12 | 7.08 | 3.75 | 0.67 | 0.83 |
@@ -628,10 +674,10 @@ This report lists all players that appeared for each team, sorted by average min
 | Robert Williams III | 65 | 17.42 | 6.88 | 7.06 | 1.14 |
 | Vít Krejčí | 23 | 16.57 | 6.0 | 2.26 | 1.48 |
 | Matisse Thybulle | 35 | 15.6 | 5.26 | 1.91 | 0.89 |
+| Rayan Rupert | 48 | 12.02 | 2.85 | 1.79 | 0.71 |
 | Blake Wesley | 35 | 10.51 | 4.26 | 1.11 | 1.77 |
 | Duop Reath | 32 | 8.0 | 2.94 | 1.19 | 0.31 |
 | Yang Hansen | 47 | 6.51 | 2.02 | 1.43 | 0.47 |
-| Chris Youngblood | 2 | 5.5 | 3.0 | 0.0 | 0.5 |
 | Javonte Cooke | 19 | 4.95 | 1.21 | 1.0 | 0.37 |
 | Jayson Kent | 5 | 4.6 | 2.0 | 1.0 | 0.0 |
 
@@ -646,8 +692,8 @@ This report lists all players that appeared for each team, sorted by average min
 | Domantas Sabonis | 19 | 29.74 | 15.84 | 11.37 | 4.11 |
 | Russell Westbrook | 64 | 28.95 | 15.17 | 5.44 | 6.66 |
 | Maxime Raynaud | 74 | 26.59 | 12.46 | 7.51 | 1.35 |
+| Dennis Schröder | 40 | 26.35 | 12.75 | 3.05 | 5.28 |
 | Daeqwon Plowden | 32 | 26.34 | 10.75 | 3.03 | 1.28 |
-| De'Andre Hunter | 2 | 25.5 | 7.5 | 1.5 | 0.5 |
 | Nique Clifford | 75 | 25.09 | 8.6 | 3.76 | 2.39 |
 | Precious Achiuwa | 73 | 23.96 | 10.08 | 6.74 | 1.38 |
 | Malik Monk | 62 | 21.98 | 12.45 | 1.89 | 2.98 |
@@ -655,11 +701,13 @@ This report lists all players that appeared for each team, sorted by average min
 | DaQuan Jeffries | 3 | 20.0 | 10.33 | 1.67 | 0.33 |
 | Devin Carter | 38 | 18.45 | 8.92 | 3.29 | 2.66 |
 | Killian Hayes | 23 | 17.61 | 5.52 | 2.35 | 3.52 |
+| Keon Ellis | 43 | 17.56 | 5.56 | 1.28 | 0.6 |
 | Doug McDermott | 29 | 15.14 | 5.66 | 1.28 | 0.76 |
 | Patrick Baldwin Jr. | 6 | 14.83 | 3.83 | 3.5 | 0.83 |
 | Isaiah Stevens | 3 | 14.33 | 3.33 | 1.0 | 3.33 |
 | Drew Eubanks | 42 | 13.19 | 5.21 | 3.02 | 0.45 |
 | Dario Saric | 5 | 8.0 | 1.0 | 1.2 | 0.4 |
+| Isaac Jones | 3 | 5.67 | 1.0 | 0.67 | 0.33 |
 
 
 ## SAS
@@ -675,6 +723,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Harrison Barnes | 97 | 22.37 | 8.36 | 2.46 | 1.58 |
 | Keldon Johnson | 105 | 22.11 | 11.99 | 4.91 | 1.25 |
 | Luke Kornet | 91 | 18.92 | 5.8 | 5.54 | 1.56 |
+| Jeremy Sochan | 28 | 12.82 | 4.07 | 2.61 | 1.0 |
 | Carter Bryant | 93 | 10.78 | 3.83 | 2.32 | 0.67 |
 | Kelly Olynyk | 51 | 7.78 | 3.1 | 1.63 | 1.02 |
 | Lindy Waters III | 49 | 6.55 | 2.24 | 0.71 | 0.47 |
@@ -683,7 +732,7 @@ This report lists all players that appeared for each team, sorted by average min
 | Mason Plumlee | 12 | 5.58 | 0.75 | 1.42 | 0.5 |
 | Bismack Biyombo | 34 | 4.97 | 0.85 | 0.85 | 0.15 |
 | Harrison Ingram | 7 | 3.71 | 1.57 | 0.43 | 0.14 |
-| Stanley Umude | 2 | 3.0 | 1.0 | 0.0 | 0.5 |
+| Riley Minix | 3 | 3.0 | 3.0 | 0.67 | 0.33 |
 
 
 ## TOR
@@ -699,11 +748,11 @@ This report lists all players that appeared for each team, sorted by average min
 | Collin Murray-Boyles | 64 | 22.42 | 9.14 | 5.16 | 1.92 |
 | Ja'Kobe Walter | 79 | 21.47 | 7.84 | 2.62 | 1.22 |
 | Sandro Mamukelashvili | 87 | 21.32 | 10.67 | 4.94 | 1.82 |
+| Ochai Agbaji | 42 | 15.55 | 4.31 | 2.26 | 0.71 |
 | Gradey Dick | 79 | 13.56 | 5.76 | 1.87 | 0.65 |
 | A.J. Lawson | 31 | 8.9 | 3.65 | 1.48 | 0.35 |
 | Jamison Battle | 67 | 8.82 | 3.3 | 1.49 | 0.37 |
 | Markelle Fultz | 5 | 7.0 | 0.8 | 0.2 | 1.6 |
-| Chucky Hepburn | 2 | 6.5 | 0.0 | 0.5 | 1.0 |
 | Alijah Martin | 23 | 6.3 | 2.22 | 0.91 | 0.52 |
 | Jonathan Mogbo | 43 | 5.91 | 1.51 | 1.58 | 0.58 |
 | Trayce Jackson-Davis | 20 | 4.6 | 1.65 | 1.7 | 0.35 |
@@ -724,7 +773,6 @@ This report lists all players that appeared for each team, sorted by average min
 | Jusuf Nurkić | 41 | 26.44 | 10.9 | 10.37 | 4.78 |
 | John Konchar | 26 | 26.12 | 5.88 | 5.69 | 3.0 |
 | Isaiah Collier | 59 | 25.73 | 11.66 | 2.54 | 7.17 |
-| Hayden Gray | 1 | 25.0 | 6.0 | 0.0 | 1.0 |
 | Cody Williams | 67 | 24.31 | 8.78 | 2.96 | 2.04 |
 | Jaren Jackson Jr. | 3 | 24.0 | 22.33 | 4.33 | 2.67 |
 | Brice Sensabaugh | 75 | 23.51 | 14.88 | 3.08 | 1.91 |
@@ -732,9 +780,11 @@ This report lists all players that appeared for each team, sorted by average min
 | Svi Mykhailiuk | 50 | 23.08 | 9.38 | 2.48 | 1.86 |
 | Elijah Harkless | 26 | 20.96 | 6.85 | 2.04 | 2.88 |
 | Blake Hinson | 14 | 20.43 | 11.93 | 2.36 | 1.14 |
-| Mo Bamba | 2 | 19.0 | 5.0 | 10.0 | 0.5 |
+| Kyle Anderson | 20 | 20.1 | 7.1 | 3.3 | 3.05 |
+| Walter Clayton Jr. | 45 | 18.04 | 6.8 | 1.96 | 3.18 |
 | Oscar Tshiebwe | 27 | 16.56 | 7.81 | 6.63 | 1.19 |
 | Kevin Love | 37 | 16.49 | 6.7 | 5.81 | 1.81 |
+| Taylor Hendricks | 33 | 15.0 | 4.94 | 3.0 | 0.73 |
 | Vince Williams Jr. | 6 | 13.83 | 4.67 | 3.17 | 2.67 |
 
 
@@ -743,12 +793,14 @@ This report lists all players that appeared for each team, sorted by average min
 | Player Name | GP | AVG MIN | AVG PTS | AVG REB | AVG AST |
 | --- | --- | --- | --- | --- | --- |
 | Julian Reese | 13 | 30.92 | 11.85 | 10.54 | 1.85 |
+| CJ McCollum | 35 | 30.91 | 18.8 | 3.54 | 3.6 |
 | Kyshawn George | 48 | 28.94 | 14.79 | 5.1 | 4.46 |
 | Leaky Black | 15 | 28.8 | 7.07 | 5.0 | 1.47 |
 | Bub Carrington | 82 | 27.71 | 10.71 | 3.37 | 4.65 |
 | Alex Sarr | 48 | 27.21 | 16.31 | 7.4 | 2.71 |
 | Bilal Coulibaly | 56 | 26.23 | 11.73 | 4.34 | 2.59 |
 | Alondes Williams | 4 | 25.0 | 11.0 | 6.25 | 3.0 |
+| Khris Middleton | 34 | 24.32 | 10.32 | 3.94 | 3.26 |
 | Tre Johnson | 60 | 23.97 | 12.22 | 2.83 | 2.03 |
 | Will Riley | 74 | 22.04 | 10.32 | 2.86 | 1.97 |
 | Kadary Richmond | 3 | 22.0 | 8.33 | 3.33 | 2.67 |
@@ -756,11 +808,15 @@ This report lists all players that appeared for each team, sorted by average min
 | Jamir Watkins | 50 | 20.58 | 7.36 | 3.88 | 1.34 |
 | Jaden Hardy | 23 | 20.48 | 12.61 | 1.7 | 1.26 |
 | Justin Champagnie | 69 | 19.96 | 8.65 | 5.57 | 1.22 |
+| Corey Kispert | 19 | 19.47 | 9.16 | 2.32 | 1.68 |
+| Marvin Bagley III | 38 | 19.29 | 10.13 | 5.68 | 1.47 |
 | Anthony Gill | 55 | 17.33 | 5.84 | 2.87 | 1.25 |
 | Sharife Cooper | 41 | 17.1 | 8.12 | 2.1 | 3.02 |
 | Cam Whitmore | 21 | 16.86 | 9.19 | 2.76 | 0.71 |
+| Keshon Gilbert | 3 | 16.0 | 2.0 | 1.67 | 1.0 |
 | Tristan Vukcevic | 49 | 13.67 | 9.0 | 3.0 | 1.12 |
 | Skal Labissiere | 3 | 12.67 | 4.33 | 3.0 | 1.0 |
 | Malaki Branham | 28 | 9.82 | 4.57 | 1.57 | 0.82 |
+| AJ Johnson | 25 | 8.64 | 2.8 | 1.24 | 0.88 |
 
 

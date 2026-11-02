@@ -12,6 +12,7 @@ conformal interval coverage on independent seasons.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 from datetime import datetime, timezone
@@ -34,6 +35,7 @@ from src.training.player_trainer import PlayerModelTrainer
 from src.features.player_form import add_player_matchup_features
 from src.training.validation_utils import expanding_window_date_splits
 from src.evaluation.bootstrap import paired_block_bootstrap, verdict
+from src.evaluation.model_doc_blocks import update_model_docs
 
 ROOT = Path(__file__).resolve().parents[1]
 SEASONS = ["2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"]
@@ -553,8 +555,18 @@ Not: Buradaki SCORE toplamı ham pace x reyting tahminidir; üretimdeki temporal
     rep_md.write_text(md_content)
     print(f"\nSaved Walk-Forward JSON Report: {rep_json}")
     print(f"Saved Walk-Forward Markdown Report: {rep_md}")
+    for path in update_model_docs(summary, ROOT):
+        print(f"Updated model doc: {path}")
 
 
 if __name__ == "__main__":
-    run_walk_forward_backtest()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--docs-only", action="store_true",
+                        help="Rewrite the model-doc blocks from the existing JSON report without rerunning.")
+    if parser.parse_args().docs_only:
+        saved = json.loads((ROOT / "reports/evaluation/multi_season_walk_forward_backtest.json").read_text())
+        for path in update_model_docs(saved, ROOT):
+            print(f"Updated model doc: {path}")
+    else:
+        run_walk_forward_backtest()
 

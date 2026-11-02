@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from src.core.artifact_paths import production_release
+from src.evaluation.model_doc_blocks import MODEL_DOCS, render_block
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE_DOCS = [
@@ -22,6 +23,9 @@ CORE_DOCS = [
     "docs/reports/nba_models_comprehensive_report.md",
     "reports/README.md",
     "reports/production/model_performance_and_architecture_report.md",
+    "docs/reports/models/win_probability_model.md",
+    "docs/reports/models/score_model.md",
+    "docs/reports/models/player_props_model.md",
 ]
 # Only directories that are tracked in git; data/ is local and rebuilt, so it is not checked.
 TRACKED_PREFIXES = ("models/", "config/", "scripts/", "src/", "docs/", "reports/", "tests/", ".github/")
@@ -81,3 +85,12 @@ def _referenced_paths(doc: Path):
 def test_core_doc_paths_exist(doc):
     missing = sorted({p for p in _referenced_paths(ROOT / doc) if not (ROOT / p).exists()})
     assert not missing, f"{doc} points at missing files: {missing}"
+
+
+@pytest.mark.parametrize("family", sorted(MODEL_DOCS))
+def test_model_doc_blocks_match_walk_forward_report(family):
+    summary = json.loads((ROOT / "reports/evaluation/multi_season_walk_forward_backtest.json").read_text())
+    text = (ROOT / MODEL_DOCS[family]).read_text()
+    assert render_block(summary, family) in text, (
+        f"{MODEL_DOCS[family]} walk-forward block is missing or stale; "
+        "run PYTHONPATH=. python3 scripts/walk_forward_benchmark.py --docs-only")

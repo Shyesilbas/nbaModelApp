@@ -4,6 +4,7 @@ import { Card, DatePicker, EmptyState, InlineError, Skeleton } from "./common";
 import TeamLogo from "./TeamLogo";
 import { TEAM_NAME_BY_ABBR } from "../lib/nbaTeams";
 import { CalibrationChart, RollingAccuracyChart } from "./paper/PaperCharts";
+import { BaselineComparison, VersionTable, type Evaluation } from "./paper/PaperBaselines";
 import PublishSnapshotButton from "./PublishSnapshotButton";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
@@ -55,7 +56,7 @@ type Summary = {
   bands: Band[];
 };
 
-type Report = { season: string; summary: Summary; games: PaperGame[] };
+type Report = { season: string; summary: Summary; evaluation?: Evaluation; games: PaperGame[] };
 
 const teamName = (abbr: string) => TEAM_NAME_BY_ABBR[abbr as keyof typeof TEAM_NAME_BY_ABBR] || abbr;
 const pct = (v: number | null, digits = 1) => (v == null ? "-" : `${(v * 100).toFixed(digits)}%`);
@@ -256,7 +257,11 @@ export default function PaperTrading() {
         )}
       </section>
 
+      {report.evaluation && <BaselineComparison evaluation={report.evaluation} />}
+
       <div className="space-y-6">
+        {report.evaluation && <VersionTable evaluation={report.evaluation} />}
+
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <RollingAccuracyChart games={games} />
           <CalibrationChart bands={s.bands} />

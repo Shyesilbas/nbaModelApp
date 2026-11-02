@@ -1,4 +1,4 @@
-# NBA Team Core & Secondary Player Discovery Report (2025-26)
+# NBA Team Core & Secondary Player Discovery Report (2021-22)
 
 This report categorizes players for each team based on an automated Importance Score:
 $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \times 1.0) + (\text{AVG\_AST} \times 0.8) + (\text{AVG\_REB} \times 0.6)$$
@@ -20,12 +20,12 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 
 ### Core Players (Top 3)
 1. **Kevin Durant** (Importance Score: 57.93 | PTS: 29.6, REB: 7.2, AST: 6.5, MIN: 37.8)
-2. **Kyrie Irving** (Importance Score: 53.44 | PTS: 26.9, REB: 4.4, AST: 5.9, MIN: 38.3)
-3. **Seth Curry** (Importance Score: 33.08 | PTS: 14.2, REB: 2.5, AST: 2.5, MIN: 30.5)
+2. **James Harden** (Importance Score: 53.89 | PTS: 22.5, REB: 8.0, AST: 10.2, MIN: 37.0)
+3. **Kyrie Irving** (Importance Score: 53.44 | PTS: 26.9, REB: 4.4, AST: 5.9, MIN: 38.3)
 
 ### Secondary Players (Top 4-5)
-4. **Joe Harris** (Importance Score: 29.59 | PTS: 11.3, REB: 4.0, AST: 1.0, MIN: 30.2)
-5. **Patty Mills** (Importance Score: 28.11 | PTS: 11.1, REB: 1.9, AST: 2.1, MIN: 28.3)
+4. **Seth Curry** (Importance Score: 33.08 | PTS: 14.2, REB: 2.5, AST: 2.5, MIN: 30.5)
+5. **Joe Harris** (Importance Score: 29.59 | PTS: 11.3, REB: 4.0, AST: 1.0, MIN: 30.2)
 
 ---
 
@@ -37,8 +37,8 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 3. **Marcus Smart** (Importance Score: 36.55 | PTS: 12.9, REB: 4.0, AST: 5.9, MIN: 33.2)
 
 ### Secondary Players (Top 4-5)
-4. **Al Horford** (Importance Score: 33.49 | PTS: 10.6, REB: 8.1, AST: 3.3, MIN: 30.7)
-5. **Robert Williams III** (Importance Score: 30.28 | PTS: 9.5, REB: 8.9, AST: 1.8, MIN: 28.2)
+4. **Dennis Schröder** (Importance Score: 34.37 | PTS: 14.4, REB: 3.3, AST: 4.2, MIN: 29.2)
+5. **Al Horford** (Importance Score: 33.49 | PTS: 10.6, REB: 8.1, AST: 3.3, MIN: 30.7)
 
 ---
 
@@ -85,12 +85,12 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 
 ### Core Players (Top 3)
 1. **Luka Dončić** (Importance Score: 59.04 | PTS: 29.0, REB: 9.2, AST: 8.3, MIN: 35.6)
-2. **Jalen Brunson** (Importance Score: 39.58 | PTS: 17.2, REB: 4.0, AST: 4.6, MIN: 32.5)
-3. **Spencer Dinwiddie** (Importance Score: 33.83 | PTS: 15.1, REB: 2.8, AST: 3.8, MIN: 28.1)
+2. **Kristaps Porziņģis** (Importance Score: 40.20 | PTS: 19.2, REB: 7.7, AST: 2.0, MIN: 29.5)
+3. **Jalen Brunson** (Importance Score: 39.58 | PTS: 17.2, REB: 4.0, AST: 4.6, MIN: 32.5)
 
 ### Secondary Players (Top 4-5)
-4. **Tim Hardaway Jr.** (Importance Score: 33.04 | PTS: 14.2, REB: 3.7, AST: 2.2, MIN: 29.6)
-5. **Dorian Finney-Smith** (Importance Score: 32.54 | PTS: 11.1, REB: 4.8, AST: 1.9, MIN: 34.0)
+4. **Spencer Dinwiddie** (Importance Score: 33.83 | PTS: 15.1, REB: 2.8, AST: 3.8, MIN: 28.1)
+5. **Tim Hardaway Jr.** (Importance Score: 33.04 | PTS: 14.2, REB: 3.7, AST: 2.2, MIN: 29.6)
 
 ---
 
@@ -149,13 +149,13 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 ## IND
 
 ### Core Players (Top 3)
-1. **Tyrese Haliburton** (Importance Score: 45.78 | PTS: 17.5, REB: 4.3, AST: 9.6, MIN: 36.2)
-2. **Malcolm Brogdon** (Importance Score: 43.60 | PTS: 19.1, REB: 5.1, AST: 5.9, MIN: 33.4)
-3. **Buddy Hield** (Importance Score: 42.82 | PTS: 18.2, REB: 5.1, AST: 4.8, MIN: 35.5)
+1. **Domantas Sabonis** (Importance Score: 47.51 | PTS: 18.9, REB: 12.1, AST: 5.0, MIN: 34.7)
+2. **Tyrese Haliburton** (Importance Score: 45.78 | PTS: 17.5, REB: 4.3, AST: 9.6, MIN: 36.2)
+3. **Malcolm Brogdon** (Importance Score: 43.60 | PTS: 19.1, REB: 5.1, AST: 5.9, MIN: 33.4)
 
 ### Secondary Players (Top 4-5)
-4. **Myles Turner** (Importance Score: 32.70 | PTS: 12.9, REB: 7.1, AST: 1.0, MIN: 29.5)
-5. **Chris Duarte** (Importance Score: 31.23 | PTS: 13.1, REB: 4.1, AST: 2.1, MIN: 28.0)
+4. **Buddy Hield** (Importance Score: 42.82 | PTS: 18.2, REB: 5.1, AST: 4.8, MIN: 35.5)
+5. **Caris LeVert** (Importance Score: 40.10 | PTS: 18.7, REB: 3.8, AST: 4.4, MIN: 31.2)
 
 ---
 
@@ -245,8 +245,8 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 3. **Jonas Valančiūnas** (Importance Score: 41.63 | PTS: 17.5, REB: 11.6, AST: 2.6, MIN: 30.1)
 
 ### Secondary Players (Top 4-5)
-4. **Jonas Valanciunas** (Importance Score: 38.35 | PTS: 15.0, REB: 11.5, AST: 1.5, MIN: 30.5)
-5. **Herbert Jones** (Importance Score: 28.87 | PTS: 9.6, REB: 3.8, AST: 2.1, MIN: 30.6)
+4. **Josh Hart** (Importance Score: 38.04 | PTS: 13.4, REB: 7.8, AST: 4.1, MIN: 33.5)
+5. **Nickeil Alexander-Walker** (Importance Score: 30.16 | PTS: 12.8, REB: 3.3, AST: 2.8, MIN: 26.4)
 
 ---
 
@@ -298,7 +298,7 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 
 ### Secondary Players (Top 4-5)
 4. **Tyrese Maxey** (Importance Score: 41.28 | PTS: 17.9, REB: 3.2, AST: 4.2, MIN: 36.0)
-5. **Georges Niang** (Importance Score: 22.12 | PTS: 8.6, REB: 2.5, AST: 1.3, MIN: 21.9)
+5. **Seth Curry** (Importance Score: 37.66 | PTS: 15.0, REB: 3.4, AST: 4.0, MIN: 34.8)
 
 ---
 
@@ -319,12 +319,12 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 
 ### Core Players (Top 3)
 1. **Damian Lillard** (Importance Score: 50.49 | PTS: 24.0, REB: 4.1, AST: 7.3, MIN: 36.4)
-2. **Josh Hart** (Importance Score: 42.64 | PTS: 19.9, REB: 5.4, AST: 4.3, MIN: 32.1)
-3. **Jusuf Nurkić** (Importance Score: 38.01 | PTS: 15.0, REB: 11.1, AST: 2.8, MIN: 28.2)
+2. **CJ McCollum** (Importance Score: 44.30 | PTS: 20.5, REB: 4.2, AST: 4.5, MIN: 35.2)
+3. **Josh Hart** (Importance Score: 42.64 | PTS: 19.9, REB: 5.4, AST: 4.3, MIN: 32.1)
 
 ### Secondary Players (Top 4-5)
-4. **Anfernee Simons** (Importance Score: 36.77 | PTS: 17.3, REB: 2.6, AST: 3.9, MIN: 29.5)
-5. **Drew Eubanks** (Importance Score: 35.62 | PTS: 14.5, REB: 8.5, AST: 1.6, MIN: 29.6)
+4. **Norman Powell** (Importance Score: 38.91 | PTS: 18.6, REB: 3.3, AST: 2.0, MIN: 33.3)
+5. **Jusuf Nurkić** (Importance Score: 38.01 | PTS: 15.0, REB: 11.1, AST: 2.8, MIN: 28.2)
 
 ---
 
@@ -333,11 +333,11 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 ### Core Players (Top 3)
 1. **Domantas Sabonis** (Importance Score: 47.77 | PTS: 18.9, REB: 12.3, AST: 5.8, MIN: 33.7)
 2. **De'Aaron Fox** (Importance Score: 47.62 | PTS: 23.2, REB: 3.9, AST: 5.6, MIN: 35.3)
-3. **Harrison Barnes** (Importance Score: 38.54 | PTS: 16.4, REB: 5.6, AST: 2.4, MIN: 33.6)
+3. **Tyrese Haliburton** (Importance Score: 39.76 | PTS: 14.3, REB: 3.9, AST: 7.4, MIN: 34.4)
 
 ### Secondary Players (Top 4-5)
-4. **Davion Mitchell** (Importance Score: 30.01 | PTS: 11.5, REB: 2.2, AST: 4.2, MIN: 27.7)
-5. **Donte DiVincenzo** (Importance Score: 29.13 | PTS: 10.3, REB: 4.4, AST: 3.6, MIN: 26.6)
+4. **Harrison Barnes** (Importance Score: 38.54 | PTS: 16.4, REB: 5.6, AST: 2.4, MIN: 33.6)
+5. **Buddy Hield** (Importance Score: 32.63 | PTS: 14.4, REB: 4.0, AST: 1.9, MIN: 28.6)
 
 ---
 
@@ -346,11 +346,11 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 ### Core Players (Top 3)
 1. **Dejounte Murray** (Importance Score: 50.78 | PTS: 21.1, REB: 8.3, AST: 9.2, MIN: 34.8)
 2. **Keldon Johnson** (Importance Score: 38.35 | PTS: 17.0, REB: 6.1, AST: 2.1, MIN: 32.0)
-3. **Jakob Poeltl** (Importance Score: 35.79 | PTS: 13.5, REB: 9.3, AST: 2.8, MIN: 29.0)
+3. **Derrick White** (Importance Score: 36.18 | PTS: 14.4, REB: 3.5, AST: 5.6, MIN: 30.4)
 
 ### Secondary Players (Top 4-5)
-4. **Devin Vassell** (Importance Score: 30.24 | PTS: 12.4, REB: 4.3, AST: 1.9, MIN: 27.4)
-5. **Josh Richardson** (Importance Score: 27.30 | PTS: 11.4, REB: 2.8, AST: 2.3, MIN: 24.7)
+4. **Jakob Poeltl** (Importance Score: 35.79 | PTS: 13.5, REB: 9.3, AST: 2.8, MIN: 29.0)
+5. **Devin Vassell** (Importance Score: 30.24 | PTS: 12.4, REB: 4.3, AST: 1.9, MIN: 27.4)
 
 ---
 
@@ -388,8 +388,8 @@ $$\text{Importance Score} = (\text{AVG\_MIN} \times 0.5) + (\text{AVG\_PTS} \tim
 3. **Kyle Kuzma** (Importance Score: 41.77 | PTS: 17.1, REB: 8.5, AST: 3.5, MIN: 33.5)
 
 ### Secondary Players (Top 4-5)
-4. **Kentavious Caldwell-Pope** (Importance Score: 31.88 | PTS: 13.2, REB: 3.4, AST: 1.9, MIN: 30.2)
-5. **Brad Wanamaker** (Importance Score: 28.50 | PTS: 7.0, REB: 4.0, AST: 7.0, MIN: 27.0)
+4. **Spencer Dinwiddie** (Importance Score: 35.20 | PTS: 12.6, REB: 4.7, AST: 5.8, MIN: 30.2)
+5. **Montrezl Harrell** (Importance Score: 31.88 | PTS: 14.1, REB: 6.7, AST: 2.1, MIN: 24.2)
 
 ---
 

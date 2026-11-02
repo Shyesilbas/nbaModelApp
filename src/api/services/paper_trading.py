@@ -196,8 +196,23 @@ def summarize(graded: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
+def _evaluation_view(rep: Dict[str, Any]) -> Dict[str, Any]:
+    """Model-vs-baseline comparison for the page: the current release's live calls, then each release."""
+    by_version = []
+    for key, summary in rep["by_version"].items():
+        version, origin = key.split("/", 1)
+        by_version.append({"version": version, "origin": origin,
+                           **{k: v for k, v in summary.items() if k != "bands"}})
+    current = {k: v for k, v in rep["current_live"].items() if k != "bands"}
+    return {"production_release": rep["production_release"], "current_live": current, "by_version": by_version}
+
+
 def paper_trading_report(season: str) -> Dict[str, Any]:
+    # Imported here because src.evaluation.paper_ledger imports this module.
+    from src.evaluation.paper_ledger import build_report
+
     season = normalize_season(season)
     graded = grade(read_ledger(season), load_results(season))
     graded.sort(key=lambda g: (g["game_date"], g["start_utc"], g["game_id"]), reverse=True)
-    return {"season": season, "summary": summarize(graded), "games": graded}
+    evaluation = _evaluation_view(build_report(season, graded))
+    return {"season": season, "summary": summarize(graded), "evaluation": evaluation, "games": graded}
