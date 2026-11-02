@@ -13,7 +13,7 @@ React 19 Frontend (Vite)
 FastAPI ML Service (Port 8001)
        │
        ├──► Frontend Store (`data/frontend_store/season_YYYY_YY.db` + `global.db`)
-       ├──► Model Predictors (release v11 (WIN, SCORE, PLAYER); warm WIN p50 ~430 ms)
+       ├──► Model Predictors (release v15 (WIN, SCORE, PLAYER); warm WIN p50 ~430 ms)
        └──► Continuous Elo & Roster Snapshot Caches
 ```
 

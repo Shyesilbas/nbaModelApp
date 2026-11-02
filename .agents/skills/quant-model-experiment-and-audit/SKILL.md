@@ -14,7 +14,7 @@ Follow this workflow whenever evaluating new features, tuning model hyperparamet
 ## 1. Pre-Flight & Production Safety
 
 1. **Read Registry & Status First**:
-   - Check `docs/artifact_registry.md` or `ARTIFACT_REGISTRY.md` and `docs/project_status.md` or `PROJECT_STATUS.md` before touching any code or data.
+   - Check `ARTIFACT_REGISTRY.md` and `PROJECT_STATUS.md` before touching any code or data.
 2. **Never Overwrite Production Silently**:
    - Never overwrite artifacts under `models/production/` or production manifests (`config/production_artifacts.yaml`) during analysis or experimentation.
    - Write all experimental outputs to `models/experimental/`, `data/experimental/`, `research/`, or `reports/backtests/YYYY-MM-DD_<topic>/`.
@@ -71,9 +71,9 @@ Whenever a model changes, an audit concludes, or a backtest is finalized, update
 1. **Experiment / Model Report**:
    - Create or update `reports/backtests/YYYY-MM-DD_<topic>/README.md` (with reproducible scripts in `code/`) or `docs/reports/models/<model>.md`.
 2. **Artifact Registry**:
-   - Register new active datasets, backtest reports, or promoted model artifacts in `docs/artifact_registry.md` or `ARTIFACT_REGISTRY.md`.
+   - Register new active datasets, backtest reports, or promoted model artifacts in `ARTIFACT_REGISTRY.md`.
 3. **Project Status**:
-   - Log the completed work, key metric deltas, and current production status in `docs/project_status.md` or `PROJECT_STATUS.md`.
+   - Log the completed work, key metric deltas, and current production status in `PROJECT_STATUS.md`.
 4. **Root Overview**:
    - Update benchmark tables in `README.md` (and `AI_CONTEXT.md` if present) if headline metrics or model versions changed.
 5. **Verification**:

@@ -73,7 +73,7 @@ PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date YYYY-MM-DD --seaso
 - Filters games for the target date from `schedule_combined.csv`.
 - Automatically queries rolling team features, rest days, and roster availability.
 - Evaluates the active Win model (logistic regression) and Score models (Ridge).
-- Outputs a formatted ASCII table to the console and exports a markdown forecast to `reports/predictions/schedule_{date}_model_{model}.md`.
+- Outputs a formatted ASCII table to the console and exports a markdown forecast to `reports/predictions/schedule_{date}_model_{model}.md` (local only, not tracked in git).
 
 ---
 
@@ -100,3 +100,17 @@ PYTHONPATH=. python3 scripts/detect_drift_and_leakage.py --reference-season 2024
 - **Feature Leakage Check**: Identifies pre-game features exhibiting Pearson correlation $> 0.95$ with target `WIN`.
 - **Distribution Drift Scan**: Executes Kolmogorov-Smirnov (KS) tests to detect feature distribution shifts.
 - **Audit Logging**: Outputs an audit ledger to `reports/audits/drift_and_leakage_{reference}_vs_{target}.md`.
+
+---
+
+## Generated Performance Reports
+
+Two reports carry every headline metric in the docs; rebuild them instead of editing numbers by hand (`reports/README.md` lists every report and its writer).
+
+```bash
+PYTHONPATH=. python3 scripts/walk_forward_benchmark.py
+PYTHONPATH=. python3 scripts/paper_ledger_report.py --season 2026-27
+```
+
+- **Walk-forward** (`reports/evaluation/multi_season_walk_forward_backtest.md`): five expanding-window seasons against pure Elo, last-10 points and EMA-10, with a date-block bootstrap interval for each model-minus-baseline difference and the number of seasons won. Its header names the model versions measured; `tests/test_docs_consistency.py` fails when they differ from `config/production_artifacts.yaml`, so rerun it after every retrain.
+- **Paper ledger** (`reports/evaluation/paper_ledger_<season>.md`): the frozen pre-tip predictions of the locked season, split by model version and origin (live vs backfill), compared with pure Elo and last-10 baselines computed from earlier games only, with calibration bands and a weekly trend. `scripts/ops/morning.py` rebuilds it after publishing.

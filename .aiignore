@@ -15,8 +15,8 @@ models/**/*weights*
 !models/**/*.json
 !config/**/*.yaml
 !config/**/*.yml
-!docs/artifact_registry.md
-!docs/project_status.md
+!ARTIFACT_REGISTRY.md
+!PROJECT_STATUS.md
 
 # Runtime/cache
 logs/**

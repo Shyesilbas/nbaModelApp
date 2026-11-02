@@ -3,8 +3,9 @@
 
 Runs scripts/update_all_game_data.py (game logs, box scores, play-by-play, PBP table, frontend
 store) and, only if that succeeds, scripts/ops/publish_snapshot_data.py, so GitHub Actions never
-predicts from a half-updated dataset. Extra arguments go to the data refresh, for example
-`--pbp-limit 20`.
+predicts from a half-updated dataset. Last, scripts/paper_ledger_report.py regrades the ledger
+against the refreshed results (a failure there is reported but does not undo the publish).
+Extra arguments go to the data refresh, for example `--pbp-limit 20`.
 """
 import argparse
 import subprocess
@@ -33,6 +34,10 @@ def main() -> int:
     except subprocess.CalledProcessError as exc:
         print(f"\nStopped: step failed with exit code {exc.returncode}; nothing was published after it.", file=sys.stderr)
         return exc.returncode
+    try:
+        run("Paper ledger report", [sys.executable, "scripts/paper_ledger_report.py"])
+    except subprocess.CalledProcessError as exc:
+        print(f"\nPaper ledger report failed with exit code {exc.returncode}; the publish above stands.", file=sys.stderr)
     return 0
 
 

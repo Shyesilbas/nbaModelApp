@@ -13,7 +13,8 @@ conformal interval coverage on independent seasons.
 from __future__ import annotations
 
 import json
-from datetime import datetime
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +33,7 @@ from src.training.score_trainer import get_location_features
 from src.training.player_trainer import PlayerModelTrainer
 from src.features.player_form import add_player_matchup_features
 from src.training.validation_utils import expanding_window_date_splits
+from src.evaluation.bootstrap import paired_block_bootstrap, verdict
 
 ROOT = Path(__file__).resolve().parents[1]
 SEASONS = ["2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"]
@@ -129,6 +131,27 @@ def load_player_dataset(player_features: list[str]) -> pd.DataFrame:
     return df.dropna(subset=["_SEASON", "GAME_DATE"]).sort_values("GAME_DATE").reset_index(drop=True)
 
 
+def _provenance() -> dict:
+    """Which production configuration was benchmarked, so a stale report is visible at a glance."""
+    out = {}
+    for family, key in (("win", "training_date"), ("score", "updated_at"), ("player", "updated_at")):
+        meta_path = ROOT / f"models/production/{family}_metadata.json"
+        if meta_path.exists():
+            meta = json.loads(meta_path.read_text())
+            out[family] = {"version": meta.get("version"), "trained_at": meta.get(key)}
+    try:
+        out["git_commit"] = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=True
+        ).stdout.strip()
+    except Exception:
+        out["git_commit"] = None
+    return out
+
+
+def _signed(x: float, digits: int) -> str:
+    return f"{x:+.{digits}f}"
+
+
 def run_walk_forward_backtest():
     print("Loading data across all available seasons...")
     data = load_dataset()
@@ -168,13 +191,15 @@ def run_walk_forward_backtest():
         offsets_80 = {"total": [-25.2, 25.2], "margin": [-20.1, 20.1]}
 
     folds = []
+    # Per-game loss differences (model minus baseline) for the paired date-block bootstrap.
+    paired = {"win_brier": [], "score_total": [], "score_margin": []}
     available_seasons = sorted(data["_SEASON"].unique())
 
     for idx, test_season in enumerate(available_seasons[1:], start=1):
         train_seasons = available_seasons[:idx]
-        print(f"\n=======================================================")
+        print("\n=======================================================")
         print(f"Fold {idx}: Train {train_seasons} -> Test {test_season}")
-        print(f"=======================================================")
+        print("=======================================================")
 
         train_data = data[data["_SEASON"].isin(train_seasons)].copy()
         test_data = data[data["_SEASON"] == test_season].copy()
@@ -222,6 +247,11 @@ def run_walk_forward_backtest():
         win_eval_lr = _evaluate_prob(y_test_win, p_win_lr)
         win_eval_elo = _evaluate_prob(y_test_win, elo_prob)
         win_eval_last10 = _evaluate_prob(y_test_win, last10_prob)
+        y_arr = y_test_win.to_numpy(dtype=float)
+        paired["win_brier"].append(pd.DataFrame({
+            "date": test_home["GAME_DATE"].to_numpy(),
+            "diff": (p_win_prod - y_arr) ** 2 - (elo_prob.to_numpy(dtype=float) - y_arr) ** 2,
+        }))
 
         # ----------------------------------------------------
         # 2. SCORE MODEL WALK-FORWARD
@@ -274,6 +304,14 @@ def run_walk_forward_backtest():
 
         score_eval_model = _evaluate_score(merged_test["ACTUAL_TOTAL"], pred_total_model, merged_test["ACTUAL_MARGIN"], pred_margin_model, offsets_80)
         score_eval_base = _evaluate_score(merged_test["ACTUAL_TOTAL"], base_total, merged_test["ACTUAL_MARGIN"], base_margin)
+        paired["score_total"].append(pd.DataFrame({
+            "date": merged_test["GAME_DATE"].to_numpy(),
+            "diff": ((merged_test["ACTUAL_TOTAL"] - pred_total_model).abs() - (merged_test["ACTUAL_TOTAL"] - base_total).abs()).to_numpy(),
+        }))
+        paired["score_margin"].append(pd.DataFrame({
+            "date": merged_test["GAME_DATE"].to_numpy(),
+            "diff": ((merged_test["ACTUAL_MARGIN"] - pred_margin_model).abs() - (merged_test["ACTUAL_MARGIN"] - base_margin).abs()).to_numpy(),
+        }))
 
         # ----------------------------------------------------
         # 3. PLAYER MODEL WALK-FORWARD
@@ -362,10 +400,17 @@ def run_walk_forward_backtest():
                 "total_samples": target_samples,
             }
 
+    significance = {}
+    for key, frames in paired.items():
+        df_pair = pd.concat(frames, ignore_index=True)
+        significance[key] = paired_block_bootstrap(df_pair["diff"].to_numpy(), df_pair["date"].astype(str).to_numpy())
+
     summary = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "provenance": _provenance(),
         "total_unseen_games": total_test_games,
         "folds_evaluated": len(folds),
+        "significance_vs_baseline": significance,
         "aggregate_win": {
             "production_brier": round(avg_prod_brier, 4),
             "production_auc": round(avg_prod_auc, 4),
@@ -401,9 +446,18 @@ def run_walk_forward_backtest():
     reb_sum = player_summary.get("reb", {})
     ast_sum = player_summary.get("ast", {})
 
+    prov = summary["provenance"]
+    prov_str = ", ".join(
+        f"{fam.upper()} `{prov[fam]['version']}` (eğitim {str(prov[fam]['trained_at'])[:10]})" for fam in ("win", "score", "player") if fam in prov
+    )
+    agg_w, agg_s = summary["aggregate_win"], summary["aggregate_score"]
+
     md_content = f"""# Çok Sezonlu Expanding-Window Walk-Forward Backtest Raporu
 
+> Bu dosya `scripts/walk_forward_benchmark.py` tarafından üretilir; elle düzenlenmez.
+
 **Rapor Tarihi:** {summary['timestamp']}  
+**Ölçülen Üretim Yapılandırması:** {prov_str}; git `{prov.get('git_commit')}`  
 **Yöntem:** Kesintisiz Genişleyen Zaman Pencereleri (Expanding Window). Her sezon yalnızca önceki tamamlanmış sezonlarla eğitilen modellerle test edilmiştir; geleceğe dönük hiçbir bilgi sızıntısı (leakage) bulunmamaktadır.  
 **Toplam Görülmemiş Test Maçı:** {total_test_games} maç (5 ayrı NBA sezonu)
 
@@ -417,21 +471,21 @@ def run_walk_forward_backtest():
 | **Logistic Regression (Üretim Mimarisi)** | **{summary['aggregate_win']['production_brier']:.4f}** | **{summary['aggregate_win']['production_auc']:.4f}** | **%{summary['aggregate_win']['production_accuracy']*100:.2f}** |
 | **Lojistik Regresyon Benchmark** | {summary['aggregate_win']['logistic_benchmark_brier']:.4f} | {summary['aggregate_win']['logistic_benchmark_auc']:.4f} | %{summary['aggregate_win']['logistic_benchmark_accuracy']*100:.2f} |
 | **Saf Elo Baseline** | {summary['aggregate_win']['elo_brier']:.4f} | {summary['aggregate_win']['elo_auc']:.4f} | %{summary['aggregate_win']['elo_accuracy']*100:.2f} |
-| **Elo Karşısında Kazanım (Üretim)** | **{summary['aggregate_win']['prod_brier_improvement_vs_elo']:+.4f} (Daha Kalibre)** | **+{summary['aggregate_win']['production_auc'] - summary['aggregate_win']['elo_auc']:.4f}** | **+{(summary['aggregate_win']['production_accuracy'] - summary['aggregate_win']['elo_accuracy'])*100:.2f} puan** |
+| **Elo Karşısında Fark (Üretim; Brier için + = daha iyi)** | **{_signed(agg_w['prod_brier_improvement_vs_elo'], 4)}** | **{_signed(agg_w['production_auc'] - agg_w['elo_auc'], 4)}** | **{_signed((agg_w['production_accuracy'] - agg_w['elo_accuracy']) * 100, 2)} puan** |
 
 ### Takım Skoru (SCORE Model) vs. Son 10 Maç Sayıları Baseline
 | Metrik | Model (Çok Sezonlu) | Son 10 Maç Taban Çizgisi | Fark / Kazanım |
 |---|---:|---:|---:|
-| **Toplam Skor MAE** | **{summary['aggregate_score']['model_total_mae']:.2f} sayı** | {summary['aggregate_score']['baseline_total_mae']:.2f} sayı | **-{summary['aggregate_score']['total_mae_reduction']:.2f} sayı daha az hata** |
-| **Sayı Farkı (Margin) MAE** | **{summary['aggregate_score']['model_margin_mae']:.2f} sayı** | {summary['aggregate_score']['baseline_margin_mae']:.2f} sayı | **-{summary['aggregate_score']['margin_mae_reduction']:.2f} sayı daha az hata** |
-| **Conformal %80 Kapsama** | **%{summary['aggregate_score']['average_conformal_80_coverage']:.1f}** | Sabit ±12 (~%47) | **Tam İstatistiksel Kalibrasyon** |
+| **Toplam Skor MAE** | **{agg_s['model_total_mae']:.2f} sayı** | {agg_s['baseline_total_mae']:.2f} sayı | **{_signed(-agg_s['total_mae_reduction'], 2)} sayı** |
+| **Sayı Farkı (Margin) MAE** | **{agg_s['model_margin_mae']:.2f} sayı** | {agg_s['baseline_margin_mae']:.2f} sayı | **{_signed(-agg_s['margin_mae_reduction'], 2)} sayı** |
+| **Conformal %80 Kapsama (toplam)** | **%{agg_s['average_conformal_80_coverage']:.1f}** | - | hedef %80 |
 
 ### Oyuncu Tahminleri (PLAYER Model) vs. EMA-10 Ortalaması
 | Hedef İstatistik | LightGBM Modeli MAE | EMA-10 Taban Çizgisi | MAE İyileşmesi | Toplam Test Satırı |
 |---|---:|---:|---:|---:|
-| **Sayı (PTS)** | **{pts_sum.get('model_mae', 0):.2f}** | {pts_sum.get('baseline_mae', 0):.2f} | **-{pts_sum.get('mae_reduction', 0):.2f} sayı** | {pts_sum.get('total_samples', 0):,} |
-| **Ribaund (REB)** | **{reb_sum.get('model_mae', 0):.2f}** | {reb_sum.get('baseline_mae', 0):.2f} | **-{reb_sum.get('mae_reduction', 0):.2f} rib** | {reb_sum.get('total_samples', 0):,} |
-| **Asist (AST)** | **{ast_sum.get('model_mae', 0):.2f}** | {ast_sum.get('baseline_mae', 0):.2f} | **-{ast_sum.get('mae_reduction', 0):.2f} ast** | {ast_sum.get('total_samples', 0):,} |
+| **Sayı (PTS)** | **{pts_sum.get('model_mae', 0):.2f}** | {pts_sum.get('baseline_mae', 0):.2f} | **{_signed(-pts_sum.get('mae_reduction', 0), 3)} sayı** | {pts_sum.get('total_samples', 0):,} |
+| **Ribaund (REB)** | **{reb_sum.get('model_mae', 0):.2f}** | {reb_sum.get('baseline_mae', 0):.2f} | **{_signed(-reb_sum.get('mae_reduction', 0), 3)} rib** | {reb_sum.get('total_samples', 0):,} |
+| **Asist (AST)** | **{ast_sum.get('model_mae', 0):.2f}** | {ast_sum.get('baseline_mae', 0):.2f} | **{_signed(-ast_sum.get('mae_reduction', 0), 3)} ast** | {ast_sum.get('total_samples', 0):,} |
 
 ---
 
@@ -456,11 +510,43 @@ def run_walk_forward_backtest():
     md_content += """
 ---
 
-## 3. Bilimsel Değerlendirme ve Çıkarımlar
+## 3. Anlamlılık ve Sezon Bazında Tutarlılık
 
-1. **Sürekli Üstünlük:** Model, test edilen her sezonda (2021-22'den 2025-26'ya kadar) saf Elo, hareketli skor taban çizgisi ve son-5 oyuncu ortalamasını istikrarlı bir biçimde geride bırakmaktadır.
-2. **Doğrulanmış Conformal Aralıklar:** Conformal aralıklar tüm bağımsız sezonlarda hedeflenen %80 bant genişliğine sadık kalmaktadır.
-3. **Zaman Serisi Güvencesi:** Hiçbir katlamada gelecekteki maçlar geriye dönük kullanılmamıştır.
+Fark = model kaybı - baseline kaybı (negatif = model daha iyi). %95 aralık, aynı tarihteki maçlar birlikte örneklenerek (date-block, 2000 tekrar) hesaplanır.
+
+| Karşılaştırma | Ortalama Fark | %95 CI | Model daha iyi olasılığı | Yorum | Kazanılan Sezon |
+|---|---:|---:|---:|---|---:|
+"""
+    n_folds = len(folds)
+    season_wins = {
+        "win_brier": sum(f["win"]["production"]["brier"] < f["win"]["pregame_elo"]["brier"] for f in folds),
+        "score_total": sum(f["score"]["model"]["total_mae"] < f["score"]["rolling_baseline"]["total_mae"] for f in folds),
+        "score_margin": sum(f["score"]["model"]["margin_mae"] < f["score"]["rolling_baseline"]["margin_mae"] for f in folds),
+    }
+    labels = {
+        "win_brier": "WIN Brier vs saf Elo",
+        "score_total": "SCORE toplam MAE vs son-10",
+        "score_margin": "SCORE margin MAE vs son-10",
+    }
+    for key, label in labels.items():
+        ci = significance.get(key)
+        if ci:
+            digits = 4 if key == "win_brier" else 3
+            md_content += (
+                f"| {label} | {_signed(ci['mean_diff'], digits)} | [{_signed(ci['ci_low'], digits)}, {_signed(ci['ci_high'], digits)}] "
+                f"| %{ci['p_model_better'] * 100:.1f} | {verdict(ci)} | {season_wins[key]}/{n_folds} |\n"
+            )
+    for target_name in ["pts", "reb", "ast"]:
+        won = sum(f["player"].get(target_name, {}).get("mae_reduction", 0) > 0 for f in folds)
+        md_content += f"| PLAYER {target_name.upper()} MAE vs EMA-10 | {_signed(-player_summary.get(target_name, {}).get('mae_reduction', 0), 3)} | - | - | satır bazında, CI hesaplanmadı | {won}/{n_folds} |\n"
+
+    coverages = [f["score"]["model"].get("conformal_80_total_coverage") for f in folds]
+    coverages = [c for c in coverages if isinstance(c, (int, float))]
+    if coverages:
+        md_content += f"""
+Conformal %80 toplam kapsaması sezonlar arasında %{min(coverages):.1f} - %{max(coverages):.1f} aralığında.
+
+Not: Buradaki SCORE toplamı ham pace x reyting tahminidir; üretimdeki temporal OOF artık düzeltmesi bu benchmark'ta uygulanmaz.
 """
 
     rep_md = ROOT / "reports/evaluation/multi_season_walk_forward_backtest.md"

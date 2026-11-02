@@ -12,6 +12,8 @@ Detaylı iş akışları ve standartlar `.agents/skills/` altındadır; ilgili g
 - **Uygulamayı Başlat (Backend + Frontend):** `./scripts/start_all.sh` (veya `python3 main.py --serve-api`)
 - **Günlük Veri Güncelleme:** `PYTHONPATH=. python3 main.py --update-data`
 - **Maç Öncesi Tahmin Kaydı (Paper Trading):** `PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --season 2026-27`
+- **Paper Trading Raporu (Elo / son-10 baseline, bootstrap CI):** `PYTHONPATH=. python3 scripts/paper_ledger_report.py --season 2026-27`
+- **Walk-Forward Benchmark Raporu:** `PYTHONPATH=. python3 scripts/walk_forward_benchmark.py`
 - **Frontend SQLite Store Derleme:** `PYTHONPATH=. python3 scripts/build_frontend_store.py`
 - **Testleri Çalıştır:** `PYTHONPATH=. python3 -m pytest tests -q`
 - **Frontend Geliştirme & Doğrulama:** `cd frontend && npm run lint:design && npm run build`
@@ -19,16 +21,17 @@ Detaylı iş akışları ve standartlar `.agents/skills/` altındadır; ilgili g
 
 ## Mimari Özeti & Dokümantasyon Haritası
 - **Aktif Üretim Modelleri (`models/production/`):**
-  - `win_model.pkl`: 11 özellikli Lojistik Regresyon (Release `v12`: Elo farkı, dinlenme, B2B, temiz net rating, `ABS_DIFF`, `MISSING_ROT_MINS_DIFF`, `ROT_CONTINUITY_DIFF`, `ACTIVE_WT_GS_DIFF`).
-  - `score_model_*.pkl`: Ridge pace (2 özellik), hücum reytingi (2 özellik her biri), Ridge sayı farkı (WIN girdi seti) ve temporal OOF artık düzeltmeleri; hedefler gerçek sayılardır.
-  - `player_model_*.pkl`: 21 özellikli LightGBM (PTS için L1 hedefi), pozisyon bayrakları ve pozisyona izin verilen rakip savunması.
+  - Release `v15` (`config/production_artifacts.yaml`; her `*_metadata.json` aynı sürümü taşır).
+  - `win_model.pkl`: 11 özellikli Lojistik Regresyon (Elo farkı, dinlenme, B2B, temiz net rating, `ABS_DIFF`, `MISSING_ROT_MINS_DIFF`, `ROT_CONTINUITY_DIFF`, `ACTIVE_WT_GS_DIFF`).
+  - `score_model_*.pkl`: Ridge pace (2 özellik), hücum reytingi (4 özellik her biri), Ridge sayı farkı (11 özellik, WIN girdi seti) ve temporal OOF artık düzeltmeleri; hedefler gerçek sayılardır.
+  - `player_model_*.pkl`: 24 özellikli LightGBM (tüm hedeflerde L1 medyan), pozisyon bayrakları, pozisyona izin verilen rakip savunması ve takım rotasyon bağlamı.
 - **Referans Belgeler (Tek Kaynak Sırası):**
   1. `ARTIFACT_REGISTRY.md` — Veri, model ve rapor envanteri.
   2. `PROJECT_STATUS.md` — Güncel sezon, model durumu ve bilinen sınırlar.
   3. `docs/reports/models/*.md` — Her modelin kendi mimari, denetim ve reddedilen deney raporu (`win_probability_model.md`, `score_model.md`, `player_props_model.md`).
   4. `docs/reports/nba_models_comprehensive_report.md` — Ana rapor indeksi.
   5. `AI_CONTEXT.md` — Makine okunabilir özet ve veri/API şema kataloğu.
-  6. Otomatik raporlar (`model_benchmarks.md`, `multi_season_walk_forward_backtest.md`) pipeline tarafından üretilir; elle düzenlenmez.
+  6. Otomatik raporlar (`reports/evaluation/multi_season_walk_forward_backtest.md` <- `scripts/walk_forward_benchmark.py`, `reports/evaluation/paper_ledger_2026_27.md` <- `scripts/paper_ledger_report.py`) elle düzenlenmez; başlık rakamları bu raporlardan alınır. Model yeniden eğitildiğinde walk-forward raporu yeniden üretilir (`tests/test_docs_consistency.py` sürüm uyuşmazlığını yakalar).
 
 ## Kod ve Bağlam Verimliliği
 - **Sıfır Emoji:** Kod, yorum satırı, docstring, commit mesajı, UI ve raporlarda kesinlikle emoji kullanma.

@@ -45,7 +45,7 @@
 |---|---|:---:|---|
 | **Sezon SQLite Veritabanı** | `data/frontend_store/season_{YYYY_YY}.db` | **ACTIVE** | Maçlar, detaylı kutu istatistikleri, oyuncu formları ve PBP anları |
 | **Küresel SQLite Veritabanı** | `data/frontend_store/global.db` | **ACTIVE** | Oyuncu profilleri, takas geçmişi ve lig geneli özetler |
-| **Canlı Tahmin Kaydı** | `data/predictions/shadow_predictions.jsonl` | **ACTIVE** | API'den üretilen canlı maç öncesi tahmin kayıtları |
+| **Canlı Tahmin Kaydı** | `data/predictions/shadow_predictions_log.jsonl` | **ACTIVE** | API çağrılarının tahmin kaydı (tip-off öncesi garanti edilmez; prospektif ölçüm defterden yapılır) |
 | **Paper Trading Defteri** | `data/predictions/paper_ledger_2026_27.jsonl` | **ACTIVE** | 2026-27 kilitli sezon maç öncesi dondurulmuş tahminler |
 
 ---
@@ -55,8 +55,9 @@
 | Rapor | Yol | Kapsam |
 |---|---|---|
 | **Kapsamlı Ana Rapor** | [`docs/reports/nba_models_comprehensive_report.md`](docs/reports/nba_models_comprehensive_report.md) | Sistem mimarisi, model aileleri ve entegrasyon |
-| **Model Benchmark Karnesi** | [`docs/reports/model_benchmarks.md`](docs/reports/model_benchmarks.md) | 5 sezonluk expanding walk-forward sonuçları |
-| **WIN Modeli Raporu** | [`docs/reports/models/win_probability_model.md`](docs/reports/models/win_probability_model.md) | Release `v12` 11 özellikli WIN modeli denetimi |
+| **Walk-Forward Benchmark (otomatik)** | [`reports/evaluation/multi_season_walk_forward_backtest.md`](reports/evaluation/multi_season_walk_forward_backtest.md) | 5 sezonluk expanding walk-forward, baseline'lar ve bootstrap CI (`scripts/walk_forward_benchmark.py`) |
+| **Paper Trading Raporu (otomatik)** | [`reports/evaluation/paper_ledger_2026_27.md`](reports/evaluation/paper_ledger_2026_27.md) | 2026-27 dondurulmuş tahminler vs saf Elo / son-10, sürüm bazında (`scripts/paper_ledger_report.py`) |
+| **WIN Modeli Raporu** | [`docs/reports/models/win_probability_model.md`](docs/reports/models/win_probability_model.md) | 11 özellikli WIN modeli (özellik seti `v12`, aktif `v15`) denetimi |
 | **SCORE Modeli Raporu** | [`docs/reports/models/score_model.md`](docs/reports/models/score_model.md) | Tempo, hücum reytingi ve fark modelleri |
 | **PLAYER Modeli Raporu** | [`docs/reports/models/player_props_model.md`](docs/reports/models/player_props_model.md) | PTS/REB/AST modelleri ve rakip izinleri |
 | **Rotasyon Ayrıştırma Deneyi**| [`reports/backtests/2026-10-25_win_rotation_continuity/README.md`](reports/backtests/2026-10-25_win_rotation_continuity/README.md) | `v12` rotasyon devamlılığı ve eksik dakika deneyi |

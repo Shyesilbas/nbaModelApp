@@ -86,7 +86,7 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 ### 4.1 Win Probability Model
 - **Artifact**: `models/production/win_model.pkl`, features in `win_features.json`, contract `config/features/win.yaml`.
 - **Algorithm**: `SimpleImputer -> StandardScaler -> LogisticRegression(C=1)`, uncalibrated. Logistic, L1 logistic and LightGBM are compared on expanding-window Brier; logistic wins and isotonic/sigmoid calibration does not improve it.
-- **Features (7)**: `ELO_DIFF`, `IS_HOME`, `CLEAN_NET_RTG_DIFF_LAST_10`, `WINRATE_DIFF_LAST_10`, `REST_DIFF`, `IS_B2B`, `OPP_IS_B2B`, chosen by forward selection on walk-forward folds. `WINRATE_DIFF_LAST_10` has a negative coefficient on purpose: at equal Elo and net rating a higher win rate reflects close-game luck that regresses.
+- **Features (11, release `v15`)**: `ELO_DIFF`, `IS_HOME`, `CLEAN_NET_RTG_DIFF_LAST_10`, `WINRATE_DIFF_LAST_10`, `REST_DIFF`, `IS_B2B`, `OPP_IS_B2B` (forward selection on walk-forward folds), plus roster availability `ABS_DIFF` and the decoupled rotation features `MISSING_ROT_MINS_DIFF`, `ROT_CONTINUITY_DIFF`, `ACTIVE_WT_GS_DIFF` (added in `v12`, `reports/backtests/2026-10-25_win_rotation_continuity/`). `WINRATE_DIFF_LAST_10` has a negative coefficient on purpose: at equal Elo and net rating a higher win rate reflects close-game luck that regresses.
 - **Elo**: pre-game Elo comes from the complete raw game log (the same chain live inference uses), not from the model-ready rows, which lack each team's first games of a season.
 - **Serving**: the first 6 games of a season blend in the pure Elo probability (weight 0.4 decaying to 0); features themselves are not shrunk.
 
@@ -94,8 +94,8 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 - **Artifacts**: `score_model_{pace,home_rtg,away_rtg,margin,ridge_total,ridge_margin}.pkl` and metadata; contract `config/features/score.yaml`.
 - **Structure**: standardized `RidgeCV` models
   1. Pace: `PACE_LAST_10`, `OPP_PACE_LAST_10`.
-  2. Home and away offensive rating: `OFF_RTG_LAST_10`, `OPP_DEF_RTG_LAST_10` (from each side's row).
-  3. Margin: the WIN inputs (`ELO_DIFF`, `CLEAN_NET_RTG_DIFF_LAST_10`, `WINRATE_DIFF_LAST_10`, rest days, back-to-backs).
+  2. Home and away offensive rating: `OFF_RTG_LAST_10`, `OPP_DEF_RTG_LAST_10`, `ABS_DELTA`, `OPP_ABS_DELTA` (from each side's row).
+  3. Margin (11 features): the WIN inputs (`ELO_DIFF`, `CLEAN_NET_RTG_DIFF_LAST_10`, `WINRATE_DIFF_LAST_10`, rest days, back-to-backs, `ABS_DIFF`) and the rotation features (`MISSING_ROT_MINS_DIFF`, `ROT_CONTINUITY_DIFF`, `ACTIVE_WT_GS_DIFF`, added in `v13`).
 - **Total** = pace x (home rating + away rating) / 100; home/away scores = (total +/- margin) / 2.
 - **Residual correction**: Ridge models on playoff, back-to-back and rest-advantage indicators, fit on temporal out-of-fold residuals.
 - **Targets** are actual final points from the box scores. `PACE x OFF_RTG / 100` was used before and undercounted overtime games by ~13 points because PACE is per 48 minutes.
@@ -103,8 +103,8 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 
 ### 4.3 Player Performance Model
 - **Artifacts**: `player_model_{pts,reb,ast}.pkl`, `player_features.pkl`; contract `config/features/player.yaml` (explicit feature list).
-- **Structure**: one LightGBM regressor per target (L1 objective for PTS, which is right-skewed and scored on MAE).
-- **Features (21)**: last-5 and EMA-10 per stat, per-minute production, minutes (last 3, EMA-10, trend), usage EMA-10, rest, home, playoff, position flags (`IS_GUARD`, `IS_BIG`) and the opponent's last-10 allowance to the player's position group (`OPP_POS_{PTS,REB,AST}_ALLOWED_LAST_10`, built by `add_player_matchup_features` for training and inference alike).
+- **Structure**: one LightGBM regressor per target, L1 (median) objective for PTS, REB and AST since `v15` (all scored on MAE).
+- **Features (24)**: last-5 and EMA-10 per stat, per-minute production, minutes (last 3, EMA-10, trend), usage EMA-10, rest, home, playoff, position flags (`IS_GUARD`, `IS_BIG`), the opponent's last-10 allowance to the player's position group (`OPP_POS_{PTS,REB,AST}_ALLOWED_LAST_10`, built by `add_player_matchup_features` for training and inference alike) and team rotation context (`MISSING_ROT_MINS`, `ROT_CONTINUITY`, `ACTIVE_WT_GS`, added in `v14`).
 - **Positions** come from `data/reference/player_metadata.csv`; the primary (first listed) official position decides (F-G -> WING).
 - **No residual correction**: the former Ridge layer raised PTS MAE in every walk-forward season and was retired.
 
@@ -121,43 +121,15 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 
 ## 6. Empirical Performance (Walk-Forward)
 
-Each season is predicted by models fitted only on earlier seasons (`python -m scripts.walk_forward_benchmark`, full report in `reports/evaluation/multi_season_walk_forward_backtest.md`). Baselines: Elo with home-court advantage; each side's last-10 points scored and allowed; each player's EMA-10.
+Each season is predicted by models fitted only on earlier seasons. The per-season tables, baselines (Elo with home-court advantage; each side's last-10 points scored and allowed; each player's EMA-10) and date-block bootstrap intervals live in the generated report `reports/evaluation/multi_season_walk_forward_backtest.md` (`python -m scripts.walk_forward_benchmark`). They are not copied here so that this document cannot fall behind a retrain.
 
-### 6.1 Win Probability
-
-| Season | Games | Accuracy | ROC-AUC | Brier | Elo AUC | Elo Brier |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| 2021-22 | 1,256 | 65.13% | 0.6903 | 0.2210 | 0.6919 | 0.2206 |
-| 2022-23 | 1,248 | 62.74% | 0.6502 | 0.2277 | 0.6443 | 0.2290 |
-| 2023-24 | 1,259 | 65.77% | 0.7271 | 0.2090 | 0.7169 | 0.2114 |
-| 2024-25 | 1,256 | 66.48% | 0.7289 | 0.2084 | 0.7187 | 0.2118 |
-| 2025-26 | 1,257 | 67.94% | 0.7389 | 0.2046 | 0.7362 | 0.2058 |
-
-### 6.2 Score
-
-| Season | Total MAE | Baseline Total MAE | Margin MAE | Baseline Margin MAE | 80% coverage (total) |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| 2021-22 | 14.68 | 14.62 | 11.15 | 11.56 | 80.5% |
-| 2022-23 | 14.89 | 14.97 | 10.29 | 10.57 | 80.3% |
-| 2023-24 | 14.72 | 14.78 | 11.04 | 11.58 | 82.5% |
-| 2024-25 | 14.92 | 15.02 | 10.97 | 11.50 | 80.5% |
-| 2025-26 | 15.30 | 15.38 | 11.40 | 11.86 | 79.0% |
-
-### 6.3 Player (MAE, model / EMA-10 baseline)
-
-| Season | PTS | REB | AST |
-| :--- | :---: | :---: | :---: |
-| 2021-22 | 4.55 / 4.63 | 1.93 / 1.94 | 1.30 / 1.30 |
-| 2022-23 | 4.59 / 4.69 | 1.92 / 1.94 | 1.30 / 1.31 |
-| 2023-24 | 4.47 / 4.57 | 1.89 / 1.90 | 1.34 / 1.35 |
-| 2024-25 | 4.56 / 4.66 | 1.92 / 1.94 | 1.33 / 1.35 |
-| 2025-26 | 4.51 / 4.61 | 1.89 / 1.92 | 1.34 / 1.35 |
+Prospective results for the locked 2026-27 season: `reports/evaluation/paper_ledger_2026_27.md` (`scripts/paper_ledger_report.py`).
 
 ---
 
 ## 7. Known Limitations
 
-1. **Near the pregame ceiling**: WIN beats Elo + home court by only ~0.002 Brier on average and SCORE totals match a last-10-points baseline; the margin model and player PTS carry the real gains. Further accuracy needs new information (injury/lineup data, market lines).
+1. **Near the pregame ceiling**: over five walk-forward seasons WIN beats Elo + home court by ~0.006 Brier (significant) while SCORE totals are not significantly better than a last-10-points baseline; the margin model and player projections carry the real gains. Further accuracy needs new information (injury/lineup data, market lines).
 2. **Player projections are conditional on playing**: the team-score excess (~20%) is cut from each player by his chance of sitting (`src/inference/team_reconciliation.py`), so regulars move little; the live player rows and opponent allowance come from the raw box scores (`reports/audits/2026-10-22_player_pipeline_audit/`).
 3. **Opening 2026-27 Elo** includes a roster-turnover adjustment that the training seasons never had; early-season WIN predictions rely on it.
 4. **The 2025-26 holdout has been used for many decisions**; the walk-forward averages above are the more reliable estimate.

@@ -1,9 +1,9 @@
-# WIN Probability Model Specification & Audit (Release v12)
+# WIN Probability Model Specification & Audit (feature set v12, active v15)
 
 > **Model Artifact:** `models/production/win_model.pkl`  
 > **Features Manifest:** `models/production/win_features.json` (11 features)  
 > **Metadata:** `models/production/win_metadata.json`  
-> **Active Release:** `v12`  
+> **Active Release:** `v15` (same 11-feature set promoted in `v12`, refit in `v15`; the tables below are the `v12` promotion record. Current walk-forward figures: `reports/evaluation/multi_season_walk_forward_backtest.md`)  
 > **Algorithm:** Uncalibrated Logistic Regression with StandardScaler and Mean Imputer  
 > **Target:** `WIN` (Binary: 1 if team wins, 0 if team loses)  
 > **Evaluation Window:** 5 Unseen Expanding Walk-Forward Seasons (`2021-22` to `2025-26`, $N = 6,276$ games) + Locked `2026-27`

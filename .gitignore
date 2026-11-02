@@ -92,3 +92,12 @@ graphify-out/
 .env
 data/raw/odds/
 data/odds/
+
+# Run-time reports rewritten by every data update or ad hoc prediction run; tracked copies go stale.
+reports/predictions/
+reports/operations/data_freshness_report.*
+reports/operations/pipeline_sync_report_*.md
+reports/operations/local_ingestion_report.md
+reports/operations/data_update_report.md
+reports/operations/team_model_ready_v3_report.md
+reports/audits/opponent_feature_report.md
