@@ -34,7 +34,7 @@ are never counted (`_raw_season_games` drops them; player logs drop game ids sta
 1. **Elo across seasons.** `ContinuousEloEngine` keeps one rating per franchise through all seasons. At each new
    season ratings regress toward 1500: `new = 0.6 * old + 0.4 * 1500` (`SEASON_REGRESSION = 0.6`; K = 10, home
    court = 50 points). So Elo already carries last season's strength into game 1.
-2. **ELO_DIFF is a model feature.** The logistic regression (8 features) already sees the Elo difference, so the model
+2. **ELO_DIFF is a model feature.** The logistic regression (11 features in `v15`) already sees the Elo difference, so the model
    is Elo-led early without any blend.
 3. **Extra pure-Elo blend.** After the model produces `p_model`, the served probability is
    `(1 - w) * p_model + w * p_elo` with `w = 0.40 * (1 - n_min / 6)` for `n_min < 6`, else 0.

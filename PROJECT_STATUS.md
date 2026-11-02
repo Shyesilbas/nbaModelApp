@@ -5,7 +5,7 @@ This file tracks the overall status of the project, active releases, and product
 ## Current Release & Phase
 
 **Release: v15** (Active production artifacts: WIN `v15`, SCORE `v15`, PLAYER `v15`).
-- WIN model `v12/v15` decouples composite roster absence into pure missing rotation minutes (`MISSING_ROT_MINS_DIFF`), lineup continuity/chemistry (`ROT_CONTINUITY_DIFF`), and active lineup quality (`ACTIVE_WT_GS_DIFF`). All-time best 5-season walk-forward calibration: Brier **`0.2098`** (breaking the 0.2100 threshold) and Log-Loss **`0.6065`** (ECE: **%1.64**).
+- WIN model `v12/v15` decouples composite roster absence into pure missing rotation minutes (`MISSING_ROT_MINS_DIFF`), lineup continuity/chemistry (`ROT_CONTINUITY_DIFF`), and active lineup quality (`ACTIVE_WT_GS_DIFF`). 5-season walk-forward: Brier **`0.2098`** and Log-Loss **`0.6065`** (games-weighted over the folds of `reports/evaluation/multi_season_walk_forward_backtest.md`).
 - SCORE model `v13/v15` incorporates the decoupled rotation features into the Margin model (`score_model_margin.pkl`), reducing 5-season walk-forward Margin MAE from `10.832` to **`10.809`** pts (winning 4 of 5 seasons) and lifting point-spread moneyline accuracy to **`66.67%`** across 6,276 matches.
 - PLAYER model `v15` adopts unified L1 median objectives across all props (`pts`, `reb`, `ast`) and tree regularization, reducing 5-season walk-forward PTS MAE to **`4.460`** pts, REB MAE to **`1.864`** pts, and AST MAE to **`1.279`** pts across 140,378 player-game rows (winning 100% of the 5 unseen seasons).
 - 100% train-serve parity guaranteed between training datasets and live match pre-game features across all three model families.

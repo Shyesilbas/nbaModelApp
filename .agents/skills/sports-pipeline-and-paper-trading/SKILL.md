@@ -16,7 +16,7 @@ Follow this workflow when operating or modifying the data ingestion pipeline, fe
    - Never read full `.csv`, `.parquet`, `.jsonl`, or `.db` files directly into context.
    - To inspect schemas or sample rows, use `head -n 5 <file>`, Python one-liners printing `.columns` and `.shape`, or `sqlite3 <db> "SELECT ... LIMIT 5;"`.
 2. **Centralized Path Resolution**:
-   - Never hardcode season directory strings. Always use the project's path resolver (`src.core.data_paths.get_data_paths(season)` or `src/config.py`) and accept `--season` in CLI scripts.
+   - Never hardcode season directory strings. Always use the project's path resolver (`src.core.data_paths.get_data_paths(season)`, defaults in `src/core/season_utils.py`) and accept `--season` in CLI scripts.
 3. **No Silent Historical Fetching**:
    - Do not re-fetch historical completed seasons from external APIs unless explicitly requested by the user.
 

@@ -101,3 +101,7 @@ reports/operations/local_ingestion_report.md
 reports/operations/data_update_report.md
 reports/operations/team_model_ready_v3_report.md
 reports/audits/opponent_feature_report.md
+# Ad hoc evaluation outputs (scripts/generate_report.py, scripts/detect_drift_and_leakage.py, dry-run retrains).
+reports/evaluation/season_*_evaluation_report.md
+reports/evaluation/compare_*.md
+reports/audits/drift_and_leakage_*.md

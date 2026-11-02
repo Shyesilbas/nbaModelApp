@@ -9,7 +9,7 @@ Detaylı iş akışları ve standartlar `.agents/skills/` altındadır; ilgili g
 - **`restrained-ui-design-standard`** (`.agents/skills/restrained-ui-design-standard/SKILL.md`): Apple/Spotify-tier sade arayüz tasarım kuralları, semantik tokenlar, radius tavanı (`rounded-md`), 4 veri durumu (loading/empty/error/pending) ve iş bitimi zorunlu lint/regex kontrolleri.
 
 ## Hızlı Komutlar
-- **Uygulamayı Başlat (Backend + Frontend):** `./scripts/start_all.sh` (veya `python3 main.py --serve-api`)
+- **Uygulamayı Başlat (Backend + Frontend):** `./scripts/start_all.sh` (yalnız API: `.venv/bin/python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001`)
 - **Günlük Veri Güncelleme:** `PYTHONPATH=. python3 main.py --update-data`
 - **Maç Öncesi Tahmin Kaydı (Paper Trading):** `PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --season 2026-27`
 - **Paper Trading Raporu (Elo / son-10 baseline, bootstrap CI):** `PYTHONPATH=. python3 scripts/paper_ledger_report.py --season 2026-27`

@@ -86,7 +86,7 @@ Oyuncu sakatlıklarının veya kadro değişikliklerinin takım gücüne etkisin
      - sıralama: aynı importance formülü, bu 20 maçlık pencerede oynanan maçların ortalamasıyla.
    - `*_PLAYED_COUNT` oyuncunun bu maçta oynayıp oynamadığını kullanır (`ABS_DELTA` ile aynı varsayım: maç öncesi sakatlık raporundan bilinir). `*_MINUTES_SUM` artık bu maçın gerçek dakikası değil, oynayan core oyuncuların **beklenen** (pencere ortalaması) dakikasıdır.
    - Eski sürüm sezonun tamamından core seçiyor ve aynı maçın gerçek dakikasını kullanıyordu; `tests/test_core_player_availability.py` bu iki sızıntıyı test eder (eski kod "bu maçın dakikası değişirse feature değişmemeli" testinde 90 → 15 değişiyordu).
-   - Bu feature'ları kullanan SCORE v9/v10 modelleri 2026-10-04'te `models/production/replaced_leaky/` altına taşınmıştı; aktif üretim modelleri (WIN v10, SCORE v10, PLAYER v9) bu kolonları kullanmaz. Veri setleri yeni kodla yeniden üretildi; walk-forward benchmark sonuçları birebir aynı kaldı.
+   - Bu feature'ları kullanan SCORE v9/v10 modelleri 2026-10-04'te `models/production/replaced_leaky/` altına taşınmıştı; o günden bu yana hiçbir üretim modeli (aktif `v15` dahil; bkz. `config/features/`) bu kolonları kullanmaz. Veri setleri yeni kodla yeniden üretildi; walk-forward benchmark sonuçları birebir aynı kaldı.
 
 ---
 
