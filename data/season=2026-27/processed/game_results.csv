@@ -154,3 +154,7 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600151,2026-10-31,MIL,Bucks,111,CLE,Cavaliers,136,CLE,MIL,Regular Season,False,Final,2.0,,,0,0,False,False,Fiserv Forum,"Milwaukee, WI"
 0022600152,2026-10-31,SAS,Spurs,121,MIN,Timberwolves,111,SAS,MIN,Regular Season,False,Final,2.0,,,0,0,False,False,Frost Bank Center,"San Antonio, TX"
 0022600153,2026-10-31,HOU,Rockets,119,OKC,Thunder,98,HOU,OKC,Regular Season,False,Final,2.0,,,0,0,False,False,Toyota Center,"Houston, TX"
+0022600154,2026-11-01,ORL,Magic,97,BOS,Celtics,108,BOS,ORL,Regular Season,False,Final,2.0,,,0,0,False,False,Kia Center,"Orlando, FL"
+0022600155,2026-11-01,IND,Pacers,90,BKN,Nets,98,BKN,IND,Regular Season,False,Final,2.0,,,0,0,False,False,Gainbridge Fieldhouse,"Indianapolis, IN"
+0022600156,2026-11-01,GSW,Warriors,124,LAC,Clippers,112,GSW,LAC,Regular Season,False,Final,2.0,,,0,0,False,False,Chase Center,"San Francisco, CA"
+0022600157,2026-11-01,LAL,Lakers,131,TOR,Raptors,125,LAL,TOR,Regular Season,False,Final,2.0,,,0,0,False,False,Crypto.com Arena,"Los Angeles, CA"
