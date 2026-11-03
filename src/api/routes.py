@@ -53,7 +53,7 @@ from .services.frontend_data import (
     get_team_rosters,
     get_trades,
 )
-from .services.paper_trading import paper_trading_report
+from .services.paper_trading import backtest_calibration, paper_trading_report
 from .services.player_prediction import predict_players
 from .services.score_prediction import predict_score
 from .services.status import get_model_status
@@ -156,6 +156,11 @@ def health():
 @data_router.get("/paper-trading")
 def frontend_paper_trading(season: str = None):
     return _run_endpoint(lambda: paper_trading_report(season or get_default_season()))
+
+
+@data_router.get("/backtest-calibration")
+def frontend_backtest_calibration():
+    return _run_endpoint(backtest_calibration)
 
 
 @data_router.get("/seasons")

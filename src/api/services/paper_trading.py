@@ -216,3 +216,17 @@ def paper_trading_report(season: str) -> Dict[str, Any]:
     graded.sort(key=lambda g: (g["game_date"], g["start_utc"], g["game_id"]), reverse=True)
     evaluation = _evaluation_view(build_report(season, graded))
     return {"season": season, "summary": summarize(graded), "evaluation": evaluation, "games": graded}
+
+
+WALK_FORWARD_JSON = ROOT / "reports" / "evaluation" / "multi_season_walk_forward_backtest.json"
+
+
+def backtest_calibration() -> Dict[str, Any]:
+    """Leakage-free walk-forward calibration of the win probability, per backtest season, in the live band format."""
+    if not WALK_FORWARD_JSON.exists():
+        return {"seasons": [], "pooled": None}
+    data = json.loads(WALK_FORWARD_JSON.read_text(encoding="utf-8")).get("win_confidence_calibration")
+    if not data:
+        return {"seasons": [], "pooled": None}
+    seasons = [{"season": season, **table} for season, table in data["by_season"].items()]
+    return {"seasons": seasons, "pooled": data["pooled"]}

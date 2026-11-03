@@ -28,6 +28,7 @@ from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, mean_abs
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from src.api.services.paper_trading import CONFIDENCE_BANDS
 from src.core.data_paths import PLAYER_TRAINING_CSV, get_data_paths, team_training_csv
 from src.features.roster_absence import add_absence_columns
 from src.features.win_strength_features import add_win_strength_features, attach_actual_points
@@ -170,6 +171,22 @@ def reliability_table(y: np.ndarray, p: np.ndarray) -> dict:
     ece = float((g["games"] * (g["mean_p"] - g["observed"]).abs()).sum() / g["games"].sum())
     bins = [{"bin": f"{max(i.left, 0.0):.1f}-{i.right:.1f}", "games": int(r.games), "mean_predicted": round(float(r.mean_p), 4), "observed": round(float(r.observed), 4)} for i, r in g.iterrows()]
     return {"ece": round(ece, 4), "bins": bins}
+
+
+def confidence_table(y: np.ndarray, p: np.ndarray) -> dict:
+    """Calibration in the live ledger's format: bands of the predicted winner's probability, with the
+    share of those predicted winners that really won, and the games-weighted ECE over the bands."""
+    conf = np.maximum(p, 1 - p)
+    won = ((p >= 0.5) == (y == 1.0)).astype(float)
+    bands = []
+    for lo, hi in CONFIDENCE_BANDS:
+        mask = (conf >= lo) & (conf < hi)
+        if mask.any():
+            bands.append({"label": f"{round(lo * 100)}-{min(round(hi * 100), 100)}%", "games": int(mask.sum()),
+                          "mean_confidence": round(float(conf[mask].mean()), 4), "accuracy": round(float(won[mask].mean()), 4)})
+    ece = sum(b["games"] * abs(b["mean_confidence"] - b["accuracy"]) for b in bands) / max(len(y), 1)
+    return {"games": int(len(y)), "accuracy": round(float(won.mean()), 4), "mean_confidence": round(float(conf.mean()), 4),
+            "ece": round(float(ece), 4), "bands": bands}
 
 
 def _carry_forward_frame(data: pd.DataFrame) -> pd.DataFrame:
@@ -492,6 +509,11 @@ def run_walk_forward_backtest():
         y_all, p_all = np.concatenate(ys), np.clip(np.concatenate(ps), 1e-6, 1 - 1e-6)
         availability_audit[key] = {"brier": round(float(brier_score_loss(y_all, p_all)), 4), "log_loss": round(float(log_loss(y_all, p_all)), 4), "games": int(len(y_all))}
     reliability = reliability_table(np.concatenate(pooled["production"][0]), np.concatenate(pooled["production"][1]))
+    confidence_calibration = {
+        "pooled": confidence_table(np.concatenate(pooled["production"][0]), np.concatenate(pooled["production"][1])),
+        "by_season": {f["test_season"]: confidence_table(pooled["production"][0][i], pooled["production"][1][i])
+                      for i, f in enumerate(folds)},
+    }
 
     summary = {
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
@@ -501,6 +523,7 @@ def run_walk_forward_backtest():
         "significance_vs_baseline": significance,
         "win_availability_audit": availability_audit,
         "win_reliability": reliability,
+        "win_confidence_calibration": confidence_calibration,
         "aggregate_win": {
             "production_brier": round(avg_prod_brier, 4),
             "production_auc": round(avg_prod_auc, 4),
@@ -679,6 +702,22 @@ Ev sahibi galibiyet olasılığı bantlarında tahmin edilen ile gerçekleşen o
 """
     for row in rel["bins"]:
         md_content += f"| {row['bin']} | {row['games']} | {row['mean_predicted']:.3f} | {row['observed']:.3f} |\n"
+
+    cc = summary["win_confidence_calibration"]
+    md_content += """
+---
+
+## 6. WIN Güven Bantları (Üretim, Sezon Bazlı, Canlı Tablo Formatı)
+
+Her maçta modelin favori dediği takımın olasılığına göre bantlar. "Gerçekleşen": o bandda favori denen takımların gerçekten kazanma oranı. Canlı izleme (paper ledger) tablosuyla aynı biçimdir.
+
+| Sezon | Band | Maç | Model dedi | Gerçekleşen |
+|---|---|---:|---:|---:|
+"""
+    for season, tab in [*cc["by_season"].items(), ("Birleşik", cc["pooled"])]:
+        for b in tab["bands"]:
+            md_content += f"| {season} | {b['label']} | {b['games']} | {b['mean_confidence'] * 100:.1f}% | {b['accuracy'] * 100:.1f}% |\n"
+        md_content += f"| {season} | **ECE** | {tab['games']} | {tab['mean_confidence'] * 100:.1f}% | {tab['accuracy'] * 100:.1f}% (ECE {tab['ece']:.4f}) |\n"
 
     rep_md = ROOT / "reports/evaluation/multi_season_walk_forward_backtest.md"
     rep_md.write_text(md_content)

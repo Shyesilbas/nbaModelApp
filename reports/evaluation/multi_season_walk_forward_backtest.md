@@ -2,8 +2,8 @@
 
 > Bu dosya `scripts/walk_forward_benchmark.py` tarafından üretilir; elle düzenlenmez.
 
-**Rapor Tarihi:** 2026-11-03T16:31:43Z  
-**Ölçülen Üretim Yapılandırması:** WIN `v15` (eğitim 2026-10-25), SCORE `v15` (eğitim 2026-10-25), PLAYER `v15` (eğitim 2026-10-25); git `91eaa30`  
+**Rapor Tarihi:** 2026-11-03T17:36:13Z  
+**Ölçülen Üretim Yapılandırması:** WIN `v15` (eğitim 2026-10-25), SCORE `v15` (eğitim 2026-10-25), PLAYER `v15` (eğitim 2026-10-25); git `cd2b990`  
 **Yöntem:** Kesintisiz Genişleyen Zaman Pencereleri (Expanding Window). Her sezon yalnızca önceki tamamlanmış sezonlarla eğitilen modellerle test edilmiştir; geleceğe dönük hiçbir bilgi sızıntısı (leakage) bulunmamaktadır.  
 **Toplam Görülmemiş Test Maçı:** 6276 maç (5 ayrı NBA sezonu)
 
@@ -97,3 +97,42 @@ Ev sahibi galibiyet olasılığı bantlarında tahmin edilen ile gerçekleşen o
 | 0.6-0.7 | 1066 | 0.649 | 0.643 |
 | 0.7-0.8 | 949 | 0.746 | 0.735 |
 | 0.8-1.0 | 719 | 0.861 | 0.847 |
+
+---
+
+## 6. WIN Güven Bantları (Üretim, Sezon Bazlı, Canlı Tablo Formatı)
+
+Her maçta modelin favori dediği takımın olasılığına göre bantlar. "Gerçekleşen": o bandda favori denen takımların gerçekten kazanma oranı. Canlı izleme (paper ledger) tablosuyla aynı biçimdir.
+
+| Sezon | Band | Maç | Model dedi | Gerçekleşen |
+|---|---|---:|---:|---:|
+| 2021-22 | 50-60% | 392 | 55.0% | 54.3% |
+| 2021-22 | 60-70% | 380 | 64.7% | 65.0% |
+| 2021-22 | 70-80% | 271 | 74.7% | 71.6% |
+| 2021-22 | 80-100% | 213 | 85.5% | 81.2% |
+| 2021-22 | **ECE** | 1256 | 67.3% | 65.8% (ECE 0.0170) |
+| 2022-23 | 50-60% | 477 | 54.6% | 49.7% |
+| 2022-23 | 60-70% | 361 | 64.7% | 63.7% |
+| 2022-23 | 70-80% | 269 | 74.4% | 72.5% |
+| 2022-23 | 80-100% | 141 | 85.5% | 79.4% |
+| 2022-23 | **ECE** | 1248 | 65.3% | 62.0% (ECE 0.0326) |
+| 2023-24 | 50-60% | 410 | 55.0% | 51.7% |
+| 2023-24 | 60-70% | 366 | 64.7% | 63.4% |
+| 2023-24 | 70-80% | 268 | 74.6% | 76.1% |
+| 2023-24 | 80-100% | 215 | 85.7% | 87.0% |
+| 2023-24 | **ECE** | 1259 | 67.2% | 66.3% (ECE 0.0199) |
+| 2024-25 | 50-60% | 394 | 54.9% | 54.8% |
+| 2024-25 | 60-70% | 363 | 64.9% | 67.5% |
+| 2024-25 | 70-80% | 275 | 74.9% | 73.5% |
+| 2024-25 | 80-100% | 224 | 86.0% | 87.5% |
+| 2024-25 | **ECE** | 1256 | 67.7% | 68.4% (ECE 0.0134) |
+| 2025-26 | 50-60% | 400 | 55.1% | 55.0% |
+| 2025-26 | 60-70% | 337 | 65.0% | 65.6% |
+| 2025-26 | 70-80% | 287 | 74.7% | 75.6% |
+| 2025-26 | 80-100% | 233 | 85.9% | 88.0% |
+| 2025-26 | **ECE** | 1257 | 67.9% | 68.7% (ECE 0.0078) |
+| Birleşik | 50-60% | 2073 | 54.9% | 53.0% |
+| Birleşik | 60-70% | 1807 | 64.8% | 65.0% |
+| Birleşik | 70-80% | 1370 | 74.7% | 73.9% |
+| Birleşik | 80-100% | 1026 | 85.7% | 85.1% |
+| Birleşik | **ECE** | 6276 | 67.1% | 66.2% (ECE 0.0098) |

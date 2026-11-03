@@ -5,6 +5,7 @@ import TeamLogo from "./TeamLogo";
 import { TEAM_NAME_BY_ABBR } from "../lib/nbaTeams";
 import { CalibrationChart, RollingAccuracyChart } from "./paper/PaperCharts";
 import { BaselineComparison, VersionTable, type Evaluation } from "./paper/PaperBaselines";
+import BacktestCalibration from "./paper/BacktestCalibration";
 import PublishSnapshotButton from "./PublishSnapshotButton";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
@@ -295,6 +296,8 @@ export default function PaperTrading() {
             </table>
           </Card>
         )}
+
+        <BacktestCalibration />
 
         <div className="flex flex-wrap items-center gap-2">
           <DatePicker

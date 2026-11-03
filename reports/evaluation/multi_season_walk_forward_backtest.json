@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-03T16:31:43Z",
+  "timestamp": "2026-11-03T17:36:13Z",
   "provenance": {
     "win": {
       "version": "v15",
@@ -13,7 +13,7 @@
       "version": "v15",
       "trained_at": "2026-10-25T11:01:57.467925Z"
     },
-    "git_commit": "91eaa30"
+    "git_commit": "cd2b990"
   },
   "total_unseen_games": 6276,
   "folds_evaluated": 5,
@@ -161,6 +161,202 @@
         "observed": 0.847
       }
     ]
+  },
+  "win_confidence_calibration": {
+    "pooled": {
+      "games": 6276,
+      "accuracy": 0.6625,
+      "mean_confidence": 0.671,
+      "ece": 0.0098,
+      "bands": [
+        {
+          "label": "50-60%",
+          "games": 2073,
+          "mean_confidence": 0.549,
+          "accuracy": 0.5297
+        },
+        {
+          "label": "60-70%",
+          "games": 1807,
+          "mean_confidence": 0.6478,
+          "accuracy": 0.6502
+        },
+        {
+          "label": "70-80%",
+          "games": 1370,
+          "mean_confidence": 0.7465,
+          "accuracy": 0.7387
+        },
+        {
+          "label": "80-100%",
+          "games": 1026,
+          "mean_confidence": 0.8574,
+          "accuracy": 0.8509
+        }
+      ]
+    },
+    "by_season": {
+      "2021-22": {
+        "games": 1256,
+        "accuracy": 0.6584,
+        "mean_confidence": 0.6735,
+        "ece": 0.017,
+        "bands": [
+          {
+            "label": "50-60%",
+            "games": 392,
+            "mean_confidence": 0.5497,
+            "accuracy": 0.5434
+          },
+          {
+            "label": "60-70%",
+            "games": 380,
+            "mean_confidence": 0.6469,
+            "accuracy": 0.65
+          },
+          {
+            "label": "70-80%",
+            "games": 271,
+            "mean_confidence": 0.747,
+            "accuracy": 0.7159
+          },
+          {
+            "label": "80-100%",
+            "games": 213,
+            "mean_confidence": 0.8555,
+            "accuracy": 0.8122
+          }
+        ]
+      },
+      "2022-23": {
+        "games": 1248,
+        "accuracy": 0.6202,
+        "mean_confidence": 0.6529,
+        "ece": 0.0326,
+        "bands": [
+          {
+            "label": "50-60%",
+            "games": 477,
+            "mean_confidence": 0.5462,
+            "accuracy": 0.4969
+          },
+          {
+            "label": "60-70%",
+            "games": 361,
+            "mean_confidence": 0.647,
+            "accuracy": 0.6371
+          },
+          {
+            "label": "70-80%",
+            "games": 269,
+            "mean_confidence": 0.744,
+            "accuracy": 0.7249
+          },
+          {
+            "label": "80-100%",
+            "games": 141,
+            "mean_confidence": 0.8547,
+            "accuracy": 0.7943
+          }
+        ]
+      },
+      "2023-24": {
+        "games": 1259,
+        "accuracy": 0.6632,
+        "mean_confidence": 0.6721,
+        "ece": 0.0199,
+        "bands": [
+          {
+            "label": "50-60%",
+            "games": 410,
+            "mean_confidence": 0.5498,
+            "accuracy": 0.5171
+          },
+          {
+            "label": "60-70%",
+            "games": 366,
+            "mean_confidence": 0.6466,
+            "accuracy": 0.6339
+          },
+          {
+            "label": "70-80%",
+            "games": 268,
+            "mean_confidence": 0.7457,
+            "accuracy": 0.7612
+          },
+          {
+            "label": "80-100%",
+            "games": 215,
+            "mean_confidence": 0.8568,
+            "accuracy": 0.8698
+          }
+        ]
+      },
+      "2024-25": {
+        "games": 1256,
+        "accuracy": 0.6839,
+        "mean_confidence": 0.677,
+        "ece": 0.0134,
+        "bands": [
+          {
+            "label": "50-60%",
+            "games": 394,
+            "mean_confidence": 0.5488,
+            "accuracy": 0.5482
+          },
+          {
+            "label": "60-70%",
+            "games": 363,
+            "mean_confidence": 0.6489,
+            "accuracy": 0.6749
+          },
+          {
+            "label": "70-80%",
+            "games": 275,
+            "mean_confidence": 0.7485,
+            "accuracy": 0.7345
+          },
+          {
+            "label": "80-100%",
+            "games": 224,
+            "mean_confidence": 0.8601,
+            "accuracy": 0.875
+          }
+        ]
+      },
+      "2025-26": {
+        "games": 1257,
+        "accuracy": 0.6866,
+        "mean_confidence": 0.6793,
+        "ece": 0.0078,
+        "bands": [
+          {
+            "label": "50-60%",
+            "games": 400,
+            "mean_confidence": 0.5508,
+            "accuracy": 0.55
+          },
+          {
+            "label": "60-70%",
+            "games": 337,
+            "mean_confidence": 0.6496,
+            "accuracy": 0.6558
+          },
+          {
+            "label": "70-80%",
+            "games": 287,
+            "mean_confidence": 0.7473,
+            "accuracy": 0.7561
+          },
+          {
+            "label": "80-100%",
+            "games": 233,
+            "mean_confidence": 0.8588,
+            "accuracy": 0.8798
+          }
+        ]
+      }
+    }
   },
   "aggregate_win": {
     "production_brier": 0.2098,
