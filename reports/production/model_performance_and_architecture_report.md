@@ -10,7 +10,9 @@ This report details the engineering design, preprocessing pipelines, feature rep
 ### 1.1 Ingestion Service Architecture
 All raw data is fetched dynamically from the official NBA API using the `UpdateDataService` and the `nba_api` client. The ingestion pipeline resolves two primary endpoints:
 - `LeagueGameLog`: Used for bulk ingestion of historical team and player stats for designated seasons.
-- `BoxScoreTraditionalV2`: Used during incremental updates to download individual box scores for matches not yet recorded locally.
+- `BoxScoreTraditionalV3` (falls back to `BoxScoreTraditionalV2`): Used during incremental updates to download individual box scores for matches not yet recorded locally. The same V3 box score also yields each game's starters (`player_starters.csv`).
+
+Two more feeds supply live context: the official NBA injury report PDF (published every 15 minutes, parsed by `src/ingestion/nba_injury_report.py` into per-player status overrides) and the player movement and ESPN transaction feeds under `data/reference/`.
 
 To bypass Akamai CDN rate limits and prevent requests from being blocked, the client uses a randomized delay (jittered sleep between 0.6 and 1.2 seconds) and an exponential backoff policy that retries failed calls up to 5 times.
 
@@ -38,7 +40,7 @@ Traditional K-Fold cross-validation or random splits suffer from time-series lea
 
 ### 2.2 Observed Roster Affiliations (Stints) & Snapshotting
 A major source of leakage in roster-aware modeling is team affiliation: assigning a player to a team's roster for a historical game when they were traded to that team months later. 
-Since the official NBA transactions API is stubbed out, we reconstruct the transaction log chronologically by scanning player game logs:
+Team affiliation is reconstructed chronologically from the player game logs (the movement and ESPN transaction feeds are used as supporting references):
 1. Contiguous stint windows (`start_date` to `end_date`) are calculated when a player changes their observed team.
 2. For any prediction day $T$, we query only roster snapshots valid on or before $T$:
    $$\text{Roster}(T) = \{P \mid \text{start\_date}_P \le T \le \text{end\_date}_P\}$$
@@ -49,6 +51,8 @@ In player prediction modeling, using the actual minutes played in the game being
 - Projected minutes for player models are estimated using an Exponential Moving Average (EMA) of previous games.
 - Game-level models (WIN, SCORE) use no player projections: aggregated player projections were trained on overlapping outcomes and are excluded until date-safe out-of-fold versions exist.
 
+### 2.4 Known Look-Ahead: Roster Availability in Training
+Four game-level features (`ABS_DIFF`, `MISSING_ROT_MINS_DIFF`, `ROT_CONTINUITY_DIFF`, `ACTIVE_WT_GS_DIFF`) describe who is missing from the rotation. In training and in the backtest they are derived from each game's own box score (who actually played), whereas live serving only has the injury report and the default "whoever played the previous game plays tonight". The injury report is matched to players by team and accent-folded name, and a player who just joined a team is excluded from its rotation in training and live alike. The walk-forward benchmark quantifies the gap: replacing the box-score availability with the live default shrinks the WIN Brier gain over Elo from about 0.006 to about 0.002 (section 4 of the generated report). Treat the backtest numbers as an upper bound for this feature group.
 ---
 
 ## 3. Feature Engineering Design
@@ -99,7 +103,7 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 - **Total** = pace x (home rating + away rating) / 100; home/away scores = (total +/- margin) / 2.
 - **Residual correction**: Ridge models on playoff, back-to-back and rest-advantage indicators, fit on temporal out-of-fold residuals.
 - **Targets** are actual final points from the box scores. `PACE x OFF_RTG / 100` was used before and undercounted overtime games by ~13 points because PACE is per 48 minutes.
-- **Intervals**: conformal offsets from out-of-fold residuals against actual points (80%: total +/-24, margin +/-17.7).
+- **Intervals**: conformal offsets from out-of-fold residuals against actual points (80%: total +/-24.0, margin +/-17.1 in the shipped release; the backtest learns radii per fold from that fold's training seasons only).
 
 ### 4.3 Player Performance Model
 - **Artifacts**: `player_model_{pts,reb,ast}.pkl`, `player_features.pkl`; contract `config/features/player.yaml` (explicit feature list).
@@ -110,7 +114,9 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 
 ---
 
-## 5. Changes in the 2026-10-20 Review
+## 5. Changes in the 2026-10-20 Review (historical)
+
+The feature counts below are the state right after that review; the current counts are in section 4.
 
 - WIN: 32 -> 7 features (two exact linear dependencies removed; ABS_DIFF roster availability was added afterwards, the shipped model has 8), early-season feature shrink removed from serving (it raised log loss in every bucket), training Elo aligned with live Elo (up to 13 points apart before).
 - SCORE: actual-point targets, 2-feature pace/rating models (collinear pairs cancelled in SHAP), margin on the WIN inputs, release model now includes the validation season.
@@ -123,14 +129,18 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 
 Each season is predicted by models fitted only on earlier seasons. The per-season tables, baselines (Elo with home-court advantage; each side's last-10 points scored and allowed; each player's EMA-10) and date-block bootstrap intervals live in the generated report `reports/evaluation/multi_season_walk_forward_backtest.md` (`python -m scripts.walk_forward_benchmark`). They are not copied here so that this document cannot fall behind a retrain.
 
-Prospective results for the locked 2026-27 season: `reports/evaluation/paper_ledger_2026_27.md` (`scripts/paper_ledger_report.py`).
+Calibration: the same report has the home-win reliability table and, per season, the predicted-winner confidence bands (50-60%, 60-70%, 70-80%, 80-100%) with ECE; pooled ECE is about 1 point, the weakest season (2022-23) about 3. The "Model takibi" page shows these bands next to the live ones.
+
+Prospective results for the locked 2026-27 season: `reports/evaluation/paper_ledger_2026_27.md` (`scripts/paper_ledger_report.py`). All generated reports and the numbers in README, PROJECT_STATUS and the model docs are refreshed by `scripts/refresh_reports.py`.
 
 ---
 
 ## 7. Known Limitations
 
-1. **Near the pregame ceiling**: over five walk-forward seasons WIN beats Elo + home court by ~0.006 Brier (significant) while SCORE totals are not significantly better than a last-10-points baseline; the margin model and player projections carry the real gains. Further accuracy needs new information (injury/lineup data, market lines).
+1. **Near the pregame ceiling**: over five walk-forward seasons WIN beats Elo + home court by ~0.006 Brier on box-score availability and ~0.002 with the live default (both significant), while SCORE totals are not significantly better than a last-10-points baseline; the margin model and player projections carry the real gains. Further accuracy needs new information (market lines, better lineup data).
 2. **Player projections are conditional on playing**: the team-score excess (~20%) is cut from each player by his chance of sitting (`src/inference/team_reconciliation.py`), so regulars move little; the live player rows and opponent allowance come from the raw box scores (`reports/audits/2026-10-22_player_pipeline_audit/`).
 3. **Opening 2026-27 Elo** includes a roster-turnover adjustment that the training seasons never had; early-season WIN predictions rely on it.
-4. **The 2025-26 holdout has been used for many decisions**; the walk-forward averages above are the more reliable estimate.
-5. **Early season is served by inference-time transitions, not by the models**: training rows start at a team's ~4th game, so SCORE pace/rating inputs hand over from last season's team means over 6 games, player projections lean on last season's averages for 3 games, and season-start roster availability moves only with explicit overrides (`reports/backtests/2026-10-21_early_season/`).
+4. **Live roster features are approximate** (section 2.4): the injury report fills in part of the gap, teams that have not filed yet get no overrides, and a few names (rookies, newly traded players) cannot be matched to a player id.
+5. **Live calibration is a small sample**: the first weeks of 2026-27 show bands that deviate from the backtest (for example 50-60%), but with a few dozen games per band this is not distinguishable from noise yet.
+6. **The 2025-26 holdout has been used for many decisions**; the walk-forward averages above are the more reliable estimate.
+7. **Early season is served by inference-time transitions, not by the models**: training rows start at a team's ~4th game, so SCORE pace/rating inputs hand over from last season's team means over 6 games, player projections lean on last season's averages for 3 games, and season-start roster availability moves only with explicit overrides (`reports/backtests/2026-10-21_early_season/`).
