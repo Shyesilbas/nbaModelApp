@@ -130,9 +130,15 @@ def _is_structural(body: List[str], j: int) -> bool:
     )
 
 
+NAME_SUFFIXES = {"Jr", "Sr", "II", "III", "IV", "V"}
+
+
 def _display_name(raw: str) -> str:
-    """'Lively II, Dereck' -> 'Dereck Lively II'."""
+    """'Lively II, Dereck' -> 'Dereck Lively II'; 'Udeh, Jr., Ernest' -> 'Ernest Udeh Jr.'."""
     last, _, first = raw.partition(", ")
+    head, sep, rest = first.partition(", ")
+    if sep and head.rstrip(".") in NAME_SUFFIXES:
+        return f"{rest} {last} {head}".strip()
     return f"{first} {last}".strip()
 
 

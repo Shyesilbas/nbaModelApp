@@ -16,20 +16,20 @@
 <!-- BEGIN GENERATED: walk-forward (scripts/walk_forward_benchmark.py; do not edit) -->
 ## Güncel Walk-Forward Sonuçları (`v15`)
 
-Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-02T19:30:56Z, commit `766e2f4`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
+Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-03T16:31:43Z, commit `91eaa30`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
 
 | Sezon | Maç | Toplam MAE | Son-10 Toplam MAE | Fark MAE | Son-10 Fark MAE | %80 Kapsama (toplam / fark) |
 |---|---:|---:|---:|---:|---:|---:|
-| 2021-22 | 1,256 | 14.69 | 14.62 | 10.98 | 11.56 | %80.7 / %79.2 |
-| 2022-23 | 1,248 | 14.88 | 14.97 | 10.10 | 10.57 | %80.3 / %83.2 |
-| 2023-24 | 1,259 | 14.73 | 14.78 | 10.98 | 11.58 | %82.3 / %79.3 |
-| 2024-25 | 1,256 | 14.91 | 15.02 | 10.82 | 11.50 | %80.3 / %79.9 |
-| 2025-26 | 1,257 | 15.29 | 15.38 | 11.18 | 11.86 | %78.7 / %78.0 |
-| **Ortalama** | **6,276** | **14.90** | **14.95** | **10.81** | **11.41** | **%80.5** (toplam) |
+| 2021-22 | 1,256 | 14.69 | 14.62 | 11.10 | 11.56 | %80.3 / %78.9 |
+| 2022-23 | 1,248 | 14.80 | 14.97 | 10.17 | 10.57 | %77.9 / %83.7 |
+| 2023-24 | 1,259 | 14.69 | 14.78 | 10.96 | 11.58 | %81.3 / %77.8 |
+| 2024-25 | 1,256 | 14.89 | 15.02 | 10.80 | 11.50 | %78.5 / %79.4 |
+| 2025-26 | 1,257 | 15.29 | 15.38 | 11.21 | 11.86 | %78.4 / %77.6 |
+| **Ortalama** | **6,276** | **14.87** | **14.95** | **10.85** | **11.41** | **%79.3** (toplam) |
 
-Son-10 baseline'ı toplamda 4/5, farkta 5/5 sezonda geçildi. Toplam, ham pace x reyting tahminidir; üretimdeki temporal OOF artık düzeltmesi bu benchmark'ta yoktur.
-- Toplam MAE, model eksi son-10: ortalama fark -0.052, %95 CI [-0.115, +0.014] -> fark anlamlı değil (CI sıfırı kapsıyor)
-- Fark MAE, model eksi son-10: ortalama fark -0.603, %95 CI [-0.705, -0.498] -> model daha iyi (CI sıfırın altında)
+Son-10 baseline'ı toplamda 4/5, farkta 5/5 sezonda geçildi. SCORE, üretim hattıyla ölçülür (OOF artık düzeltmesi dahil); yarıçaplar her katta yalnızca eğitim sezonlarından öğrenilir.
+- Toplam MAE, model eksi son-10: ortalama fark -0.081, %95 CI [-0.157, +0.001] -> fark anlamlı değil (CI sıfırı kapsıyor)
+- Fark MAE, model eksi son-10: ortalama fark -0.567, %95 CI [-0.674, -0.452] -> model daha iyi (CI sıfırın altında)
 <!-- END GENERATED: walk-forward -->
 
 ---

@@ -63,3 +63,11 @@ def test_not_yet_submitted_teams_are_tracked_per_game():
     assert not report.submitted("CHI", "MIL", "CHI") and not report.submitted("CHI", "MIL", "MIL")
     assert report.for_matchup("CHI", "MIL") == []
     assert {e["game_date"] for e in report.entries} == {"10/22/2026"}
+
+
+def test_display_name_handles_suffix_after_comma():
+    from src.ingestion.nba_injury_report import _display_name, _plain
+
+    assert _display_name("Lively II, Dereck") == "Dereck Lively II"
+    assert _display_name("Udeh, Jr., Ernest") == "Ernest Udeh Jr."
+    assert _plain(_display_name("Udeh, Jr., Ernest")) == _plain("Ernest Udeh Jr.")

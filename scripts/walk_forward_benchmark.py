@@ -20,22 +20,25 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.base import clone
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression, RidgeCV
+from sklearn.linear_model import LogisticRegression, Ridge, RidgeCV
 from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, mean_absolute_error, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from src.core.data_paths import PLAYER_TRAINING_CSV, team_training_csv
+from src.core.data_paths import PLAYER_TRAINING_CSV, get_data_paths, team_training_csv
+from src.features.roster_absence import add_absence_columns
 from src.features.win_strength_features import add_win_strength_features, attach_actual_points
 from src.features.continuous_elo import HOME_COURT_ADVANTAGE
-from src.training.score_trainer import get_location_features
+from src.training.score_trainer import ScoreModelTrainer, get_location_features
 from src.training.player_trainer import PlayerModelTrainer
 from src.features.player_form import add_player_matchup_features
 from src.training.validation_utils import expanding_window_date_splits
 from src.evaluation.bootstrap import paired_block_bootstrap, verdict
 from src.evaluation.model_doc_blocks import update_model_docs
+from src.evaluation.status_blocks import update_status_docs
 
 ROOT = Path(__file__).resolve().parents[1]
 SEASONS = ["2020-21", "2021-22", "2022-23", "2023-24", "2024-25", "2025-26"]
@@ -92,6 +95,95 @@ def _evaluate_player(actual: pd.Series, pred: np.ndarray, baseline: pd.Series) -
         "model_rmse": round(rmse_mod, 4),
         "samples": int(len(act)),
     }
+
+
+AVAILABILITY_FEATURES = ["ABS_DIFF", "MISSING_ROT_MINS_DIFF", "ROT_CONTINUITY_DIFF", "ACTIVE_WT_GS_DIFF"]
+RELIABILITY_BINS = [0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0]
+
+
+def _ridge_pipeline() -> Pipeline:
+    """Same estimator as src/training/score_trainer.py (estimator: ridge)."""
+    return Pipeline([("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler()), ("ridge", RidgeCV(alphas=np.logspace(-2, 4, 25)))])
+
+
+def _correction_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Context features of the production residual correction (src/training/score_trainer.py)."""
+    return pd.DataFrame({
+        "is_playoff": (df["IS_PLAYOFF"].astype(int) == 1).astype(float),
+        "home_b2b": (df["IS_B2B"].astype(int) == 1).astype(float),
+        "away_b2b": (df["OPP_IS_B2B"].astype(int) == 1).astype(float),
+        "home_rest_advantage": (df["DAYS_REST"] > df["OPP_DAYS_REST"]).astype(float),
+        "away_rest_advantage": (df["OPP_DAYS_REST"] > df["DAYS_REST"]).astype(float),
+    }, index=df.index)
+
+
+def score_fold(train_data, test_data, pace_features, home_features, away_features, margin_features):
+    """Production SCORE pipeline refit on the training seasons only.
+
+    The four ridge models are fit on all training games; the residual correction and the conformal
+    radii come from temporal OOF predictions inside the training seasons, exactly as the trainer does,
+    so neither sees the test season. Returns the merged test frame (raw and corrected predictions) and
+    the fold's own 80% radii."""
+    h_tr, a_tr = train_data[train_data["IS_HOME"] == 1].copy(), train_data[train_data["IS_HOME"] == 0].copy()
+    h_te, a_te = test_data[test_data["IS_HOME"] == 1].copy(), test_data[test_data["IS_HOME"] == 0].copy()
+    h_tr["TARGET_PACE"], h_tr["TARGET_HOME_OFF_RTG"] = h_tr["PACE"], h_tr["OFF_RTG"]
+    a_tr["TARGET_AWAY_OFF_RTG"] = a_tr["OFF_RTG"]
+    h_tr["TARGET_MARGIN"] = h_tr["ACTUAL_PTS"] - h_tr["ACTUAL_OPP_PTS"]
+    home_specs = [("PRED_PACE", pace_features, "TARGET_PACE"), ("PRED_HOME_RTG", home_features, "TARGET_HOME_OFF_RTG"),
+                  ("PRED_MARGIN_MODEL", margin_features, "TARGET_MARGIN")]
+    pred_cols = [c for c, _, _ in home_specs] + ["PRED_AWAY_RTG"]
+
+    oof = h_tr.copy()
+    for col, feats, target in home_specs:
+        oof[col] = ScoreModelTrainer._temporal_oof_predictions(h_tr, feats, target, _ridge_pipeline())
+    away_oof = a_tr[["GAME_ID"]].copy()
+    away_oof["PRED_AWAY_RTG"] = ScoreModelTrainer._temporal_oof_predictions(a_tr, away_features, "TARGET_AWAY_OFF_RTG", _ridge_pipeline())
+    oof = oof.merge(away_oof, on="GAME_ID", how="inner").dropna(subset=pred_cols)
+    oof["ACTUAL_HOME_PTS"], oof["ACTUAL_AWAY_PTS"] = oof["ACTUAL_PTS"], oof["ACTUAL_OPP_PTS"]
+    oof["ACTUAL_TOTAL"] = oof["ACTUAL_HOME_PTS"] + oof["ACTUAL_AWAY_PTS"]
+    oof["ACTUAL_MARGIN"] = oof["ACTUAL_HOME_PTS"] - oof["ACTUAL_AWAY_PTS"]
+    oof["PRED_TOTAL_RAW"] = oof["PRED_PACE"] * (oof["PRED_HOME_RTG"] + oof["PRED_AWAY_RTG"]) / 100.0
+    x_oof = _correction_features(oof)
+    ridge_total = Ridge(alpha=1.0).fit(x_oof, oof["PRED_TOTAL_RAW"] - oof["ACTUAL_TOTAL"])
+    ridge_margin = Ridge(alpha=1.0).fit(x_oof, oof["PRED_MARGIN_MODEL"] - oof["ACTUAL_MARGIN"])
+    total_oof = oof["PRED_TOTAL_RAW"] - ridge_total.predict(x_oof)
+    margin_oof = oof["PRED_MARGIN_MODEL"] - ridge_margin.predict(x_oof)
+    radii = ScoreModelTrainer._compute_conformal_intervals(oof, total_oof, margin_oof, (total_oof + margin_oof) / 2.0, (total_oof - margin_oof) / 2.0)
+
+    for col, feats, target in home_specs:
+        h_te[col] = _ridge_pipeline().fit(h_tr[feats], h_tr[target]).predict(h_te[feats])
+    a_te["PRED_AWAY_RTG"] = _ridge_pipeline().fit(a_tr[away_features], a_tr["TARGET_AWAY_OFF_RTG"]).predict(a_te[away_features])
+    merged = h_te.merge(a_te[["GAME_ID", "PRED_AWAY_RTG"]], on="GAME_ID", how="inner").dropna(subset=pred_cols).copy()
+    merged["ACTUAL_TOTAL"] = merged["ACTUAL_PTS"] + merged["ACTUAL_OPP_PTS"]
+    merged["ACTUAL_MARGIN"] = merged["ACTUAL_PTS"] - merged["ACTUAL_OPP_PTS"]
+    merged["PRED_TOTAL_RAW"] = merged["PRED_PACE"] * (merged["PRED_HOME_RTG"] + merged["PRED_AWAY_RTG"]) / 100.0
+    x_te = _correction_features(merged)
+    merged["PRED_TOTAL"] = merged["PRED_TOTAL_RAW"] - ridge_total.predict(x_te)
+    merged["PRED_MARGIN"] = merged["PRED_MARGIN_MODEL"] - ridge_margin.predict(x_te)
+    return merged, radii["offsets_80pct"], float((h_tr["ACTUAL_PTS"] - h_tr["ACTUAL_OPP_PTS"]).mean())
+
+
+def reliability_table(y: np.ndarray, p: np.ndarray) -> dict:
+    """Binned predicted vs realised home-win rate and the sample-weighted ECE."""
+    df = pd.DataFrame({"y": y, "p": p, "bin": pd.cut(p, RELIABILITY_BINS, include_lowest=True)})
+    g = df.groupby("bin", observed=True).agg(games=("y", "size"), mean_p=("p", "mean"), observed=("y", "mean"))
+    ece = float((g["games"] * (g["mean_p"] - g["observed"]).abs()).sum() / g["games"].sum())
+    bins = [{"bin": f"{max(i.left, 0.0):.1f}-{i.right:.1f}", "games": int(r.games), "mean_predicted": round(float(r.mean_p), 4), "observed": round(float(r.observed), 4)} for i, r in g.iterrows()]
+    return {"ece": round(ece, 4), "bins": bins}
+
+
+def _carry_forward_frame(data: pd.DataFrame) -> pd.DataFrame:
+    """The team-game dataset with the availability features rebuilt under the live default
+    (whoever played the previous game plays tonight) instead of the game's own box score."""
+    frames = []
+    for s in SEASONS:
+        path = Path(get_data_paths(s).player_games_raw)
+        if path.exists():
+            frames.append(pd.read_csv(path, dtype={"Game_ID": str}))
+    out = add_absence_columns(data, pd.concat(frames, ignore_index=True), availability="carry_forward")
+    assert len(out) == len(data), "carry-forward merge changed the row count"
+    out.index = data.index
+    return out
 
 
 def load_dataset() -> pd.DataFrame:
@@ -184,18 +276,20 @@ def run_walk_forward_backtest():
         home_features = s_meta["home_off_rtg_features"]
         away_features = s_meta["away_off_rtg_features"]
         margin_features = s_meta["margin_features"]
-        offsets_80 = s_meta.get("prediction_interval_offsets_80pct", {"total": [-25.2, 25.2], "margin": [-20.1, 20.1]})
     else:
         pace_features = ["PACE_LAST_5", "OPP_PACE_LAST_5", "PACE_COLLISION"]
         home_features = ["OFF_RTG_LAST_5", "EFG_PCT_LAST_5"]
         away_features = ["OFF_RTG_LAST_5", "EFG_PCT_LAST_5"]
         margin_features = ["ELO_DIFF", "REST_DIFF"]
-        offsets_80 = {"total": [-25.2, 25.2], "margin": [-20.1, 20.1]}
 
     folds = []
     # Per-game loss differences (model minus baseline) for the paired date-block bootstrap.
-    paired = {"win_brier": [], "score_total": [], "score_margin": []}
+    paired = {"win_brier": [], "win_brier_live_like": [], "score_total": [], "score_margin": [],
+              "player_pts": [], "player_reb": [], "player_ast": []}
     available_seasons = sorted(data["_SEASON"].unique())
+    data_cf = _carry_forward_frame(data)
+    no_avail_features = [f for f in win_features if f not in AVAILABILITY_FEATURES]
+    pooled = {k: ([], []) for k in ("production", "live_like_serve", "live_like_retrain", "no_availability", "elo")}
 
     for idx, test_season in enumerate(available_seasons[1:], start=1):
         train_seasons = available_seasons[:idx]
@@ -255,56 +349,34 @@ def run_walk_forward_backtest():
             "diff": (p_win_prod - y_arr) ** 2 - (elo_prob.to_numpy(dtype=float) - y_arr) ** 2,
         }))
 
+        # Availability audit: the production model trained on box-score availability, served with the
+        # live default (previous-game carry-forward), retrained on that default, and without the group.
+        te_cf, tr_cf = data_cf.loc[test_home.index], data_cf.loc[train_home.index]
+        p_live_serve = prod_pipe.predict_proba(te_cf[win_features])[:, 1]
+        p_live_retrain = clone(prod_pipe).fit(tr_cf[win_features], y_train_win).predict_proba(te_cf[win_features])[:, 1]
+        p_no_avail = clone(prod_pipe).fit(X_train_win[no_avail_features], y_train_win).predict_proba(X_test_win[no_avail_features])[:, 1]
+        for key, probs in (("production", p_win_prod), ("live_like_serve", p_live_serve), ("live_like_retrain", p_live_retrain),
+                           ("no_availability", p_no_avail), ("elo", elo_prob.to_numpy(dtype=float))):
+            pooled[key][0].append(y_arr)
+            pooled[key][1].append(np.asarray(probs, dtype=float))
+        paired["win_brier_live_like"].append(pd.DataFrame({
+            "date": test_home["GAME_DATE"].to_numpy(),
+            "diff": (p_live_serve - y_arr) ** 2 - (elo_prob.to_numpy(dtype=float) - y_arr) ** 2,
+        }))
+
         # ----------------------------------------------------
         # 2. SCORE MODEL WALK-FORWARD
         # ----------------------------------------------------
-        df_home_train = train_data[train_data["IS_HOME"] == 1].copy()
-        df_away_train = train_data[train_data["IS_HOME"] == 0].copy()
-        df_home_test = test_data[test_data["IS_HOME"] == 1].copy()
-        df_away_test = test_data[test_data["IS_HOME"] == 0].copy()
+        merged_test, fold_offsets_80, home_edge = score_fold(train_data, test_data, pace_features, home_features, away_features, margin_features)
+        pred_total_model, pred_margin_model = merged_test["PRED_TOTAL"], merged_test["PRED_MARGIN"]
 
-        df_home_train["TARGET_PACE"] = df_home_train["PACE"]
-        df_home_train["TARGET_HOME_OFF_RTG"] = df_home_train["OFF_RTG"]
-        df_away_train["TARGET_AWAY_OFF_RTG"] = df_away_train["OFF_RTG"]
-        df_home_train["TARGET_MARGIN"] = df_home_train["ACTUAL_PTS"] - df_home_train["ACTUAL_OPP_PTS"]
-
-        # Same estimator as src/training/score_trainer.py (estimator: ridge)
-        ridge = lambda: Pipeline([("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler()), ("ridge", RidgeCV(alphas=np.logspace(-2, 4, 25)))])
-        model_pace, model_home, model_away, model_margin = ridge(), ridge(), ridge(), ridge()
-
-        model_pace.fit(df_home_train[pace_features], df_home_train["TARGET_PACE"])
-        model_home.fit(df_home_train[home_features], df_home_train["TARGET_HOME_OFF_RTG"])
-        model_away.fit(df_away_train[away_features], df_away_train["TARGET_AWAY_OFF_RTG"])
-        model_margin.fit(df_home_train[margin_features], df_home_train["TARGET_MARGIN"])
-
-        # Predict test games
-        df_home_test["PRED_PACE"] = model_pace.predict(df_home_test[pace_features])
-        df_home_test["PRED_HOME_RTG"] = model_home.predict(df_home_test[home_features])
-        df_home_test["PRED_MARGIN_MODEL"] = model_margin.predict(df_home_test[margin_features])
-
-        df_away_test_sub = df_away_test[["GAME_ID"] + away_features].copy()
-        df_away_test_sub["PRED_AWAY_RTG"] = model_away.predict(df_away_test_sub[away_features])
-        df_away_test_sub = df_away_test_sub[["GAME_ID", "PRED_AWAY_RTG"]]
-
-        merged_test = df_home_test.merge(df_away_test_sub, on="GAME_ID", how="inner").dropna(
-            subset=["PRED_PACE", "PRED_HOME_RTG", "PRED_MARGIN_MODEL", "PRED_AWAY_RTG"]
-        ).copy()
-
-        merged_test["ACTUAL_HOME_PTS"] = merged_test["ACTUAL_PTS"]
-        merged_test["ACTUAL_AWAY_PTS"] = merged_test["ACTUAL_OPP_PTS"]
-        merged_test["ACTUAL_TOTAL"] = merged_test["ACTUAL_HOME_PTS"] + merged_test["ACTUAL_AWAY_PTS"]
-        merged_test["ACTUAL_MARGIN"] = merged_test["ACTUAL_HOME_PTS"] - merged_test["ACTUAL_AWAY_PTS"]
-
-        pred_total_model = merged_test["PRED_PACE"] * (merged_test["PRED_HOME_RTG"] + merged_test["PRED_AWAY_RTG"]) / 100.0
-        pred_margin_model = merged_test["PRED_MARGIN_MODEL"]
-
-        # Baseline: rolling team offensive ratings x pregame pace
         # Baselines from recent real points: both teams' last-10 scoring and allowing, plus the training home edge.
         base_total = (merged_test["PTS_LAST_10"] + merged_test["PTS_ALLOWED_LAST_10"] + merged_test["OPP_PTS_LAST_10"] + merged_test["OPP_PTS_ALLOWED_LAST_10"]) / 2.0
-        home_edge = (df_home_train["ACTUAL_PTS"] - df_home_train["ACTUAL_OPP_PTS"]).mean()
         base_margin = ((merged_test["PTS_LAST_10"] - merged_test["PTS_ALLOWED_LAST_10"]) - (merged_test["OPP_PTS_LAST_10"] - merged_test["OPP_PTS_ALLOWED_LAST_10"])) / 2.0 + home_edge
 
-        score_eval_model = _evaluate_score(merged_test["ACTUAL_TOTAL"], pred_total_model, merged_test["ACTUAL_MARGIN"], pred_margin_model, offsets_80)
+        score_eval_model = _evaluate_score(merged_test["ACTUAL_TOTAL"], pred_total_model, merged_test["ACTUAL_MARGIN"], pred_margin_model, fold_offsets_80)
+        score_eval_model["conformal_80_radius"] = {"total": fold_offsets_80["total"][1], "margin": fold_offsets_80["margin"][1]}
+        score_eval_raw = _evaluate_score(merged_test["ACTUAL_TOTAL"], merged_test["PRED_TOTAL_RAW"], merged_test["ACTUAL_MARGIN"], merged_test["PRED_MARGIN_MODEL"])
         score_eval_base = _evaluate_score(merged_test["ACTUAL_TOTAL"], base_total, merged_test["ACTUAL_MARGIN"], base_margin)
         paired["score_total"].append(pd.DataFrame({
             "date": merged_test["GAME_DATE"].to_numpy(),
@@ -335,6 +407,10 @@ def run_walk_forward_backtest():
                 pred_p = m_p.predict(p_te[player_features])
                 
                 player_eval_fold[target_name] = _evaluate_player(p_te[target_col], pred_p, p_te[base_col])
+                paired[f"player_{target_name}"].append(pd.DataFrame({
+                    "date": p_te["GAME_DATE"].to_numpy(),
+                    "diff": np.abs(p_te[target_col].to_numpy() - pred_p) - np.abs(p_te[target_col].to_numpy() - p_te[base_col].to_numpy()),
+                }))
 
         fold_record = {
             "fold": idx,
@@ -351,6 +427,7 @@ def run_walk_forward_backtest():
             },
             "score": {
                 "model": score_eval_model,
+                "model_raw": score_eval_raw,
                 "rolling_baseline": score_eval_base,
                 "beats_baseline": bool(score_eval_model["total_mae"] <= score_eval_base["total_mae"] and score_eval_model["margin_mae"] <= score_eval_base["margin_mae"]),
             },
@@ -385,6 +462,9 @@ def run_walk_forward_backtest():
     avg_score_margin_mae = sum(f["score"]["model"]["margin_mae"] * f["test_games"] for f in folds) / total_test_games
     avg_base_margin_mae = sum(f["score"]["rolling_baseline"]["margin_mae"] * f["test_games"] for f in folds) / total_test_games
     avg_cov_total = sum(f["score"]["model"].get("conformal_80_total_coverage", 80.0) * f["test_games"] for f in folds) / total_test_games
+    avg_cov_margin = sum(f["score"]["model"].get("conformal_80_margin_coverage", 80.0) * f["test_games"] for f in folds) / total_test_games
+    avg_raw_total_mae = sum(f["score"]["model_raw"]["total_mae"] * f["test_games"] for f in folds) / total_test_games
+    avg_raw_margin_mae = sum(f["score"]["model_raw"]["margin_mae"] * f["test_games"] for f in folds) / total_test_games
 
     # Player aggregate
     player_summary = {}
@@ -407,12 +487,20 @@ def run_walk_forward_backtest():
         df_pair = pd.concat(frames, ignore_index=True)
         significance[key] = paired_block_bootstrap(df_pair["diff"].to_numpy(), df_pair["date"].astype(str).to_numpy())
 
+    availability_audit = {}
+    for key, (ys, ps) in pooled.items():
+        y_all, p_all = np.concatenate(ys), np.clip(np.concatenate(ps), 1e-6, 1 - 1e-6)
+        availability_audit[key] = {"brier": round(float(brier_score_loss(y_all, p_all)), 4), "log_loss": round(float(log_loss(y_all, p_all)), 4), "games": int(len(y_all))}
+    reliability = reliability_table(np.concatenate(pooled["production"][0]), np.concatenate(pooled["production"][1]))
+
     summary = {
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "provenance": _provenance(),
         "total_unseen_games": total_test_games,
         "folds_evaluated": len(folds),
         "significance_vs_baseline": significance,
+        "win_availability_audit": availability_audit,
+        "win_reliability": reliability,
         "aggregate_win": {
             "production_brier": round(avg_prod_brier, 4),
             "production_auc": round(avg_prod_auc, 4),
@@ -433,6 +521,9 @@ def run_walk_forward_backtest():
             "baseline_margin_mae": round(avg_base_margin_mae, 4),
             "margin_mae_reduction": round(avg_base_margin_mae - avg_score_margin_mae, 4),
             "average_conformal_80_coverage": round(avg_cov_total, 1),
+            "average_conformal_80_margin_coverage": round(avg_cov_margin, 1),
+            "raw_total_mae": round(avg_raw_total_mae, 4),
+            "raw_margin_mae": round(avg_raw_margin_mae, 4),
         },
         "aggregate_player": player_summary,
         "folds": folds,
@@ -480,7 +571,7 @@ def run_walk_forward_backtest():
 |---|---:|---:|---:|
 | **Toplam Skor MAE** | **{agg_s['model_total_mae']:.2f} sayı** | {agg_s['baseline_total_mae']:.2f} sayı | **{_signed(-agg_s['total_mae_reduction'], 2)} sayı** |
 | **Sayı Farkı (Margin) MAE** | **{agg_s['model_margin_mae']:.2f} sayı** | {agg_s['baseline_margin_mae']:.2f} sayı | **{_signed(-agg_s['margin_mae_reduction'], 2)} sayı** |
-| **Conformal %80 Kapsama (toplam)** | **%{agg_s['average_conformal_80_coverage']:.1f}** | - | hedef %80 |
+| **Conformal %80 Kapsama (toplam / margin)** | **%{agg_s['average_conformal_80_coverage']:.1f} / %{agg_s['average_conformal_80_margin_coverage']:.1f}** | - | hedef %80 |
 
 ### Oyuncu Tahminleri (PLAYER Model) vs. EMA-10 Ortalaması
 | Hedef İstatistik | LightGBM Modeli MAE | EMA-10 Taban Çizgisi | MAE İyileşmesi | Toplam Test Satırı |
@@ -524,39 +615,77 @@ Fark = model kaybı - baseline kaybı (negatif = model daha iyi). %95 aralık, a
         "win_brier": sum(f["win"]["production"]["brier"] < f["win"]["pregame_elo"]["brier"] for f in folds),
         "score_total": sum(f["score"]["model"]["total_mae"] < f["score"]["rolling_baseline"]["total_mae"] for f in folds),
         "score_margin": sum(f["score"]["model"]["margin_mae"] < f["score"]["rolling_baseline"]["margin_mae"] for f in folds),
+        **{f"player_{t}": sum(f["player"].get(t, {}).get("mae_reduction", 0) > 0 for f in folds) for t in ("pts", "reb", "ast")},
     }
     labels = {
         "win_brier": "WIN Brier vs saf Elo",
+        "win_brier_live_like": "WIN Brier vs saf Elo (canlı kadro varsayımı)",
         "score_total": "SCORE toplam MAE vs son-10",
         "score_margin": "SCORE margin MAE vs son-10",
+        **{f"player_{t}": f"PLAYER {t.upper()} MAE vs EMA-10" for t in ("pts", "reb", "ast")},
     }
     for key, label in labels.items():
         ci = significance.get(key)
         if ci:
-            digits = 4 if key == "win_brier" else 3
+            digits = 4 if key.startswith("win_brier") else 3
             md_content += (
                 f"| {label} | {_signed(ci['mean_diff'], digits)} | [{_signed(ci['ci_low'], digits)}, {_signed(ci['ci_high'], digits)}] "
-                f"| %{ci['p_model_better'] * 100:.1f} | {verdict(ci)} | {season_wins[key]}/{n_folds} |\n"
+                f"| %{ci['p_model_better'] * 100:.1f} | {verdict(ci)} | {f"{season_wins[key]}/{n_folds}" if key in season_wins else "-"} |\n"
             )
-    for target_name in ["pts", "reb", "ast"]:
-        won = sum(f["player"].get(target_name, {}).get("mae_reduction", 0) > 0 for f in folds)
-        md_content += f"| PLAYER {target_name.upper()} MAE vs EMA-10 | {_signed(-player_summary.get(target_name, {}).get('mae_reduction', 0), 3)} | - | - | satır bazında, CI hesaplanmadı | {won}/{n_folds} |\n"
-
     coverages = [f["score"]["model"].get("conformal_80_total_coverage") for f in folds]
     coverages = [c for c in coverages if isinstance(c, (int, float))]
     if coverages:
         md_content += f"""
-Conformal %80 toplam kapsaması sezonlar arasında %{min(coverages):.1f} - %{max(coverages):.1f} aralığında.
+Conformal %80 toplam kapsaması sezonlar arasında %{min(coverages):.1f} - %{max(coverages):.1f} aralığında. Yarıçaplar her fold'da yalnızca o fold'un eğitim sezonlarının temporal OOF artıklarından hesaplanır (test sezonu hiçbir aşamada görülmez); sezon başına yarıçaplar JSON raporunda `conformal_80_radius` altındadır.
 
-Not: Buradaki SCORE toplamı ham pace x reyting tahminidir; üretimdeki temporal OOF artık düzeltmesi bu benchmark'ta uygulanmaz.
+Not: SCORE modeli üretim hattıyla ölçülür: dört ridge modeli, ardından eğitim sezonlarının OOF artıklarından öğrenilen bağlam düzeltmesi (`ridge_total`, `ridge_margin`). Düzeltmesiz ham model: toplam MAE {agg_s['raw_total_mae']:.2f}, margin MAE {agg_s['raw_margin_mae']:.2f}.
 """
+
+    audit = summary["win_availability_audit"]
+    elo_b = audit["elo"]["brier"]
+    audit_rows = [
+        ("production", "Üretim: maç kaydındaki gerçek kadro (eğitim ve test)"),
+        ("live_like_serve", "Üretim modeli, test sezonunda canlı varsayımla (önceki maçta oynayan oynar)"),
+        ("live_like_retrain", "Canlı varsayımla yeniden eğitilmiş ve test edilmiş"),
+        ("no_availability", "Kadro özellikleri (4 adet) olmadan"),
+        ("elo", "Saf Elo"),
+    ]
+    md_content += """
+---
+
+## 4. WIN Kadro Bilgisi Denetimi (look-ahead)
+
+Eğitim ve backtest, kadro özelliklerini (`ABS_DIFF`, `MISSING_ROT_MINS_DIFF`, `ROT_CONTINUITY_DIFF`, `ACTIVE_WT_GS_DIFF`) o maçın kendi box score'undan üretir; canlıda bu bilgi sakatlık raporundan ve "önceki maçta oynayan oynar" varsayımından gelir. Aşağıdaki satırlar aynı walk-forward'ı farklı kadro varsayımlarıyla çalıştırır. Canlı varsayım sakatlık raporunu içermez, yani raporun getirdiği bilgi için alt sınırdır.
+
+| Varyant | Brier | Log loss | Elo'ya karşı Brier farkı |
+|---|---:|---:|---:|
+"""
+    for key, label in audit_rows:
+        md_content += f"| {label} | {audit[key]['brier']:.4f} | {audit[key]['log_loss']:.4f} | {_signed(audit[key]['brier'] - elo_b, 4)} |\n"
+    live_ci = significance.get("win_brier_live_like")
+    if live_ci:
+        md_content += f"\nCanlı varsayımla üretim modeli vs saf Elo: fark {_signed(live_ci['mean_diff'], 4)}, %95 CI [{_signed(live_ci['ci_low'], 4)}, {_signed(live_ci['ci_high'], 4)}], {verdict(live_ci)}.\n"
+
+    rel = summary["win_reliability"]
+    md_content += f"""
+---
+
+## 5. WIN Güvenilirlik Tablosu (Üretim, 5 Sezon Birleşik)
+
+Ev sahibi galibiyet olasılığı bantlarında tahmin edilen ile gerçekleşen oran. ECE (maç ağırlıklı) = **{rel['ece']:.4f}**.
+
+| Tahmin bandı | Maç | Ortalama tahmin | Gerçekleşen |
+|---|---:|---:|---:|
+"""
+    for row in rel["bins"]:
+        md_content += f"| {row['bin']} | {row['games']} | {row['mean_predicted']:.3f} | {row['observed']:.3f} |\n"
 
     rep_md = ROOT / "reports/evaluation/multi_season_walk_forward_backtest.md"
     rep_md.write_text(md_content)
     print(f"\nSaved Walk-Forward JSON Report: {rep_json}")
     print(f"Saved Walk-Forward Markdown Report: {rep_md}")
-    for path in update_model_docs(summary, ROOT):
-        print(f"Updated model doc: {path}")
+    for path in update_model_docs(summary, ROOT) + update_status_docs(ROOT):
+        print(f"Updated doc: {path}")
 
 
 if __name__ == "__main__":
@@ -565,8 +694,8 @@ if __name__ == "__main__":
                         help="Rewrite the model-doc blocks from the existing JSON report without rerunning.")
     if parser.parse_args().docs_only:
         saved = json.loads((ROOT / "reports/evaluation/multi_season_walk_forward_backtest.json").read_text())
-        for path in update_model_docs(saved, ROOT):
-            print(f"Updated model doc: {path}")
+        for path in update_model_docs(saved, ROOT) + update_status_docs(ROOT):
+            print(f"Updated doc: {path}")
     else:
         run_walk_forward_backtest()
 

@@ -84,7 +84,7 @@ def _score(summary: dict) -> str:
     return "\n".join([
         "\n".join(rows), "",
         f"Son-10 baseline'ı toplamda {won_t}/{n}, farkta {won_m}/{n} sezonda geçildi. "
-        "Toplam, ham pace x reyting tahminidir; üretimdeki temporal OOF artık düzeltmesi bu benchmark'ta yoktur.",
+        "SCORE, üretim hattıyla ölçülür (OOF artık düzeltmesi dahil); yarıçaplar her katta yalnızca eğitim sezonlarından öğrenilir.",
         _ci_line("Toplam MAE, model eksi son-10", sig.get("score_total"), 3),
         _ci_line("Fark MAE, model eksi son-10", sig.get("score_margin"), 3),
     ])

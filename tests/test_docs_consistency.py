@@ -94,3 +94,39 @@ def test_model_doc_blocks_match_walk_forward_report(family):
     assert render_block(summary, family) in text, (
         f"{MODEL_DOCS[family]} walk-forward block is missing or stale; "
         "run PYTHONPATH=. python3 scripts/walk_forward_benchmark.py --docs-only")
+
+
+def test_status_doc_blocks_match_reports():
+    from src.evaluation import status_blocks as sb
+
+    wf = json.loads((ROOT / sb.WALK_FORWARD_JSON).read_text())
+    expected = {
+        "PROJECT_STATUS.md": {"walk-forward-headline": sb.status_walk_forward(wf)},
+        "README.md": {"walk-forward-table": sb.readme_table(wf), "walk-forward-significance": sb.readme_significance(wf)},
+    }
+    ledger_path = ROOT / "reports/evaluation/paper_ledger_2026_27.json"
+    if ledger_path.exists():
+        expected["PROJECT_STATUS.md"]["ledger-headline"] = sb.status_ledger(json.loads(ledger_path.read_text()))
+    for doc, blocks in expected.items():
+        text = (ROOT / doc).read_text()
+        for name, body in blocks.items():
+            assert sb.apply_named_block(text, name, body) == text, (
+                f"{doc} block '{name}' is stale; run PYTHONPATH=. python3 scripts/refresh_reports.py")
+
+
+def test_walk_forward_report_is_not_older_than_production_models():
+    from scripts.refresh_reports import walk_forward_is_stale
+
+    assert not walk_forward_is_stale(ROOT), "production models changed after the benchmark; run scripts/refresh_reports.py"
+
+
+def test_paper_ledger_report_covers_every_graded_ledger_row():
+    from src.api.services.paper_trading import grade, load_results, read_ledger
+
+    ledger = ROOT / "data/predictions/paper_ledger_2026_27.jsonl"
+    if not ledger.exists():
+        pytest.skip("local ledger absent")
+    report = json.loads((ROOT / "reports/evaluation/paper_ledger_2026_27.json").read_text())
+    graded = grade(read_ledger("2026-27"), load_results("2026-27"))
+    final = sum(1 for g in graded if g["status"] == "final" and g["valid"])
+    assert report["graded"] == final, f"paper ledger report has {report['graded']} graded games, ledger has {final}; rerun scripts/paper_ledger_report.py"

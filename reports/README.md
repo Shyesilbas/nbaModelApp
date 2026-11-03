@@ -4,13 +4,15 @@ Two kinds of files live here. Generated reports are rewritten by a script and ne
 
 ## Generated (tracked)
 
+Everything below is rebuilt in one step by `PYTHONPATH=. python3 scripts/refresh_reports.py` (run daily by `scripts/ops/morning.py` and after each promotion by `scripts/retrain_pipeline.py`; the benchmark reruns only when the production models changed). It also rewrites the generated blocks of `PROJECT_STATUS.md` and `README.md`.
+
 | Report | Script | When to rebuild |
 |---|---|---|
 | `evaluation/multi_season_walk_forward_backtest.{md,json}` | `PYTHONPATH=. python3 scripts/walk_forward_benchmark.py` | After every retrain or promotion. The header names the model versions it measured; `tests/test_docs_consistency.py` fails when they differ from the production release. |
 | `evaluation/paper_ledger_<season>.{md,json}` | `PYTHONPATH=. python3 scripts/paper_ledger_report.py --season 2026-27` | After results are pulled (the morning routine `scripts/ops/morning.py` runs it). |
 | `evaluation/training_run_<timestamp>.md` | `scripts/retrain_pipeline.py` | Written by each retrain, dry runs included. Only the run of the active release is kept (its id is `run_id` in `models/production/clean_holdout_metrics.json`); delete the others, git history keeps them. |
 | `operations/season=<season>/*.md` | `PYTHONPATH=. python3 main.py --season <season> --run-roster-analysis` | Season roster analysis. For the in-progress season only the markdown is rewritten; its `data/season=<season>/analysis/*.csv` are the signed bootstrap roster and are left alone. |
-| Walk-forward block in `docs/reports/models/*.md` | `scripts/walk_forward_benchmark.py` (or `--docs-only` to re-render from the saved JSON) | With every walk-forward run; the rest of those docs is hand-written. |
+| Walk-forward blocks in `docs/reports/models/*.md`, `PROJECT_STATUS.md`, `README.md` | `scripts/walk_forward_benchmark.py` (or `--docs-only` to re-render from the saved JSON) | With every walk-forward run; the rest of those docs is hand-written. |
 
 ## Generated (not tracked, see `.gitignore`)
 

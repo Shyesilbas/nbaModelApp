@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import shutil
+import subprocess
 import argparse
 import joblib
 import pandas as pd
@@ -611,6 +612,9 @@ def main():
         if args.models:
             print(f"Note: only {', '.join(args.models)} were retrained; the other models keep the release in their own metadata.")
         print(f"Model promotion complete. Production release is now {manifest.release}.")
+        # The reports and doc numbers describe the models that were just replaced.
+        subprocess.run([sys.executable, str(ROOT / "scripts" / "refresh_reports.py"), "--walk-forward", "always"],
+                       cwd=ROOT, env={**os.environ, "PYTHONPATH": str(ROOT)})
     else:
         print("Promotion cancelled. Experimental models left under models/experimental/.")
 

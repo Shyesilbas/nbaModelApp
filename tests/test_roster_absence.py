@@ -1,3 +1,4 @@
+import pytest
 import pandas as pd
 
 from src.features.roster_absence import (
@@ -149,3 +150,14 @@ def test_add_absence_columns_rotation_antisymmetry():
     assert out.loc["AAA", "MISSING_ROT_MINS_DIFF"] < 0
     assert out.loc["BBB", "MISSING_ROT_MINS_DIFF"] > 0
 
+
+
+def test_carry_forward_availability_cannot_see_tonights_absence():
+    logs = _logs(star_plays_last=False)
+    actual = build_absence_deltas(logs).set_index("GAME_ID")["ABS_DELTA"]
+    carried = build_absence_deltas(logs, availability="carry_forward").set_index("GAME_ID")["ABS_DELTA"]
+    last = actual.index[-1]
+    assert actual.loc[last] < -5  # the box score knows the star sat out
+    assert carried.loc[last] > actual.loc[last] + 5  # the live default does not: he played the previous game
+    with pytest.raises(ValueError):
+        build_absence_deltas(logs, availability="injury_report")

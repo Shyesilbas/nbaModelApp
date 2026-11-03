@@ -63,8 +63,6 @@ def game_injuries(report, season: str, game_date: str, away: str, home: str):
     overrides, summary = build_overrides(report, season, game_date, away, home)
     if summary and summary["unmatched"]:
         print(f"  no player id for: {', '.join(summary['unmatched'])}")
-    if summary:
-        summary.pop("unmatched")
     return overrides, summary
 
 

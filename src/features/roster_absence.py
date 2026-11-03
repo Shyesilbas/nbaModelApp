@@ -52,8 +52,17 @@ def _prepare(player_games: pd.DataFrame) -> pd.DataFrame:
     return d[d["MIN"] > 0]
 
 
-def build_absence_deltas(player_games: pd.DataFrame) -> pd.DataFrame:
-    """Actual-availability ABS_DELTA and decoupled rotation metrics for every (GAME_ID, TEAM_ABBREVIATION) in the logs."""
+AVAILABILITY_MODES = ("actual", "carry_forward")
+
+
+def build_absence_deltas(player_games: pd.DataFrame, availability: str = "actual") -> pd.DataFrame:
+    """ABS_DELTA and decoupled rotation metrics for every (GAME_ID, TEAM_ABBREVIATION) in the logs.
+
+    ``availability="actual"`` uses who played the game (training). ``"carry_forward"`` assumes whoever
+    played the team's previous game plays tonight, which is what live inference does for a player no
+    injury report mentions; it is the leak-free lower bound of the information live serving has."""
+    if availability not in AVAILABILITY_MODES:
+        raise ValueError(f"availability must be one of {AVAILABILITY_MODES}")
     d = _prepare(player_games)
     out = []
     for (_, team), g in d.groupby(["_season", "TEAM_ABBREVIATION"]):
@@ -71,6 +80,9 @@ def build_absence_deltas(player_games: pd.DataFrame) -> pd.DataFrame:
         avg_min = msum.div(gp.replace(0, np.nan))
         rotation = avg_min >= MIN_ROTATION_MINUTES
         gs_avg = gssum.div(gp.replace(0, np.nan))
+
+        if availability == "carry_forward":
+            on = on.shift(1).fillna(0.0)
 
         # 1. Standard ABS_DELTA
         delta = ((on - presence) * gs_avg).where(rotation).sum(axis=1)
@@ -111,9 +123,9 @@ ROTATION_COLUMNS = (
 )
 
 
-def add_absence_columns(model_df: pd.DataFrame, player_games: pd.DataFrame) -> pd.DataFrame:
+def add_absence_columns(model_df: pd.DataFrame, player_games: pd.DataFrame, availability: str = "actual") -> pd.DataFrame:
     """Add ABS_DELTA, decoupled rotation metrics and their differentials to a team-game model dataset."""
-    deltas = build_absence_deltas(player_games)
+    deltas = build_absence_deltas(player_games, availability)
     df = model_df.drop(columns=[c for c in ROTATION_COLUMNS if c in model_df.columns]).copy()
     key = df["GAME_ID"].astype(str).str.zfill(10)
     df["_gid"] = key

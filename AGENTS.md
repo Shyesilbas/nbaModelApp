@@ -13,6 +13,7 @@ Detaylı iş akışları ve standartlar `.agents/skills/` altındadır; ilgili g
 - **Günlük Veri Güncelleme:** `PYTHONPATH=. python3 main.py --update-data`
 - **Maç Öncesi Tahmin Kaydı (Paper Trading):** `PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --season 2026-27`
 - **Paper Trading Raporu (Elo / son-10 baseline, bootstrap CI):** `PYTHONPATH=. python3 scripts/paper_ledger_report.py --season 2026-27`
+- **Tüm Raporları ve Doküman Rakamlarını Yenile (günlük `morning.py` ve retrain sonrası otomatik):** `PYTHONPATH=. python3 scripts/refresh_reports.py`
 - **Walk-Forward Benchmark Raporu:** `PYTHONPATH=. python3 scripts/walk_forward_benchmark.py`
 - **Frontend SQLite Store Derleme:** `PYTHONPATH=. python3 scripts/build_frontend_store.py`
 - **Testleri Çalıştır:** `PYTHONPATH=. python3 -m pytest tests -q`
