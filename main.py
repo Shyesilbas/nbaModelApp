@@ -5,9 +5,22 @@ from src.orchestration import PipelineOrchestrator
 
 def main():
     scripts_epilog = """standalone scripts (run with PYTHONPATH=. python3 <script> --help for details):
+
+daily operations
+  scripts/ops/morning.py [--skip-update] [--dry-run]
+      Morning routine in one command: refresh game data, publish the snapshot inputs, refresh reports.
   scripts/update_all_game_data.py [--season YYYY-YY] [--pbp-limit N]
-      One-shot daily refresh: --update-data, box scores, play-by-play, then rebuild the
+      One-shot data refresh: --update-data, box scores, play-by-play, then rebuild the
       PBP situational table (data/training/) and the frontend store.
+  scripts/ops/publish_snapshot_data.py [--season YYYY-YY] [--dry-run]
+      Publish the small data subset the pre-tip snapshot needs (used by GitHub Actions).
+  scripts/paper_trading_snapshot.py [--season YYYY-YY] [--date D] [--pre-tip MIN] [--backfill] [--dry-run]
+      Freeze pre-tip WIN and SCORE predictions into the paper ledger (run by .github/workflows/snapshot.yml).
+  scripts/refresh_reports.py [--walk-forward {auto,always,never}] [--season YYYY-YY]
+      Rebuild the ledger report, the walk-forward report when the models changed, and the numbers
+      copied into README, PROJECT_STATUS and the model docs.
+
+data and features
   scripts/build_play_by_play.py --season YYYY-YY [--limit N] [--dry-run]
       Fetch and cache play-by-play JSON per game (NBA API calls; resumes where it stopped).
   scripts/build_pbp_lineups.py --season YYYY-YY [--limit N] [--dry-run]
@@ -18,15 +31,50 @@ def main():
       with current regular-season games. Also runs automatically in --update-data (Step 9b).
   scripts/build_frontend_store.py [--season YYYY-YY] [--force]
       Build the SQLite store the API serves frontend data from. Closed seasons are built once.
-  scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY
-      Predict all matchups for a given date with the production models.
+  scripts/rebuild_training_data.py [--seasons YYYY-YY ...]
+      Rebuild the season-scoped team model-ready datasets in data/training/.
+  scripts/backfill_starters.py [season ...]
+      Backfill per-game starter flags (player_starters.csv) from BoxScoreTraditionalV3; resumable.
+  scripts/feature_engineering/build_initial_season_elo.py --season YYYY-YY [--write]
+      Opening Elo of a season (chained earlier seasons, mean reversion, roster-talent adjustment).
+  scripts/ingest/ingest_espn_transactions.py
+      ESPN transactions as per-player movement events (data/reference/player_movement.csv shape).
+  scripts/ingest/build_observed_affiliation_events.py [--season YYYY-YY]
+      Observed player-team stints and affiliation events.
+  scripts/measure_status_factors.py [--season YYYY-YY]
+      How often a player listed Questionable/Doubtful/Probable actually plays, from past reports.
+
+models and evaluation
   scripts/retrain_pipeline.py [--dry-run | --promote] [--models {win,score,player} ...]
       Retrain, compare against the production champion, and promote if eligible (asks
       first unless --promote). Seasons come from config/training_manifest.yaml.
+  scripts/walk_forward_benchmark.py [--docs-only]
+      5-season expanding-window walk-forward benchmark for WIN, SCORE and PLAYER, with bootstrap
+      intervals, availability audit and calibration; writes reports/evaluation/multi_season_walk_forward_backtest.*.
+  scripts/paper_ledger_report.py [--season YYYY-YY] [--stdout]
+      Locked-season ledger graded against pure Elo and last-10 baselines, split by model version.
   scripts/generate_report.py --season YYYY-YY --evaluate [--model-dir DIR]
       Evaluate the production models (or DIR) on a season; --compare-models DIR1 DIR2.
+  scripts/backtest/live.py --season YYYY-YY --out FILE [--workers N] [--limit N]
+      Replay a finished season through the live prediction service (use NBA_MODEL_DIR for holdout models).
+  scripts/backtest/offline.py --out FILE [--test-seasons YYYY-YY ...] [--keep-models]
+      Offline walk-forward backtest that retrains the WIN, SCORE and PLAYER trainers.
+  scripts/backtest/compare.py base.parquet new.parquet [...]
+      Compare live-replay results on the same games.
   scripts/detect_drift_and_leakage.py --reference-season YYYY-YY --target-season YYYY-YY
       Data drift and feature leakage detector.
+
+predictions and checks
+  scripts/predict_matchup.py --home ABB --away ABB --prediction-date YYYY-MM-DD
+      Predict a single matchup.
+  scripts/predict_daily_schedule.py --date YYYY-MM-DD --season YYYY-YY
+      Predict all matchups for a given date with the production models.
+  scripts/audit/validate_project_structure.py
+      File integrity, feature alignment and path checks.
+  scripts/audit/validate_season_path_refactor.py
+      Season path resolution checks.
+  scripts/start_all.sh
+      Start the API (port 8001) and the Vite frontend (port 5173).
 """
     parser = argparse.ArgumentParser(
         description=(
@@ -83,12 +131,12 @@ def main():
     parser.add_argument(
         "--train-score-models",
         action="store_true",
-        help="Train XGBoost game score component prediction models"
+        help="Train the game score models (Ridge pace, offensive rating, margin and temporal residual correction)"
     )
     parser.add_argument(
         "--train-win-model",
         action="store_true",
-        help="Train calibrated Logistic Regression win probability model"
+        help="Train the Logistic Regression win probability model"
     )
     parser.add_argument(
         "--build-schedule-context",

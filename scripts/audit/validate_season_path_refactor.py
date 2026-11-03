@@ -42,7 +42,7 @@ def test_get_data_paths_values():
     assert other_token in paths_prev.team_games_raw or f"season={other_season}" in paths_prev.team_games_raw
     assert paths_prev.win_model_dataset.endswith(f"season={other_season}/processed/team_win_model_ready_v2_player_features.csv")
     
-    print("✅ get_data_paths tests passed successfully.")
+    print("get_data_paths tests passed successfully.")
 
 def test_production_manifest():
     print("Testing production model manifest resolution...")
@@ -57,13 +57,13 @@ def test_production_manifest():
     score_model_path = resolve_artifact_path("score_model", "home_model_path", "models/home_score_model_v2.pkl")
     assert score_model_path.exists()
     
-    print("✅ Production manifest verification passed successfully.")
+    print("Production manifest verification passed successfully.")
 
 def main():
     try:
         test_get_data_paths_values()
         test_production_manifest()
-        print("\n🎉 ALL PATH REFACTOR VALIDATION CHECKS PASSED SUCCESSFULLY! 🎉\n")
+        print("\nALL PATH REFACTOR VALIDATION CHECKS PASSED SUCCESSFULLY!\n")
     except AssertionError as e:
         print(f"\n❌ Validation assertion failed: {e}\n")
         sys.exit(1)
