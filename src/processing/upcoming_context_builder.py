@@ -105,10 +105,10 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
 
     today = pd.Timestamp(date.today())
     upcoming = schedule_df[schedule_df["GAME_DATE"] >= today].copy()
-    print(f"\n  📅 Upcoming games found: {len(upcoming)} (from {today.date()} onwards)")
+    print(f"\n  Upcoming games found: {len(upcoming)} (from {today.date()} onwards)")
 
     if upcoming.empty:
-        print("  ⚠️  No upcoming games found in the combined schedule.")
+        print("   No upcoming games found in the combined schedule.")
         return upcoming
 
     # ── 2. Load V2 team features and get latest per team ──────────────────
@@ -120,7 +120,7 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
 
     v2_df = pd.read_csv(v2_model_path)
     latest_features = _get_latest_team_features(v2_df)
-    print(f"  📊 Loaded V2 team features for {len(latest_features)} teams")
+    print(f"  Loaded V2 team features for {len(latest_features)} teams")
 
     # ── 3. Join home team features ─────────────────────────────────────────
     home_features = latest_features.rename(columns={
@@ -148,7 +148,7 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
 
     # ── 4. Add core player strings ─────────────────────────────────────────
     if not os.path.exists(core_players_path):
-        print(f"  ⚠️  Core players file not found at {core_players_path}. Skipping player context.")
+        print(f"   Core players file not found at {core_players_path}. Skipping player context.")
         ctx["HOME_TOP3_CORE_PLAYERS"] = None
         ctx["HOME_TOP5_CORE_PLAYERS"] = None
         ctx["AWAY_TOP3_CORE_PLAYERS"] = None
@@ -169,7 +169,7 @@ def build_upcoming_games_context(save: bool = True) -> pd.DataFrame:
         })
         ctx = ctx.merge(home_core, on="HOME_TEAM_ABBREVIATION", how="left")
         ctx = ctx.merge(away_core, on="AWAY_TEAM_ABBREVIATION", how="left")
-        print(f"  🏀 Core player strings added for {len(core_str)} teams")
+        print(f"  Core player strings added for {len(core_str)} teams")
 
     # ── 5. Playoff series context ──────────────────────────────────────────
     # For each upcoming playoff/Finals game, count wins from completed h2h games

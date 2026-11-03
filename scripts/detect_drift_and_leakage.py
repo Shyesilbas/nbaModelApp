@@ -36,7 +36,7 @@ def main():
     args = parser.parse_args()
     
     print("==================================================")
-    print("  🔍 Data Drift & Feature Leakage Detector        ")
+    print("  Data Drift & Feature Leakage Detector        ")
     print("==================================================")
     print(f"Reference Season: {args.reference_season}")
     print(f"Target Season:    {args.target_season}")

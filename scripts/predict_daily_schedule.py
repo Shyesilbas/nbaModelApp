@@ -259,7 +259,7 @@ def main():
     ]
     
     print("\n" + "="*80)
-    print(f"🏀 NBA PREDICTIONS FOR {target_date} ({release})")
+    print(f"NBA PREDICTIONS FOR {target_date} ({release})")
     print("="*80)
     print(f"{'AWAY':<6} | {'HOME':<6} | {'HOME WIN%':<10} | {'AWAY WIN%':<10} | {'PROJECTED SCORE':<18} | {'PRED WINNER':<12}")
     print("-"*80)

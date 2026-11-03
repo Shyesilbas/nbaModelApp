@@ -24,7 +24,7 @@ def _df_to_markdown(df: pd.DataFrame) -> str:
 
 def run_feature_pipeline(args, season, token, paths) -> None:
     print("============================================================")
-    print("🏀 STARTING NBA ML PREPROCESSING & FEATURE ENGINEERING PIPELINE 🏀")
+    print("STARTING NBA ML PREPROCESSING & FEATURE ENGINEERING PIPELINE ")
     print("============================================================\n")
 
     # 1. LOAD DATASETS
@@ -43,10 +43,10 @@ def run_feature_pipeline(args, season, token, paths) -> None:
             df_team_raw = load_team_games(season=args.season)
             df_player_raw = load_player_games(season=args.season)
         except Exception as e:
-            print(f"❌ Error loading raw datasets: {e}")
+            print(f"Error loading raw datasets: {e}")
             sys.exit(1)
         if df_team_raw.empty or df_player_raw.empty:
-            print(f"❌ Raw team/player game logs for season {season} are missing or empty.")
+            print(f"Raw team/player game logs for season {season} are missing or empty.")
             print("   Run --update-data first, or pass --mock to test the pipeline with synthetic data.")
             sys.exit(1)
 
@@ -70,9 +70,9 @@ def run_feature_pipeline(args, season, token, paths) -> None:
     player_valid = validate_player_games(df_player_raw)
 
     if not team_valid or not player_valid:
-        print("⚠️ Warning: Validation found discrepancies. Proceeding with caution...\n")
+        print("Warning: Validation found discrepancies. Proceeding with caution...\n")
     else:
-        print("✅ Validation checks passed successfully.\n")
+        print("Validation checks passed successfully.\n")
 
     # 3. DATE CLEANING & SORTING
     print("--- STEP 3: DATE CLEANING & SORTING ---")
@@ -152,7 +152,7 @@ def run_feature_pipeline(args, season, token, paths) -> None:
             f.write(f"- **Number of Rows Before Join**: {val_metrics['rows_before']}\n")
             f.write(f"- **Number of Rows After Join**: {val_metrics['rows_after']}\n")
             f.write(f"- **Join Success Rate**: {val_metrics['success_rate_percent']:.2f}%\n")
-            f.write(f"- **Every GAME_ID has exactly 2 rows?**: {'Yes ✅' if val_metrics['all_games_have_two_rows'] else 'No ❌'}\n")
+            f.write(f"- **Every GAME_ID has exactly 2 rows?**: {'Yes ' if val_metrics['all_games_have_two_rows'] else 'No '}\n")
             f.write(f"- **Number of Invalid GAME_ID row counts**: {val_metrics['invalid_game_ids_count']}\n")
             f.write(f"- **Failed Matching GAME_IDs**: {val_metrics['failed_game_ids'] if val_metrics['failed_game_ids'] else 'None'}\n\n")
             
@@ -285,7 +285,7 @@ def run_feature_pipeline(args, season, token, paths) -> None:
         enrich_all_seasons([season])
 
     print("\n============================================================")
-    print("🎉 PIPELINE RUN COMPLETED SUCCESSFULLY! 🎉")
+    print("PIPELINE RUN COMPLETED SUCCESSFULLY! ")
     if args.build_v3_dataset:
         print(f"All features and model-ready datasets (V2, V3) saved successfully.")
     elif args.build_model_dataset:

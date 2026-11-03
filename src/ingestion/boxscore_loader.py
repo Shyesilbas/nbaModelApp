@@ -72,13 +72,13 @@ def load_team_boxscores(save: bool = True, season: str = None, output_scope: str
 
     df = df.sort_values(["GAME_DATE", "GAME_ID", "TEAM_ABBREVIATION"]).reset_index(drop=True)
 
-    print(f"  ✅ Team box scores: {len(df):,} rows, {df['GAME_ID'].nunique():,} unique games")
+    print(f"  Team box scores: {len(df):,} rows, {df['GAME_ID'].nunique():,} unique games")
 
     if save:
         team_bs_csv = get_data_paths(season).raw_team_boxscores
         os.makedirs(os.path.dirname(team_bs_csv), exist_ok=True)
         write_csv_atomic(df, team_bs_csv)
-        print(f"  💾 Saved: {team_bs_csv}")
+        print(f"  Saved: {team_bs_csv}")
 
     return df
 
@@ -147,13 +147,13 @@ def load_player_boxscores(save: bool = True, season: str = None, output_scope: s
 
     df = df.sort_values(["GAME_DATE", "GAME_ID", "TEAM_ABBREVIATION", "PLAYER_NAME"]).reset_index(drop=True)
 
-    print(f"  ✅ Player box scores: {len(df):,} rows, {df['PLAYER_ID'].nunique():,} unique players")
+    print(f"  Player box scores: {len(df):,} rows, {df['PLAYER_ID'].nunique():,} unique players")
 
     if save:
         player_bs_csv = get_data_paths(season).raw_player_boxscores
         os.makedirs(os.path.dirname(player_bs_csv), exist_ok=True)
         write_csv_atomic(df, player_bs_csv)
-        print(f"  💾 Saved: {player_bs_csv}")
+        print(f"  Saved: {player_bs_csv}")
 
     return df
 
@@ -251,7 +251,7 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
 
     results = results[final_cols].sort_values(["GAME_DATE", "GAME_ID"]).reset_index(drop=True)
 
-    print(f"  ✅ Game results: {len(results):,} completed games")
+    print(f"  Game results: {len(results):,} completed games")
 
     if save:
         token = season_to_file_token(season or get_default_season())
@@ -263,7 +263,7 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
             os.makedirs(os.path.dirname(results_csv), exist_ok=True)
             
         write_csv_atomic(results, results_csv)
-        print(f"  💾 Saved results summary: {results_csv}")
+        print(f"  Saved results summary: {results_csv}")
 
     return results
 

@@ -22,7 +22,7 @@ class UpdateDataService:
 
     def run(self, args) -> None:
         print("============================================================")
-        print("🔄 STARTING LOCAL DATA UPDATE PIPELINE 🔄")
+        print("STARTING LOCAL DATA UPDATE PIPELINE ")
         print("============================================================\n")
 
         # Step 1: Refresh schedule
@@ -247,5 +247,5 @@ class UpdateDataService:
         print(f"  Freshness:   {freshness_results_pre.get('status', 'UNKNOWN')} -> {post_status}")
 
         print("\n" + "="*60)
-        print("🎉 LOCAL DATA UPDATE PIPELINE COMPLETE! 🎉")
+        print("LOCAL DATA UPDATE PIPELINE COMPLETE! ")
         print("="*60 + "\n")

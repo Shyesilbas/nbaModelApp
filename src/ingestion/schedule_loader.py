@@ -63,7 +63,7 @@ def load_full_schedule(season: Optional[str] = None) -> pd.DataFrame:
     if not os.path.exists(raw_schedule_path):
         team_games_path = paths.team_games_raw
         if os.path.exists(team_games_path):
-            print(f"  ℹ️ Generating schedule.csv from team_games.csv ({team_games_path})...")
+            print(f"  Generating schedule.csv from team_games.csv ({team_games_path})...")
             df_tg = pd.read_csv(team_games_path, dtype={"GAME_ID": str})
             df_tg["GAME_ID"] = df_tg["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
             df_home = df_tg[df_tg["MATCHUP"].astype(str).str.contains("vs.", case=False, na=False)].copy()
@@ -87,7 +87,7 @@ def load_full_schedule(season: Optional[str] = None) -> pd.DataFrame:
             
             os.makedirs(os.path.dirname(raw_schedule_path), exist_ok=True)
             write_csv_atomic(df_sched, raw_schedule_path)
-            print(f"  ✅ Saved generated schedule.csv ({len(df_sched)} games)")
+            print(f"  Saved generated schedule.csv ({len(df_sched)} games)")
         else:
             raise FileNotFoundError(
                 f"Main schedule file not found: {raw_schedule_path}\n"
@@ -104,7 +104,7 @@ def load_full_schedule(season: Optional[str] = None) -> pd.DataFrame:
         )
 
     df = _ensure_columns(df)
-    print(f"  ✅ Loaded full schedule: {len(df):,} games  ({raw_schedule_path})")
+    print(f"  Loaded full schedule: {len(df):,} games  ({raw_schedule_path})")
     return df
 
 
@@ -132,7 +132,7 @@ def load_finals_upcoming_schedule(season: Optional[str] = None) -> pd.DataFrame:
         )
 
     df = _ensure_columns(df)
-    print(f"  ✅ Loaded Finals upcoming schedule: {len(df):,} games  ({raw_finals_path})")
+    print(f"  Loaded Finals upcoming schedule: {len(df):,} games  ({raw_finals_path})")
     return df
 
 
@@ -168,7 +168,7 @@ def load_combined_schedule(save: bool = True, season: Optional[str] = None) -> p
     # Sort chronologically
     df_combined = df_combined.sort_values("GAME_DATE").reset_index(drop=True)
 
-    print(f"\n  📋 Combined schedule: {len(df_combined):,} total games")
+    print(f"\n  Combined schedule: {len(df_combined):,} total games")
     season_dist = df_combined["SEASON_TYPE"].value_counts()
     for stype, cnt in season_dist.items():
         print(f"     {stype}: {cnt:,} games")
@@ -176,6 +176,6 @@ def load_combined_schedule(save: bool = True, season: Optional[str] = None) -> p
     if save:
         os.makedirs(os.path.dirname(combined_csv_path), exist_ok=True)
         write_csv_atomic(df_combined, combined_csv_path)
-        print(f"  💾 Saved: {combined_csv_path}")
+        print(f"  Saved: {combined_csv_path}")
 
     return df_combined

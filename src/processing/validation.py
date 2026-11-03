@@ -43,24 +43,24 @@ def _run_validation_checks(df: pd.DataFrame, required_cols: List[str], dataset_n
     # 2. Check required columns
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
-        print(f"❌ WARNING: The following {len(missing_cols)} required columns are MISSING:")
+        print(f"WARNING: The following {len(missing_cols)} required columns are MISSING:")
         for col in missing_cols:
             print(f"   - {col}")
         valid = False
     else:
-        print("✅ Success: All required columns are present.")
+        print("Success: All required columns are present.")
         valid = True
         
     # 3. Check null counts
     null_counts = df.isnull().sum()
     cols_with_nulls = null_counts[null_counts > 0]
     if not cols_with_nulls.empty:
-        print(f"⚠️ Null values found in {len(cols_with_nulls)} columns:")
+        print(f"Null values found in {len(cols_with_nulls)} columns:")
         for col, count in cols_with_nulls.items():
             pct = (count / rows) * 100
             print(f"   - {col}: {count} nulls ({pct:.2f}%)")
     else:
-        print("✅ Success: No null values found in any columns.")
+        print("Success: No null values found in any columns.")
         
     # 4. Check SEASON_TYPE distribution
     if "SEASON_TYPE" in df.columns:
@@ -69,14 +69,14 @@ def _run_validation_checks(df: pd.DataFrame, required_cols: List[str], dataset_n
         for val, count in dist.items():
             print(f"   - {val}: {count}")
     else:
-        print("⚠️ Warning: 'SEASON_TYPE' column not found, cannot show distribution.")
+        print("Warning: 'SEASON_TYPE' column not found, cannot show distribution.")
         
     # 5. Check duplicate rows
     duplicate_count = df.duplicated().sum()
     if duplicate_count > 0:
-        print(f"⚠️ Warning: Found {duplicate_count} duplicate rows in this dataset.")
+        print(f"Warning: Found {duplicate_count} duplicate rows in this dataset.")
     else:
-        print("✅ Success: No duplicate rows detected.")
+        print("Success: No duplicate rows detected.")
         
     print("=" * 60 + "\n")
     return valid

@@ -65,10 +65,10 @@ def main():
         test_production_manifest()
         print("\nALL PATH REFACTOR VALIDATION CHECKS PASSED SUCCESSFULLY!\n")
     except AssertionError as e:
-        print(f"\n❌ Validation assertion failed: {e}\n")
+        print(f"\nValidation assertion failed: {e}\n")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Unexpected validation error: {e}\n")
+        print(f"\nUnexpected validation error: {e}\n")
         sys.exit(1)
 
 if __name__ == "__main__":

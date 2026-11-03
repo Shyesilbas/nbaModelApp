@@ -43,12 +43,12 @@ def load_local_datasets(
     try:
         df_team = load_team_games(season=season)
     except Exception as e:
-        print(f"⚠️ Error loading team games for season {season}: {e}")
+        print(f"Error loading team games for season {season}: {e}")
 
     try:
         df_player = load_player_games(season=season)
     except Exception as e:
-        print(f"⚠️ Error loading player games for season {season}: {e}")
+        print(f"Error loading player games for season {season}: {e}")
 
     try:
         if refresh_schedule:
@@ -62,7 +62,7 @@ def load_local_datasets(
             else:
                 df_schedule = load_combined_schedule(save=save_schedule, season=season)
     except Exception as e:
-        print(f"⚠️ Error loading combined schedule: {e}")
+        print(f"Error loading combined schedule: {e}")
 
     return df_team, df_player, df_schedule
 
@@ -517,7 +517,7 @@ def generate_data_freshness_report(
                 f.write(f"| `{m['game_id']}` | {m['game_date']} | {m['matchup']} | {m['row_count']} |\n")
             f.write("\n")
         else:
-            f.write("✅ All scheduled completed games are present in team games.\n\n")
+            f.write("All scheduled completed games are present in team games.\n\n")
 
         f.write("## 3. Dataset Sync (Team vs Player Games)\n\n")
         f.write(f"- **Game IDs in team_games only**: {len(team_only)}\n")
@@ -534,15 +534,15 @@ def generate_data_freshness_report(
                 f.write(f"\n*...and {len(team_player_mismatch_game_ids) - 100} more mismatches.*\n")
             f.write("\n")
         else:
-            f.write("✅ Game ID coverage matches perfectly between team and player game logs.\n\n")
+            f.write("Game ID coverage matches perfectly between team and player game logs.\n\n")
 
         f.write("## 4. Finals / Playoff Anomaly Detection\n\n")
         if finals_warnings:
             for fw in finals_warnings:
-                f.write(f"- ⚠️ {fw}\n")
+                f.write(f"- {fw}\n")
             f.write("\n")
         else:
-            f.write("✅ No missing completed Finals games detected.\n\n")
+            f.write("No missing completed Finals games detected.\n\n")
 
         f.write("## 5. Active Warnings / Diagnostics\n\n")
         if warnings:
@@ -550,9 +550,9 @@ def generate_data_freshness_report(
             seen_warn = set()
             for w in warnings:
                 if w not in seen_warn:
-                    f.write(f"- ⚠️ {w}\n")
+                    f.write(f"- {w}\n")
                     seen_warn.add(w)
         else:
-            f.write("✅ No warnings or data discrepancies detected.\n")
+            f.write("No warnings or data discrepancies detected.\n")
 
     return results

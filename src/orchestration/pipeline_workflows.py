@@ -145,7 +145,7 @@ def run_startup_check(args: Any) -> None:
     print(f"Missing completed games: {len(results['missing_completed_game_ids'])}")
     print(f"Team/player game ID mismatches: {len(results['team_player_mismatch_game_ids'])}")
     for warning in results["warnings"]:
-        print(f"  ⚠️ {warning}")
+        print(f"  {warning}")
 
 
 def run_update_data(args: Any) -> None:

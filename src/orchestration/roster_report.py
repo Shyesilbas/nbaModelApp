@@ -79,7 +79,7 @@ def run_roster_analysis_report(season, paths) -> None:
     # Same normalized name mapping to different PLAYER_IDs (which can be normal for different players, but useful to report)
     dup_normalized = player_name_lookup_df[player_name_lookup_df.duplicated(subset=["NORMALIZED_PLAYER_NAME"], keep=False)]
     if len(dup_normalized) > 0:
-        print(f"ℹ️ Info: Detected {dup_normalized['NORMALIZED_PLAYER_NAME'].nunique()} normalized names sharing multiple PLAYER_IDs:")
+        print(f"Info: Detected {dup_normalized['NORMALIZED_PLAYER_NAME'].nunique()} normalized names sharing multiple PLAYER_IDs:")
         # Display grouping
         for name, group in dup_normalized.groupby("NORMALIZED_PLAYER_NAME"):
             ids_str = ", ".join(group["PLAYER_ID"].astype(str).tolist())

@@ -338,7 +338,7 @@ def main():
     args = parser.parse_args()
     
     print("==================================================")
-    print("  🏀 NBA Prediction Model Retraining Pipeline     ")
+    print("  NBA Prediction Model Retraining Pipeline     ")
     print("==================================================")
     manifest = load_training_manifest(args.manifest, root=ROOT)
     validation_season = manifest.validation_season
