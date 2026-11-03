@@ -105,3 +105,6 @@ reports/audits/opponent_feature_report.md
 reports/evaluation/season_*_evaluation_report.md
 reports/evaluation/compare_*.md
 reports/audits/drift_and_leakage_*.md
+
+# Roster analysis reports, rebuilt by main.py --run-roster-analysis
+reports/operations/season=*/

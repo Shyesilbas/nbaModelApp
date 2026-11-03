@@ -1,6 +1,6 @@
 # All-season per-game walk-forward predictions
 
-`per_game_predictions.csv`: 6276 games, 2021-22..2025-26. Each season is predicted by models trained only on earlier seasons (current 8-feature WIN, Ridge SCORE), merged from `2026-10-23_win_metadata_check{,_early,_prev}`. Rebuild: `PYTHONPATH=. python3 reports/backtests/2026-10-23_all_seasons_per_game/code/build_csv.py`.
+`per_game_predictions.csv`: 6276 games, 2021-22..2025-26. Each season is predicted by models trained only on earlier seasons (current 8-feature WIN, Ridge SCORE), merged from `2026-10-23_win_metadata_check{,_early,_prev}`. The per-season parquet inputs were removed from the repository to save space (kept in git history before the cleanup commit), so `build_csv.py` needs them regenerated first. Rebuild: `PYTHONPATH=. python3 reports/backtests/2026-10-23_all_seasons_per_game/code/build_csv.py`.
 
 Columns: `P_HOME_WIN, HOME_WIN, PRED_HOME_WIN, WIN_CORRECT, PRED_TOTAL, REAL_TOTAL, TOTAL_ERROR (pred - real), PRED_MARGIN, REAL_MARGIN, MARGIN_ERROR, OVERTIME`.
 No sportsbook lines exist, so there is no true over/under result; total error is the evaluation.
