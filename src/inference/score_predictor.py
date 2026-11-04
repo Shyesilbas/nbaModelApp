@@ -13,6 +13,14 @@ from src.core.artifact_paths import resolve_artifact_path
 from src.features.build_matchup_features import build_features
 
 
+def interval_offsets_80(metadata: Dict[str, Any], is_playoff: bool, fallback: Dict[str, Any]) -> Dict[str, Any]:
+    """80% interval offsets for one game; playoff games override the keys the model measured separately."""
+    offsets = dict(metadata.get("prediction_interval_offsets_80pct") or fallback)
+    if is_playoff:
+        offsets.update(metadata.get("prediction_interval_offsets_80pct_playoff") or {})
+    return offsets
+
+
 class ScorePredictor:
     def __init__(self, metadata_path: Optional[Path] = None):
         self.metadata_path = metadata_path or resolve_artifact_path(
@@ -106,7 +114,7 @@ class ScorePredictor:
                 pred_home = (pred_total + pred_margin) / 2.0
                 pred_away = (pred_total - pred_margin) / 2.0
 
-        offsets = self.metadata.get("prediction_interval_offsets_80pct", {
+        offsets = interval_offsets_80(self.metadata, features.get("IS_PLAYOFF", 0) == 1, {
             "home": [-8.0, 8.0],
             "away": [-8.0, 8.0],
             "total": [-12.0, 12.0],

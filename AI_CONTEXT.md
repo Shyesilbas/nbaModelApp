@@ -62,9 +62,9 @@ system_architecture:
   - `score_model_margin.pkl`: Ridge on 11 features (`ELO_DIFF`, `CLEAN_NET_RTG_DIFF_LAST_10`, `WINRATE_DIFF_LAST_10`, `DAYS_REST`, `OPP_DAYS_REST`, `IS_B2B`, `OPP_IS_B2B`, `ABS_DIFF`, `MISSING_ROT_MINS_DIFF`, `ROT_CONTINUITY_DIFF`, `ACTIVE_WT_GS_DIFF`)
   - `score_model_ridge_total.pkl` & `ridge_margin.pkl`: Residual corrections
 - **5-Season Walk-Forward Performance (6,276 Unseen Games):**
-  - **Total MAE:** `14.90 pts` (vs last-10 baseline `14.95 pts`; CI `[-0.115, +0.014]` includes 0, not significant). Raw pace x rating; the residual correction is not part of this benchmark.
-  - **Margin MAE:** `10.81 pts` (vs last-10 baseline `11.41 pts`; v13 promotion: `10.809` vs v12 `10.832`, 4/5 seasons)
-  - **Conformal 80% Coverage:** `80.5%` (seasons `78.7%` - `82.3%`)
+  - **Total MAE:** `14.87 pts` (vs last-10 baseline `14.95 pts`; CI `[-0.157, +0.001]` includes 0, not significant). Production pipeline including the OOF residual correction.
+  - **Margin MAE:** `10.85 pts` (vs last-10 baseline `11.41 pts`; CI `[-0.674, -0.452]`)
+  - **Conformal 80% Coverage:** total `79.3%`, margin `79.8%`; playoff margins use their own radius (`77.9%` playoff coverage instead of `74.3%`)
 
 ### C. PLAYER Model (`models/production/player_model_*.pkl`)
 - **Release:** `v15`

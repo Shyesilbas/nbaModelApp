@@ -12,7 +12,7 @@
 <!-- BEGIN GENERATED: walk-forward (scripts/walk_forward_benchmark.py; do not edit) -->
 ## Güncel Walk-Forward Sonuçları (`v15`)
 
-Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-03T17:36:13Z, commit `cd2b990`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
+Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-04T09:06:05Z, commit `3af50c9`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
 
 | Sezon | Maç | Model Brier | Elo Brier | Fark | Model Log-Loss | Elo Log-Loss | AUC | Doğruluk |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|

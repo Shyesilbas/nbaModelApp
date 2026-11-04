@@ -2,8 +2,8 @@
 
 > Bu dosya `scripts/walk_forward_benchmark.py` tarafından üretilir; elle düzenlenmez.
 
-**Rapor Tarihi:** 2026-11-03T17:36:13Z  
-**Ölçülen Üretim Yapılandırması:** WIN `v15` (eğitim 2026-10-25), SCORE `v15` (eğitim 2026-10-25), PLAYER `v15` (eğitim 2026-10-25); git `cd2b990`  
+**Rapor Tarihi:** 2026-11-04T09:06:05Z  
+**Ölçülen Üretim Yapılandırması:** WIN `v15` (eğitim 2026-10-25), SCORE `v15` (eğitim 2026-10-25), PLAYER `v15` (eğitim 2026-10-25); git `3af50c9`  
 **Yöntem:** Kesintisiz Genişleyen Zaman Pencereleri (Expanding Window). Her sezon yalnızca önceki tamamlanmış sezonlarla eğitilen modellerle test edilmiştir; geleceğe dönük hiçbir bilgi sızıntısı (leakage) bulunmamaktadır.  
 **Toplam Görülmemiş Test Maçı:** 6276 maç (5 ayrı NBA sezonu)
 
@@ -24,7 +24,7 @@
 |---|---:|---:|---:|
 | **Toplam Skor MAE** | **14.87 sayı** | 14.95 sayı | **-0.08 sayı** |
 | **Sayı Farkı (Margin) MAE** | **10.85 sayı** | 11.41 sayı | **-0.57 sayı** |
-| **Conformal %80 Kapsama (toplam / margin)** | **%79.3 / %79.5** | - | hedef %80 |
+| **Conformal %80 Kapsama (toplam / margin)** | **%79.3 / %79.8** | - | hedef %80 |
 
 ### Oyuncu Tahminleri (PLAYER Model) vs. EMA-10 Ortalaması
 | Hedef İstatistik | LightGBM Modeli MAE | EMA-10 Taban Çizgisi | MAE İyileşmesi | Toplam Test Satırı |
@@ -62,6 +62,8 @@ Fark = model kaybı - baseline kaybı (negatif = model daha iyi). %95 aralık, a
 | PLAYER AST MAE vs EMA-10 | -0.053 | [-0.056, -0.050] | %100.0 | model daha iyi (CI sıfırın altında) | 5/5 |
 
 Conformal %80 toplam kapsaması sezonlar arasında %77.9 - %81.3 aralığında. Yarıçaplar her fold'da yalnızca o fold'un eğitim sezonlarının temporal OOF artıklarından hesaplanır (test sezonu hiçbir aşamada görülmez); sezon başına yarıçaplar JSON raporunda `conformal_80_radius` altındadır.
+
+Playoff maçlarında (toplam 452) margin kapsaması: tek yarıçapla %74.3, playoff'a özel yarıçapla (üretimde sunulan) %77.9. Playoff margin hataları daha büyük olduğu için normal sezon yarıçapı bu maçları hedefin altında kapsıyordu.
 
 Not: SCORE modeli üretim hattıyla ölçülür: dört ridge modeli, ardından eğitim sezonlarının OOF artıklarından öğrenilen bağlam düzeltmesi (`ridge_total`, `ridge_margin`). Düzeltmesiz ham model: toplam MAE 14.90, margin MAE 10.81.
 

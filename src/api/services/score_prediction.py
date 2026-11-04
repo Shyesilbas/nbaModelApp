@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 import pandas as pd
 
 from src.features.build_matchup_features import build_features
+from src.inference.score_predictor import interval_offsets_80
 
 from . import win_prediction as svc
 from ..schemas import ScorePredictionRequest, ScorePredictionResponse, WinProbRequest, WinProbResponse
@@ -122,12 +123,12 @@ def predict_score(
     pred_home = (pred_total + pred_margin) / 2.0
     pred_away = (pred_total - pred_margin) / 2.0
 
-    offsets = metadata.get("prediction_interval_offsets_80pct") or {
+    offsets = interval_offsets_80(metadata, features.get("IS_PLAYOFF", 0) == 1, {
         "home": [-16.1, 16.1],
         "away": [-15.7, 15.7],
         "total": [-25.2, 25.2],
         "margin": [-20.1, 20.1]
-    }
+    })
 
     return ScorePredictionResponse(
         home_team=home_team,

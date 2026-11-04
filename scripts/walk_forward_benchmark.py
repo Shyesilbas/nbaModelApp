@@ -58,7 +58,7 @@ def _evaluate_prob(y_true: pd.Series, probs: np.ndarray) -> dict:
     }
 
 
-def _evaluate_score(actual_total, pred_total, actual_margin, pred_margin, offsets_80=None):
+def _evaluate_score(actual_total, pred_total, actual_margin, pred_margin, offsets_80=None, playoff=None, playoff_offsets_80=None):
     res_total = actual_total - pred_total
     res_margin = actual_margin - pred_margin
     total_mae = float(mean_absolute_error(actual_total, pred_total))
@@ -78,6 +78,13 @@ def _evaluate_score(actual_total, pred_total, actual_margin, pred_margin, offset
         cov_mar = float((res_margin.abs() <= abs(offsets_80["margin"][1])).mean())
         out["conformal_80_total_coverage"] = round(cov_tot * 100, 1)
         out["conformal_80_margin_coverage"] = round(cov_mar * 100, 1)
+        if playoff is not None and playoff.any():
+            # What production serves: playoff games use the playoff radius when the fold learned one.
+            radius = np.where(playoff.to_numpy(), abs((playoff_offsets_80 or {}).get("margin", offsets_80["margin"])[1]), abs(offsets_80["margin"][1]))
+            out["playoff_games"] = int(playoff.sum())
+            out["conformal_80_playoff_margin_coverage_single_radius"] = round(float((res_margin.abs() <= abs(offsets_80["margin"][1]))[playoff].mean()) * 100, 1)
+            out["conformal_80_playoff_margin_coverage"] = round(float((res_margin.abs().to_numpy() <= radius)[playoff.to_numpy()].mean()) * 100, 1)
+            out["conformal_80_margin_coverage"] = round(float((res_margin.abs().to_numpy() <= radius).mean()) * 100, 1)
     return out
 
 
@@ -124,7 +131,7 @@ def score_fold(train_data, test_data, pace_features, home_features, away_feature
     The four ridge models are fit on all training games; the residual correction and the conformal
     radii come from temporal OOF predictions inside the training seasons, exactly as the trainer does,
     so neither sees the test season. Returns the merged test frame (raw and corrected predictions) and
-    the fold's own 80% radii."""
+    the fold's own 80% radii (plus the playoff margin radius, or None when the training seasons have too few playoff games)."""
     h_tr, a_tr = train_data[train_data["IS_HOME"] == 1].copy(), train_data[train_data["IS_HOME"] == 0].copy()
     h_te, a_te = test_data[test_data["IS_HOME"] == 1].copy(), test_data[test_data["IS_HOME"] == 0].copy()
     h_tr["TARGET_PACE"], h_tr["TARGET_HOME_OFF_RTG"] = h_tr["PACE"], h_tr["OFF_RTG"]
@@ -161,7 +168,7 @@ def score_fold(train_data, test_data, pace_features, home_features, away_feature
     x_te = _correction_features(merged)
     merged["PRED_TOTAL"] = merged["PRED_TOTAL_RAW"] - ridge_total.predict(x_te)
     merged["PRED_MARGIN"] = merged["PRED_MARGIN_MODEL"] - ridge_margin.predict(x_te)
-    return merged, radii["offsets_80pct"], float((h_tr["ACTUAL_PTS"] - h_tr["ACTUAL_OPP_PTS"]).mean())
+    return merged, radii["offsets_80pct"], float((h_tr["ACTUAL_PTS"] - h_tr["ACTUAL_OPP_PTS"]).mean()), radii.get("playoff_offsets_80pct") or None
 
 
 def reliability_table(y: np.ndarray, p: np.ndarray) -> dict:
@@ -384,15 +391,18 @@ def run_walk_forward_backtest():
         # ----------------------------------------------------
         # 2. SCORE MODEL WALK-FORWARD
         # ----------------------------------------------------
-        merged_test, fold_offsets_80, home_edge = score_fold(train_data, test_data, pace_features, home_features, away_features, margin_features)
+        merged_test, fold_offsets_80, home_edge, fold_playoff_offsets_80 = score_fold(train_data, test_data, pace_features, home_features, away_features, margin_features)
         pred_total_model, pred_margin_model = merged_test["PRED_TOTAL"], merged_test["PRED_MARGIN"]
 
         # Baselines from recent real points: both teams' last-10 scoring and allowing, plus the training home edge.
         base_total = (merged_test["PTS_LAST_10"] + merged_test["PTS_ALLOWED_LAST_10"] + merged_test["OPP_PTS_LAST_10"] + merged_test["OPP_PTS_ALLOWED_LAST_10"]) / 2.0
         base_margin = ((merged_test["PTS_LAST_10"] - merged_test["PTS_ALLOWED_LAST_10"]) - (merged_test["OPP_PTS_LAST_10"] - merged_test["OPP_PTS_ALLOWED_LAST_10"])) / 2.0 + home_edge
 
-        score_eval_model = _evaluate_score(merged_test["ACTUAL_TOTAL"], pred_total_model, merged_test["ACTUAL_MARGIN"], pred_margin_model, fold_offsets_80)
+        score_eval_model = _evaluate_score(merged_test["ACTUAL_TOTAL"], pred_total_model, merged_test["ACTUAL_MARGIN"], pred_margin_model, fold_offsets_80,
+                                          playoff=merged_test["IS_PLAYOFF"].astype(int) == 1, playoff_offsets_80=fold_playoff_offsets_80)
         score_eval_model["conformal_80_radius"] = {"total": fold_offsets_80["total"][1], "margin": fold_offsets_80["margin"][1]}
+        if fold_playoff_offsets_80:
+            score_eval_model["conformal_80_radius"]["margin_playoff"] = fold_playoff_offsets_80["margin"][1]
         score_eval_raw = _evaluate_score(merged_test["ACTUAL_TOTAL"], merged_test["PRED_TOTAL_RAW"], merged_test["ACTUAL_MARGIN"], merged_test["PRED_MARGIN_MODEL"])
         score_eval_base = _evaluate_score(merged_test["ACTUAL_TOTAL"], base_total, merged_test["ACTUAL_MARGIN"], base_margin)
         paired["score_total"].append(pd.DataFrame({
@@ -480,6 +490,10 @@ def run_walk_forward_backtest():
     avg_base_margin_mae = sum(f["score"]["rolling_baseline"]["margin_mae"] * f["test_games"] for f in folds) / total_test_games
     avg_cov_total = sum(f["score"]["model"].get("conformal_80_total_coverage", 80.0) * f["test_games"] for f in folds) / total_test_games
     avg_cov_margin = sum(f["score"]["model"].get("conformal_80_margin_coverage", 80.0) * f["test_games"] for f in folds) / total_test_games
+    playoff_folds = [f["score"]["model"] for f in folds if f["score"]["model"].get("playoff_games")]
+    playoff_games = sum(m["playoff_games"] for m in playoff_folds)
+    cov_playoff = sum(m["conformal_80_playoff_margin_coverage"] * m["playoff_games"] for m in playoff_folds) / playoff_games if playoff_games else None
+    cov_playoff_single = sum(m["conformal_80_playoff_margin_coverage_single_radius"] * m["playoff_games"] for m in playoff_folds) / playoff_games if playoff_games else None
     avg_raw_total_mae = sum(f["score"]["model_raw"]["total_mae"] * f["test_games"] for f in folds) / total_test_games
     avg_raw_margin_mae = sum(f["score"]["model_raw"]["margin_mae"] * f["test_games"] for f in folds) / total_test_games
 
@@ -545,6 +559,9 @@ def run_walk_forward_backtest():
             "margin_mae_reduction": round(avg_base_margin_mae - avg_score_margin_mae, 4),
             "average_conformal_80_coverage": round(avg_cov_total, 1),
             "average_conformal_80_margin_coverage": round(avg_cov_margin, 1),
+            "playoff_games": playoff_games,
+            "playoff_margin_coverage": round(cov_playoff, 1) if cov_playoff is not None else None,
+            "playoff_margin_coverage_single_radius": round(cov_playoff_single, 1) if cov_playoff_single is not None else None,
             "raw_total_mae": round(avg_raw_total_mae, 4),
             "raw_margin_mae": round(avg_raw_margin_mae, 4),
         },
@@ -655,12 +672,19 @@ Fark = model kaybı - baseline kaybı (negatif = model daha iyi). %95 aralık, a
                 f"| {label} | {_signed(ci['mean_diff'], digits)} | [{_signed(ci['ci_low'], digits)}, {_signed(ci['ci_high'], digits)}] "
                 f"| %{ci['p_model_better'] * 100:.1f} | {verdict(ci)} | {f"{season_wins[key]}/{n_folds}" if key in season_wins else "-"} |\n"
             )
+    playoff_note = ""
+    if agg_s.get("playoff_margin_coverage") is not None:
+        playoff_note = (
+            f"\nPlayoff maçlarında (toplam {agg_s['playoff_games']}) margin kapsaması: tek yarıçapla %{agg_s['playoff_margin_coverage_single_radius']:.1f}, "
+            f"playoff'a özel yarıçapla (üretimde sunulan) %{agg_s['playoff_margin_coverage']:.1f}. Playoff margin hataları daha büyük olduğu için "
+            f"normal sezon yarıçapı bu maçları hedefin altında kapsıyordu.\n"
+        )
     coverages = [f["score"]["model"].get("conformal_80_total_coverage") for f in folds]
     coverages = [c for c in coverages if isinstance(c, (int, float))]
     if coverages:
         md_content += f"""
 Conformal %80 toplam kapsaması sezonlar arasında %{min(coverages):.1f} - %{max(coverages):.1f} aralığında. Yarıçaplar her fold'da yalnızca o fold'un eğitim sezonlarının temporal OOF artıklarından hesaplanır (test sezonu hiçbir aşamada görülmez); sezon başına yarıçaplar JSON raporunda `conformal_80_radius` altındadır.
-
+{playoff_note}
 Not: SCORE modeli üretim hattıyla ölçülür: dört ridge modeli, ardından eğitim sezonlarının OOF artıklarından öğrenilen bağlam düzeltmesi (`ridge_total`, `ridge_margin`). Düzeltmesiz ham model: toplam MAE {agg_s['raw_total_mae']:.2f}, margin MAE {agg_s['raw_margin_mae']:.2f}.
 """
 

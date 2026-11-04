@@ -367,6 +367,12 @@
             14.8
         ]
     },
+    "prediction_interval_offsets_80pct_playoff": {
+        "margin": [
+            -19.6,
+            19.6
+        ]
+    },
     "prediction_interval_offsets_90pct": {
         "total": [
             -30.7,
@@ -540,6 +546,13 @@
                 "conformal_50_empirical_coverage": 50.0
             }
         },
-        "calibration_samples": 4781
+        "calibration_samples": 4781,
+        "playoff_offsets_80pct": {
+            "margin": [
+                -19.6,
+                19.6
+            ]
+        },
+        "playoff_calibration_samples": 359
     }
 }

@@ -103,7 +103,7 @@ All three models are retrained by `scripts/retrain_pipeline.py`. Each run fits a
 - **Total** = pace x (home rating + away rating) / 100; home/away scores = (total +/- margin) / 2.
 - **Residual correction**: Ridge models on playoff, back-to-back and rest-advantage indicators, fit on temporal out-of-fold residuals.
 - **Targets** are actual final points from the box scores. `PACE x OFF_RTG / 100` was used before and undercounted overtime games by ~13 points because PACE is per 48 minutes.
-- **Intervals**: conformal offsets from out-of-fold residuals against actual points (80%: total +/-24.0, margin +/-17.1 in the shipped release; the backtest learns radii per fold from that fold's training seasons only).
+- **Intervals**: conformal offsets from out-of-fold residuals against actual points (80%: total +/-24.0, margin +/-17.1 in the shipped release; the backtest learns radii per fold from that fold's training seasons only). Playoff games use a separate margin radius (+/-19.6, from 359 playoff residuals) because playoff margin errors are larger: walk-forward coverage of playoff margins is 77.9% with it and 74.3% with the regular radius (452 playoff games; the 2021-22 fold had too few earlier playoff games to learn one).
 
 ### 4.3 Player Performance Model
 - **Artifacts**: `player_model_{pts,reb,ast}.pkl`, `player_features.pkl`; contract `config/features/player.yaml` (explicit feature list).

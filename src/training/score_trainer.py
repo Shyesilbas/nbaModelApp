@@ -80,6 +80,9 @@ def get_location_features(row):
     else:
         return pd.Series({"TRAVEL_DISTANCE": dist, "TIMEZONE_DIFF": tz_diff, "OPP_TRAVEL_DISTANCE": 0.0, "OPP_TIMEZONE_DIFF": 0.0})
 
+MIN_PLAYOFF_CALIBRATION_GAMES = 100  # fewer playoff residuals than this give a meaningless 80% quantile
+
+
 class ScoreModelTrainer:
     def __init__(self, data_pattern=None, output_dir=None, release=None, data_files=None, manifest_metadata=None, holdout_config=None, feature_contract_path=None, player_data_path=None, player_models_dir=None):
         root = Path(__file__).resolve().parents[2]
@@ -513,6 +516,7 @@ class ScoreModelTrainer:
             },
             "estimator": self.estimator,
             "prediction_interval_offsets_80pct": conformal_stats.get("offsets_80pct", {}),
+            "prediction_interval_offsets_80pct_playoff": conformal_stats.get("playoff_offsets_80pct", {}),
             "prediction_interval_offsets_90pct": conformal_stats.get("offsets_90pct", {}),
             "prediction_interval_offsets_50pct": conformal_stats.get("offsets_50pct", {}),
             "conformal_prediction_intervals": conformal_stats,
@@ -582,13 +586,27 @@ class ScoreModelTrainer:
                 "conformal_50_empirical_coverage": round(cov_50 * 100, 1),
             }
 
+        # Playoff margins miss a regular-season radius far more often (about 74% instead of 80% in the
+        # walk-forward), so playoff games get a radius from playoff residuals only.
+        playoff_offsets_80 = {}
+        playoff_samples = 0
+        if "IS_PLAYOFF" in df_full_eval.columns:
+            margin_err = targets["margin"]
+            playoff_err = margin_err[(df_full_eval.loc[margin_err.index, "IS_PLAYOFF"].astype(int) == 1).to_numpy()]
+            playoff_samples = int(len(playoff_err))
+            if playoff_samples >= MIN_PLAYOFF_CALIBRATION_GAMES:
+                q_playoff = float(np.quantile(playoff_err.abs(), min(1.0, np.ceil((playoff_samples + 1) * 0.80) / playoff_samples)))
+                playoff_offsets_80["margin"] = [round(-q_playoff, 1), round(q_playoff, 1)]
+
         return {
             "offsets_80pct": offsets_80,
             "offsets_90pct": offsets_90,
             "offsets_50pct": offsets_50,
+            "playoff_offsets_80pct": playoff_offsets_80,
             "empirical_quantiles_80pct": empirical_80,
             "empirical_quantiles_90pct": empirical_90,
             "coverage_report": coverage_report,
             "calibration_samples": n,
+            "playoff_calibration_samples": playoff_samples,
         }
 

@@ -16,15 +16,15 @@
 <!-- BEGIN GENERATED: walk-forward (scripts/walk_forward_benchmark.py; do not edit) -->
 ## Güncel Walk-Forward Sonuçları (`v15`)
 
-Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-03T17:36:13Z, commit `cd2b990`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
+Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-04T09:06:05Z, commit `3af50c9`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
 
 | Sezon | Maç | Toplam MAE | Son-10 Toplam MAE | Fark MAE | Son-10 Fark MAE | %80 Kapsama (toplam / fark) |
 |---|---:|---:|---:|---:|---:|---:|
 | 2021-22 | 1,256 | 14.69 | 14.62 | 11.10 | 11.56 | %80.3 / %78.9 |
-| 2022-23 | 1,248 | 14.80 | 14.97 | 10.17 | 10.57 | %77.9 / %83.7 |
-| 2023-24 | 1,259 | 14.69 | 14.78 | 10.96 | 11.58 | %81.3 / %77.8 |
-| 2024-25 | 1,256 | 14.89 | 15.02 | 10.80 | 11.50 | %78.5 / %79.4 |
-| 2025-26 | 1,257 | 15.29 | 15.38 | 11.21 | 11.86 | %78.4 / %77.6 |
+| 2022-23 | 1,248 | 14.80 | 14.97 | 10.17 | 10.57 | %77.9 / %84.0 |
+| 2023-24 | 1,259 | 14.69 | 14.78 | 10.96 | 11.58 | %81.3 / %78.2 |
+| 2024-25 | 1,256 | 14.89 | 15.02 | 10.80 | 11.50 | %78.5 / %79.9 |
+| 2025-26 | 1,257 | 15.29 | 15.38 | 11.21 | 11.86 | %78.4 / %77.8 |
 | **Ortalama** | **6,276** | **14.87** | **14.95** | **10.85** | **11.41** | **%79.3** (toplam) |
 
 Son-10 baseline'ı toplamda 4/5, farkta 5/5 sezonda geçildi. SCORE, üretim hattıyla ölçülür (OOF artık düzeltmesi dahil); yarıçaplar her katta yalnızca eğitim sezonlarından öğrenilir.
