@@ -90,51 +90,48 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
       {/* Header: Title + Conference Toggle */}
       <div className="flex flex-col items-start justify-between gap-3 border-b border-border pb-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded bg-amber-500/10 text-amber-500">
+          <div className="flex h-9 w-9 items-center justify-center rounded bg-status-warning/10 text-status-warning">
             <Trophy className="h-5 w-5" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-text-primary">
               {t.fixtures.standingsTitle}
             </h3>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-text-secondary">
               {t.fixtures.standingsSubtitle.replace("{season}", season)}
             </p>
           </div>
         </div>
 
         {/* Conference Tabs */}
-        <div className="flex items-center rounded border border-border bg-background-tertiary p-1 gap-1 self-stretch sm:self-auto justify-center">
+        <div className="flex items-center justify-center gap-1 self-stretch rounded border border-border bg-background-tertiary p-1 sm:self-auto">
           <button
             type="button"
             onClick={() => setConferenceFilter("all")}
-            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${
-              conferenceFilter === "all"
-                ? "bg-primary text-white "
+            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${conferenceFilter === "all"
+                ? "bg-primary text-white dark:text-background-secondary"
                 : "text-text-secondary hover:text-text-primary"
-            }`}
+              }`}
           >
             {t.common.all}
           </button>
           <button
             type="button"
             onClick={() => setConferenceFilter("east")}
-            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${
-              conferenceFilter === "east"
-                ? "bg-primary text-white "
+            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${conferenceFilter === "east"
+                ? "bg-primary text-white dark:text-background-secondary"
                 : "text-text-secondary hover:text-text-primary"
-            }`}
+              }`}
           >
             {t.fixtures.easternConference}
           </button>
           <button
             type="button"
             onClick={() => setConferenceFilter("west")}
-            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${
-              conferenceFilter === "west"
-                ? "bg-primary text-white "
+            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${conferenceFilter === "west"
+                ? "bg-primary text-white dark:text-background-secondary"
                 : "text-text-secondary hover:text-text-primary"
-            }`}
+              }`}
           >
             {t.fixtures.westernConference}
           </button>
@@ -143,48 +140,48 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
 
       {/* Standings Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-border text-xs font-semibold text-text-muted bg-background-tertiary/50">
-              <th className="py-2.5 px-3 w-12 text-center">#</th>
-              <th className="py-2.5 px-3 min-w-[180px]">{t.common.team}</th>
-              <th className="py-2.5 px-2 text-center w-10" title={language === "tr" ? "Oynanan maç" : "Games Played"}>
+            <tr className="border-b border-border bg-background-tertiary/50 text-xs font-semibold text-text-secondary">
+              <th className="w-12 px-3 py-2.5 text-center">#</th>
+              <th className="min-w-[180px] px-3 py-2.5">{t.common.team}</th>
+              <th className="w-10 px-2 py-2.5 text-center" title={language === "tr" ? "Oynanan maç" : "Games Played"}>
                 {language === "tr" ? "O" : "GP"}
               </th>
-              <th className="py-2.5 px-2 text-center w-10" title={language === "tr" ? "Galibiyet" : "Wins"}>
+              <th className="w-10 px-2 py-2.5 text-center" title={language === "tr" ? "Galibiyet" : "Wins"}>
                 {language === "tr" ? "G" : "W"}
               </th>
-              <th className="py-2.5 px-2 text-center w-10" title={language === "tr" ? "Mağlubiyet" : "Losses"}>
+              <th className="w-10 px-2 py-2.5 text-center" title={language === "tr" ? "Mağlubiyet" : "Losses"}>
                 {language === "tr" ? "M" : "L"}
               </th>
-              <th className="py-2.5 px-2 text-center w-12 font-semibold text-text-primary" title={t.fixtures.winRate}>
+              <th className="w-12 px-2 py-2.5 text-center font-semibold text-text-primary" title={t.fixtures.winRate}>
                 {t.fixtures.pct}
               </th>
-              <th className="py-2.5 px-2 text-center w-12" title={t.fixtures.gamesBehind}>
+              <th className="w-12 px-2 py-2.5 text-center" title={t.fixtures.gamesBehind}>
                 {t.fixtures.gamesBehind}
               </th>
-              <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title={t.fixtures.pointsFor}>
+              <th className="hidden w-14 px-2 py-2.5 text-center md:table-cell" title={t.fixtures.pointsFor}>
                 {language === "tr" ? "Sayı" : "PPG"}
               </th>
-              <th className="py-2.5 px-2 text-center w-14 hidden md:table-cell" title={t.fixtures.pointsAgainst}>
+              <th className="hidden w-14 px-2 py-2.5 text-center md:table-cell" title={t.fixtures.pointsAgainst}>
                 {language === "tr" ? "Y.Sayı" : "OPP"}
               </th>
-              <th className="py-2.5 px-2 text-center w-12" title={t.fixtures.pointDiff}>
+              <th className="w-12 px-2 py-2.5 text-center" title={t.fixtures.pointDiff}>
                 {language === "tr" ? "AV" : "DIFF"}
               </th>
-              <th className="py-2.5 px-2 text-center w-16 hidden lg:table-cell" title={language === "tr" ? "İç saha" : "Home record"}>
+              <th className="hidden w-16 px-2 py-2.5 text-center lg:table-cell" title={language === "tr" ? "İç saha" : "Home record"}>
                 {t.fixtures.homeRecord}
               </th>
-              <th className="py-2.5 px-2 text-center w-16 hidden lg:table-cell" title={language === "tr" ? "Deplasman" : "Away record"}>
+              <th className="hidden w-16 px-2 py-2.5 text-center lg:table-cell" title={language === "tr" ? "Deplasman" : "Away record"}>
                 {t.fixtures.awayRecord}
               </th>
-              <th className="py-2.5 px-2 text-center w-14 hidden sm:table-cell" title={language === "tr" ? "Son 10 maç" : "Last 10"}>
+              <th className="hidden w-14 px-2 py-2.5 text-center sm:table-cell" title={language === "tr" ? "Son 10 maç" : "Last 10"}>
                 {t.fixtures.l10}
               </th>
-              <th className="py-2.5 px-2 text-center w-12 hidden sm:table-cell" title={language === "tr" ? "Mevcut seri" : "Streak"}>
+              <th className="hidden w-12 px-2 py-2.5 text-center sm:table-cell" title={language === "tr" ? "Mevcut seri" : "Streak"}>
                 {t.fixtures.streak}
               </th>
-              <th className="py-2.5 px-3 text-center w-28 hidden sm:table-cell" title={t.fixtures.recentForm}>
+              <th className="hidden w-28 px-3 py-2.5 text-center sm:table-cell" title={t.fixtures.recentForm}>
                 Form
               </th>
             </tr>
@@ -198,16 +195,16 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
               return (
                 <tr
                   key={t.abbr}
-                  className="transition-colors hover:bg-background-tertiary/60 group"
+                  className="group transition-colors hover:bg-background-tertiary"
                 >
                   {/* Rank */}
-                  <td className="py-2.5 px-3 text-center tabular-nums font-semibold text-text-secondary">
+                  <td className="px-3 py-2.5 text-center font-semibold tabular-nums text-text-secondary">
                     <div className="flex items-center justify-center gap-1.5">
                       {isDirectPlayoff && (
                         <span className="h-1.5 w-1.5 rounded-full bg-status-success" title="Dogrudan Playoff (1-6)" />
                       )}
                       {isPlayIn && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title="Play-In Turnuvasi (7-10)" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-status-warning" title="Play-In Turnuvasi (7-10)" />
                       )}
                       {isLottery && (
                         <span className="h-1.5 w-1.5 rounded-full bg-border" />
@@ -217,51 +214,49 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                   </td>
 
                   {/* Team */}
-                  <td className="py-2.5 px-3">
+                  <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2.5">
                       <TeamLogo abbr={t.abbr} name={t.name} size={22} className="shrink-0" />
                       <button
                         type="button"
                         onClick={() => onSelectTeam?.(t.abbr)}
-                        className="truncate text-left font-semibold text-text-primary transition-colors hover:underline hover:text-primary"
+                        className="truncate text-left font-semibold text-text-primary transition-colors hover:text-primary hover:underline"
                         title={t.fullName || t.name}
                       >
                         <span className="hidden md:inline">{t.name}</span>
                         <span className="inline md:hidden">{t.abbr}</span>
                       </button>
-                      <span className="hidden tabular-nums text-xs font-semibold text-text-muted lg:inline">
+                      <span className="hidden text-xs font-medium tabular-nums text-text-secondary lg:inline">
                         {t.abbr}
                       </span>
                     </div>
                   </td>
 
                   {/* Stats */}
-                  <td className="py-2.5 px-2 text-center font-semibold text-text-primary">{t.gp}</td>
-                  <td className="py-2.5 px-2 text-center font-semibold text-status-success">{t.w}</td>
-                  <td className="py-2.5 px-2 text-center text-text-secondary">{t.l}</td>
-                  <td className="py-2.5 px-2 text-center tabular-nums font-semibold text-text-primary">{t.pctFormatted}</td>
-                  <td className="py-2.5 px-2 text-center tabular-nums text-text-muted">{t.gb}</td>
-                  <td className="py-2.5 px-2 text-center tabular-nums text-text-secondary hidden md:table-cell">{t.ppg}</td>
-                  <td className="py-2.5 px-2 text-center tabular-nums text-text-secondary hidden md:table-cell">{t.oppPpg}</td>
-                  <td className={`py-2.5 px-2 text-center tabular-nums font-semibold ${
-                    t.diffNum > 0 ? "text-status-success" : t.diffNum < 0 ? "text-status-error" : "text-text-muted"
-                  }`}>
+                  <td className="px-2 py-2.5 text-center font-semibold tabular-nums text-text-primary">{t.gp}</td>
+                  <td className="px-2 py-2.5 text-center font-semibold tabular-nums text-status-success">{t.w}</td>
+                  <td className="px-2 py-2.5 text-center tabular-nums text-text-secondary">{t.l}</td>
+                  <td className="px-2 py-2.5 text-center font-semibold tabular-nums text-text-primary">{t.pctFormatted}</td>
+                  <td className="px-2 py-2.5 text-center tabular-nums text-text-secondary">{t.gb}</td>
+                  <td className="hidden px-2 py-2.5 text-center tabular-nums text-text-secondary md:table-cell">{t.ppg}</td>
+                  <td className="hidden px-2 py-2.5 text-center tabular-nums text-text-secondary md:table-cell">{t.oppPpg}</td>
+                  <td className={`px-2 py-2.5 text-center font-semibold tabular-nums ${t.diffNum > 0 ? "text-status-success" : t.diffNum < 0 ? "text-status-error" : "text-text-secondary"
+                    }`}>
                     {t.diff}
                   </td>
-                  <td className="py-2.5 px-2 text-center tabular-nums text-text-muted hidden lg:table-cell">{t.homeRecord}</td>
-                  <td className="py-2.5 px-2 text-center tabular-nums text-text-muted hidden lg:table-cell">{t.awayRecord}</td>
-                  <td className="py-2.5 px-2 text-center tabular-nums text-text-secondary hidden sm:table-cell">{t.l10}</td>
-                  <td className="py-2.5 px-2 text-center tabular-nums font-semibold text-text-primary hidden sm:table-cell">{t.streak}</td>
+                  <td className="hidden px-2 py-2.5 text-center tabular-nums text-text-secondary lg:table-cell">{t.homeRecord}</td>
+                  <td className="hidden px-2 py-2.5 text-center tabular-nums text-text-secondary lg:table-cell">{t.awayRecord}</td>
+                  <td className="hidden px-2 py-2.5 text-center tabular-nums text-text-secondary sm:table-cell">{t.l10}</td>
+                  <td className="hidden px-2 py-2.5 text-center font-semibold tabular-nums text-text-primary sm:table-cell">{t.streak}</td>
 
                   {/* Form */}
-                  <td className="py-2.5 px-3 text-center hidden sm:table-cell">
+                  <td className="hidden px-3 py-2.5 text-center sm:table-cell">
                     <div className="flex items-center justify-center gap-1">
                       {t.form.map((res, i) => (
                         <span
                           key={i}
-                          className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold text-white ${
-                            res === "W" ? "bg-status-success" : "bg-status-error"
-                          }`}
+                          className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold text-white ${res === "W" ? "bg-status-success" : "bg-status-error"
+                            }`}
                           title={res === "W" ? (language === "tr" ? "Galibiyet" : "Win") : (language === "tr" ? "Mağlubiyet" : "Loss")}
                         >
                           {res === "W" ? (language === "tr" ? "G" : "W") : (language === "tr" ? "M" : "L")}
@@ -277,14 +272,14 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
       </div>
 
       {/* Legend Footer */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs font-medium text-text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs font-medium text-text-secondary">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-status-success" />
             <span>{language === "tr" ? "Doğrudan Playoff (1-6)" : "Playoffs Seed (1-6)"}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-amber-500" />
+            <span className="h-2 w-2 rounded-full bg-status-warning" />
             <span>{language === "tr" ? "Play-In Turnuvası (7-10)" : "Play-In Tournament (7-10)"}</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -293,7 +288,7 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           </div>
         </div>
 
-        <div className="tabular-nums text-xs text-text-muted">
+        <div className="tabular-nums text-xs text-text-secondary">
           {language === "tr"
             ? "O: oynanan • G: galibiyet • M: mağlubiyet • %: yüzde • Fark: galibiyet farkı • AV: averaj"
             : "GP: games played • W: wins • L: losses • %: win pct • GB: games behind • DIFF: point diff"}

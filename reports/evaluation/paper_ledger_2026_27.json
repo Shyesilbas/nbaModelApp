@@ -1,145 +1,145 @@
 {
   "season": "2026-27",
-  "generated_utc": "2026-11-03T16:51:52Z",
+  "generated_utc": "2026-11-08T10:44:12Z",
   "production_release": "v15",
-  "ledger_rows": 106,
-  "graded": 106,
+  "ledger_rows": 138,
+  "graded": 138,
   "pending": 0,
   "invalid_late": 0,
-  "last_game_date": "2026-11-02",
+  "last_game_date": "2026-11-07",
   "current_live": {
-    "games": 63,
-    "accuracy": 0.6508,
-    "brier": 0.1963,
-    "log_loss": 0.5795,
-    "home_win_rate": 0.5556,
-    "mae_total": 16.25,
-    "mae_margin": 11.13,
-    "elo_games": 63,
-    "elo_brier": 0.207,
-    "elo_accuracy": 0.6667,
+    "games": 95,
+    "accuracy": 0.6842,
+    "brier": 0.1891,
+    "log_loss": 0.5627,
+    "home_win_rate": 0.5474,
+    "mae_total": 14.89,
+    "mae_margin": 11.09,
+    "elo_games": 95,
+    "elo_brier": 0.1932,
+    "elo_accuracy": 0.7053,
     "brier_vs_elo": {
-      "mean_diff": -0.01062,
-      "ci_low": -0.03453,
-      "ci_high": 0.02127,
+      "mean_diff": -0.00419,
+      "ci_low": -0.02708,
+      "ci_high": 0.01919,
       "level": 0.95,
-      "n": 63,
-      "blocks": 8,
-      "p_model_better": 0.749
+      "n": 95,
+      "blocks": 12,
+      "p_model_better": 0.6245
     },
-    "baseline_games": 59,
-    "base_mae_total": 16.53,
-    "base_mae_margin": 11.76,
+    "baseline_games": 91,
+    "base_mae_total": 15.1,
+    "base_mae_margin": 11.83,
     "total_vs_last10": {
-      "mean_diff": -0.29718,
-      "ci_low": -0.89859,
-      "ci_high": 0.52054,
+      "mean_diff": -0.27144,
+      "ci_low": -0.71418,
+      "ci_high": 0.26619,
       "level": 0.95,
-      "n": 59,
-      "blocks": 8,
-      "p_model_better": 0.7655
+      "n": 91,
+      "blocks": 12,
+      "p_model_better": 0.844
     },
     "margin_vs_last10": {
-      "mean_diff": -0.52748,
-      "ci_low": -1.85282,
-      "ci_high": 1.09436,
+      "mean_diff": -0.67524,
+      "ci_low": -1.81802,
+      "ci_high": 0.52202,
       "level": 0.95,
-      "n": 59,
-      "blocks": 8,
-      "p_model_better": 0.767
+      "n": 91,
+      "blocks": 12,
+      "p_model_better": 0.895
     },
     "bands": [
       {
         "label": "50-60%",
-        "games": 18,
-        "mean_confidence": 0.5489,
-        "accuracy": 0.3333
+        "games": 26,
+        "mean_confidence": 0.5478,
+        "accuracy": 0.3846
       },
       {
         "label": "60-70%",
-        "games": 23,
-        "mean_confidence": 0.6428,
-        "accuracy": 0.6957
+        "games": 34,
+        "mean_confidence": 0.6419,
+        "accuracy": 0.7353
       },
       {
         "label": "70-80%",
-        "games": 17,
-        "mean_confidence": 0.7468,
-        "accuracy": 0.8824
+        "games": 27,
+        "mean_confidence": 0.7451,
+        "accuracy": 0.8519
       },
       {
         "label": "80-100%",
-        "games": 5,
-        "mean_confidence": 0.8584,
-        "accuracy": 0.8
+        "games": 8,
+        "mean_confidence": 0.8486,
+        "accuracy": 0.875
       }
     ]
   },
   "all_valid": {
-    "games": 106,
-    "accuracy": 0.5943,
-    "brier": 0.2159,
-    "log_loss": 0.6216,
-    "home_win_rate": 0.5189,
-    "mae_total": 15.73,
-    "mae_margin": 11.97,
-    "elo_games": 106,
-    "elo_brier": 0.2135,
-    "elo_accuracy": 0.6321,
+    "games": 138,
+    "accuracy": 0.6304,
+    "brier": 0.2064,
+    "log_loss": 0.6003,
+    "home_win_rate": 0.5217,
+    "mae_total": 14.92,
+    "mae_margin": 11.75,
+    "elo_games": 138,
+    "elo_brier": 0.2025,
+    "elo_accuracy": 0.6667,
     "brier_vs_elo": {
-      "mean_diff": 0.00242,
-      "ci_low": -0.01782,
-      "ci_high": 0.02434,
+      "mean_diff": 0.00382,
+      "ci_low": -0.01334,
+      "ci_high": 0.02172,
       "level": 0.95,
-      "n": 106,
-      "blocks": 14,
-      "p_model_better": 0.394
+      "n": 138,
+      "blocks": 18,
+      "p_model_better": 0.329
     },
-    "baseline_games": 59,
-    "base_mae_total": 16.53,
-    "base_mae_margin": 11.76,
+    "baseline_games": 91,
+    "base_mae_total": 15.1,
+    "base_mae_margin": 11.83,
     "total_vs_last10": {
-      "mean_diff": -0.29718,
-      "ci_low": -0.89859,
-      "ci_high": 0.52054,
+      "mean_diff": -0.27144,
+      "ci_low": -0.71418,
+      "ci_high": 0.26619,
       "level": 0.95,
-      "n": 59,
-      "blocks": 8,
-      "p_model_better": 0.7655
+      "n": 91,
+      "blocks": 12,
+      "p_model_better": 0.844
     },
     "margin_vs_last10": {
-      "mean_diff": -0.52748,
-      "ci_low": -1.85282,
-      "ci_high": 1.09436,
+      "mean_diff": -0.67524,
+      "ci_low": -1.81802,
+      "ci_high": 0.52202,
       "level": 0.95,
-      "n": 59,
-      "blocks": 8,
-      "p_model_better": 0.767
+      "n": 91,
+      "blocks": 12,
+      "p_model_better": 0.895
     },
     "bands": [
       {
         "label": "50-60%",
-        "games": 35,
-        "mean_confidence": 0.5518,
-        "accuracy": 0.3429
+        "games": 43,
+        "mean_confidence": 0.5506,
+        "accuracy": 0.3721
       },
       {
         "label": "60-70%",
-        "games": 35,
-        "mean_confidence": 0.6479,
-        "accuracy": 0.6286
+        "games": 46,
+        "mean_confidence": 0.646,
+        "accuracy": 0.6739
       },
       {
         "label": "70-80%",
-        "games": 29,
-        "mean_confidence": 0.7451,
-        "accuracy": 0.8276
+        "games": 39,
+        "mean_confidence": 0.7444,
+        "accuracy": 0.8205
       },
       {
         "label": "80-100%",
-        "games": 7,
-        "mean_confidence": 0.8468,
-        "accuracy": 0.7143
+        "games": 10,
+        "mean_confidence": 0.8424,
+        "accuracy": 0.8
       }
     ]
   },
@@ -264,70 +264,70 @@
       ]
     },
     "v15/live": {
-      "games": 63,
-      "accuracy": 0.6508,
-      "brier": 0.1963,
-      "log_loss": 0.5795,
-      "home_win_rate": 0.5556,
-      "mae_total": 16.25,
-      "mae_margin": 11.13,
-      "elo_games": 63,
-      "elo_brier": 0.207,
-      "elo_accuracy": 0.6667,
+      "games": 95,
+      "accuracy": 0.6842,
+      "brier": 0.1891,
+      "log_loss": 0.5627,
+      "home_win_rate": 0.5474,
+      "mae_total": 14.89,
+      "mae_margin": 11.09,
+      "elo_games": 95,
+      "elo_brier": 0.1932,
+      "elo_accuracy": 0.7053,
       "brier_vs_elo": {
-        "mean_diff": -0.01062,
-        "ci_low": -0.03453,
-        "ci_high": 0.02127,
+        "mean_diff": -0.00419,
+        "ci_low": -0.02708,
+        "ci_high": 0.01919,
         "level": 0.95,
-        "n": 63,
-        "blocks": 8,
-        "p_model_better": 0.749
+        "n": 95,
+        "blocks": 12,
+        "p_model_better": 0.6245
       },
-      "baseline_games": 59,
-      "base_mae_total": 16.53,
-      "base_mae_margin": 11.76,
+      "baseline_games": 91,
+      "base_mae_total": 15.1,
+      "base_mae_margin": 11.83,
       "total_vs_last10": {
-        "mean_diff": -0.29718,
-        "ci_low": -0.89859,
-        "ci_high": 0.52054,
+        "mean_diff": -0.27144,
+        "ci_low": -0.71418,
+        "ci_high": 0.26619,
         "level": 0.95,
-        "n": 59,
-        "blocks": 8,
-        "p_model_better": 0.7655
+        "n": 91,
+        "blocks": 12,
+        "p_model_better": 0.844
       },
       "margin_vs_last10": {
-        "mean_diff": -0.52748,
-        "ci_low": -1.85282,
-        "ci_high": 1.09436,
+        "mean_diff": -0.67524,
+        "ci_low": -1.81802,
+        "ci_high": 0.52202,
         "level": 0.95,
-        "n": 59,
-        "blocks": 8,
-        "p_model_better": 0.767
+        "n": 91,
+        "blocks": 12,
+        "p_model_better": 0.895
       },
       "bands": [
         {
           "label": "50-60%",
-          "games": 18,
-          "mean_confidence": 0.5489,
-          "accuracy": 0.3333
+          "games": 26,
+          "mean_confidence": 0.5478,
+          "accuracy": 0.3846
         },
         {
           "label": "60-70%",
-          "games": 23,
-          "mean_confidence": 0.6428,
-          "accuracy": 0.6957
+          "games": 34,
+          "mean_confidence": 0.6419,
+          "accuracy": 0.7353
         },
         {
           "label": "70-80%",
-          "games": 17,
-          "mean_confidence": 0.7468,
-          "accuracy": 0.8824
+          "games": 27,
+          "mean_confidence": 0.7451,
+          "accuracy": 0.8519
         },
         {
           "label": "80-100%",
-          "games": 5,
-          "mean_confidence": 0.8584,
-          "accuracy": 0.8
+          "games": 8,
+          "mean_confidence": 0.8486,
+          "accuracy": 0.875
         }
       ]
     }
@@ -344,12 +344,12 @@
     },
     {
       "week": "2026-11-02",
-      "games": 15,
-      "accuracy": 0.7333,
-      "brier": 0.1525,
-      "elo_brier": 0.2029,
-      "mae_total": 14.85,
-      "mae_margin": 9.73
+      "games": 47,
+      "accuracy": 0.7447,
+      "brier": 0.1676,
+      "elo_brier": 0.1779,
+      "mae_total": 13.06,
+      "mae_margin": 10.6
     }
   ]
 }

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isGameEligibleForRefresh } from "./game-results/utils";
 import {
-  AlertTriangle,
   LayoutGrid,
   List,
   RefreshCw,
   Search,
+  X,
 } from "lucide-react";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 import { loadPrivateApi, loadPrivateApiFresh, postPrivateApi } from "../lib/dataCache";
@@ -16,7 +16,6 @@ import {
 } from "../lib/archiveData";
 import {
   GameCardDetail,
-  fmtDate,
   normGid,
   playerTeamFilter,
   type PlayerBoxScore,
@@ -24,7 +23,7 @@ import {
 } from "./game-results";
 import { parseUrlRoute, updateUrlRoute } from "../lib/router";
 import type { ActiveView, DayGroup, DisplayMode } from "./fixtures/types";
-import { DatePicker, Select } from "./common";
+import { DatePicker, InlineError, Select, Skeleton } from "./common";
 import { FixturesScheduleView } from "./fixtures/FixturesScheduleView";
 import { FixturesStandingsView } from "./fixtures/FixturesStandingsView";
 import { computeSeasonTeamRecords } from "../lib/teamRecords";
@@ -45,7 +44,7 @@ export default function FixturesTab({
   onNavigateToPrediction,
   onSelectTeam,
 }: FixturesTabProps) {
-  const { t, language } = useLanguage();
+  const { t, language, formatDate } = useLanguage();
   const [seasonsList, setSeasonsList] = useState<string[]>([
     "2026-27",
     "2025-26",
@@ -165,6 +164,26 @@ export default function FixturesTab({
   }, [selectedGameId]);
 
   // Load matches of selected season
+  const fetchSeasonGames = useCallback((season: string) => {
+    setLoading(true);
+    setError(null);
+    loadArchivedGameIndex(season)
+      .then((rows) => {
+        const currentSeasonRows = rows.map((g) => ({ ...g, SEASON: g.SEASON ?? season }));
+        setAllResults((prev) => [
+          ...prev.filter((g) => g.SEASON !== season),
+          ...currentSeasonRows,
+        ]);
+        setResults(currentSeasonRows);
+      })
+      .catch((e) => {
+        setError(e.message);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -245,12 +264,12 @@ export default function FixturesTab({
         const gamesForDate = sortedResults.filter((g) => g.GAME_DATE === date);
         return {
           date,
-          formattedDate: fmtDate(date),
+          formattedDate: formatDate(date),
           games: gamesForDate,
         };
       })
       .filter((group) => group.games.length > 0);
-  }, [sortedResults, selectedDate, uniqueDates]);
+  }, [sortedResults, selectedDate, uniqueDates, formatDate]);
 
   // Compute team forms (Son 5 mac) across the whole season pool
   const teamForms = useMemo(() => {
@@ -517,9 +536,13 @@ export default function FixturesTab({
     return (
       <div className="space-y-4">
         {isCompletedGame && detailLoading ? (
-          <div className="flex h-32 items-center justify-center gap-2 rounded border border-border bg-background-primary ">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span className="text-xs text-text-secondary">{t.fixtures.boxscoresLoading}</span>
+          <div className="space-y-4 rounded border border-border bg-background-primary p-5" aria-busy="true">
+            <Skeleton className="h-6 w-48" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+            <Skeleton className="h-64 w-full" />
           </div>
         ) : (
           <GameCardDetail
@@ -571,8 +594,8 @@ export default function FixturesTab({
                 aria-selected={activeView === id}
                 onClick={() => setActiveView(id)}
                 className={`-mb-px border-b-2 pb-2.5 text-sm font-medium transition-colors ${activeView === id
-                    ? "border-primary text-text-primary"
-                    : "border-transparent text-text-secondary hover:text-text-primary"
+                  ? "border-primary text-text-primary"
+                  : "border-transparent text-text-secondary hover:text-text-primary"
                   }`}
               >
                 {label}
@@ -606,7 +629,7 @@ export default function FixturesTab({
                 onChange={setSelectedDate}
                 todayStr={todayStr}
                 counts={dateCounts}
-                formatDate={fmtDate}
+                formatDate={formatDate}
                 order="asc"
                 className="shrink-0"
               />
@@ -615,7 +638,7 @@ export default function FixturesTab({
               <button
                 type="button"
                 onClick={() => setSelectedDate(todayStr)}
-                className="text-xs font-medium text-primary hover:underline"
+                className="rounded border border-border bg-background-primary px-2.5 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-card-border-hover hover:bg-background-tertiary"
                 title={t.fixtures.goToToday}
               >
                 {t.common.today}
@@ -629,7 +652,7 @@ export default function FixturesTab({
                   type="button"
                   onClick={refreshDateGames}
                   disabled={batchRunning}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-1.5 rounded border border-border bg-background-primary px-3 text-xs font-medium text-text-secondary transition-colors hover:border-card-border-hover hover:text-text-primary disabled:opacity-50"
                   title={language === "tr" ? `${pendingDateGames.length} tamamlanan maçın kutu puanını çek` : `Fetch box scores for ${pendingDateGames.length} finished games`}
                 >
                   <RefreshCw size={14} className={batchRunning ? "animate-spin text-primary" : ""} />
@@ -638,8 +661,8 @@ export default function FixturesTab({
                     : language === "tr" ? `Eksik kutu puanlarını çek (${pendingDateGames.length})` : `Fetch missing box scores (${pendingDateGames.length})`}
                 </button>
                 {batchProgress && (
-                  <div className="flex items-center gap-2 text-xs text-text-muted">
-                    <div className="h-1 w-24 overflow-hidden rounded-full bg-background-tertiary">
+                  <div className="flex items-center gap-2 text-xs text-text-secondary">
+                    <div className="h-1.5 w-24 overflow-hidden rounded-full bg-background-tertiary">
                       <div
                         className="h-full bg-primary transition-all duration-300"
                         style={{ width: `${Math.round((batchProgress.current / (batchProgress.total || 1)) * 100)}%` }}
@@ -649,33 +672,35 @@ export default function FixturesTab({
                   </div>
                 )}
                 {!batchRunning && !batchProgress && batchMsg && (
-                  <span className="text-xs text-text-muted">{batchMsg}</span>
+                  <span className="text-xs text-text-secondary">{batchMsg}</span>
                 )}
               </div>
             )}
 
-            <div className="relative ml-auto min-w-[170px] flex-1 sm:max-w-[240px] sm:flex-initial">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
+            <div className="relative ml-auto min-w-[180px] flex-1 sm:max-w-[240px] sm:flex-initial">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-secondary" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t.fixtures.searchPlaceholder}
-                className="w-full rounded border border-border bg-background-primary py-1.5 pl-8 pr-7 text-xs text-text-primary outline-none placeholder:text-text-muted focus:border-border-focus"
+                aria-label={t.fixtures.searchPlaceholder}
+                className="h-9 w-full rounded border border-border bg-background-primary pl-8 pr-7 text-xs text-text-primary outline-none transition-colors placeholder:text-text-muted hover:border-card-border-hover focus:border-border-focus"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 px-1 text-xs text-text-muted hover:text-text-primary"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-text-secondary transition-colors hover:text-text-primary"
                   title={t.fixtures.clearSearch}
+                  aria-label={t.fixtures.clearSearch}
                 >
-                  x
+                  <X size={14} />
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-3 text-xs font-medium">
+            <div className="inline-flex h-9 items-center rounded border border-border bg-background-tertiary p-0.5 text-xs font-medium">
               {([
                 ["list", List, language === "tr" ? "Liste" : "List"],
                 ["cards", LayoutGrid, language === "tr" ? "Kart" : "Cards"],
@@ -685,7 +710,9 @@ export default function FixturesTab({
                   type="button"
                   onClick={() => handleDisplayModeChange(mode)}
                   aria-pressed={displayMode === mode}
-                  className={`inline-flex items-center gap-1 transition-colors ${displayMode === mode ? "text-text-primary" : "text-text-muted hover:text-text-primary"
+                  className={`inline-flex h-full items-center gap-1.5 rounded-sm px-2.5 transition-colors ${displayMode === mode
+                      ? "bg-background-primary font-semibold text-text-primary"
+                      : "text-text-secondary hover:text-text-primary"
                     }`}
                 >
                   <Icon size={14} />
@@ -695,16 +722,14 @@ export default function FixturesTab({
             </div>
           </div>
         )}
-
-
       </div>
 
       {/* Error alert if any */}
       {error && (
-        <div className="rounded border border-status-error/30 bg-background-primary p-4 text-center ">
-          <AlertTriangle size={20} className="mx-auto mb-1.5 text-status-error" />
-          <p className="text-xs font-semibold text-status-error">{error}</p>
-        </div>
+        <InlineError
+          message={error}
+          onRetry={() => fetchSeasonGames(selectedSeason)}
+        />
       )}
 
       {/* Main Content Area: Standings vs Fixtures Schedule */}
@@ -734,6 +759,8 @@ export default function FixturesTab({
           }}
           onRefresh={refreshGame}
           refreshingGameId={refreshingGameId}
+          hasActiveSearch={Boolean(search.trim())}
+          onClearSearch={() => setSearch("")}
         />
       )}
     </div>

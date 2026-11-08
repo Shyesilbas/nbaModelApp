@@ -58,21 +58,21 @@ function ChartFrame({
       </div>
       <figure className="m-0" role="img" aria-label={`${title}. ${summary}`}>
         <div className="flex gap-2">
-          <div className="flex h-48 flex-col justify-between text-right text-xs tabular-nums text-text-muted" aria-hidden="true">
+          <div className="flex h-44 flex-col justify-between text-right text-xs tabular-nums text-text-secondary" aria-hidden="true">
             {yTicks.map((t) => (
               <span key={t}>{t}</span>
             ))}
           </div>
-          <div className="relative h-48 flex-1 border-b border-l border-border-light">{children}</div>
+          <div className="relative h-44 flex-1 border-b border-l border-border">{children}</div>
         </div>
-        <div className="mt-1 flex justify-between pl-10 text-xs tabular-nums text-text-muted" aria-hidden="true">
+        <div className="mt-1.5 flex justify-between pl-10 text-xs tabular-nums text-text-secondary" aria-hidden="true">
           {xTicks.map((t) => (
             <span key={t}>{t}</span>
           ))}
         </div>
       </figure>
       {legend}
-      <p className="text-xs text-text-secondary">{summary}</p>
+      <p className="border-t border-border-light pt-2.5 text-xs tabular-nums text-text-secondary">{summary}</p>
     </Card>
   );
 }

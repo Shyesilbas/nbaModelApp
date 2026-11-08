@@ -67,43 +67,49 @@ export default function BacktestCalibration() {
   ];
 
   return (
-    <section aria-labelledby="backtest-calibration">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+    <Card padding="none" className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div>
           <h2 id="backtest-calibration" className="text-sm font-semibold text-text-primary">{p.backtestTitle}</h2>
           <p className="mt-0.5 max-w-2xl text-xs text-text-secondary">{p.backtestHint}</p>
         </div>
         <div className="w-48">
-          <Select label={p.backtestSeason} value={selected} onChange={(e) => setSelected(e.target.value)} options={options} />
+          <Select
+            aria-label={p.backtestSeason}
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+            options={options}
+            className="h-9"
+          />
         </div>
       </div>
-      <Card padding="none" className="overflow-x-auto">
+      <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="bg-background-tertiary text-xs text-text-muted">
+          <thead className="border-b border-border bg-background-tertiary/60 text-xs font-semibold text-text-secondary">
             <tr>
-              <th scope="col" className="px-4 py-2 font-medium">{p.colConfidence}</th>
-              <th scope="col" className="px-4 py-2 text-right font-medium">{p.colGames}</th>
-              <th scope="col" className="px-4 py-2 text-right font-medium">{p.colModelSaid}</th>
-              <th scope="col" className="px-4 py-2 text-right font-medium">{p.colHitRate}</th>
-              <th scope="col" className="px-4 py-2 text-right font-medium">{p.backtestGap}</th>
+              <th scope="col" className="px-4 py-2.5">{p.colConfidence}</th>
+              <th scope="col" className="px-4 py-2.5 text-right">{p.colGames}</th>
+              <th scope="col" className="px-4 py-2.5 text-right">{p.colModelSaid}</th>
+              <th scope="col" className="px-4 py-2.5 text-right">{p.colHitRate}</th>
+              <th scope="col" className="px-4 py-2.5 text-right">{p.backtestGap}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border-light">
             {table.bands.map((b) => (
-              <tr key={b.label} className="border-t border-border-light">
-                <td className="px-4 py-2 tabular-nums text-text-primary">{b.label}</td>
-                <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{b.games}</td>
-                <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{pct(b.mean_confidence)}</td>
-                <td className="px-4 py-2 text-right tabular-nums text-text-primary">{pct(b.accuracy)}</td>
-                <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{gap(b)}</td>
+              <tr key={b.label} className="transition-colors hover:bg-background-tertiary/40">
+                <td className="px-4 py-2.5 font-medium tabular-nums text-text-primary">{b.label}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-text-secondary">{b.games}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-text-secondary">{pct(b.mean_confidence)}</td>
+                <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-text-primary">{pct(b.accuracy)}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-text-secondary">{gap(b)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="border-t border-border-light px-4 py-3 text-xs tabular-nums text-text-secondary">
-          {fill(p.backtestFooter, { games: table.games, acc: pct(table.accuracy), ece: (table.ece * 100).toFixed(1) })}
-        </p>
-      </Card>
-    </section>
+      </div>
+      <p className="border-t border-border bg-background-tertiary/30 px-4 py-2.5 text-xs tabular-nums text-text-secondary">
+        {fill(p.backtestFooter, { games: table.games, acc: pct(table.accuracy), ece: (table.ece * 100).toFixed(1) })}
+      </p>
+    </Card>
   );
 }

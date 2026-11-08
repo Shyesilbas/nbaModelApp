@@ -29,6 +29,8 @@ def _moves(impact: dict) -> list:
     seen, moves = set(), []
     for f in sorted((ROOT / "data").glob("season=*/analysis/multi_team_players.csv")):
         d = pd.read_csv(f)
+        if "MOVE_TYPE" not in d.columns:  # seasons before 2025-26 were written without move details
+            continue
         for r in d[d.MOVE_TYPE == "Non-rostered"].itertuples():
             key = (int(r.PLAYER_ID), str(r.TRADE_DATE))
             if key in seen:
