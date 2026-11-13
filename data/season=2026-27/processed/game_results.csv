@@ -236,3 +236,7 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600224,2026-11-11,UTA,Jazz,106,ORL,Magic,123,ORL,UTA,Regular Season,False,Final,4.0,,,0,0,False,False,Delta Center,"Salt Lake City, UT"
 0022600225,2026-11-11,HOU,Rockets,115,GSW,Warriors,108,HOU,GSW,Regular Season,False,Final,4.0,,,0,0,False,False,Toyota Center,"Houston, TX"
 0022600226,2026-11-11,POR,Trail Blazers,118,OKC,Thunder,108,POR,OKC,Regular Season,False,Final,4.0,,,0,0,False,False,Moda Center,"Portland, OR"
+0022600227,2026-11-12,PHI,76ers,123,TOR,Raptors,112,PHI,TOR,Regular Season,False,Final,4.0,,,0,0,False,False,Xfinity Mobile Arena,"Philadelphia, PA"
+0022600228,2026-11-12,WAS,Wizards,140,DET,Pistons,144,DET,WAS,Regular Season,False,Final,4.0,,,0,0,False,False,Capital One Arena,"Washington, DC"
+0022600229,2026-11-12,MIN,Timberwolves,133,DAL,Mavericks,94,MIN,DAL,Regular Season,False,Final,4.0,,,0,0,False,False,Target Center,"Minneapolis, MN"
+0022600230,2026-11-12,PHX,Suns,101,CHA,Hornets,96,PHX,CHA,Regular Season,False,Final,4.0,,,0,0,False,False,Mortgage Matchup Center,"Phoenix, AZ"
