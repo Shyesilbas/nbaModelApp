@@ -249,3 +249,8 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600040,2026-11-13,SAS,Spurs,123,GSW,Warriors,85,SAS,GSW,Regular Season,False,Final,4.0,Emirates NBA Cup,,0,0,False,False,Frost Bank Center,"San Antonio, TX"
 0022600041,2026-11-13,SAC,Kings,107,POR,Trail Blazers,120,POR,SAC,Regular Season,False,Final,4.0,Emirates NBA Cup,,0,0,False,False,Golden 1 Center,"Sacramento, CA"
 0022600042,2026-11-13,LAC,Clippers,113,OKC,Thunder,112,LAC,OKC,Regular Season,False,Final,4.0,Emirates NBA Cup,,0,0,False,False,Intuit Dome,"Inglewood, CA"
+0022600231,2026-11-14,NOP,Pelicans,108,DEN,Nuggets,116,DEN,NOP,Regular Season,False,Final,4.0,,,0,0,False,False,Smoothie King Center,"New Orleans, LA"
+0022600232,2026-11-14,CLE,Cavaliers,127,DAL,Mavericks,117,CLE,DAL,Regular Season,False,Final,4.0,,,0,0,False,False,Rocket Arena,"Cleveland, OH"
+0022600233,2026-11-14,MIA,Heat,137,DET,Pistons,117,MIA,DET,Regular Season,False,Final,4.0,,,0,0,False,False,Kaseya Center,"Miami, FL"
+0022600234,2026-11-14,MEM,Grizzlies,129,BKN,Nets,110,MEM,BKN,Regular Season,False,Final,4.0,,,0,0,False,False,FedExForum,"Memphis, TN"
+0022600235,2026-11-14,MIN,Timberwolves,106,CHI,Bulls,117,CHI,MIN,Regular Season,False,Final,4.0,,,0,0,False,False,Target Center,"Minneapolis, MN"
