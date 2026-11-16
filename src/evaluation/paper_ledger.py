@@ -22,6 +22,7 @@ from src.core.artifact_paths import production_release
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import normalize_season
 from src.evaluation.bootstrap import paired_block_bootstrap
+from src.evaluation.ledger_detail import player_summary, shadow_summary
 from src.features.continuous_elo import ContinuousEloEngine
 from src.features.win_strength_features import season_opening_ratings
 from src.processing.season_type_normalizer import drop_preseason
@@ -192,4 +193,6 @@ def build_report(season: str, graded: list[dict] | None = None) -> dict:
         "all_valid": summarize_group(final),
         "by_version": {f"{v}/{o}": summarize_group(rows) for (v, o), rows in sorted(groups.items())},
         "weekly_current_live": weekly,
+        "shadow_current_live": shadow_summary(current_live),
+        "players_current_live": player_summary(current_live, season),
     }

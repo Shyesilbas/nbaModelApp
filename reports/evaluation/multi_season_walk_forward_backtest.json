@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-04T09:06:05Z",
+  "timestamp": "2026-11-16T18:25:16Z",
   "provenance": {
     "win": {
       "version": "v15",
@@ -13,7 +13,7 @@
       "version": "v15",
       "trained_at": "2026-10-25T11:01:57.467925Z"
     },
-    "git_commit": "3af50c9"
+    "git_commit": "0b7ec57"
   },
   "total_unseen_games": 6276,
   "folds_evaluated": 5,
@@ -107,6 +107,86 @@
       "brier": 0.2157,
       "log_loss": 0.6203,
       "games": 6276
+    }
+  },
+  "player_rotation_audit": {
+    "pts": {
+      "production": 4.4603,
+      "live_like_serve": 4.559,
+      "live_like_retrain": 4.5312,
+      "no_rotation": 4.5367,
+      "ema10": 4.6316,
+      "rows": 140378,
+      "live_vs_ema10": {
+        "mean_diff": -0.07265,
+        "ci_low": -0.08192,
+        "ci_high": -0.06335,
+        "level": 0.95,
+        "n": 140378,
+        "blocks": 1056,
+        "p_model_better": 1.0
+      },
+      "retrain_vs_serve": {
+        "mean_diff": -0.02776,
+        "ci_low": -0.03319,
+        "ci_high": -0.02213,
+        "level": 0.95,
+        "n": 140378,
+        "blocks": 1056,
+        "p_model_better": 1.0
+      }
+    },
+    "reb": {
+      "production": 1.8639,
+      "live_like_serve": 1.8923,
+      "live_like_retrain": 1.8849,
+      "no_rotation": 1.8858,
+      "ema10": 1.9271,
+      "rows": 140378,
+      "live_vs_ema10": {
+        "mean_diff": -0.03477,
+        "ci_low": -0.03817,
+        "ci_high": -0.03141,
+        "level": 0.95,
+        "n": 140378,
+        "blocks": 1056,
+        "p_model_better": 1.0
+      },
+      "retrain_vs_serve": {
+        "mean_diff": -0.00739,
+        "ci_low": -0.00907,
+        "ci_high": -0.00574,
+        "level": 0.95,
+        "n": 140378,
+        "blocks": 1056,
+        "p_model_better": 1.0
+      }
+    },
+    "ast": {
+      "production": 1.2792,
+      "live_like_serve": 1.2947,
+      "live_like_retrain": 1.2893,
+      "no_rotation": 1.2895,
+      "ema10": 1.3317,
+      "rows": 140378,
+      "live_vs_ema10": {
+        "mean_diff": -0.03705,
+        "ci_low": -0.03998,
+        "ci_high": -0.03457,
+        "level": 0.95,
+        "n": 140378,
+        "blocks": 1056,
+        "p_model_better": 1.0
+      },
+      "retrain_vs_serve": {
+        "mean_diff": -0.0054,
+        "ci_low": -0.00688,
+        "ci_high": -0.00395,
+        "level": 0.95,
+        "n": 140378,
+        "blocks": 1056,
+        "p_model_better": 1.0
+      }
     }
   },
   "win_reliability": {

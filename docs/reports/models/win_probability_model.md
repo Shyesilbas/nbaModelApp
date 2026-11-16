@@ -12,7 +12,7 @@
 <!-- BEGIN GENERATED: walk-forward (scripts/walk_forward_benchmark.py; do not edit) -->
 ## Güncel Walk-Forward Sonuçları (`v15`)
 
-Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-04T09:06:05Z, commit `3af50c9`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
+Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-16T18:25:16Z, commit `0b7ec57`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
 
 | Sezon | Maç | Model Brier | Elo Brier | Fark | Model Log-Loss | Elo Log-Loss | AUC | Doğruluk |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -48,21 +48,21 @@ Across 5 fully out-of-fold expanding walk-forward seasons (6,276 unseen NBA game
 
 All features are computed chronologically with strict zero-leakage (`shift(1)` on prior games):
 
-| Feature Name | Role / Description | Coeff (Std) | Permutation $\Delta\text{LL}$ |
+| Feature Name | Role / Description | Coeff (Std, `v15`) | Permutation $\Delta\text{LL}$ (`v12`) |
 |---|---|---:|---:|
-| `ELO_DIFF` | Continuous Elo differential between home and away team | `+0.7038` | `+0.1479` |
-| `CLEAN_NET_RTG_DIFF_LAST_10` | Net rating differential with garbage time stripped | `+0.2405` | `+0.0191` |
-| `MISSING_ROT_MINS_DIFF` | **[v12 New]** Opponent missing rotation minutes minus own missing rotation minutes ($\ge 20$ min regular starters) | `+0.2113` | `+0.0095` |
-| `ACTIVE_WT_GS_DIFF` | **[v12 New]** Average Game Score of active lineup weighted by playing time differential | `+0.1646` | `+0.0069` |
-| `ABS_DIFF` | Hollinger Game Score availability delta | `+0.0799` | `+0.0020` |
-| `ROT_CONTINUITY_DIFF` | **[v12 New]** Roster continuity / chemistry ratio differential tonight vs last 15 games | `+0.0007` | `+0.0002` |
-| `REST_DIFF` | Differential in rest days (`DAYS_REST - OPP_DAYS_REST`) | `+0.0416` | - |
-| `IS_HOME` | Home court advantage indicator | `+0.0000`* | `+0.0102` |
-| `OPP_IS_B2B` | Opponent back-to-back indicator | `+0.0518` | `+0.0003` |
-| `IS_B2B` | Own team back-to-back indicator | `-0.0822` | `+0.0004` |
-| `WINRATE_DIFF_LAST_10` | 10-game win rate differential (negative: close-game luck regression) | `-0.2535` | `+0.0074` |
+| `ELO_DIFF` | Continuous Elo differential between home and away team | `+0.7197` | `+0.1479` |
+| `CLEAN_NET_RTG_DIFF_LAST_10` | Net rating differential with garbage time stripped | `+0.2460` | `+0.0191` |
+| `MISSING_ROT_MINS_DIFF` | **[v12 New]** Opponent missing rotation minutes minus own missing rotation minutes ($\ge 20$ min regular starters) | `+0.2154` | `+0.0095` |
+| `ACTIVE_WT_GS_DIFF` | **[v12 New]** Average Game Score of active lineup weighted by playing time differential | `+0.1623` | `+0.0069` |
+| `ABS_DIFF` | Hollinger Game Score availability delta | `+0.0945` | `+0.0020` |
+| `ROT_CONTINUITY_DIFF` | **[v12 New]** Roster continuity / chemistry ratio differential tonight vs last 15 games | `-0.0162` | `+0.0002` |
+| `REST_DIFF` | Differential in rest days (`DAYS_REST - OPP_DAYS_REST`) | `+0.0422` | - |
+| `IS_HOME` | Home court advantage indicator | `+0.2400` | `+0.0102` |
+| `OPP_IS_B2B` | Opponent back-to-back indicator | `+0.0668` | `+0.0003` |
+| `IS_B2B` | Own team back-to-back indicator | `-0.0671` | `+0.0004` |
+| `WINRATE_DIFF_LAST_10` | 10-game win rate differential (negative: close-game luck regression) | `-0.2718` | `+0.0074` |
 
-*\*Not: Model hem ev hem deplasman satırlarını simetrik öğrendiğinde IS_HOME katsayısı model intercept'ine (+0.2599) taşınır; ev sahibi avantajını intercept sağlar.*
+Katsayılar `v15` artefaktından (`models/production/win_model.pkl`, standartlaştırılmış girdiler, intercept `0.0000`) okunmuştur; ev sahibi avantajını `IS_HOME` taşır. Permütasyon sütunu `v12` terfi ölçümüdür. `ROT_CONTINUITY_DIFF` katsayısı sıfıra yakındır: modelde yer alır ama tahmini fiilen değiştirmez.
 
 ---
 

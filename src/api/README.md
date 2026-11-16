@@ -14,6 +14,9 @@ Exposes the FastAPI ML inference service (`/predict/*`, `/model-status`, `/healt
 - **Frontend Data Token Guard:** `/frontend-data-api/*` (`data_router`) enforces `require_data_token` (`X-Data-Token` vs `NBA_DATA_API_TOKEN` when configured) and reads strictly from `data/frontend_store/` SQLite files (`services/frontend_data.py`).
 - **Pre-Tip Paper Ledger Integrity (`services/paper_trading.py`):** `append_records` enforces first-write-wins immutability on `paper_ledger_2026_27.jsonl`; live API predictions log separately to `shadow_predictions_log.jsonl` (`services/shadow_logger.py`).
 - **Startup Warmup (`main.py`):** `lifespan` preloads models (`init_model`), frontend SQLite caches (`warm_up_cache`), and current-season player datasets.
+- **Compression & Conditional GET (`main.py`, `etag.py`):** `GZipMiddleware` compresses responses over 1 KB; `ETagMiddleware` adds a content-hash ETag and `Cache-Control: no-cache` to every `GET /frontend-data-api/*` 200 and answers a matching `If-None-Match` with 304.
+- **Per-Day Feature Caches:** Team form (`pregame_team_rows`), player form (`_team_pregame_rows`) and live rotations (`_live_rotation`) are cached per date and data-file version; `services/slate_warmup.py` fills them for the games of today and tomorrow in a background thread after startup (`NBA_WARM_SLATE=0` disables it).
+- **Ledger Detail Fields:** `build_record` also freezes served model inputs (`features`), `player_rows` projections (`players`) and shadow candidate probabilities (`shadow`); `paper_trading_report` drops these `DETAIL_FIELDS` from the page payload.
 - **Change rule:** Any route change in [`routes.py`](routes.py) requires updating `frontend/src/api/` or `frontend/src/lib/` and running `python3 scripts/check_api_endpoints.py`.
 
 ## API (`routes.py`)

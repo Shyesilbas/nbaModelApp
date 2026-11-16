@@ -20,6 +20,7 @@ mentioned, assumes whoever played the team's previous game plays again.
 from __future__ import annotations
 
 import os
+import weakref
 from functools import lru_cache
 from typing import Mapping, Optional
 
@@ -50,6 +51,29 @@ def _prepare(player_games: pd.DataFrame) -> pd.DataFrame:
         d[c] = pd.to_numeric(d[c], errors="coerce").fillna(0.0)
     d["GS"] = game_score(d)
     return d[d["MIN"] > 0]
+
+
+_prepared_memo: dict = {}
+_rotation_memo: dict = {}
+
+
+def _prepared(player_games: pd.DataFrame) -> pd.DataFrame:
+    """``_prepare`` of a frame, computed once per frame object. Live inference passes the same
+    cached logs for every team and request; the weak reference drops the entry when the data
+    files are reloaded and the old frame is freed."""
+    key = id(player_games)
+    hit = _prepared_memo.get(key)
+    if hit is not None and hit[0]() is player_games:
+        return hit[1]
+    for stale_key in [k for k, v in _prepared_memo.items() if v[0]() is None]:
+        _prepared_memo.pop(stale_key, None)
+        for rk in [rk for rk in _rotation_memo if rk[0] == stale_key]:
+            _rotation_memo.pop(rk, None)
+    for rk in [rk for rk in _rotation_memo if rk[0] == key]:  # id reused by a new frame
+        _rotation_memo.pop(rk, None)
+    prepared = _prepare(player_games)
+    _prepared_memo[key] = (weakref.ref(player_games), prepared)
+    return prepared
 
 
 AVAILABILITY_MODES = ("actual", "carry_forward")
@@ -165,7 +189,16 @@ def _live_rotation(player_games: pd.DataFrame, team: str, pred_date, preseason: 
     the feature (opening games 2021-22..2025-26: WIN Brier 0.2294 -> 0.2227)."""
     if player_games is None or player_games.empty:
         return None
-    d = _prepare(player_games)
+    d = _prepared(player_games)
+    key = (id(player_games), team, pd.to_datetime(pred_date), bool(preseason))
+    if key not in _rotation_memo:
+        if len(_rotation_memo) > 512:
+            _rotation_memo.clear()
+        _rotation_memo[key] = _live_rotation_uncached(d, team, pred_date, preseason)
+    return _rotation_memo[key]
+
+
+def _live_rotation_uncached(d: pd.DataFrame, team: str, pred_date, preseason: bool):
     d = d[d["GAME_DATE"] < pd.to_datetime(pred_date)].sort_values("GAME_DATE", kind="stable")
     if not preseason:
         d = d[~d["GAME_ID"].str.startswith("001")]
@@ -233,7 +266,9 @@ def current_roster_ids(team: str, pred_date) -> Optional[set]:
         dt = pd.to_datetime(pred_date)
         season = date_to_season(dt)
         path = get_data_paths(season).team_rosters
-        roster = roster_as_of(_read_roster(path, os.path.getmtime(path)), season, dt.strftime("%Y-%m-%d"))
+        from src.analysis.roster_transactions import MOVEMENTS_PATH
+        moves_mtime = os.path.getmtime(MOVEMENTS_PATH) if os.path.exists(MOVEMENTS_PATH) else 0.0
+        roster = _roster_on(str(path), os.path.getmtime(path), moves_mtime, season, dt.strftime("%Y-%m-%d"))
         ids = set(roster.loc[roster["TEAM_ABBREVIATION"] == team, "PLAYER_ID"].astype(int))
         return ids or None
     except Exception:
@@ -243,6 +278,13 @@ def current_roster_ids(team: str, pred_date) -> Optional[set]:
 @lru_cache(maxsize=4)
 def _read_roster(path: str, _mtime: float) -> pd.DataFrame:
     return pd.read_csv(path)
+
+
+@lru_cache(maxsize=64)
+def _roster_on(path: str, mtime: float, _moves_mtime: float, season: str, as_of: str) -> pd.DataFrame:
+    """Roster with movements replayed up to ``as_of``; keyed by both files' mtimes."""
+    from src.analysis.roster_transactions import roster_as_of
+    return roster_as_of(_read_roster(path, mtime), season, as_of)
 
 
 def live_roster_metrics(

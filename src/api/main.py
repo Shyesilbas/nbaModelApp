@@ -4,8 +4,10 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from .routes import router
 from .rate_limit import RateLimitMiddleware
+from .etag import ETagMiddleware
 from .services.win_prediction import init_model
 import uvicorn
 
@@ -33,6 +35,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Player data warmup failed on startup: %s", e)
 
+    try:
+        from .services.slate_warmup import start_background_warmup
+        start_background_warmup()
+    except Exception as e:
+        logger.warning("Slate warmup could not start: %s", e)
+
     yield
 
 
@@ -58,7 +66,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(ETagMiddleware)
 app.add_middleware(RateLimitMiddleware)
+# Store documents are JSON of 0.1-1.3 MB; gzip cuts them by roughly 85% on the wire.
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)
 app.include_router(router)
 
 

@@ -30,7 +30,7 @@ from sklearn.preprocessing import StandardScaler
 
 from src.api.services.paper_trading import CONFIDENCE_BANDS
 from src.core.data_paths import PLAYER_TRAINING_CSV, get_data_paths, team_training_csv
-from src.features.roster_absence import add_absence_columns
+from src.features.roster_absence import add_absence_columns, build_absence_deltas
 from src.features.win_strength_features import add_win_strength_features, attach_actual_points
 from src.features.continuous_elo import HOME_COURT_ADVANTAGE
 from src.training.score_trainer import ScoreModelTrainer, get_location_features
@@ -106,6 +106,8 @@ def _evaluate_player(actual: pd.Series, pred: np.ndarray, baseline: pd.Series) -
 
 
 AVAILABILITY_FEATURES = ["ABS_DIFF", "MISSING_ROT_MINS_DIFF", "ROT_CONTINUITY_DIFF", "ACTIVE_WT_GS_DIFF"]
+PLAYER_ROTATION_FEATURES = ["MISSING_ROT_MINS", "ROT_CONTINUITY", "ACTIVE_WT_GS"]
+PLAYER_AUDIT_VARIANTS = ("production", "live_like_serve", "live_like_retrain", "no_rotation", "ema10")
 RELIABILITY_BINS = [0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0]
 
 
@@ -232,7 +234,7 @@ def load_player_dataset(player_features: list[str]) -> pd.DataFrame:
     csv_path = PLAYER_TRAINING_CSV
     if not csv_path.exists():
         return pd.DataFrame()
-    wanted = set(["SEASON_ID", "GAME_DATE", "TARGET_PTS", "TARGET_REB", "TARGET_AST", "PLAYER_POSITION_GROUP",
+    wanted = set(["SEASON_ID", "GAME_ID", "TEAM_ABBREVIATION", "GAME_DATE", "TARGET_PTS", "TARGET_REB", "TARGET_AST", "PLAYER_POSITION_GROUP",
                   "PTS_EMA_10", "REB_EMA_10", "AST_EMA_10"] + player_features)
     df = pd.read_csv(csv_path, usecols=lambda c: c in wanted or "_ALLOWED_LAST_10" in c)
     df = add_player_matchup_features(df)  # derived columns of the production feature list
@@ -247,6 +249,34 @@ def load_player_dataset(player_features: list[str]) -> pd.DataFrame:
     df["_SEASON"] = df["SEASON_ID"].map(season_map)
     df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce")
     return df.dropna(subset=["_SEASON", "GAME_DATE"]).sort_values("GAME_DATE").reset_index(drop=True)
+
+
+def _player_carry_forward(player_data: pd.DataFrame) -> pd.DataFrame:
+    """The three team rotation features of the PLAYER model under the live default (whoever played
+    the team's previous game plays tonight), aligned to ``player_data`` rows. The dataset itself
+    carries them built from the game's own box score."""
+    frames = []
+    for s in SEASONS:
+        path = Path(get_data_paths(s).player_games_raw)
+        if path.exists():
+            frames.append(pd.read_csv(path, dtype={"Game_ID": str}))
+    logs = pd.concat(frames, ignore_index=True)
+    keys = pd.DataFrame({
+        "GAME_ID": player_data["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10).to_numpy(),
+        "TEAM_ABBREVIATION": player_data["TEAM_ABBREVIATION"].to_numpy(),
+    })
+    out = {}
+    for mode in ("actual", "carry_forward"):
+        deltas = build_absence_deltas(logs, mode)[["GAME_ID", "TEAM_ABBREVIATION", *PLAYER_ROTATION_FEATURES]]
+        merged = keys.merge(deltas, on=["GAME_ID", "TEAM_ABBREVIATION"], how="left")
+        assert len(merged) == len(keys), "rotation merge changed the row count"
+        out[mode] = merged[PLAYER_ROTATION_FEATURES].set_axis(player_data.index)
+    # The rebuilt box-score version must reproduce the stored columns, or the join is wrong.
+    gap = (out["actual"] - player_data[PLAYER_ROTATION_FEATURES]).abs().max().max()
+    matched = float(out["carry_forward"].notna().all(axis=1).mean())
+    print(f"PLAYER rotation rebuild: max gap to stored columns {gap:.2e}, rows matched {matched:.1%}")
+    assert gap < 1e-6, "rebuilt rotation features differ from the training dataset"
+    return out["carry_forward"]
 
 
 def _provenance() -> dict:
@@ -314,6 +344,12 @@ def run_walk_forward_backtest():
     data_cf = _carry_forward_frame(data)
     no_avail_features = [f for f in win_features if f not in AVAILABILITY_FEATURES]
     pooled = {k: ([], []) for k in ("production", "live_like_serve", "live_like_retrain", "no_availability", "elo")}
+    audit_players = not player_data.empty and all(f in player_features for f in PLAYER_ROTATION_FEATURES)
+    player_cf = _player_carry_forward(player_data) if audit_players else None
+    no_rot_features = [f for f in player_features if f not in PLAYER_ROTATION_FEATURES]
+    # Absolute errors per variant, pooled over folds, plus paired differences for the bootstrap.
+    player_pooled = {t: {v: [] for v in PLAYER_AUDIT_VARIANTS} for t in ("pts", "reb", "ast")}
+    player_paired = {t: {"live_vs_ema10": [], "retrain_vs_serve": []} for t in ("pts", "reb", "ast")}
 
     for idx, test_season in enumerate(available_seasons[1:], start=1):
         train_seasons = available_seasons[:idx]
@@ -439,6 +475,27 @@ def run_walk_forward_backtest():
                     "diff": np.abs(p_te[target_col].to_numpy() - pred_p) - np.abs(p_te[target_col].to_numpy() - p_te[base_col].to_numpy()),
                 }))
 
+                if audit_players:
+                    # Rotation audit: production model served with the live default, retrained on it,
+                    # and without the three rotation features (same idea as the WIN audit).
+                    y_te = p_te[target_col].to_numpy(dtype=float)
+                    te_cf, tr_cf = p_te.copy(), p_tr.copy()
+                    te_cf[PLAYER_ROTATION_FEATURES] = player_cf.loc[p_te.index]
+                    tr_cf[PLAYER_ROTATION_FEATURES] = player_cf.loc[p_tr.index]
+                    trainer = PlayerModelTrainer()
+                    errs = {
+                        "production": np.abs(y_te - pred_p),
+                        "live_like_serve": np.abs(y_te - m_p.predict(te_cf[player_features])),
+                        "live_like_retrain": np.abs(y_te - trainer._model_pipeline(target_name).fit(tr_cf[player_features], tr_cf[target_col]).predict(te_cf[player_features])),
+                        "no_rotation": np.abs(y_te - trainer._model_pipeline(target_name).fit(p_tr[no_rot_features], p_tr[target_col]).predict(p_te[no_rot_features])),
+                        "ema10": np.abs(y_te - p_te[base_col].to_numpy(dtype=float)),
+                    }
+                    for variant, e in errs.items():
+                        player_pooled[target_name][variant].append(e)
+                    dates = p_te["GAME_DATE"].to_numpy()
+                    player_paired[target_name]["live_vs_ema10"].append(pd.DataFrame({"date": dates, "diff": errs["live_like_serve"] - errs["ema10"]}))
+                    player_paired[target_name]["retrain_vs_serve"].append(pd.DataFrame({"date": dates, "diff": errs["live_like_retrain"] - errs["live_like_serve"]}))
+
         fold_record = {
             "fold": idx,
             "test_season": test_season,
@@ -522,6 +579,17 @@ def run_walk_forward_backtest():
     for key, (ys, ps) in pooled.items():
         y_all, p_all = np.concatenate(ys), np.clip(np.concatenate(ps), 1e-6, 1 - 1e-6)
         availability_audit[key] = {"brier": round(float(brier_score_loss(y_all, p_all)), 4), "log_loss": round(float(log_loss(y_all, p_all)), 4), "games": int(len(y_all))}
+    player_audit = {}
+    if audit_players:
+        for t, variants in player_pooled.items():
+            if not variants["production"]:
+                continue
+            entry = {v: round(float(np.concatenate(e).mean()), 4) for v, e in variants.items()}
+            entry["rows"] = int(sum(len(e) for e in variants["production"]))
+            for key, frames in player_paired[t].items():
+                df_pair = pd.concat(frames, ignore_index=True)
+                entry[key] = paired_block_bootstrap(df_pair["diff"].to_numpy(), df_pair["date"].astype(str).to_numpy())
+            player_audit[t] = entry
     reliability = reliability_table(np.concatenate(pooled["production"][0]), np.concatenate(pooled["production"][1]))
     confidence_calibration = {
         "pooled": confidence_table(np.concatenate(pooled["production"][0]), np.concatenate(pooled["production"][1])),
@@ -536,6 +604,7 @@ def run_walk_forward_backtest():
         "folds_evaluated": len(folds),
         "significance_vs_baseline": significance,
         "win_availability_audit": availability_audit,
+        "player_rotation_audit": player_audit,
         "win_reliability": reliability,
         "win_confidence_calibration": confidence_calibration,
         "aggregate_win": {
@@ -712,6 +781,32 @@ Eğitim ve backtest, kadro özelliklerini (`ABS_DIFF`, `MISSING_ROT_MINS_DIFF`, 
     live_ci = significance.get("win_brier_live_like")
     if live_ci:
         md_content += f"\nCanlı varsayımla üretim modeli vs saf Elo: fark {_signed(live_ci['mean_diff'], 4)}, %95 CI [{_signed(live_ci['ci_low'], 4)}, {_signed(live_ci['ci_high'], 4)}], {verdict(live_ci)}.\n"
+
+    p_audit = summary.get("player_rotation_audit") or {}
+    if p_audit:
+        md_content += """
+### PLAYER Rotasyon Bilgisi Denetimi (look-ahead)
+
+PLAYER modelinin üç takım özelliği (`MISSING_ROT_MINS`, `ROT_CONTINUITY`, `ACTIVE_WT_GS`) de eğitimde maçın kendi box score'undan gelir. Aşağıda aynı walk-forward, bu üç özellik canlı varsayımla (önceki maçta oynayan oynar) yeniden kurularak tekrarlanır. Satırlar yine yalnızca maçta oynayan oyunculardır; dakika tahmini ve sakatlık raporu bu denetimin dışındadır (onları kilitli sezon defteri ölçer).
+
+| Varyant | PTS MAE | REB MAE | AST MAE |
+|---|---:|---:|---:|
+"""
+        labels = [
+            ("production", "Üretim: maç kaydındaki gerçek kadro (eğitim ve test)"),
+            ("live_like_serve", "Üretim modeli, test sezonunda canlı varsayımla"),
+            ("live_like_retrain", "Canlı varsayımla yeniden eğitilmiş ve test edilmiş"),
+            ("no_rotation", "Rotasyon özellikleri (3 adet) olmadan"),
+            ("ema10", "EMA-10 baseline"),
+        ]
+        for key, label in labels:
+            md_content += f"| {label} | {p_audit['pts'][key]:.3f} | {p_audit['reb'][key]:.3f} | {p_audit['ast'][key]:.3f} |\n"
+        md_content += "\n| Karşılaştırma (canlı varsayım) | Ortalama Fark | %95 CI | Yorum |\n|---|---:|---:|---|\n"
+        for t in ("pts", "reb", "ast"):
+            for key, label in (("live_vs_ema10", "üretim modeli vs EMA-10"), ("retrain_vs_serve", "yeniden eğitilmiş vs üretim modeli")):
+                ci = p_audit[t].get(key)
+                if ci:
+                    md_content += f"| {t.upper()}: {label} | {_signed(ci['mean_diff'], 4)} | [{_signed(ci['ci_low'], 4)}, {_signed(ci['ci_high'], 4)}] | {verdict(ci)} |\n"
 
     rel = summary["win_reliability"]
     md_content += f"""

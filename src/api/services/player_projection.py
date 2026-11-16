@@ -1,4 +1,6 @@
 import logging
+import os
+import weakref
 import re
 import pandas as pd
 import numpy as np
@@ -7,7 +9,7 @@ from functools import lru_cache
 
 ROOT = Path(__file__).resolve().parents[3]
 
-from src.core.data_paths import PLAYER_METADATA_CSV, PLAYER_TRAINING_CSV, get_data_paths
+from src.core.data_paths import PLAYER_HISTORY_SLIM_CSV, PLAYER_METADATA_CSV, PLAYER_TRAINING_CSV, get_data_paths
 from src.core.season_utils import date_to_season
 from src.processing.cleaning import clean_minutes_column
 from src.analysis.roster_transactions import MOVEMENTS_PATH, roster_as_of
@@ -330,6 +332,11 @@ def _load_player_dataset(season: str = None):
     global _player_df_cache
 
     v4_path = PLAYER_TRAINING_CSV
+    # Without the full training dataset (cloud snapshot) the slim history carries the same raw
+    # game lines; NBA_PLAYER_HISTORY=slim forces it, to check both sources agree.
+    slim = not v4_path.exists() or os.environ.get("NBA_PLAYER_HISTORY") == "slim"
+    if slim:
+        v4_path = PLAYER_HISTORY_SLIM_CSV
     season_path = None
     if season:
         season_path = Path(get_data_paths(season).player_games_raw)
@@ -344,7 +351,11 @@ def _load_player_dataset(season: str = None):
 
     dfs = []
     if v4_path.exists():
-        dfs.append(pd.read_csv(v4_path))
+        history = pd.read_csv(v4_path)
+        if slim:
+            # No stored pregame features: every row is rolled forward like a current-season row.
+            history["_LIVE_ROW"] = True
+        dfs.append(history)
     if season_path is not None and season_path.exists():
         dfs.append(season_rows_from_raw(season))
 
@@ -527,6 +538,22 @@ def _build_inference_df(roster_df, is_home: bool, defense_values):
     return roster_df
 
 
+_pregame_rows_memo: dict = {}
+
+
+def _team_pregame_rows(df, past_df, team: str, player_ids: frozenset, pred_dt) -> pd.DataFrame:
+    """``pregame_player_rows`` for one team's players, cached per dataset object, date and player set."""
+    key = (id(df), team, pd.Timestamp(pred_dt), player_ids)
+    hit = _pregame_rows_memo.get(key)
+    if hit is not None and hit[0]() is df:
+        return hit[1]
+    if len(_pregame_rows_memo) > 256 or any(ref() is None for ref, _ in _pregame_rows_memo.values()):
+        _pregame_rows_memo.clear()
+    rows = pregame_player_rows(past_df[past_df["PLAYER_ID"].isin(player_ids)], "PLAYER_ID", pred_dt)
+    _pregame_rows_memo[key] = (weakref.ref(df), rows)
+    return rows
+
+
 def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, prediction_date: str, roll_forward: bool = True):
     past_df = df[df["GAME_DATE"] < pred_dt]
     if len(past_df) == 0:
@@ -539,14 +566,26 @@ def _build_future_rosters(df, home_team: str, away_team: str, pred_dt, predictio
 
     # Form is computed per player, so only the two teams' players (anyone who ever
     # played for either, plus the listed rosters) need rolling forward, not the league.
-    wanted = set(past_df.loc[past_df["TEAM_ABBREVIATION"].isin([home_team, away_team]), "PLAYER_ID"]) | set(home_active or ()) | set(away_active or ())
+    wanted_by_team = {
+        team: frozenset(past_df.loc[past_df["TEAM_ABBREVIATION"] == team, "PLAYER_ID"]) | frozenset(active or ())
+        for team, active in ((home_team, home_active), (away_team, away_active))
+    }
+    wanted = wanted_by_team[home_team] | wanted_by_team[away_team]
     form_history = past_df[past_df["PLAYER_ID"].isin(wanted)]
     try:
         if not roll_forward:
             # Lineup preview: each player's last stored form row is enough to list and rank a roster.
             raise ValueError("roll-forward skipped")
         # Roll each player's form forward to include their latest game, as training rows do.
-        last_games = pregame_player_rows(form_history, "PLAYER_ID", pred_dt)
+        # Per team and cached: the rows depend only on the player's own history, so a slate
+        # computes each team once and a repeated request (status override, revisit) reuses it.
+        parts = [_team_pregame_rows(df, past_df, team, wanted_by_team[team], pred_dt) for team in (home_team, away_team)]
+        last_games = (
+            pd.concat(parts, ignore_index=True)
+            .drop_duplicates("PLAYER_ID")
+            .sort_values("PLAYER_ID", kind="stable")
+            .reset_index(drop=True)
+        )
     except ValueError as exc:
         if roll_forward:
             logger.warning("Player form not rolled forward (%s); using each player's last stored row.", exc)

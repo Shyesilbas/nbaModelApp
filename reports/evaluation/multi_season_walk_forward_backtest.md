@@ -2,8 +2,8 @@
 
 > Bu dosya `scripts/walk_forward_benchmark.py` tarafından üretilir; elle düzenlenmez.
 
-**Rapor Tarihi:** 2026-11-04T09:06:05Z  
-**Ölçülen Üretim Yapılandırması:** WIN `v15` (eğitim 2026-10-25), SCORE `v15` (eğitim 2026-10-25), PLAYER `v15` (eğitim 2026-10-25); git `3af50c9`  
+**Rapor Tarihi:** 2026-11-16T18:25:16Z  
+**Ölçülen Üretim Yapılandırması:** WIN `v15` (eğitim 2026-10-25), SCORE `v15` (eğitim 2026-10-25), PLAYER `v15` (eğitim 2026-10-25); git `0b7ec57`  
 **Yöntem:** Kesintisiz Genişleyen Zaman Pencereleri (Expanding Window). Her sezon yalnızca önceki tamamlanmış sezonlarla eğitilen modellerle test edilmiştir; geleceğe dönük hiçbir bilgi sızıntısı (leakage) bulunmamaktadır.  
 **Toplam Görülmemiş Test Maçı:** 6276 maç (5 ayrı NBA sezonu)
 
@@ -82,6 +82,27 @@ Eğitim ve backtest, kadro özelliklerini (`ABS_DIFF`, `MISSING_ROT_MINS_DIFF`, 
 | Saf Elo | 0.2157 | 0.6203 | +0.0000 |
 
 Canlı varsayımla üretim modeli vs saf Elo: fark -0.0022, %95 CI [-0.0041, -0.0002], model daha iyi (CI sıfırın altında).
+
+### PLAYER Rotasyon Bilgisi Denetimi (look-ahead)
+
+PLAYER modelinin üç takım özelliği (`MISSING_ROT_MINS`, `ROT_CONTINUITY`, `ACTIVE_WT_GS`) de eğitimde maçın kendi box score'undan gelir. Aşağıda aynı walk-forward, bu üç özellik canlı varsayımla (önceki maçta oynayan oynar) yeniden kurularak tekrarlanır. Satırlar yine yalnızca maçta oynayan oyunculardır; dakika tahmini ve sakatlık raporu bu denetimin dışındadır (onları kilitli sezon defteri ölçer).
+
+| Varyant | PTS MAE | REB MAE | AST MAE |
+|---|---:|---:|---:|
+| Üretim: maç kaydındaki gerçek kadro (eğitim ve test) | 4.460 | 1.864 | 1.279 |
+| Üretim modeli, test sezonunda canlı varsayımla | 4.559 | 1.892 | 1.295 |
+| Canlı varsayımla yeniden eğitilmiş ve test edilmiş | 4.531 | 1.885 | 1.289 |
+| Rotasyon özellikleri (3 adet) olmadan | 4.537 | 1.886 | 1.290 |
+| EMA-10 baseline | 4.632 | 1.927 | 1.332 |
+
+| Karşılaştırma (canlı varsayım) | Ortalama Fark | %95 CI | Yorum |
+|---|---:|---:|---|
+| PTS: üretim modeli vs EMA-10 | -0.0727 | [-0.0819, -0.0634] | model daha iyi (CI sıfırın altında) |
+| PTS: yeniden eğitilmiş vs üretim modeli | -0.0278 | [-0.0332, -0.0221] | model daha iyi (CI sıfırın altında) |
+| REB: üretim modeli vs EMA-10 | -0.0348 | [-0.0382, -0.0314] | model daha iyi (CI sıfırın altında) |
+| REB: yeniden eğitilmiş vs üretim modeli | -0.0074 | [-0.0091, -0.0057] | model daha iyi (CI sıfırın altında) |
+| AST: üretim modeli vs EMA-10 | -0.0370 | [-0.0400, -0.0346] | model daha iyi (CI sıfırın altında) |
+| AST: yeniden eğitilmiş vs üretim modeli | -0.0054 | [-0.0069, -0.0040] | model daha iyi (CI sıfırın altında) |
 
 ---
 

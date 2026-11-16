@@ -75,6 +75,9 @@ def build_record(
     now: Optional[datetime] = None,
     origin: str = "live",
     injury_report: Optional[Dict[str, Any]] = None,
+    features: Optional[Dict[str, float]] = None,
+    players: Optional[List[Dict[str, Any]]] = None,
+    shadow: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
     p = float(home_win_probability)
     record = {
@@ -94,7 +97,31 @@ def build_record(
     if injury_report is not None:
         # Official injury report the prediction was made with (published time, who filed, players listed).
         record["injury_report"] = injury_report
+    if features:
+        # Model inputs as served, so a later gap to the baselines can be traced to a feature.
+        record["features"] = features
+    if players:
+        # Frozen PLAYER projections (see player_rows): graded against the box score at read time.
+        record["players"] = players
+    if shadow:
+        # Home-win probability of shadow candidates (name -> probability); never shown as the call.
+        record["shadow"] = shadow
     return record
+
+
+# Per-game detail kept in the ledger for evaluation; the page payload leaves it out.
+DETAIL_FIELDS = ("features", "players", "shadow")
+
+
+def player_rows(players: Iterable[Any], team: str) -> List[Dict[str, Any]]:
+    """Compact ledger rows from GameFullPlayer projections: reconciled pts/reb/ast, raw model points, minutes."""
+    rows = []
+    for p in players:
+        if p.player_id is None:
+            continue
+        rows.append({"id": int(p.player_id), "team": team, "status": p.status, "min": p.proj_min,
+                     "pts": p.proj_pts, "reb": p.proj_reb, "ast": p.proj_ast, "raw_pts": p.raw_pts})
+    return rows
 
 
 def load_results(season: str) -> Dict[str, Dict[str, Any]]:
@@ -217,7 +244,8 @@ def paper_trading_report(season: str) -> Dict[str, Any]:
     evaluation = _evaluation_view(build_report(season, graded))
     # The page shows only the current release's live calls; older versions and backfill stay in the ledger.
     release = evaluation["production_release"]
-    shown = [g for g in graded if g["model_version"] == release and g["origin"] == "live"]
+    shown = [{k: v for k, v in g.items() if k not in DETAIL_FIELDS}
+             for g in graded if g["model_version"] == release and g["origin"] == "live"]
     evaluation["by_version"] = [v for v in evaluation["by_version"] if v["version"] == release and v["origin"] == "live"]
     return {"season": season, "summary": summarize(shown), "evaluation": evaluation, "games": shown}
 

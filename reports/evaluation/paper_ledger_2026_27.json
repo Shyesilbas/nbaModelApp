@@ -1,6 +1,6 @@
 {
   "season": "2026-27",
-  "generated_utc": "2026-11-16T13:44:17Z",
+  "generated_utc": "2026-11-16T18:27:49Z",
   "production_release": "v15",
   "ledger_rows": 196,
   "graded": 196,
@@ -360,5 +360,7 @@
       "mae_total": 13.82,
       "mae_margin": 12.99
     }
-  ]
+  ],
+  "shadow_current_live": {},
+  "players_current_live": null
 }

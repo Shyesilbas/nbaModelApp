@@ -14,6 +14,7 @@ ESPN_TRANSACTIONS_CSV = REFERENCE_DIR / "espn_transactions.csv"
 # Cross-season datasets the models are trained on, plus the PBP lookup the team features use.
 TRAINING_DIR = DATA_DIR / "training"
 PLAYER_TRAINING_CSV = TRAINING_DIR / "player_model_ready.csv"
+PLAYER_HISTORY_SLIM_CSV = TRAINING_DIR / "player_history_slim.csv"
 PBP_SITUATIONAL_CSV = TRAINING_DIR / "pbp_situational_features.csv"
 TEAM_TRAINING_GLOB = str(TRAINING_DIR / "team_model_ready_*.csv")
 

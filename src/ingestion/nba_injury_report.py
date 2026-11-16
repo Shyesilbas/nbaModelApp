@@ -7,6 +7,7 @@ show "NOT YET SUBMITTED"; those games get no overrides, so the model keeps its d
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -194,11 +195,14 @@ def _previous_season(season: str) -> str:
 
 def _player_index(season: str) -> Dict[Tuple[str, str], int]:
     """(team, plain name) -> player id from this and the previous season's box scores; the latest team wins."""
+    paths = [Path(get_data_paths(yr).player_games_raw) for yr in (_previous_season(season), season)]
+    return _player_index_cached(tuple((str(p), p.stat().st_mtime_ns) for p in paths if p.exists()))
+
+
+@lru_cache(maxsize=4)
+def _player_index_cached(files: Tuple[Tuple[str, int], ...]) -> Dict[Tuple[str, str], int]:
     index: Dict[Tuple[str, str], int] = {}
-    for yr in (_previous_season(season), season):
-        path = Path(get_data_paths(yr).player_games_raw)
-        if not path.exists():
-            continue
+    for path, _mtime in files:
         df = pd.read_csv(path, usecols=["Player_ID", "PLAYER_NAME", "MATCHUP", "GAME_DATE"]).sort_values("GAME_DATE")
         df["team"] = df["MATCHUP"].str.split(" ").str[0]
         for r in df.itertuples():

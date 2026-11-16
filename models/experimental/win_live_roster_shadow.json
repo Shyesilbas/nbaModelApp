@@ -1,0 +1,44 @@
+{
+  "name": "win_live_roster_v1",
+  "status": "shadow (not production; logged next to production in the paper ledger)",
+  "trained_utc": "2026-11-16T18:15:00.287637+00:00",
+  "seed": 42,
+  "features": [
+    "IS_HOME",
+    "IS_B2B",
+    "OPP_IS_B2B",
+    "ABS_DIFF",
+    "MISSING_ROT_MINS_DIFF",
+    "ROT_CONTINUITY_DIFF",
+    "ACTIVE_WT_GS_DIFF",
+    "ELO_DIFF",
+    "WINRATE_DIFF_LAST_10",
+    "REST_DIFF",
+    "CLEAN_NET_RTG_DIFF_LAST_10"
+  ],
+  "roster_feature_availability": "carry_forward",
+  "train_seasons": [
+    "2020-21",
+    "2021-22",
+    "2022-23",
+    "2023-24",
+    "2024-25",
+    "2025-26"
+  ],
+  "rows": 14780,
+  "sha256": "15da3d36224e66e43c00821ef97044cac421462e040835c1dda49b4172e30410",
+  "standardized_coefficients": {
+    "IS_HOME": 0.2507,
+    "IS_B2B": -0.086,
+    "OPP_IS_B2B": 0.0858,
+    "ABS_DIFF": -0.0832,
+    "MISSING_ROT_MINS_DIFF": 0.2102,
+    "ROT_CONTINUITY_DIFF": 0.0444,
+    "ACTIVE_WT_GS_DIFF": 0.1019,
+    "ELO_DIFF": 0.7251,
+    "WINRATE_DIFF_LAST_10": -0.2673,
+    "REST_DIFF": 0.0561,
+    "CLEAN_NET_RTG_DIFF_LAST_10": 0.258
+  },
+  "intercept": 0.0
+}

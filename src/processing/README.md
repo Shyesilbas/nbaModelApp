@@ -13,6 +13,7 @@ Standardizes raw game logs, cleans play-by-play events into on-court stints, ass
 - **Symmetrical Standardization:** [`cleaning.py`](cleaning.py) converts dates to ISO `YYYY-MM-DD`, parses `MM:SS` minutes into floats (`clean_minutes_column`), and standardizes home/away matchups (`normalize_game_matchups`).
 - **Play-by-Play Stint Extraction:** [`pbp_lineups.py`](pbp_lineups.py) (`extract_stints`, `player_games_from_stints`) reconstructs 5-on-5 lineups and game stints from cached play-by-play JSONs with quality validation (`quality_check`, `game_quality`).
 - **Offline Dataset Builders:** `build_team_model_dataset_v3` outputs `data/training/team_model_ready_{YYYY_YY}.csv` (WIN/SCORE rows) and `build_player_dataset_v4` outputs `data/training/player_model_ready.csv` (PLAYER rows). `rebuild_season` rebuilds training datasets cleanly from raw logs.
+- **Slim Player History (`player_history_slim.py`):** `build_player_history_slim` copies the raw game lines of `player_model_ready.csv` into `player_history_slim.csv`, which the cloud snapshot uses in place of the full dataset; projections from both sources are identical because live form is recomputed from those lines.
 - **Change rule:** Any column transformation added in `model_dataset_builder.py` or `player_dataset_builder.py` must be mirrored identically in live feature generation (`src/features/build_matchup_features.py` or `src/api/services/player_projection.py`) to preserve train-serve parity.
 
 ## Processed Data Owned

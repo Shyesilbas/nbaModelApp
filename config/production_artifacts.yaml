@@ -27,4 +27,4 @@ player_model:
   feature_columns_path: models/production/player_features.pkl
   metadata_path: models/production/player_metadata.json
   status: production
-  notes: "LightGBM per target (L1 objective for PTS) on 24 features including position flags and the opponent allowance to the player position; no residual correction."
+  notes: "LightGBM per target (L1 objective for PTS, REB and AST) on 24 features including position flags and the opponent allowance to the player position; no residual correction."

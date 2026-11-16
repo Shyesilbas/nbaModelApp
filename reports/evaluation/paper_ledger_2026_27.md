@@ -3,7 +3,7 @@
 > Bu dosya `scripts/paper_ledger_report.py` tarafından üretilir; elle düzenlenmez.
 > Kilitli sezon: yalnızca prospektif izleme. Bu sonuçlar model seçimi veya ayar için kullanılmaz.
 
-**Rapor Tarihi:** 2026-11-16T13:44:17Z
+**Rapor Tarihi:** 2026-11-16T18:27:49Z
 **Üretim Sürümü:** `v15`
 **Defter:** 196 kayıt, 196 sonuçlanmış ve geçerli, 0 bekleyen, 0 geç (tip-off sonrası, sayılmaz). Son sonuçlanan maç: 2026-11-15
 
@@ -63,6 +63,20 @@ Not: model MAE satırları tüm maçlar üzerindedir; baseline sütunu yalnızca
 | 2026-10-26 | 48 | %62.5 | 0.2100 | 0.2082 | 16.69 | 11.57 |
 | 2026-11-02 | 54 | %74.1 | 0.1641 | 0.1723 | 13.11 | 10.55 |
 | 2026-11-09 | 51 | %68.6 | 0.2058 | 0.1880 | 13.82 | 12.99 |
+
+---
+
+## 4. Gölge WIN Adayları (`v15` / live)
+
+Henüz gölge olasılığı taşıyan sonuçlanmış kayıt yok (alan 2026-11-16 sonrasındaki kayıtlara yazılır).
+
+Karar kuralı (kayıt başlamadan sabitlendi, `reports/backtests/2026-11-16_win_live_roster_shadow/README.md`): aday yalnızca izlenir; normal sezon bitmeden ve en az 600 ortak maç birikmeden terfi değerlendirilmez.
+
+---
+
+## 5. Oyuncu Projeksiyonları (`v15` / live)
+
+Henüz oyuncu projeksiyonu taşıyan sonuçlanmış kayıt yok (alan 2026-11-16 sonrasındaki kayıtlara yazılır).
 
 ---
 

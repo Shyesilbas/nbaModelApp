@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Freeze pre-game WIN and SCORE predictions into the paper trading ledger.
+"""Freeze pre-game WIN, SCORE and PLAYER predictions into the paper trading ledger.
 
 Run after `main.py --update-data` and before tip-off. Games already in the ledger
 are never rewritten and games that have started are skipped, so each record is a
@@ -64,6 +64,50 @@ def game_injuries(report, season: str, game_date: str, away: str, home: str):
     if summary and summary["unmatched"]:
         print(f"  no player id for: {', '.join(summary['unmatched'])}")
     return overrides, summary
+
+
+def served_features(feats_home: dict, feats_away: dict) -> dict | None:
+    """The WIN and SCORE model inputs of this call (home row, plus the away scoring row)."""
+    try:
+        meta = win_prediction.score_loader.metadata or {}
+        home_cols = list(dict.fromkeys([*(win_prediction.loader.feature_cols or []), *meta.get("pace_features", []),
+                                        *meta.get("home_off_rtg_features", []), *meta.get("margin_features", []),
+                                        "PRE_GAME_ELO", "OPP_PRE_GAME_ELO", "EARLY_SEASON_ELO_BLEND_WEIGHT"]))
+        def pick(feats, cols):
+            out = {}
+            for c in cols:
+                v = pd.to_numeric(feats.get(c), errors="coerce")
+                if pd.notna(v):
+                    out[c] = round(float(v), 4)
+            return out
+        return {"home": pick(feats_home, home_cols), "away": pick(feats_away, meta.get("away_off_rtg_features", []))}
+    except Exception as exc:  # detail fields must never cost the game its frozen call
+        print(f"  features not recorded: {exc}")
+        return None
+
+
+def player_projections(home: str, away: str, day: str, score, overrides) -> list | None:
+    """Frozen PLAYER projections for both teams, as /predict/game_full would return them."""
+    try:
+        from src.api.services.game_full import _predict_game_full_players
+        home_list, away_list, _, _ = _predict_game_full_players(
+            home, away, day, score.predicted_home_score, score.predicted_away_score,
+            player_status_overrides=overrides, is_preseason=False,
+        )
+        return pt.player_rows(home_list, home) + pt.player_rows(away_list, away)
+    except Exception as exc:
+        print(f"  player projections not recorded: {exc}")
+        return None
+
+
+def shadow_probabilities(feats_home: dict) -> dict | None:
+    """Home-win probability of each shadow candidate on the same features and Elo blend as production."""
+    try:
+        from src.inference.win_shadow import shadow_home_win_probabilities
+        return shadow_home_win_probabilities(feats_home) or None
+    except Exception as exc:
+        print(f"  shadow models not recorded: {exc}")
+        return None
 
 
 def main() -> int:
@@ -139,6 +183,9 @@ def main() -> int:
             win.home_win_probability, score.predicted_home_score, score.predicted_away_score, now=now,
             origin="backfill" if started else "live",
             injury_report=injuries,
+            features=served_features(feats_home, feats_away),
+            players=player_projections(home, away, day, score, overrides),
+            shadow=shadow_probabilities(feats_home),
         ))
         print(f"{gid} {away}@{home}: {win.predicted_winner} {max(win.home_win_probability, win.away_win_probability):.1%}")
 

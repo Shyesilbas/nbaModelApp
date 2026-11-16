@@ -41,6 +41,12 @@ def _ci_row(label: str, ci: dict | None, digits: int) -> str:
     )
 
 
+def _ci_cell(ci: dict | None, digits: int) -> str:
+    if not ci:
+        return "-"
+    return f"{ci['mean_diff']:+.{digits}f} [{ci['ci_low']:+.{digits}f}, {ci['ci_high']:+.{digits}f}]"
+
+
 def render_markdown(rep: dict) -> str:
     cur = rep["current_live"]
     rel = rep["production_release"]
@@ -97,6 +103,33 @@ Not: model MAE satırları tüm maçlar üzerindedir; baseline sütunu yalnızca
         md += f"\n---\n\n## 3. Haftalık Seyir (`{rel}` / live)\n\n| Hafta | Maç | Doğruluk | Brier | Elo Brier | Toplam MAE | Margin MAE |\n|---|---:|---:|---:|---:|---:|---:|\n"
         for w in rep["weekly_current_live"]:
             md += f"| {w['week']} | {w['games']} | %{w['accuracy'] * 100:.1f} | {_fmt(w['brier'])} | {_fmt(w['elo_brier'])} | {_fmt(w['mae_total'], 2)} | {_fmt(w['mae_margin'], 2)} |\n"
+
+    md += f"\n---\n\n## 4. Gölge WIN Adayları (`{rel}` / live)\n\n"
+    shadow = rep.get("shadow_current_live") or {}
+    if not shadow:
+        md += "Henüz gölge olasılığı taşıyan sonuçlanmış kayıt yok (alan 2026-11-16 sonrasındaki kayıtlara yazılır).\n"
+    else:
+        md += "Aynı maç önü kaydında üretim modelinin yanına yazılan aday olasılıkları. Fark = aday - karşılaştırılan, negatif = aday daha iyi.\n\n"
+        md += "| Aday | Maç | Aday Brier | Üretim Brier | Elo Brier | Aday - Üretim (%95 CI) | Aday - Elo (%95 CI) |\n|---|---:|---:|---:|---:|---|---|\n"
+        for name, sh in shadow.items():
+            md += (f"| `{name}` | {sh['games']} | {_fmt(sh['shadow_brier'])} | {_fmt(sh['production_brier'])} | {_fmt(sh.get('elo_brier'))} "
+                   f"| {_ci_cell(sh.get('shadow_vs_production'), 4)} | {_ci_cell(sh.get('shadow_vs_elo'), 4)} |\n")
+    md += ("\nKarar kuralı (kayıt başlamadan sabitlendi, `reports/backtests/2026-11-16_win_live_roster_shadow/README.md`): "
+           "aday yalnızca izlenir; normal sezon bitmeden ve en az 600 ortak maç birikmeden terfi değerlendirilmez.\n")
+
+    md += f"\n---\n\n## 5. Oyuncu Projeksiyonları (`{rel}` / live)\n\n"
+    pl = rep.get("players_current_live")
+    if not pl:
+        md += "Henüz oyuncu projeksiyonu taşıyan sonuçlanmış kayıt yok (alan 2026-11-16 sonrasındaki kayıtlara yazılır).\n"
+    else:
+        md += (f"{pl['games']} maç, oynaması beklenen ve oynayan {pl['rows']} oyuncu satırı. Oynaması beklenenlerin %{(pl['played_share_of_projected'] or 0) * 100:.1f}'i sahaya çıktı; "
+               f"sahaya çıkanların %{(pl['box_score_players_listed'] or 0) * 100:.1f}'i projeksiyon listesindeydi. Dakika MAE {pl['minutes_mae']:.2f}; ham model sayı MAE {pl['raw_pts_mae']:.3f}.\n\n")
+        md += "| İstatistik | Satır | Model MAE | EMA-10 MAE | Fark (%95 CI) | Yorum |\n|---|---:|---:|---:|---|---|\n"
+        for stat, st in pl["stats"].items():
+            ci = st.get("model_vs_ema10")
+            md += f"| {stat.upper()} | {st['rows']} | {_fmt(st['model_mae'], 3)} | {_fmt(st['ema10_mae'], 3)} | {_ci_cell(ci, 3)} | {verdict(ci) if ci else 'yetersiz veri'} |\n"
+        md += ("\nModel sütunu, sayfada gösterilen (takım skoruyla uzlaştırılmış, sakatlık raporu uygulanmış) projeksiyondur. EMA-10, oyuncunun önceki maçlarının üstel ortalamasıdır "
+               "ve maçta oynayacağını bilerek hesaplanır; model ise dakikayı da tahmin eder, bu yüzden karşılaştırma walk-forward'daki koşullu ölçümden daha zordur.\n")
 
     md += """
 ---

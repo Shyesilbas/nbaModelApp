@@ -28,9 +28,12 @@ export async function loadPrivateApi<T>(path: string): Promise<T> {
   return (await apiCache.get(path)) as T;
 }
 
-/** GET bypassing every cache, for data that changes while the page is open. */
+/**
+ * GET that always asks the server, for data that changes while the page is open. The server
+ * answers 304 when the ETag still matches, so an unchanged document is not downloaded again.
+ */
 export async function loadPrivateApiFresh<T>(path: string): Promise<T> {
-  return requestJson<T>(path, { cache: "no-store", headers: dataHeaders() });
+  return requestJson<T>(path, { cache: "no-cache", headers: dataHeaders() });
 }
 
 export async function postPrivateApi<T>(path: string, body?: unknown): Promise<T> {

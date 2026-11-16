@@ -132,10 +132,19 @@ def _load_player_games(season: str = None):
     return pd.DataFrame() if df is None else df
 
 
+_absence_logs_memo: dict = {}
+
+
 def _load_absence_logs(season: str):
     """Current + previous season logs, so a fresh injury counts before the team has 5 games this season."""
-    logs = pd.concat([_load_player_games(previous_season(season)), _load_player_games(season)], ignore_index=True)
-    return logs.drop_duplicates(subset=["Game_ID", "Player_ID"])
+    prev, cur = _load_player_games(previous_season(season)), _load_player_games(season)
+    hit = _absence_logs_memo.get(season)
+    # Same frame object while both files are unchanged, so per-frame caches downstream stay warm.
+    if hit is not None and hit[0] is prev and hit[1] is cur:
+        return hit[2]
+    logs = pd.concat([prev, cur], ignore_index=True).drop_duplicates(subset=["Game_ID", "Player_ID"])
+    _absence_logs_memo[season] = (prev, cur, logs)
+    return logs
 
 
 def _load_team_games(season: str = None):
@@ -750,7 +759,6 @@ def build_features(home_team: str, away_team: str, prediction_date: str, season:
     # Roster availability: players marked OUT/RESTRICTED move the team strength the
     # form features still credit them with (see src/features/roster_absence.py).
     overrides = _parse_player_overrides(player_status_overrides)
-    player_logs = _load_player_games(season)
     player_logs = _load_absence_logs(season)
     pre = bool(res.get("IS_PRESEASON"))
     home_roster_metrics = live_roster_metrics(player_logs, home_team, pred_dt, overrides, pre, current_roster_ids(home_team, pred_dt))

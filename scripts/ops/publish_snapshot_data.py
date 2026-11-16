@@ -37,6 +37,10 @@ def whitelist(season: str) -> list:
     data = ROOT / "data"
     paths = set(data.glob("reference/*.csv"))
     paths.update(data.glob("training/pbp_situational_features.csv"))
+    # PLAYER projections in the snapshot: raw game lines of the training seasons (see player_history_slim).
+    paths.update(data.glob("training/player_history_slim.csv"))
+    # Shadow WIN candidates scored next to production (src/inference/win_shadow.py).
+    paths.update((ROOT / "models" / "experimental").glob("win_live_roster_shadow.*"))
     for pattern in CURRENT_SEASON_FILES:
         paths.update(data.glob(f"season={season}/{pattern}"))
     for pattern in PREVIOUS_SEASON_FILES:
@@ -52,6 +56,9 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     season = normalize_season(args.season or get_default_season())
+    from src.processing.player_history_slim import build_player_history_slim, slim_is_stale
+    if slim_is_stale():
+        print(f"rebuilt {build_player_history_slim().name} from the player training dataset")
     files = whitelist(season)
     size = sum((ROOT / f).stat().st_size for f in files) / 1e6
     print(f"{len(files)} files, {size:.1f} MB")

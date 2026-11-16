@@ -46,7 +46,9 @@
 | **Sezon SQLite Veritabanı** | `data/frontend_store/season_{YYYY_YY}.db` | **ACTIVE** | Maçlar, detaylı kutu istatistikleri, oyuncu formları ve PBP anları |
 | **Küresel SQLite Veritabanı** | `data/frontend_store/global.db` | **ACTIVE** | Oyuncu profilleri, takas geçmişi ve lig geneli özetler |
 | **Canlı Tahmin Kaydı** | `data/predictions/shadow_predictions_log.jsonl` | **ACTIVE** | API çağrılarının tahmin kaydı (tip-off öncesi garanti edilmez; prospektif ölçüm defterden yapılır) |
-| **Paper Trading Defteri** | `data/predictions/paper_ledger_2026_27.jsonl` | **ACTIVE** | 2026-27 kilitli sezon maç öncesi dondurulmuş tahminler |
+| **Paper Trading Defteri** | `data/predictions/paper_ledger_2026_27.jsonl` | **ACTIVE** | 2026-27 kilitli sezon maç öncesi dondurulmuş tahminler; 2026-11-16 sonrası kayıtlar model girdilerini (`features`), oyuncu projeksiyonlarını (`players`) ve gölge aday olasılıklarını (`shadow`) da taşır |
+| **İnce Oyuncu Geçmişi** | `data/training/player_history_slim.csv` | **ACTIVE** | `player_model_ready.csv` dosyasının ham maç satırları (24 MB); bulut snapshot oyuncu projeksiyonlarını bununla üretir (`src/processing/player_history_slim.py`, yayın sırasında yenilenir) |
+| **WIN Gölge Adayı** | `models/experimental/win_live_roster_shadow.pkl` | **SHADOW** | Kadro özellikleri canlı varsayımla eğitilmiş lojistik regresyon; yalnızca deftere ikinci olasılık olarak yazılır, servis edilmez |
 
 ---
 
@@ -61,5 +63,6 @@
 | **SCORE Modeli Raporu** | [`docs/reports/models/score_model.md`](reports/models/score_model.md) | Tempo, hücum reytingi ve fark modelleri |
 | **PLAYER Modeli Raporu** | [`docs/reports/models/player_props_model.md`](reports/models/player_props_model.md) | PTS/REB/AST modelleri ve rakip izinleri |
 | **Rotasyon Ayrıştırma Deneyi**| [`reports/backtests/2026-10-25_win_rotation_continuity/README.md`](../reports/backtests/2026-10-25_win_rotation_continuity/README.md) | `v12` rotasyon devamlılığı ve eksik dakika deneyi |
+| **WIN Canlı Kadro Gölge Adayı** | [`reports/backtests/2026-11-16_win_live_roster_shadow/README.md`](../reports/backtests/2026-11-16_win_live_roster_shadow/README.md) | Canlı varsayımla eğitilmiş WIN adayı, walk-forward ölçümü ve önceden sabitlenmiş karar kuralı |
 | **Kadro Elo Düzeltme Deneyi** | [`reports/backtests/2026-10-24_roster_elo_adjustment/README.md`](../reports/backtests/2026-10-24_roster_elo_adjustment/README.md) | Açılış Elo kadro yetenek düzeltmesi analizi |
 | **Erken Sezon Geçiş Raporu** | [`docs/early_season_transitions.md`](early_season_transitions.md) | Sezon başı prior devir kuralları |
