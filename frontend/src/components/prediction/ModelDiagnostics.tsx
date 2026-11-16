@@ -1,8 +1,20 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Cpu } from "lucide-react";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
+import type { NormalizedPrediction } from "../../types/prediction";
 
-export function ModelDiagnostics({ modelStatus, result }: { modelStatus: any; result: any }) {
+interface ModelStatusInfo {
+  win_model?: { metrics?: { roc_auc?: number; accuracy?: number } };
+  score_model?: { metrics?: { home_mae?: number; away_mae?: number } };
+}
+
+export function ModelDiagnostics({
+  modelStatus,
+  result,
+}: {
+  modelStatus: ModelStatusInfo | null | undefined;
+  result: NormalizedPrediction | null | undefined;
+}) {
   const { t, language } = useLanguage();
   const [open, setOpen] = useState(false);
 

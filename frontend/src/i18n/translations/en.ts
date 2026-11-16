@@ -67,7 +67,7 @@ const en = {
   fixtures: {
     boxscoresLoading: "Loading box scores...",
     goToToday: "Go to today's games",
-    searchPlaceholder: "Search team or arena",
+    searchPlaceholder: "Search season",
     clearSearch: "Clear search",
     allGames: "All Games",
     gamesCount: "{count} games",
@@ -207,7 +207,7 @@ const en = {
   },
   compare: {
     loading: "Loading comparison...",
-    title: "Head-to-Head Comparison",
+    title: "Player comparison",
     subtitle: "Compare statistics, shooting efficiency, and advanced metrics across seasons",
     searchPlaceholder: "Search player for {slot}...",
     slot1: "Player 1",

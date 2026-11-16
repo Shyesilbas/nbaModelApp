@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CloudUpload } from "lucide-react";
 import { Badge, Button } from "./common";
 import { loadPrivateApiFresh, postPrivateApi } from "../lib/dataCache";
@@ -18,37 +18,58 @@ const POLL_MS = 2000;
 export default function PublishSnapshotButton() {
   const [state, setState] = useState<PublishStatus | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
-  const timer = useRef<number | null>(null);
-
-  const poll = useCallback(async () => {
-    try {
-      const next = await loadPrivateApiFresh<PublishStatus>(API);
-      setState(next);
-      setRequestError(null);
-      if (next.status === "running") timer.current = window.setTimeout(poll, POLL_MS);
-    } catch (e) {
-      setRequestError((e as Error).message);
-    }
-  }, []);
 
   useEffect(() => {
-    poll();
+    let active = true;
+    loadPrivateApiFresh<PublishStatus>(API)
+      .then((next) => {
+        if (!active) return;
+        setState(next);
+        setRequestError(null);
+      })
+      .catch((e: Error) => {
+        if (active) setRequestError(e.message);
+      });
     return () => {
-      if (timer.current) window.clearTimeout(timer.current);
+      active = false;
     };
-  }, [poll]);
+  }, []);
+
+  const running = state?.status === "running";
+
+  useEffect(() => {
+    if (!running) return;
+    let active = true;
+    let timerId: number | undefined;
+    const tick = () => {
+      timerId = window.setTimeout(async () => {
+        try {
+          const next = await loadPrivateApiFresh<PublishStatus>(API);
+          if (!active) return;
+          setState(next);
+          setRequestError(null);
+          if (next.status === "running") tick();
+        } catch (e) {
+          if (active) setRequestError((e as Error).message);
+        }
+      }, POLL_MS);
+    };
+    tick();
+    return () => {
+      active = false;
+      if (timerId) window.clearTimeout(timerId);
+    };
+  }, [running]);
 
   const start = async () => {
     setRequestError(null);
     try {
       setState(await postPrivateApi<PublishStatus>(API));
-      timer.current = window.setTimeout(poll, POLL_MS);
     } catch (e) {
       setRequestError((e as Error).message);
     }
   };
 
-  const running = state?.status === "running";
   const failure = requestError ?? (state?.status === "failed" ? state.error : null);
 
   return (

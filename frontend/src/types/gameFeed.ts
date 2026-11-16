@@ -83,3 +83,17 @@ export interface GameFeedRow {
   _isUpcoming?: boolean;
   game_detail?: GameDetail | null;
 }
+
+export interface TeamRosterEntry {
+  TEAM_ABBREVIATION: string;
+  PLAYER_ID: number;
+  PLAYER_NAME?: string | null;
+  GP?: number | null;
+  AVG_MIN?: number | null;
+  AVG_PTS?: number | null;
+  AVG_REB?: number | null;
+  AVG_AST?: number | null;
+  IMPORTANCE_SCORE?: number | null;
+  STATS_SEASON?: string | null;
+  CORE_RANK?: number | null;
+}

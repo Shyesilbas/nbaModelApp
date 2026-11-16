@@ -1,18 +1,11 @@
 import { ArrowRight } from "lucide-react";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
+import { INJURY_TONE } from "./types";
 
 export type InjuryChange = {
   team: string;
   player_name: string;
   steps: { status: string | null; at: string }[];
-};
-
-export const INJURY_TONE: Record<string, string> = {
-  Out: "text-status-error",
-  Doubtful: "text-status-warning",
-  Questionable: "text-status-warning",
-  Probable: "text-text-secondary",
-  Available: "text-status-success",
 };
 
 const clock = (published: string) => published.split(" ").slice(1).join(" ");

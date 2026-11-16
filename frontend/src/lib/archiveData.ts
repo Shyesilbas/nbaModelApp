@@ -1,6 +1,7 @@
 import { loadPrivateApi, loadPrivateApiFresh } from "./dataCache";
 import { CURRENT_SEASON } from "./constants";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
+import type { PbpData } from "../components/game-results/HighlightsTab";
 import type { PlayerBoxScore, TeamBoxScore } from "../components/game-results/types";
 
 export type GameBoxscores = {
@@ -13,7 +14,7 @@ export type GameBoxscores = {
 const normId = (id: string | number) =>
   String(id ?? "").replace(/\D/g, "").padStart(10, "0");
 
-const pbpCache = new Map<string, Promise<any>>();
+const pbpCache = new Map<string, Promise<PbpData>>();
 
 /** Drop cached play-by-play so a refreshed game is fetched again. */
 export function invalidateGameIndexCache() {
@@ -38,7 +39,7 @@ export async function loadArchivedPlayByPlay(gameId: string, season?: string | n
   const seasonKey = season ?? CURRENT_SEASON;
   const cacheKey = `${seasonKey}:${gid}`;
   if (!pbpCache.has(cacheKey)) {
-    const request = loadPrivateApi<any>(
+    const request = loadPrivateApi<PbpData>(
       `/frontend-data-api/play-by-play/${encodeURIComponent(gid)}?season=${encodeURIComponent(seasonKey)}`
     ).catch((error) => {
       pbpCache.delete(cacheKey);

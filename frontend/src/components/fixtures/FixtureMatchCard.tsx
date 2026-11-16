@@ -4,7 +4,8 @@ import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../../lib/nbaTeams";
 import { fmtTipoffTR, isGameEligibleForRefresh } from "../game-results/utils";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
+import { FormDots } from "./FormDots";
 
 interface FixtureMatchCardProps {
   game: GameFeedRow;
@@ -48,7 +49,6 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
 
   const awayWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === awayAbbr;
   const homeWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === homeAbbr;
-  const margin = isCompleted ? Math.abs((Number(game.HOME_SCORE) || 0) - (Number(game.AWAY_SCORE) || 0)) : 0;
 
   const tipoff = fmtTipoffTR(game.GAME_START_UTC, language);
   const meta = [
@@ -89,15 +89,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
           </button>
           <p className="flex items-center gap-2 text-xs tabular-nums text-text-secondary">
             {record && <span className="font-medium">{record}</span>}
-            {form.length > 0 && (
-              <span className="flex gap-0.5 font-medium" title={tr ? "Son 5 maç" : "Last 5 games"}>
-                {form.map((res, i) => (
-                  <span key={i} className={res === "W" ? "text-status-success" : "text-status-error"}>
-                    {res === "W" ? (tr ? "G" : "W") : tr ? "M" : "L"}
-                  </span>
-                ))}
-              </span>
-            )}
+            <FormDots form={form} />
           </p>
         </div>
         {isCompleted && (
@@ -114,15 +106,12 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
       onClick={onOpen}
       className="group flex w-full cursor-pointer flex-col gap-3 rounded border border-border bg-background-primary p-4 transition-colors hover:border-card-border-hover"
     >
-      <div className="flex items-center justify-between gap-2">
-        <span
-          className={`inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-medium tabular-nums ${isCompleted
-              ? "bg-background-tertiary text-text-secondary"
-              : "bg-background-tertiary text-text-primary"
-            }`}
-        >
-          {meta[0]}
-        </span>
+      <div className="flex items-center justify-between gap-2 empty:hidden">
+        {!isCompleted && (
+          <span className="inline-flex items-center rounded-sm bg-background-tertiary px-2 py-0.5 text-xs font-medium tabular-nums text-text-primary">
+            {meta[0]}
+          </span>
+        )}
         {meta.length > 1 && (
           <span className="truncate text-xs font-medium text-text-secondary">{meta.slice(1).join(" · ")}</span>
         )}
@@ -135,7 +124,7 @@ export const FixtureMatchCard: React.FC<FixtureMatchCardProps> = ({
 
       <div className="flex items-center justify-between gap-2 border-t border-border-light pt-3 text-xs text-text-secondary">
         <span className="min-w-0 truncate tabular-nums" title={game.ARENA ?? undefined}>
-          {[game.ARENA, margin > 0 ? `+${margin}` : null].filter(Boolean).join(" · ")}
+          {game.ARENA}
         </span>
         <div className="flex shrink-0 items-center gap-3">
           {canRefresh && (

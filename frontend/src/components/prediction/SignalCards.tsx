@@ -1,9 +1,10 @@
 import { BarChart2, Home, Shield, Target, TrendingUp, Zap } from "lucide-react";
 import type { TeamInfo } from "./types";
-import { useLanguage } from "../../context/LanguageContext";
+import type { NormalizedPrediction } from "../../types/prediction";
+import { useLanguage } from "../../context/useLanguage";
 
 interface SignalCardsProps {
-  result: any;
+  result: NormalizedPrediction;
   homeInfo: TeamInfo;
   awayInfo: TeamInfo;
   winnerInfo: TeamInfo;
@@ -18,7 +19,7 @@ export function SignalCards({
   const win = result.win_probability;
   const score = result.score_prediction;
   const winProb = Math.max(win?.home_win_probability ?? 0, win?.away_win_probability ?? 0);
-  const margin = score ? Math.abs(score.predicted_margin) : null;
+  const margin = score?.predicted_margin != null ? Math.abs(score.predicted_margin) : null;
   const isHome = win?.predicted_winner === homeInfo.abbr;
 
   const signals = [
@@ -44,23 +45,23 @@ export function SignalCards({
     },
     ...(margin !== null
       ? [
-          {
-            icon: <BarChart2 size={16} />,
-            label: t.predictions.expectedMargin,
-            value: `+${margin.toFixed(1)} ${t.common.ptsUnit}`,
-            detail: `${winnerInfo.abbr} ${language === "tr" ? "öngörülen marj" : "projected margin"}`,
-          },
-        ]
+        {
+          icon: <BarChart2 size={16} />,
+          label: t.predictions.expectedMargin,
+          value: `+${margin.toFixed(1)} ${t.common.ptsUnit}`,
+          detail: `${winnerInfo.abbr} ${language === "tr" ? "öngörülen marj" : "projected margin"}`,
+        },
+      ]
       : []),
-    ...(score
+    ...(score?.predicted_total_points != null && score.total_points_range?.length
       ? [
-          {
-            icon: <Zap size={16} />,
-            label: t.predictions.expectedTotal,
-            value: `${score.predicted_total_points.toFixed(0)} ${t.common.ptsUnit}`,
-            detail: `${language === "tr" ? "Aralık" : "Range"}: ${score.total_points_range[0]}–${score.total_points_range[1]}`,
-          },
-        ]
+        {
+          icon: <Zap size={16} />,
+          label: t.predictions.expectedTotal,
+          value: `${score.predicted_total_points.toFixed(0)} ${t.common.ptsUnit}`,
+          detail: `${language === "tr" ? "Aralık" : "Range"}: ${score.total_points_range[0]}–${score.total_points_range[1]}`,
+        },
+      ]
       : []),
     {
       icon: <Shield size={16} />,

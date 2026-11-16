@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   ArrowLeft,
@@ -29,7 +29,7 @@ import {
   EmptyState,
   InlineError,
 } from "./common";
-import { useLanguage } from "../context/LanguageContext";
+import { useLanguage } from "../context/useLanguage";
 
 /* ─────────── Types ─────────── */
 interface GameRow {
@@ -84,12 +84,12 @@ const fmtDate = (d: string | null) => {
 type RenderItem =
   | { type: "game"; data: GameRow }
   | {
-      type: "trade";
-      from: string;
-      to: string;
-      dateBefore: string | null;
-      dateAfter: string | null;
-    };
+    type: "trade";
+    from: string;
+    to: string;
+    dateBefore: string | null;
+    dateAfter: string | null;
+  };
 
 function ShotCell({
   made,
@@ -226,20 +226,19 @@ function GameLogTable({
                   onKeyDown={
                     clickable
                       ? (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            onGameClick!(g);
-                          }
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onGameClick!(g);
                         }
+                      }
                       : undefined
                   }
                   tabIndex={clickable ? 0 : undefined}
                   aria-label={clickable ? `${g.MATCHUP ?? ""} ${fmtDate(g.GAME_DATE)} - kutu skoru` : undefined}
-                  className={`transition-colors duration-150 ${
-                    isDnp
-                      ? "opacity-60"
-                      : "hover:bg-background-tertiary"
-                  } ${clickable ? "group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus" : ""}`}
+                  className={`transition-colors duration-150 ${isDnp
+                    ? "opacity-60"
+                    : "hover:bg-background-tertiary"
+                    } ${clickable ? "group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-focus" : ""}`}
                 >
                   <td className="sticky left-0 bg-background-primary px-3 py-3 group-hover:bg-background-tertiary transition-colors">
                     <p className="text-xs font-medium text-text-primary tabular-nums">
@@ -337,11 +336,10 @@ function GameLogTable({
                   key={pg}
                   type="button"
                   onClick={() => setPage(pg)}
-                  className={`h-8 w-8 rounded text-xs font-medium tabular-nums transition-colors cursor-pointer ${
-                    pg === page
-                      ? "bg-primary text-white"
-                      : "border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
-                  }`}
+                  className={`h-8 w-8 rounded text-xs font-medium tabular-nums transition-colors cursor-pointer ${pg === page
+                    ? "bg-primary text-white"
+                    : "border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
+                    }`}
                 >
                   {pg + 1}
                 </button>
@@ -466,11 +464,10 @@ function PlayerTrendRadar({ games, seasonAvgs, season }: TrendRadarProps) {
               type="button"
               aria-pressed={metric === m.id}
               onClick={() => setMetric(m.id)}
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                metric === m.id
-                  ? "bg-primary text-white"
-                  : "border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
-              }`}
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${metric === m.id
+                ? "bg-primary text-white"
+                : "border border-border bg-background-primary text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
+                }`}
             >
               {m.label.split(" ")[0]}
             </button>
@@ -614,6 +611,15 @@ const POSITION_GROUPS = [
   { id: "CENTER", label: "Center" },
 ];
 const PAGE_SIZE = 25;
+const MIN_GP_RATIO = 0.7;
+
+function qualifiesForLeaders(a?: SeasonAverages): a is SeasonAverages {
+  return Boolean(
+    a &&
+    a.games_total > 0 &&
+    a.games_played >= Math.ceil(MIN_GP_RATIO * a.games_total)
+  );
+}
 
 function DiscoveryGrid({
   profiles,
@@ -631,9 +637,7 @@ function DiscoveryGrid({
   const defaultSeason = useMemo(
     () =>
       seasonsDesc.find((sn) =>
-        profiles.some(
-          (p) => (averagesData[String(p.PLAYER_ID)]?.[sn]?.games_played ?? 0) >= 1
-        )
+        profiles.some((p) => qualifiesForLeaders(averagesData[String(p.PLAYER_ID)]?.[sn]))
       ) ??
       seasonsDesc[0] ??
       "",
@@ -649,7 +653,7 @@ function DiscoveryGrid({
     () =>
       profiles.flatMap((p) => {
         const a = averagesData[String(p.PLAYER_ID)]?.[season];
-        if (!a || a.games_played < 1) return [];
+        if (!qualifiesForLeaders(a)) return [];
         return [{ p, a, team: a.teams?.[a.teams.length - 1] ?? p.CURRENT_TEAM ?? null }];
       }),
     [profiles, averagesData, season]
@@ -682,7 +686,9 @@ function DiscoveryGrid({
             {language === "tr" ? "Lig liderleri" : "League Leaders"}
           </h2>
           <p className="text-xs sm:text-sm text-text-secondary">
-            {language === "tr" ? "Maç başına ortalamalar · en az 1 maç · " : "Per-game averages · min. 1 game · "}
+            {language === "tr"
+              ? "Maç başına ortalamalar · en az %70 maç · "
+              : "Per-game averages · min. 70% games · "}
             <span className="tabular-nums font-medium text-text-primary">{list.length}</span> {language === "tr" ? "oyuncu" : "players"}
           </p>
         </div>
@@ -733,11 +739,10 @@ function DiscoveryGrid({
                   setPosition(g.id);
                   reset();
                 }}
-                className={`h-8 rounded-sm px-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
-                  position === g.id
-                    ? "bg-background-primary text-text-primary border border-border"
-                    : "text-text-secondary hover:text-text-primary"
-                }`}
+                className={`h-8 rounded-sm px-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer ${position === g.id
+                  ? "bg-background-primary text-text-primary border border-border"
+                  : "text-text-secondary hover:text-text-primary"
+                  }`}
               >
                 {g.id === "all" ? (language === "tr" ? "Tümü" : "All") : g.label}
               </button>
@@ -763,9 +768,8 @@ function DiscoveryGrid({
                       reset();
                     }}
                     aria-sort={sortKey === c.key ? "descending" : "none"}
-                    className={`rounded px-1.5 py-1 transition-colors cursor-pointer hover:text-text-primary ${
-                      sortKey === c.key ? "text-text-primary font-semibold" : ""
-                    }`}
+                    className={`rounded px-1.5 py-1 transition-colors cursor-pointer hover:text-text-primary ${sortKey === c.key ? "text-text-primary font-semibold" : ""
+                      }`}
                   >
                     {c.label}
                     {sortKey === c.key ? " ↓" : ""}
@@ -815,17 +819,16 @@ function DiscoveryGrid({
                     </span>
                   )}
                 </td>
-                <td className="px-3 py-2.5 text-right tabular-nums text-text-secondary text-xs">
-                  {a.games_played}
+                <td className="px-3 py-2.5 text-right tabular-nums text-text-secondary text-xs whitespace-nowrap">
+                  {a.games_played}/{a.games_total}
                 </td>
                 {LEADER_COLS.map((c) => (
                   <td
                     key={c.key}
-                    className={`px-3 py-2.5 text-right tabular-nums text-xs ${
-                      sortKey === c.key
-                        ? "font-semibold text-text-primary"
-                        : "text-text-secondary font-normal"
-                    }`}
+                    className={`px-3 py-2.5 text-right tabular-nums text-xs ${sortKey === c.key
+                      ? "font-semibold text-text-primary"
+                      : "text-text-secondary font-normal"
+                      }`}
                   >
                     {c.pct ? fmtPct(a[c.key]) : fmtStat(a[c.key])}
                   </td>
@@ -952,55 +955,83 @@ export default function PlayerPage({
   const [gamesData, setGamesData] = useState<Record<string, Record<string, GameRow[]>>>({});
   const [averagesData, setAveragesData] = useState<Record<string, Record<string, SeasonAverages>>>({});
   const [loading, setLoading] = useState(true);
-  const [playerLoading, setPlayerLoading] = useState(false);
+  const [loadedPlayerIds, setLoadedPlayerIds] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<PlayerProfile | null>(null);
+  const [playerOverride, setPlayerOverride] = useState<{
+    forInitialId: number | null | undefined;
+    player: PlayerProfile | null;
+  } | null>(null);
+  const selectedPlayer = useMemo(() => {
+    if (playerOverride && playerOverride.forInitialId === initialPlayerId) {
+      return playerOverride.player;
+    }
+    if (initialPlayerId != null && profiles.length > 0) {
+      return profiles.find((profile) => profile.PLAYER_ID === initialPlayerId) ?? null;
+    }
+    return null;
+  }, [playerOverride, initialPlayerId, profiles]);
+  const setSelectedPlayer = useCallback(
+    (player: PlayerProfile | null) => setPlayerOverride({ forInitialId: initialPlayerId, player }),
+    [initialPlayerId]
+  );
   const [openGame, setOpenGame] = useState<GameRow | null>(null);
   const [selectedSeason, setSelectedSeason] = useState("2026-27");
   const [opponentSearch, setOpponentSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "RS" | "PO">("all");
   const [hideDnp, setHideDnp] = useState(false);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (initialPlayerId != null) {
-        loadPrivateApi(
-          `/frontend-data-api/players/${encodeURIComponent(String(initialPlayerId))}`
-        ).catch(() => {});
-      }
-
-      loadPrivateApi<string[]>("/frontend-data-api/seasons")
-        .then((data) => {
-          if (Array.isArray(data) && data.length > 0) {
-            const asc = [...data].sort((a, b) => a.localeCompare(b));
-            setSeasonsList(asc);
-          }
-        })
-        .catch(() => {});
-
-      const [prof, avgs] = await Promise.all([
-        loadPrivateApi<PlayerProfile[]>("/frontend-data-api/player-profiles"),
-        loadPrivateApi<Record<string, Record<string, SeasonAverages>>>(
-          "/frontend-data-api/player-season-averages"
-        ),
-      ]);
-      setProfiles(prof);
-      setAveragesData(avgs);
-    } catch (e) {
-      setError((e instanceof Error && e.message) || t.player.loadError);
-    } finally {
-      setLoading(false);
-    }
-  }, [initialPlayerId]);
+  const seasonSyncedPidRef = useRef<string | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let active = true;
+    if (initialPlayerId != null) {
+      loadPrivateApi(
+        `/frontend-data-api/players/${encodeURIComponent(String(initialPlayerId))}`
+      ).catch(() => { });
+    }
+
+    loadPrivateApi<string[]>("/frontend-data-api/seasons")
+      .then((data) => {
+        if (active && Array.isArray(data) && data.length > 0) {
+          const asc = [...data].sort((a, b) => a.localeCompare(b));
+          setSeasonsList(asc);
+        }
+      })
+      .catch(() => { });
+
+    Promise.all([
+      loadPrivateApi<PlayerProfile[]>("/frontend-data-api/player-profiles"),
+      loadPrivateApi<Record<string, Record<string, SeasonAverages>>>(
+        "/frontend-data-api/player-season-averages"
+      ),
+    ])
+      .then(([prof, avgs]) => {
+        if (!active) return;
+        setProfiles(prof);
+        setAveragesData(avgs);
+        setError(null);
+      })
+      .catch((e: unknown) => {
+        if (!active) return;
+        setError(e instanceof Error && e.message ? e.message : "__LOAD_ERROR__");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initialPlayerId, reloadTick]);
+
+  const loadData = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    setReloadTick((n) => n + 1);
+  }, []);
 
   const filteredProfiles = useMemo(() => {
     if (!search.trim()) return profiles.slice(0, 20);
@@ -1008,49 +1039,56 @@ export default function PlayerPage({
     return profiles.filter((p) => p.PLAYER_NAME?.toLowerCase().includes(q)).slice(0, 20);
   }, [profiles, search]);
 
-  const handleSelectPlayer = useCallback((p: PlayerProfile, targetSeason?: string) => {
-    setSelectedPlayer(p);
-    setOpponentSearch("");
-    setSearch("");
-    setShowDropdown(false);
-    updateUrlRoute({ playerId: p.PLAYER_ID });
-    const playerId = String(p.PLAYER_ID);
+  const handleSelectPlayer = useCallback(
+    (p: PlayerProfile) => {
+      setSelectedPlayer(p);
+      setOpponentSearch("");
+      setSearch("");
+      setShowDropdown(false);
+      updateUrlRoute({ playerId: p.PLAYER_ID });
+    },
+    [setSelectedPlayer]
+  );
 
-    setPlayerLoading(true);
+  const selectedPid = selectedPlayer ? String(selectedPlayer.PLAYER_ID) : null;
+  const playerLoading = Boolean(selectedPid && !loadedPlayerIds[selectedPid]);
 
+  useEffect(() => {
+    if (!selectedPid) return;
+    let active = true;
     loadPrivateApi<{
       player_id: string;
       games: Record<string, GameRow[]>;
       averages: Record<string, SeasonAverages>;
-    }>(`/frontend-data-api/players/${encodeURIComponent(playerId)}`)
+    }>(`/frontend-data-api/players/${encodeURIComponent(selectedPid)}`)
       .then((payload) => {
+        if (!active) return;
         setGamesData((prev) => ({ ...prev, [payload.player_id]: payload.games }));
         setAveragesData((prev) => ({ ...prev, [payload.player_id]: payload.averages }));
 
-        // Pick best available season for this player
-        const games = payload.games ?? {};
-        const avgs = payload.averages ?? {};
-        const available = seasonsList.filter(
-          (s) => games[s]?.length > 0 || avgs[s] != null || s === "2026-27"
-        );
-        if (targetSeason && available.includes(targetSeason)) {
-          setSelectedSeason(targetSeason);
-        } else if (available.length > 0) {
-          setSelectedSeason(available[available.length - 1]);
+        if (seasonSyncedPidRef.current !== selectedPid) {
+          seasonSyncedPidRef.current = selectedPid;
+          const games = payload.games ?? {};
+          const avgs = payload.averages ?? {};
+          const available = seasonsList.filter(
+            (s) => games[s]?.length > 0 || avgs[s] != null || s === "2026-27"
+          );
+          if (available.length > 0) {
+            setSelectedSeason(available[available.length - 1]);
+          }
         }
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setPlayerLoading(false));
-  }, [seasonsList]);
-
-  // Initial load or URL prop sync
-  useEffect(() => {
-    if (initialPlayerId == null || loading) return;
-    const target = profiles.find((profile) => profile.PLAYER_ID === initialPlayerId);
-    if (target && selectedPlayer?.PLAYER_ID !== target.PLAYER_ID) {
-      handleSelectPlayer(target);
-    }
-  }, [handleSelectPlayer, initialPlayerId, loading, profiles, selectedPlayer?.PLAYER_ID]);
+      .catch((e: unknown) => {
+        if (!active) return;
+        setError(e instanceof Error && e.message ? e.message : "__LOAD_ERROR__");
+      })
+      .finally(() => {
+        if (active) setLoadedPlayerIds((prev) => ({ ...prev, [selectedPid]: true }));
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedPid, seasonsList]);
 
   // Listen to browser popstate (back/forward)
   useEffect(() => {
@@ -1069,7 +1107,7 @@ export default function PlayerPage({
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [handleSelectPlayer, profiles, selectedPlayer?.PLAYER_ID]);
+  }, [handleSelectPlayer, profiles, selectedPlayer?.PLAYER_ID, setSelectedPlayer]);
 
   const pid = selectedPlayer ? String(selectedPlayer.PLAYER_ID) : null;
   const playerGames = useMemo(() => (pid ? gamesData[pid] ?? {} : {}), [pid, gamesData]);
@@ -1129,7 +1167,7 @@ export default function PlayerPage({
       <div className="py-8">
         <InlineError
           title={t.player.loadError}
-          message={error}
+          message={error === "__LOAD_ERROR__" ? t.player.loadError : error}
           onRetry={loadData}
         />
       </div>
@@ -1332,11 +1370,10 @@ export default function PlayerPage({
                           type="button"
                           aria-pressed={typeFilter === id}
                           onClick={() => setTypeFilter(id)}
-                          className={`cursor-pointer transition-colors ${
-                            typeFilter === id
-                              ? "font-semibold text-text-primary"
-                              : "text-text-muted hover:text-text-primary"
-                          }`}
+                          className={`cursor-pointer transition-colors ${typeFilter === id
+                            ? "font-semibold text-text-primary"
+                            : "text-text-muted hover:text-text-primary"
+                            }`}
                         >
                           {label}
                         </button>
@@ -1346,9 +1383,8 @@ export default function PlayerPage({
                       type="button"
                       aria-pressed={hideDnp}
                       onClick={() => setHideDnp((v) => !v)}
-                      className={`cursor-pointer text-xs transition-colors ${
-                        hideDnp ? "font-semibold text-text-primary" : "text-text-muted hover:text-text-primary"
-                      }`}
+                      className={`cursor-pointer text-xs transition-colors ${hideDnp ? "font-semibold text-text-primary" : "text-text-muted hover:text-text-primary"
+                        }`}
                     >
                       {language === "tr" ? "Oynamadığı maçları gizle" : "Hide DNP games"}
                     </button>
@@ -1358,27 +1394,27 @@ export default function PlayerPage({
                 {(playerGames[selectedSeason] ?? []).length > 0 ? (
                   currentGames.length > 0 ? (
                     <>
-                    {selectedPlayer && (
-                      <PlayerGameCard
-                        game={openGame}
-                        playerId={selectedPlayer.PLAYER_ID}
-                        playerName={selectedPlayer.PLAYER_NAME ?? ""}
-                        onClose={() => setOpenGame(null)}
-                        onOpenGame={(gameId) => {
-                          setOpenGame(null);
-                          if (onSelectGame) {
-                            onSelectGame(gameId);
-                          } else {
-                            updateUrlRoute({ tab: "game-results", gameId });
-                          }
-                        }}
+                      {selectedPlayer && (
+                        <PlayerGameCard
+                          game={openGame}
+                          playerId={selectedPlayer.PLAYER_ID}
+                          playerName={selectedPlayer.PLAYER_NAME ?? ""}
+                          onClose={() => setOpenGame(null)}
+                          onOpenGame={(gameId) => {
+                            setOpenGame(null);
+                            if (onSelectGame) {
+                              onSelectGame(gameId);
+                            } else {
+                              updateUrlRoute({ tab: "game-results", gameId });
+                            }
+                          }}
+                        />
+                      )}
+                      <GameLogTable
+                        key={`${selectedSeason}-${typeFilter}-${hideDnp}-${opponentSearch}`}
+                        games={currentGames}
+                        onGameClick={setOpenGame}
                       />
-                    )}
-                    <GameLogTable
-                      key={`${selectedSeason}-${typeFilter}-${hideDnp}-${opponentSearch}`}
-                      games={currentGames}
-                      onGameClick={setOpenGame}
-                    />
                     </>
                   ) : (
                     <EmptyState

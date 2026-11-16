@@ -1,7 +1,7 @@
 import type { TeamBoxScore } from "./types";
 import { fmtPair, fmtPct } from "./utils";
 import TeamLogo from "../TeamLogo";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 export function ShootingSummary({ home, away }: { home: TeamBoxScore | null; away: TeamBoxScore | null }) {
   const { language } = useLanguage();

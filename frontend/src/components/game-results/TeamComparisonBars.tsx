@@ -1,7 +1,7 @@
 import type { TeamBoxScore, PlayerBoxScore } from "./types";
 import { fmtInt, fmtPct } from "./utils";
 import TeamLogo from "../TeamLogo";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 export function TeamComparisonBars({
   home,

@@ -4,7 +4,7 @@ import TeamLogo from "../TeamLogo";
 import type { ConferenceFilter, TeamStanding } from "./types";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { computeSeasonTeamRecords } from "../../lib/teamRecords";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 interface FixturesStandingsViewProps {
   games: GameFeedRow[];

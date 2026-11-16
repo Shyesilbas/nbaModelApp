@@ -9,6 +9,7 @@ import { loadPrivateApi } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
 import { loadArchivedGameIndex } from "../lib/archiveData";
 import { computeSeasonTeamRecords, type TeamRecordsMap } from "../lib/teamRecords";
+import type { TeamRosterEntry } from "../types/gameFeed";
 import {
   Card,
   Skeleton,
@@ -16,20 +17,7 @@ import {
   InlineError,
   Select,
 } from "./common";
-import { useLanguage } from "../context/LanguageContext";
-
-interface CorePlayer {
-  PLAYER_ID: number;
-  PLAYER_NAME: string;
-  TEAM_ABBREVIATION: string;
-  CORE_RANK: number;
-  IMPORTANCE_SCORE: number;
-  GP: number;
-  AVG_PTS: number;
-  AVG_REB: number;
-  AVG_AST: number;
-  AVG_MIN: number;
-}
+import { useLanguage } from "../context/useLanguage";
 
 interface TeamRosterItem {
   TEAM_ABBREVIATION: string;
@@ -45,7 +33,7 @@ interface TeamRosterItem {
 }
 
 interface TeamExplorerProps {
-  rosters?: any[];
+  rosters?: TeamRosterEntry[];
   onSelectPlayer: (playerId: number) => void;
   initialTeam?: string;
 }
@@ -124,18 +112,21 @@ function TeamExplorerSkeleton() {
 const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam }) => {
   const { t, language } = useLanguage();
   const [selectedSeason, setSelectedSeason] = useState<string>(CURRENT_SEASON);
-  const [activeRosters, setActiveRosters] = useState<any[]>([]);
+  const [activeRosters, setActiveRosters] = useState<TeamRosterEntry[]>([]);
   const [teamRecords, setTeamRecords] = useState<TeamRecordsMap | null>(null);
   const [playerPositions, setPlayerPositions] = useState<Record<number, "guard" | "forward" | "center">>({});
   const [loadingSeason, setLoadingSeason] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [selectedTeam, setSelectedTeam] = useState<string>(() => initialTeam || "BOS");
-
-  useEffect(() => {
-    if (initialTeam) {
-      setSelectedTeam(initialTeam);
-    }
-  }, [initialTeam]);
+  const [reloadTick, setReloadTick] = useState(0);
+  const [teamOverride, setTeamOverride] = useState<{ base: string | undefined; team: string } | null>(null);
+  const selectedTeam =
+    teamOverride && teamOverride.base === initialTeam
+      ? teamOverride.team
+      : initialTeam || "BOS";
+  const setSelectedTeam = useCallback(
+    (team: string) => setTeamOverride({ base: initialTeam, team }),
+    [initialTeam]
+  );
 
   useEffect(() => {
     loadPrivateApi<Array<{ PLAYER_ID: number; POSITION_GROUP?: string; OFFICIAL_POSITION?: string }>>(
@@ -155,7 +146,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
         });
         setPlayerPositions(map);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const [view, setView] = useState<"team" | "league">("team");
@@ -166,30 +157,39 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
     []
   );
 
-  const fetchRosters = useCallback(async () => {
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      loadPrivateApi<TeamRosterEntry[]>(
+        `/frontend-data-api/team-rosters?season=${encodeURIComponent(selectedSeason)}`
+      ),
+      loadArchivedGameIndex(selectedSeason).catch(() => []),
+    ])
+      .then(([rosterData, gamesData]) => {
+        if (!active) return;
+        setActiveRosters(rosterData || []);
+        setTeamRecords(computeSeasonTeamRecords(gamesData || []));
+        setLoadError(null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLoadError(`${selectedSeason} kadro verileri yüklenemedi.`);
+        setActiveRosters([]);
+        setTeamRecords(null);
+      })
+      .finally(() => {
+        if (active) setLoadingSeason(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedSeason, reloadTick]);
+
+  const fetchRosters = useCallback(() => {
     setLoadingSeason(true);
     setLoadError(null);
-    try {
-      const [rosterData, gamesData] = await Promise.all([
-        loadPrivateApi<any[]>(
-          `/frontend-data-api/team-rosters?season=${encodeURIComponent(selectedSeason)}`
-        ),
-        loadArchivedGameIndex(selectedSeason).catch(() => []),
-      ]);
-      setActiveRosters(rosterData || []);
-      setTeamRecords(computeSeasonTeamRecords(gamesData || []));
-    } catch {
-      setLoadError(`${selectedSeason} kadro verileri yüklenemedi.`);
-      setActiveRosters([]);
-      setTeamRecords(null);
-    } finally {
-      setLoadingSeason(false);
-    }
-  }, [selectedSeason]);
-
-  useEffect(() => {
-    fetchRosters();
-  }, [fetchRosters]);
+    setReloadTick((n) => n + 1);
+  }, []);
 
   const teamsList = useMemo(() => {
     if (!activeRosters || activeRosters.length === 0) return [...NBA_TEAM_ABBRS];
@@ -230,16 +230,6 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
       });
   }, [activeRosters, activeTeam, selectedSeason]);
 
-  const corePlayers: CorePlayer[] = useMemo(() => {
-    return [...rawTeamRoster]
-      .sort((a, b) => b.IMPORTANCE_SCORE - a.IMPORTANCE_SCORE)
-      .slice(0, 5)
-      .map((p, index) => ({
-        ...p,
-        CORE_RANK: index + 1,
-      }));
-  }, [rawTeamRoster]);
-
   const sortedTeamRoster = useMemo(() => {
     return [...rawTeamRoster].sort((a, b) => b.IMPORTANCE_SCORE - a.IMPORTANCE_SCORE);
   }, [rawTeamRoster]);
@@ -275,6 +265,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
     return [...activeRosters]
       .map((r) => ({
         ...r,
+        PLAYER_NAME: r.PLAYER_NAME || `Player ${r.PLAYER_ID}`,
         IMPORTANCE_SCORE: Number(r.IMPORTANCE_SCORE || 0),
         CORE_RANK: Number(r.CORE_RANK || 99),
       }))
@@ -294,18 +285,18 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
 
   const renderRosterTable = (players: TeamRosterItem[], ranked: boolean) => (
     <div className="overflow-x-auto rounded border border-border bg-background-primary">
-      <table className="w-full min-w-[560px] border-collapse text-xs">
+      <table className="w-full border-collapse text-xs">
         <thead>
           <tr className="border-b border-border-light bg-background-tertiary text-text-secondary">
-            <th scope="col" className="w-8 px-3 py-2 text-right font-medium">#</th>
-            <th scope="col" className="px-2 py-2 text-left font-medium">{language === "tr" ? "Oyuncu" : "Player"}</th>
-            {!ranked && <th scope="col" className="px-2 py-2 text-left font-medium">{language === "tr" ? "Poz" : "Pos"}</th>}
-            <th scope="col" className="px-2 py-2 text-right font-medium">GP</th>
-            <th scope="col" className="px-2 py-2 text-right font-medium">MIN</th>
-            <th scope="col" className="px-2 py-2 text-right font-medium">PTS</th>
-            <th scope="col" className="px-2 py-2 text-right font-medium">REB</th>
-            <th scope="col" className="px-2 py-2 text-right font-medium">AST</th>
-            <th scope="col" className="px-3 py-2 text-right font-medium">{language === "tr" ? "Etki" : "Impact"}</th>
+            <th scope="col" className="w-8 px-3 py-1.5 text-right font-medium">#</th>
+            <th scope="col" className="px-2 py-1.5 text-left font-medium">{language === "tr" ? "Oyuncu" : "Player"}</th>
+            {!ranked && <th scope="col" className="hidden px-2 py-1.5 text-left font-medium sm:table-cell">{language === "tr" ? "Poz" : "Pos"}</th>}
+            <th scope="col" className="hidden px-2 py-1.5 text-right font-medium sm:table-cell">GP</th>
+            <th scope="col" className="px-2 py-1.5 text-right font-medium">MIN</th>
+            <th scope="col" className="px-2 py-1.5 text-right font-medium">PTS</th>
+            <th scope="col" className="px-2 py-1.5 text-right font-medium">REB</th>
+            <th scope="col" className="px-2 py-1.5 text-right font-medium">AST</th>
+            <th scope="col" className="px-3 py-1.5 text-right font-medium" title={language === "tr" ? "Model etki puanı" : "Model impact score"}>{language === "tr" ? "Etki" : "Impact"}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border-light tabular-nums">
@@ -318,13 +309,13 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                 onClick={() => onSelectPlayer(p.PLAYER_ID)}
                 className="group cursor-pointer transition-colors hover:bg-background-tertiary/40"
               >
-                <td className="px-3 py-2 text-right text-text-muted">{idx + 1}</td>
-                <td className="px-2 py-2">
+                <td className="px-3 py-1.5 text-right text-text-muted">{idx + 1}</td>
+                <td className="px-2 py-1.5">
                   <div className="flex items-center gap-2.5">
                     <PlayerPhoto
                       playerId={p.PLAYER_ID}
                       name={p.PLAYER_NAME}
-                      size={32}
+                      size={28}
                       className="shrink-0 rounded-full border border-border"
                     />
                     <span className="truncate text-sm font-semibold text-text-primary transition-colors group-hover:text-primary">
@@ -333,16 +324,16 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                   </div>
                 </td>
                 {!ranked && (
-                  <td className="px-2 py-2 text-text-secondary">
+                  <td className="hidden px-2 py-1.5 text-text-secondary sm:table-cell">
                     {posLabel(playerPositions[p.PLAYER_ID] || "forward")}
                   </td>
                 )}
-                <td className="px-2 py-2 text-right text-text-muted">{p.GP}</td>
-                <td className="px-2 py-2 text-right text-text-secondary">{dash(p.AVG_MIN.toFixed(0))}</td>
-                <td className="px-2 py-2 text-right font-semibold text-text-primary">{dash(p.AVG_PTS.toFixed(1))}</td>
-                <td className="px-2 py-2 text-right text-text-secondary">{dash(p.AVG_REB.toFixed(1))}</td>
-                <td className="px-2 py-2 text-right text-text-secondary">{dash(p.AVG_AST.toFixed(1))}</td>
-                <td className="px-3 py-2 text-right font-semibold text-text-primary">{p.IMPORTANCE_SCORE.toFixed(1)}%</td>
+                <td className="hidden px-2 py-1.5 text-right text-text-muted sm:table-cell">{p.GP}</td>
+                <td className="px-2 py-1.5 text-right text-text-secondary">{dash(p.AVG_MIN.toFixed(0))}</td>
+                <td className="px-2 py-1.5 text-right font-semibold text-text-primary">{dash(p.AVG_PTS.toFixed(1))}</td>
+                <td className="px-2 py-1.5 text-right text-text-secondary">{dash(p.AVG_REB.toFixed(1))}</td>
+                <td className="px-2 py-1.5 text-right text-text-secondary">{dash(p.AVG_AST.toFixed(1))}</td>
+                <td className="px-3 py-1.5 text-right font-semibold text-text-primary">{p.IMPORTANCE_SCORE.toFixed(1)}%</td>
               </tr>
             );
           })}
@@ -357,72 +348,57 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Page Header */}
-      <Card padding="md">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <TeamLogo abbr={activeTeam} name={TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR]} size={56} />
-            <div>
-              <h1 className="text-xl font-semibold text-text-primary sm:text-2xl">
-                {TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR] || activeTeam}
-              </h1>
-              <p className="mt-0.5 text-xs text-text-secondary tabular-nums">
-                {[teamRecords?.get(activeTeam)?.recordFormatted, selectedSeason].filter(Boolean).join(" · ")}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <div className="w-48">
-              <Select
-                label={t.team.selectTeam}
-                value={activeTeam}
-                onChange={(e) => setSelectedTeam(e.target.value)}
-              >
-                {teamsList.map((team) => (
-                  <option key={team} value={team}>
-                    {TEAM_NAME_BY_ABBR[team as keyof typeof TEAM_NAME_BY_ABBR] || team}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="w-32">
-              <Select
-                label={t.team.selectSeason}
-                value={selectedSeason}
-                onChange={(e) => setSelectedSeason(e.target.value)}
-              >
-                {seasonsList.map((season) => (
-                  <option key={season} value={season}>
-                    {season}
-                  </option>
-                ))}
-              </Select>
-            </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <TeamLogo abbr={activeTeam} name={TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR]} size={36} />
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold leading-tight text-text-primary md:text-lg">
+              {TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR] || activeTeam}
+            </h1>
+            <p className="text-xs tabular-nums text-text-secondary">
+              {[teamRecords?.get(activeTeam)?.recordFormatted, selectedSeason].filter(Boolean).join(" · ")}
+            </p>
           </div>
         </div>
 
-        {/* Season Status Info */}
-        {(loadingSeason || loadError) && (
-          <div className="mt-3 border-t border-border-light pt-2.5">
-            {loadingSeason && (
-              <p className="text-xs text-text-secondary">
-                {t.team.loadingRosters}
-              </p>
-            )}
-            {loadError && (
-              <div className="mt-2">
-                <InlineError
-                  title={t.common.error}
-                  message={loadError}
-                  onRetry={fetchRosters}
-                />
-              </div>
-            )}
+        <div className="flex gap-2">
+          <div className="w-40">
+            <Select
+              aria-label={t.team.selectTeam}
+              value={activeTeam}
+              onChange={(e) => setSelectedTeam(e.target.value)}
+            >
+              {teamsList.map((team) => (
+                <option key={team} value={team}>
+                  {TEAM_NAME_BY_ABBR[team as keyof typeof TEAM_NAME_BY_ABBR] || team}
+                </option>
+              ))}
+            </Select>
           </div>
-        )}
-      </Card>
+          <div className="w-28">
+            <Select
+              aria-label={t.team.selectSeason}
+              value={selectedSeason}
+              onChange={(e) => {
+                setLoadingSeason(true);
+                setLoadError(null);
+                setSelectedSeason(e.target.value);
+              }}
+            >
+              {seasonsList.map((season) => (
+                <option key={season} value={season}>
+                  {season}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {loadingSeason && <p className="text-xs text-text-secondary">{t.team.loadingRosters}</p>}
+      {loadError && <InlineError title={t.common.error} message={loadError} onRetry={fetchRosters} />}
 
       {/* View Switcher */}
       <nav
@@ -432,22 +408,20 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
         <button
           type="button"
           onClick={() => setView("team")}
-          className={`border-b-2 px-3 py-2 text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
-            view === "team"
-              ? "border-primary text-text-primary"
-              : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
-          }`}
+          className={`border-b-2 px-3 py-2 text-xs sm:text-sm font-medium transition-colors cursor-pointer ${view === "team"
+            ? "border-primary text-text-primary"
+            : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
+            }`}
         >
           {language === "tr" ? "Takım Genel Bakış" : "Team Overview"}
         </button>
         <button
           type="button"
           onClick={() => setView("league")}
-          className={`border-b-2 px-3 py-2 text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
-            view === "league"
-              ? "border-primary text-text-primary"
-              : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
-          }`}
+          className={`border-b-2 px-3 py-2 text-xs sm:text-sm font-medium transition-colors cursor-pointer ${view === "league"
+            ? "border-primary text-text-primary"
+            : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
+            }`}
         >
           {language === "tr" ? "Lig Sıralaması" : "League Rankings"}
         </button>
@@ -455,20 +429,29 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
 
       {view === "team" ? (
         <>
-          <section className="space-y-3">
-            <div>
+          <section className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-sm font-semibold text-text-primary">
-                {language === "tr" ? "Çekirdek Rotasyon" : "Core Rotation"}
+                {language === "tr" ? "Kadro" : "Roster"}
               </h2>
-              <p className="mt-0.5 text-xs text-text-secondary">
-                {language === "tr"
-                  ? "Model etki puanına göre en belirleyici 5 oyuncu"
-                  : "Top 5 players by model impact score"}
-              </p>
+              <div role="group" aria-label="Position filter" className="flex gap-1">
+                {(["all", "guard", "forward", "center"] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setPosFilter(k)}
+                    aria-pressed={posFilter === k}
+                    className={`rounded border px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${posFilter === k
+                      ? "border-primary text-text-primary"
+                      : "border-border text-text-secondary hover:text-text-primary"
+                      }`}
+                  >
+                    {posLabel(k)}
+                  </button>
+                ))}
+              </div>
             </div>
-            {corePlayers.length > 0 ? (
-              renderRosterTable(corePlayers, true)
-            ) : (
+            {sortedTeamRoster.length === 0 ? (
               <EmptyState
                 icon={<Users size={28} strokeWidth={1.5} />}
                 title={language === "tr" ? "Kadro bulunamadı" : "No roster found"}
@@ -478,38 +461,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                     : `No registered players found for ${TEAM_NAME_BY_ABBR[activeTeam as keyof typeof TEAM_NAME_BY_ABBR] || activeTeam} in the ${selectedSeason} season.`
                 }
               />
-            )}
-          </section>
-
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-text-primary">
-                  {language === "tr" ? "Tam Kadro" : "Full Roster"}
-                </h2>
-                <p className="mt-0.5 text-xs text-text-secondary">
-                  {language === "tr" ? "Sezon ortalamaları, etki puanına göre sıralı" : "Season averages, sorted by impact score"}
-                </p>
-              </div>
-              <div role="group" aria-label="Position filter" className="flex gap-1">
-                {(["all", "guard", "forward", "center"] as const).map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setPosFilter(k)}
-                    aria-pressed={posFilter === k}
-                    className={`rounded border px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
-                      posFilter === k
-                        ? "border-primary text-text-primary"
-                        : "border-border text-text-secondary hover:text-text-primary"
-                    }`}
-                  >
-                    {posLabel(k)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {filteredRoster.length > 0 ? (
+            ) : filteredRoster.length > 0 ? (
               renderRosterTable(filteredRoster, false)
             ) : (
               <p className="py-6 text-center text-xs italic text-text-muted">
@@ -522,16 +474,16 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {/* Franchise strength section */}
           <Card padding="none" className="overflow-hidden">
-            <div className="border-b border-border p-4">
+            <div
+              className="flex items-baseline justify-between border-b border-border px-4 py-2.5"
+              title={language === "tr" ? "İlk 3 oyuncunun ortalama önem puanı" : "Average importance of the top 3 players"}
+            >
               <h2 className="text-sm font-semibold text-text-primary">
-                {language === "tr" ? "Takım Güç Endeksi" : "Team Power Index"}
+                {language === "tr" ? "Takım güç endeksi" : "Team power index"}
               </h2>
-              <p className="mt-0.5 text-xs text-text-secondary">
-                {language === "tr" ? "İlk 3 oyuncunun ortalama önem puanı · lig ortalaması " : "Top 3 players avg importance · league average "}
-                <span className="tabular-nums font-medium text-text-primary">
-                  {leagueAverage.toFixed(1)}
-                </span>
-              </p>
+              <span className="text-xs tabular-nums text-text-secondary">
+                {language === "tr" ? "ort." : "avg"} {leagueAverage.toFixed(1)}
+              </span>
             </div>
             <div className="divide-y divide-border-light">
               {leagueTeamRanks.map((item, index) => {
@@ -544,7 +496,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                       setSelectedTeam(item.team);
                       setView("team");
                     }}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-xs transition-colors hover:bg-background-tertiary cursor-pointer"
+                    className="flex w-full items-center gap-3 px-4 py-1.5 text-left text-xs transition-colors hover:bg-background-tertiary cursor-pointer"
                   >
                     <span className="w-5 text-right tabular-nums text-text-muted">
                       {index + 1}
@@ -563,9 +515,8 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                       {item.score.toFixed(1)}
                     </span>
                     <span
-                      className={`hidden w-12 text-right tabular-nums sm:block ${
-                        difference >= 0 ? "text-status-success font-medium" : "text-text-muted"
-                      }`}
+                      className={`hidden w-12 text-right tabular-nums sm:block ${difference >= 0 ? "text-status-success font-medium" : "text-text-muted"
+                        }`}
                     >
                       {difference >= 0 ? "+" : ""}
                       {difference.toFixed(1)}
@@ -578,15 +529,10 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
 
           {/* League leaders section */}
           <Card padding="none" className="overflow-hidden">
-            <div className="border-b border-border p-4">
+            <div className="border-b border-border px-4 py-2.5">
               <h2 className="text-sm font-semibold text-text-primary">
-                {language === "tr" ? "Lig Liderleri" : "League Leaders"}
+                {language === "tr" ? "Lig liderleri" : "League leaders"}
               </h2>
-              <p className="mt-0.5 text-xs text-text-secondary">
-                {language === "tr"
-                  ? `Önem puanına göre en etkili oyuncular · ${selectedSeason}`
-                  : `Top players by importance score · ${selectedSeason}`}
-              </p>
             </div>
             <div className="divide-y divide-border-light">
               {leaguePlayerLeaders.map((player, index) => (
@@ -594,7 +540,7 @@ const TeamExplorer: React.FC<TeamExplorerProps> = ({ onSelectPlayer, initialTeam
                   key={`${player.TEAM_ABBREVIATION}-${player.PLAYER_ID}`}
                   type="button"
                   onClick={() => onSelectPlayer(player.PLAYER_ID)}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-xs transition-colors hover:bg-background-tertiary cursor-pointer"
+                  className="flex w-full items-center gap-3 px-4 py-1.5 text-left text-xs transition-colors hover:bg-background-tertiary cursor-pointer"
                   aria-label={`Open ${player.PLAYER_NAME} player profile`}
                 >
                   <span className="w-5 text-right tabular-nums text-text-muted">

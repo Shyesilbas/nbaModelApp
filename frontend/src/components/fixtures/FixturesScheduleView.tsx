@@ -4,7 +4,7 @@ import type { DayGroup, DisplayMode } from "./types";
 import { FixtureMatchRow } from "./FixtureMatchRow";
 import { FixtureMatchCard } from "./FixtureMatchCard";
 import type { GameFeedRow } from "../../types/gameFeed";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 import { EmptyState, Skeleton } from "../common";
 
 interface FixturesScheduleViewProps {
@@ -71,7 +71,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 4 }).map((_, idx) => (
               <div key={idx} className="space-y-3 rounded border border-border bg-background-primary p-4">
                 <Skeleton className="h-4 w-24 rounded-sm" />
@@ -119,7 +119,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
   return (
     <div className="space-y-6">
       {dayGroups.map((dayGroup) => (
-        <div key={dayGroup.date} className="space-y-2.5">
+        <div key={dayGroup.date} className={`space-y-2.5 ${displayMode === "list" ? "max-w-2xl" : ""}`}>
           <div className="flex items-baseline justify-between px-1">
             <h3 className="text-sm font-semibold text-text-primary">{dayGroup.formattedDate}</h3>
             <span className="text-xs font-medium tabular-nums text-text-secondary">
@@ -151,7 +151,7 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
               })}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
               {dayGroup.games.map((game) => {
                 const awayAbbr = game.AWAY_TEAM_ABBREVIATION ?? "";
                 const homeAbbr = game.HOME_TEAM_ABBREVIATION ?? "";

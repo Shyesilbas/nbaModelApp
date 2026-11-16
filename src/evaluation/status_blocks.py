@@ -1,4 +1,4 @@
-"""Headline figures of PROJECT_STATUS.md and README.md, rendered from the generated reports.
+"""Headline figures of docs/project_status.md and README.md, rendered from the generated reports.
 
 The hand-written docs carry numbers that go stale on every benchmark run or ledger update. Those
 numbers live between ``<!-- BEGIN GENERATED: <name> -->`` markers and are rewritten from
@@ -170,12 +170,12 @@ def status_ledger(ledger: dict) -> str:
 
 
 def update_status_docs(root: Path, season: str = LEDGER_SEASON) -> list[Path]:
-    """Rewrite the generated blocks of PROJECT_STATUS.md and README.md; returns the files that changed."""
+    """Rewrite the generated blocks of docs/project_status.md and README.md; returns the files that changed."""
     wf = json.loads((root / WALK_FORWARD_JSON).read_text())
     ledger_path = root / f"reports/evaluation/paper_ledger_{season_to_file_token(season)}.json"
     ledger = json.loads(ledger_path.read_text()) if ledger_path.exists() else None
     plan = {
-        "PROJECT_STATUS.md": [("walk-forward-headline", status_walk_forward(wf))]
+        "docs/project_status.md": [("walk-forward-headline", status_walk_forward(wf))]
         + ([("ledger-headline", status_ledger(ledger))] if ledger else []),
         "README.md": [("walk-forward-table", readme_table(wf)), ("walk-forward-significance", readme_significance(wf))],
     }

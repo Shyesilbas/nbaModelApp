@@ -5,7 +5,7 @@ import TeamLogo from "../TeamLogo";
 import PlayerPhoto from "../PlayerPhoto";
 import { PlayerMatchupModal, type PlayerMatchupData } from "./PlayerMatchupModal";
 import type { TeamInfo } from "./types";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 interface PlayerSpotlightProps {
   players: { home_players?: PlayerMatchupData[]; away_players?: PlayerMatchupData[] };

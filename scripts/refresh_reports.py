@@ -4,7 +4,7 @@
 1. Paper ledger report (always; read-only on the ledger).
 2. Walk-forward benchmark when it no longer describes the production models (their version or
    training time differs from the benchmark's provenance), or always with ``--walk-forward always``.
-3. Walk-forward blocks of docs/reports/models/*.md and the generated blocks of PROJECT_STATUS.md
+3. Walk-forward blocks of docs/reports/models/*.md and the generated blocks of docs/project_status.md
    and README.md, rendered from the two JSON reports.
 
 Run by scripts/ops/morning.py every day and by scripts/retrain_pipeline.py after a promotion, so

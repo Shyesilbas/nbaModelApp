@@ -131,7 +131,7 @@ Each season is predicted by models fitted only on earlier seasons. The per-seaso
 
 Calibration: the same report has the home-win reliability table and, per season, the predicted-winner confidence bands (50-60%, 60-70%, 70-80%, 80-100%) with ECE; pooled ECE is about 1 point, the weakest season (2022-23) about 3. The "Model takibi" page shows these bands next to the live ones.
 
-Prospective results for the locked 2026-27 season: `reports/evaluation/paper_ledger_2026_27.md` (`scripts/paper_ledger_report.py`). All generated reports and the numbers in README, PROJECT_STATUS and the model docs are refreshed by `scripts/refresh_reports.py`.
+Prospective results for the locked 2026-27 season: `reports/evaluation/paper_ledger_2026_27.md` (`scripts/paper_ledger_report.py`). All generated reports and the numbers in `README.md`, `docs/project_status.md` and the model docs are refreshed by `scripts/refresh_reports.py`.
 
 ---
 

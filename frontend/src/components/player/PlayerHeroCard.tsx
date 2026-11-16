@@ -6,7 +6,8 @@ import { Card, Skeleton } from "../common";
 import { TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../../lib/nbaTeams";
 import { fmtPct, fmtStat } from "./format";
 import type { PlayerProfile, SeasonAverages } from "./types";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
+import { formatHeight } from "../../lib/formatHeight";
 
 /* ─────────── Season selector ─────────── */
 
@@ -184,7 +185,7 @@ export default function PlayerHeroCard({
   const { language } = useLanguage();
   const teams = avgs?.teams && avgs.teams.length > 0 ? avgs.teams : player.CURRENT_TEAM ? [player.CURRENT_TEAM] : [];
   const bio = [
-    { label: language === "tr" ? "Boy" : "Height", value: player.HEIGHT },
+    { label: language === "tr" ? "Boy" : "Height", value: formatHeight(player.HEIGHT) || null },
     { label: language === "tr" ? "Kilo" : "Weight", value: player.WEIGHT ? `${player.WEIGHT} lbs` : null },
     { label: language === "tr" ? "Ülke" : "Country", value: player.COUNTRY },
     { label: language === "tr" ? "Okul" : "College", value: player.COLLEGE },

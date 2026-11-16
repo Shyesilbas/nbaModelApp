@@ -10,15 +10,12 @@ type Props = {
 };
 
 function TeamLogoComponent({ abbr, name, size = 36, className = "", fallbackClassName = "" }: Props) {
-  const [failed, setFailed] = React.useState(false);
+  const [failedAbbr, setFailedAbbr] = React.useState<string | null>(null);
   const label = name ?? abbr;
   const src = isKnownTeamAbbr(abbr) ? getTeamLogoUrl(abbr) : "";
+  const failed = !src || failedAbbr === abbr;
 
-  React.useEffect(() => {
-    setFailed(false);
-  }, [abbr]);
-
-  if (!src || failed) {
+  if (failed) {
     return (
       <div
         className={`team-logo-fallback ${fallbackClassName}`}
@@ -41,7 +38,7 @@ function TeamLogoComponent({ abbr, name, size = 36, className = "", fallbackClas
       loading="lazy"
       decoding="async"
       className={`team-logo-image ${className}`}
-      onError={() => setFailed(true)}
+      onError={() => setFailedAbbr(abbr)}
     />
   );
 }

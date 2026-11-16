@@ -4,7 +4,7 @@ import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
 import { loadPrivateApi } from "../lib/dataCache";
 import { TEAM_NAME_BY_ABBR, type NbaTeamAbbr } from "../lib/nbaTeams";
-import { useLanguage } from "../context/LanguageContext";
+import { useLanguage } from "../context/useLanguage";
 
 interface TradeSide {
   team: string;
@@ -29,11 +29,11 @@ interface Move {
 type Event = Trade | Move;
 
 type Tier = "cornerstone" | "costar" | "starter" | "rotation";
-const TIERS: { id: Tier; label: string; min: number }[] = [
-  { id: "cornerstone", label: "Franchise Cornerstone", min: 45 },
-  { id: "costar", label: "All-Star / Co-Star", min: 32 },
-  { id: "starter", label: "Key Starter", min: 22 },
-  { id: "rotation", label: "Rotation Piece", min: -Infinity },
+const TIERS: { id: Tier; label: string; tr: string; min: number }[] = [
+  { id: "cornerstone", label: "Franchise Cornerstone", tr: "Takımın direği", min: 45 },
+  { id: "costar", label: "All-Star / Co-Star", tr: "Yıldız oyuncu", min: 32 },
+  { id: "starter", label: "Key Starter", tr: "Kilit ilk beş", min: 22 },
+  { id: "rotation", label: "Rotation Piece", tr: "Rotasyon oyuncusu", min: -Infinity },
 ];
 const tierOf = (impact: number | null | undefined) => TIERS.find((t) => (impact ?? 0) >= t.min)!;
 
@@ -41,10 +41,12 @@ const topImpact = (e: Event) =>
   Math.max(...(e.kind === "trade" ? e.sides.flatMap((s) => s.players.map((p) => p.impact ?? 0)) : [e.player.impact ?? 0]));
 
 function TierTag({ impact }: { impact: number | null | undefined }) {
+  const { language } = useLanguage();
   if (impact == null) return null;
+  const tier = tierOf(impact);
   return (
     <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-text-secondary">
-      {tierOf(impact).label} · <span className="tabular-nums">{impact.toFixed(1)}</span>
+      {language === "tr" ? tier.tr : tier.label} · <span className="tabular-nums">{impact.toFixed(1)}</span>
     </span>
   );
 }
@@ -64,7 +66,7 @@ const posLabel = (pos: string | null) =>
 function SideColumn({ side }: { side: TradeSide }) {
   const { language } = useLanguage();
   return (
-    <div className="flex min-w-0 flex-col gap-3 p-4 sm:p-5">
+    <div className="flex min-w-0 flex-col gap-2 p-3 sm:p-4">
       <div className="flex items-center gap-3">
         <TeamLogo abbr={side.team} name="" size={32} />
         <div className="min-w-0">
@@ -78,8 +80,8 @@ function SideColumn({ side }: { side: TradeSide }) {
       </div>
       <ul className="flex flex-col">
         {side.players.map((p) => (
-          <li key={p.id} className="flex items-center gap-3 border-t border-border-light py-2 first:border-t-0">
-            <PlayerPhoto playerId={p.id} name={p.name} size={40} />
+          <li key={p.id} className="flex items-center gap-3 border-t border-border-light py-1.5 first:border-t-0">
+            <PlayerPhoto playerId={p.id} name={p.name} size={32} />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-text-primary">{p.name}</p>
               {posLabel(p.pos) && <p className="text-xs text-text-secondary">{posLabel(p.pos)}</p>}
@@ -102,7 +104,7 @@ function TradeCard({ trade }: { trade: Trade }) {
   const count = trade.sides.reduce((n, s) => n + s.players.length, 0);
   return (
     <article className="rounded border border-border bg-background-primary hover:border-card-border-hover">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-light px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-light px-4 py-2 sm:px-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
           {trade.sides.map((s, i) => (
             <span key={s.team} className="flex items-center gap-2">
@@ -119,9 +121,8 @@ function TradeCard({ trade }: { trade: Trade }) {
         </div>
       </div>
       <div
-        className={`grid divide-y divide-border-light sm:divide-y-0 sm:divide-x ${
-          trade.sides.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"
-        }`}
+        className={`grid divide-y divide-border-light sm:divide-y-0 sm:divide-x ${trade.sides.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"
+          }`}
       >
         {trade.sides.map((s) => (
           <SideColumn key={s.team} side={s} />
@@ -135,16 +136,16 @@ function MovesCard({ moves }: { moves: Move[] }) {
   const { language, formatDate } = useLanguage();
   return (
     <article className="rounded border border-border bg-background-primary">
-      <div className="flex items-center justify-between gap-3 border-b border-border-light px-4 py-3 text-sm sm:px-5">
+      <div className="flex items-center justify-between gap-3 border-b border-border-light px-4 py-2 text-sm">
         <span className="font-semibold text-text-primary">
           {language === "tr" ? "Kadro dışı hareketler" : "Roster moves & Waivers"}
         </span>
         <span className="tabular-nums text-text-secondary">{formatDate(moves[0].date)}</span>
       </div>
-      <ul className="px-4 sm:px-5">
+      <ul className="px-4">
         {moves.map((m) => (
-          <li key={m.id} className="flex flex-wrap items-center gap-3 border-t border-border-light py-3 first:border-t-0">
-            <PlayerPhoto playerId={m.player.id} name={m.player.name} size={40} />
+          <li key={m.id} className="flex flex-wrap items-center gap-3 border-t border-border-light py-2 first:border-t-0">
+            <PlayerPhoto playerId={m.player.id} name={m.player.name} size={32} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-text-primary">{m.player.name}</p>
               <p className="text-xs text-text-secondary">
@@ -201,7 +202,6 @@ export default function TradeBoard() {
   // A tier filter lists every matching event by impact score, whatever the date; otherwise one day at a time.
   const byTier = tier !== "all";
   const [shown, setShown] = useState(PAGE);
-  useEffect(() => setShown(PAGE), [kind, tier]);
   const todays = useMemo(
     () => (byTier ? [...visible].sort((x, y) => topImpact(y) - topImpact(x)).slice(0, shown) : visible.filter((e) => e.date === date)),
     [byTier, visible, shown, date]
@@ -224,98 +224,100 @@ export default function TradeBoard() {
   }
 
   const stepBtn =
-    "inline-flex h-10 w-10 items-center justify-center rounded border border-border bg-background-primary text-text-primary hover:border-card-border-hover disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer";
+    "inline-flex h-9 w-9 items-center justify-center rounded border border-border bg-background-primary text-text-primary hover:border-card-border-hover disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer";
+
+  const summary = byTier
+    ? (language === "tr" ? `${visible.length} kayıt · tüm tarihler` : `${visible.length} entries · all dates`)
+    : todays.length
+      ? (language === "tr"
+        ? `${todayTrades.length} takas · ${todayMoves.length} kadro dışı`
+        : `${todayTrades.length} trades · ${todayMoves.length} moves`)
+      : (language === "tr" ? "Kayıt yok" : "No records");
+
+  const control = "h-9 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary focus:border-border-focus focus:outline-none";
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-text-primary">{t.trades.title}</h1>
-        <p className="text-sm text-text-secondary">{t.trades.subtitle}</p>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h1 className="text-base font-semibold text-text-primary md:text-lg">{t.trades.title}</h1>
+        <span className="text-xs tabular-nums text-text-secondary">{summary}</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className={stepBtn} disabled={byTier || !prev} onClick={() => prev && setDate(prev)} aria-label={t.common.previousDay}>
-          <ChevronLeft size={16} strokeWidth={1.5} />
-        </button>
-        <label className={`inline-flex h-10 items-center rounded border border-border bg-background-primary px-3 focus-within:border-border-focus ${byTier ? "opacity-40" : ""}`}>
-          <span className="sr-only">{t.common.date}</span>
-          <input
-            type="date"
-            value={date}
-            disabled={byTier}
-            min={dates[0]}
-            max={latest}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
-            className="rounded bg-transparent text-sm font-medium tabular-nums text-text-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
-          />
-        </label>
-        <button type="button" className={stepBtn} disabled={byTier || !next} onClick={() => next && setDate(next)} aria-label={t.common.nextDay}>
-          <ChevronRight size={16} strokeWidth={1.5} />
-        </button>
-        <button
-          type="button"
-          onClick={() => setDate(latest)}
-          disabled={byTier || date === latest}
-          className="h-10 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary hover:border-card-border-hover disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-        >
-          {language === "tr" ? "Son kayıt" : "Latest"}
-        </button>
-        <span className="ml-auto text-sm tabular-nums text-text-secondary">
-          {byTier
-            ? (language === "tr" ? `${visible.length} kayıt · tüm tarihler` : `${visible.length} entries · all dates`)
-            : todays.length
-            ? (language === "tr"
-                ? `${todayTrades.length} takas · ${todayMoves.length} kadro dışı`
-                : `${todayTrades.length} trades · ${todayMoves.length} moves`)
-            : (language === "tr" ? "Kayıt yok" : "No records")}
-        </span>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
-          {t.common.season}
-          <select
-            value={season}
-            onChange={(e) => {
-              setSeason(e.target.value);
-              const first = events.find((ev) => seasonOf(ev.date) === e.target.value);
-              if (first) setDate(first.date);
-            }}
-            className="h-10 rounded border border-border bg-background-primary px-3 text-sm font-medium tabular-nums text-text-primary focus:border-border-focus focus:outline-none"
+        <div className="flex items-center gap-1">
+          <button type="button" className={stepBtn} disabled={byTier || !prev} onClick={() => prev && setDate(prev)} aria-label={t.common.previousDay}>
+            <ChevronLeft size={16} strokeWidth={1.5} />
+          </button>
+          <label className={`inline-flex h-9 items-center rounded border border-border bg-background-primary px-2 focus-within:border-border-focus ${byTier ? "opacity-40" : ""}`}>
+            <span className="sr-only">{t.common.date}</span>
+            <input
+              type="date"
+              value={date}
+              disabled={byTier}
+              min={dates[0]}
+              max={latest}
+              onChange={(e) => e.target.value && setDate(e.target.value)}
+              className="rounded bg-transparent text-sm font-medium tabular-nums text-text-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
+            />
+          </label>
+          <button type="button" className={stepBtn} disabled={byTier || !next} onClick={() => next && setDate(next)} aria-label={t.common.nextDay}>
+            <ChevronRight size={16} strokeWidth={1.5} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDate(latest)}
+            disabled={byTier || date === latest}
+            className={`${control} disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer`}
           >
-            {seasons.map((sn) => (
-              <option key={sn} value={sn}>{sn}</option>
-            ))}
-          </select>
-        </label>
+            {language === "tr" ? "Son" : "Latest"}
+          </button>
+        </div>
+
+        <select
+          aria-label={t.common.season}
+          value={season}
+          onChange={(e) => {
+            setSeason(e.target.value);
+            const first = events.find((ev) => seasonOf(ev.date) === e.target.value);
+            if (first) setDate(first.date);
+          }}
+          className={`${control} tabular-nums`}
+        >
+          {seasons.map((sn) => (
+            <option key={sn} value={sn}>{sn}</option>
+          ))}
+        </select>
         <div role="group" aria-label={language === "tr" ? "Hareket türü" : "Movement type"} className="inline-flex rounded border border-border bg-background-tertiary p-0.5">
           {KINDS.map((k) => (
             <button
               key={k.id}
               type="button"
               aria-pressed={kind === k.id}
-              onClick={() => setKind(k.id)}
-              className={`h-9 rounded-sm px-3 text-sm font-medium cursor-pointer ${
-                kind === k.id ? "bg-background-primary text-text-primary" : "text-text-secondary hover:text-text-primary"
-              }`}
+              onClick={() => {
+                setKind(k.id);
+                setShown(PAGE);
+              }}
+              className={`h-8 rounded-sm px-3 text-sm font-medium cursor-pointer ${kind === k.id ? "bg-background-primary text-text-primary" : "text-text-secondary hover:text-text-primary"
+                }`}
             >
               {k.id === "all" ? t.common.all : k.id === "trade" ? (language === "tr" ? "Takas" : "Trades") : (language === "tr" ? "Kadro dışı" : "Moves")}
             </button>
           ))}
         </div>
-        <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
-          {language === "tr" ? "Etki seviyesi" : "Impact level"}
-          <select
-            value={tier}
-            onChange={(e) => setTier(e.target.value as Tier | "all")}
-            className="h-10 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary focus:border-border-focus focus:outline-none"
-          >
-            <option value="all">{t.common.all}</option>
-            {TIERS.map((t) => (
-              <option key={t.id} value={t.id}>{t.label}</option>
-            ))}
-          </select>
-        </label>
+        <select
+          aria-label={language === "tr" ? "Etki seviyesi" : "Impact level"}
+          value={tier}
+          onChange={(e) => {
+            setTier(e.target.value as Tier | "all");
+            setShown(PAGE);
+          }}
+          className={control}
+        >
+          <option value="all">{language === "tr" ? "Tüm etki seviyeleri" : "All impact levels"}</option>
+          {TIERS.map((t) => (
+            <option key={t.id} value={t.id}>{language === "tr" ? t.tr : t.label}</option>
+          ))}
+        </select>
       </div>
 
       {todays.length > 0 ? (

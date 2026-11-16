@@ -3,11 +3,11 @@
 > **Rapor Tarihi:** 2026-11-02 (rakamlar `reports/evaluation/multi_season_walk_forward_backtest.md` kaynaklıdır)  
 > **Kapsam:** NBA Tahmin Motoru Uretim Mimarisi, Walk-Forward Dogrulamasi ve Metrik Envanteri  
 > **Tek Kaynak Sirasi:**  
-> 1. `ARTIFACT_REGISTRY.md` — Veri, model ve rapor envanteri.  
-> 2. `PROJECT_STATUS.md` — Guncel sezon, model durumu ve bilinen sinirlar.  
+> 1. `docs/artifact_registry.md` — Veri, model ve rapor envanteri.  
+> 2. `docs/project_status.md` — Guncel sezon, model durumu ve bilinen sinirlar.  
 > 3. `docs/reports/models/*.md` — Her modelin kendi mimari, denetim ve reddedilen deney raporu.  
 > 4. `docs/reports/nba_models_comprehensive_report.md` — Bu ana rapor.  
-> 5. `AI_CONTEXT.md` — Makine okunabilir ozet ve veri/API sema katalogu.  
+> 5. `docs/README.md` & `AGENTS.md` — Merkezi dokuman haritasi ve ajan standartlari.  
 
 ---
 

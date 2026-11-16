@@ -14,7 +14,7 @@ import PlayerPhoto from "../PlayerPhoto";
 import TeamLogo from "../TeamLogo";
 import { loadArchivedPlayByPlay } from "../../lib/archiveData";
 import { Badge, Button, Card, EmptyState, InlineError, Skeleton } from "../common";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 export interface PbpEvent {
   period: number;

@@ -2,7 +2,8 @@ import { ChevronRight } from "lucide-react";
 import PlayerPhoto from "../PlayerPhoto";
 import TeamLogo from "../TeamLogo";
 import { Modal, Skeleton } from "../common";
-import { PlayerQuarterTable, useGameQuarters } from "../game-results/QuarterBreakdown";
+import { PlayerQuarterTable } from "../game-results/QuarterBreakdown";
+import { useGameQuarters } from "../game-results/quarters";
 import { TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../../lib/nbaTeams";
 
 export interface PlayerGameInfo {

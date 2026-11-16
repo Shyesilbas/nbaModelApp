@@ -1,86 +1,10 @@
-import { useEffect, useState } from "react";
 import PlayerPhoto from "../PlayerPhoto";
-import { loadPrivateApi } from "../../lib/dataCache";
-
-export interface QuarterStatLine {
-  pts: number;
-  fgm: number;
-  fga: number;
-  fg3m: number;
-  fg3a: number;
-  ftm: number;
-  fta: number;
-  reb: number;
-  ast: number;
-  stl: number;
-  blk: number;
-  tov: number;
-  pf: number;
-}
-
-export interface QuarterPlayer {
-  player_id: number;
-  name: string;
-  team: string;
-  periods: Record<string, QuarterStatLine>;
-}
-
-export interface GameQuarters {
-  game_id: string;
-  home_team: string;
-  away_team: string;
-  periods: { period: number; label: string }[];
-  quarter_scores: { quarter: string; home: number; away: number }[];
-  players: QuarterPlayer[];
-}
-
-const EMPTY: QuarterStatLine = {
-  pts: 0, fgm: 0, fga: 0, fg3m: 0, fg3a: 0, ftm: 0, fta: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0,
-};
-
-/** Quarter data comes from the full play-by-play file, so it only exists for seasons that have one. */
-export function useGameQuarters(gameId: string | null | undefined, season: string | null | undefined) {
-  const [data, setData] = useState<GameQuarters | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!gameId) {
-      setData(null);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    const query = season ? `?season=${encodeURIComponent(season)}` : "";
-    loadPrivateApi<GameQuarters>(`/frontend-data-api/game-quarters/${encodeURIComponent(gameId)}${query}`)
-      .then((res) => {
-        if (!cancelled) setData(res && Array.isArray(res.players) ? res : null);
-      })
-      .catch(() => {
-        if (!cancelled) setData(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [gameId, season]);
-
-  return { data, loading };
-}
-
-export function sumPeriods(player: QuarterPlayer, periods?: number[]): QuarterStatLine {
-  const keys = periods ? periods.map(String) : Object.keys(player.periods);
-  const out = { ...EMPTY };
-  for (const k of keys) {
-    const row = player.periods[k];
-    if (!row) continue;
-    (Object.keys(out) as (keyof QuarterStatLine)[]).forEach((s) => {
-      out[s] += row[s];
-    });
-  }
-  return out;
-}
+import {
+  EMPTY_QUARTER_LINE,
+  sumPeriods,
+  type GameQuarters,
+  type QuarterStatLine,
+} from "./quarters";
 
 export function PeriodTabs({
   periods,
@@ -106,9 +30,8 @@ export function PeriodTabs({
           role="tab"
           aria-selected={value === it.id}
           onClick={() => onChange(it.id)}
-          className={`cursor-pointer transition-colors ${
-            value === it.id ? "font-semibold text-text-primary" : "text-text-muted hover:text-text-primary"
-          }`}
+          className={`cursor-pointer transition-colors ${value === it.id ? "font-semibold text-text-primary" : "text-text-muted hover:text-text-primary"
+            }`}
         >
           {it.label}
         </button>
@@ -193,7 +116,7 @@ export function PlayerQuarterTable({ data, playerId }: { data: GameQuarters; pla
   if (!player) return null;
   const total = sumPeriods(player);
   const rows: { label: string; s: QuarterStatLine; strong?: boolean }[] = [
-    ...data.periods.map((p) => ({ label: p.label, s: player.periods[String(p.period)] ?? EMPTY })),
+    ...data.periods.map((p) => ({ label: p.label, s: player.periods[String(p.period)] ?? EMPTY_QUARTER_LINE })),
     { label: "Toplam", s: total, strong: true },
   ];
   return (

@@ -1,8 +1,8 @@
 import { reportStampText } from "../../lib/injuryTime";
 import TeamLogo from "../TeamLogo";
-import { InjuryChangesList, INJURY_TONE, type InjuryChange } from "./InjuryChangesList";
-import type { TeamInfo } from "./types";
-import { useLanguage } from "../../context/LanguageContext";
+import { InjuryChangesList, type InjuryChange } from "./InjuryChangesList";
+import { INJURY_TONE, type TeamInfo } from "./types";
+import { useLanguage } from "../../context/useLanguage";
 
 export type InjuryReportSummary = {
   published_et: string;

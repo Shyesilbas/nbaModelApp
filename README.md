@@ -2,6 +2,8 @@
 
 NBA prediction pipeline with a FastAPI backend and a React dashboard. It predicts game win probability, score (total and margin) and player PTS/REB/AST, with features built only from earlier games. Results are checked by walk-forward backtests and by a frozen pre-tip ledger for the locked 2026-27 season.
 
+> **AI Agents & Contributors:** Start with [`AGENTS.md`](AGENTS.md) for cross-cutting standards, testing rules, and skill mappings. For architectural deep dives and governance docs, visit [`docs/README.md`](docs/README.md).
+
 ---
 
 ## Results
@@ -122,8 +124,9 @@ PYTHONPATH=. python3 scripts/predict_daily_schedule.py --date 2026-10-08 --seaso
 
 ## Documentation & Governance
 
-- [ARTIFACT_REGISTRY.md](ARTIFACT_REGISTRY.md) — Single source of truth for all active models, datasets, and paths.
-- [PROJECT_STATUS.md](PROJECT_STATUS.md) — Current development phase, active production configurations, and backlog.
+- [docs/README.md](docs/README.md) — Central documentation index for pipeline guides, registries, and model specifications.
+- [docs/artifact_registry.md](docs/artifact_registry.md) — Single source of truth for all active models, datasets, and paths.
+- [docs/project_status.md](docs/project_status.md) — Current development phase, active production configurations, and backlog.
 - [reports/README.md](reports/README.md) — Which reports are generated (and by which script) and which are hand-written records.
 - [reports/production/model_performance_and_architecture_report.md](reports/production/model_performance_and_architecture_report.md) — Active model architecture, the 2026-10-20 review changes and walk-forward benchmarks.
 - [docs/season_onboarding_guide.md](docs/season_onboarding_guide.md) — Step-by-step workflow for ingesting new NBA seasons.

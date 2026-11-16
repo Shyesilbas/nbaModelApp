@@ -14,12 +14,14 @@ import { DatePicker, EmptyState, InlineError, Input, Skeleton } from "./common";
 import {
   normalizeGameFullPrediction,
   predictGameFull,
+  type NormalizedPrediction,
 } from "../api/predictions";
+import type { GameFeedRow } from "../types/gameFeed";
 import { loadArchivedGameIndex } from "../lib/archiveData";
 import { loadPrivateApiFresh } from "../lib/dataCache";
-import { NBA_TEAMS } from "../lib/nbaTeams";
+import { NBA_TEAMS, getTeamShortName } from "../lib/nbaTeams";
 import { CURRENT_SEASON, MIN_PREDICTION_DATE } from "../lib/constants";
-import { useLanguage } from "../context/LanguageContext";
+import { useLanguage } from "../context/useLanguage";
 
 import {
   MatchupHeroCard,
@@ -52,58 +54,61 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   const [home, setHome] = useState(initialGame?.home || "");
   const [away, setAway] = useState(initialGame?.away || "");
   const [date, setDate] = useState(initialGame?.date || "");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<NormalizedPrediction | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [seasonGames, setSeasonGames] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [seasonGames, setSeasonGames] = useState<GameFeedRow[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(initialGame?.date || "");
+  const [initialTargetDate] = useState<string | undefined>(initialGame?.date);
   const [loadingData, setLoadingData] = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
+  const [dataLoadFailed, setDataLoadFailed] = useState(false);
+  const dataError = dataLoadFailed ? t.predictions.scheduleLoadError : null;
 
   const [teamQuery, setTeamQuery] = useState("");
-  const [injuryChanges, setInjuryChanges] = useState<InjuryChange[]>([]);
-  const [latestReport, setLatestReport] = useState<InjuryReportSummary | null>(null);
-  const [selectorOpen, setSelectorOpen] = useState(!initialGame);
+  const [injuryState, setInjuryState] = useState<{
+    key: string;
+    report: InjuryReportSummary | null;
+    changes: InjuryChange[];
+  } | null>(null);
+  const [selectorOpen, setSelectorOpen] = useState(true);
   const [activeResultTab, setActiveResultTab] = useState<"overview" | "explanation" | "players">("overview");
 
   useEffect(() => {
     let active = true;
-    const fetchSchedule = async () => {
-      try {
-        setLoadingData(true);
-        setDataError(null);
-        const scheduleGames = await loadArchivedGameIndex(CURRENT_SEASON);
+    loadArchivedGameIndex(CURRENT_SEASON)
+      .then((scheduleGames) => {
         if (!active) return;
         setSeasonGames(scheduleGames);
+        setDataLoadFailed(false);
 
         const todayStr = new Date().toISOString().slice(0, 10);
         const dates = Array.from(
           new Set(scheduleGames.map((g) => g.GAME_DATE?.slice(0, 10)).filter(Boolean))
         ).sort();
 
-        let initialDate = initialGame?.date;
+        let initialDate = initialTargetDate;
         if (!initialDate || !dates.includes(initialDate)) {
           // Select today or the nearest future date
           initialDate = dates.find((d) => d >= todayStr) || dates[dates.length - 1] || "";
         }
         setSelectedDate(initialDate);
-      } catch (err: any) {
+      })
+      .catch((err: unknown) => {
         console.error("Error loading schedule games:", err);
-        if (active) setDataError(t.predictions.scheduleLoadError);
-      } finally {
+        if (active) setDataLoadFailed(true);
+      })
+      .finally(() => {
         if (active) setLoadingData(false);
-      }
-    };
-    fetchSchedule();
+      });
     return () => {
       active = false;
     };
-  }, [initialGame?.date]);
+  }, [initialTargetDate]);
 
   // Derived: dates of unplayed/upcoming games
   const uniqueDates = useMemo(() => {
-    const isCompletedGame = (g: any) => {
+    const isCompletedGame = (g: GameFeedRow) => {
       const homeScore = Number(g.HOME_SCORE);
       const awayScore = Number(g.AWAY_SCORE);
       return !isNaN(homeScore) && !isNaN(awayScore) && (homeScore > 0 || awayScore > 0);
@@ -121,7 +126,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
   // Current day unplayed games
   const dateGames = useMemo(() => {
     if (!selectedDate) return [];
-    const isCompletedGame = (g: any) => {
+    const isCompletedGame = (g: GameFeedRow) => {
       const homeScore = Number(g.HOME_SCORE);
       const awayScore = Number(g.AWAY_SCORE);
       return !isNaN(homeScore) && !isNaN(awayScore) && (homeScore > 0 || awayScore > 0);
@@ -136,32 +141,33 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
       });
   }, [selectedDate, seasonGames]);
 
+  const injuryKey =
+    home && away && home !== away && date && date >= etDate(0) && date <= etDate(1)
+      ? `${home}|${away}|${date}`
+      : null;
+
   // Injury report changes for the two teams, shown as soon as a game is selected
   useEffect(() => {
-    const isNear = date >= etDate(0) && date <= etDate(1);
-    if (!home || !away || home === away || !date || !isNear) {
-      setInjuryChanges([]);
-      setLatestReport(null);
-      return;
-    }
+    if (!injuryKey) return;
     let active = true;
     loadPrivateApiFresh<{ report: InjuryReportSummary | null; changes: InjuryChange[] }>(
       `/frontend-data-api/injury-changes?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${encodeURIComponent(date)}`
     )
       .then((r) => {
         if (!active) return;
-        setInjuryChanges(r.changes ?? []);
-        setLatestReport(r.report);
+        setInjuryState({ key: injuryKey, report: r.report, changes: r.changes ?? [] });
       })
       .catch(() => {
         if (!active) return;
-        setInjuryChanges([]);
-        setLatestReport(null);
+        setInjuryState({ key: injuryKey, report: null, changes: [] });
       });
     return () => {
       active = false;
     };
-  }, [home, away, date]);
+  }, [injuryKey, home, away, date]);
+
+  const injuryChanges = injuryKey && injuryState?.key === injuryKey ? injuryState.changes : [];
+  const latestReport = injuryKey && injuryState?.key === injuryKey ? injuryState.report : null;
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -189,8 +195,9 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
         setResult(normalized);
         setActiveResultTab("overview");
         setSelectorOpen(false);
-      } catch (e: any) {
-        setError(e.message || (language === "tr" ? "Bilinmeyen bir hata oluştu." : "An unknown error occurred."));
+      } catch (e: unknown) {
+        const msg = e instanceof Error && e.message ? e.message : "";
+        setError(msg || (language === "tr" ? "Bilinmeyen bir hata oluştu." : "An unknown error occurred."));
       } finally {
         setLoading(false);
       }
@@ -200,15 +207,6 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
   useEffect(() => {
     if (initialGame?.home && initialGame?.away && initialGame?.date) {
-      setHome(initialGame.home);
-      setAway(initialGame.away);
-      setDate(initialGame.date);
-      setResult(null);
-      setError(null);
-      setSelectorOpen(true);
-      if (initialGame.date) {
-        setSelectedDate(initialGame.date);
-      }
       onClearInitialGame?.();
     }
   }, [initialGame, onClearInitialGame]);
@@ -218,7 +216,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
 
   const teamAbbr = (abbr: string) => abbr?.toUpperCase?.() || "";
 
-  const handleSelectGame = (game: any) => {
+  const handleSelectGame = (game: GameFeedRow) => {
     setHome(game.HOME_TEAM_ABBREVIATION);
     setAway(game.AWAY_TEAM_ABBREVIATION);
     setDate(game.GAME_DATE);
@@ -232,10 +230,10 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
     return submitGame(home, away, date);
   }, [submitGame, home, away, date]);
 
-  const filteredSchedule = dateGames.filter((g: any) => {
+  const filteredSchedule = dateGames.filter((g) => {
     const q = teamQuery.trim().toLowerCase();
     if (!q) return true;
-    return [g.HOME_TEAM_ABBREVIATION, g.AWAY_TEAM_ABBREVIATION].some((abbr: string) => {
+    return [g.HOME_TEAM_ABBREVIATION, g.AWAY_TEAM_ABBREVIATION].some((abbr) => {
       const info = getTeamInfo(teamAbbr(abbr));
       return abbr?.toLowerCase().includes(q) || info.name.toLowerCase().includes(q);
     });
@@ -325,7 +323,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                {filteredSchedule.map((g: any) => {
+                {filteredSchedule.map((g) => {
                   const isSelected = home === g.HOME_TEAM_ABBREVIATION && away === g.AWAY_TEAM_ABBREVIATION && date === g.GAME_DATE;
                   const h = getTeamInfo(teamAbbr(g.HOME_TEAM_ABBREVIATION));
                   const a = getTeamInfo(teamAbbr(g.AWAY_TEAM_ABBREVIATION));
@@ -335,11 +333,10 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                       type="button"
                       onClick={() => handleSelectGame(g)}
                       aria-pressed={isSelected}
-                      className={`flex items-center justify-between gap-3 rounded border p-3 text-left transition-colors cursor-pointer ${
-                        isSelected
+                      className={`flex items-center justify-between gap-3 rounded border p-3 text-left transition-colors cursor-pointer ${isSelected
                           ? "border-primary bg-background-secondary"
                           : "border-border bg-background-primary hover:border-card-border-hover"
-                      }`}
+                        }`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex shrink-0 items-center gap-1">
@@ -347,7 +344,7 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                           <TeamLogo abbr={h.abbr} name={h.name} size={28} />
                         </div>
                         <span className="truncate text-sm font-semibold text-text-primary">
-                          {a.name} @ {h.name}
+                          {getTeamShortName(a.abbr, a.name)} @ {getTeamShortName(h.abbr, h.name)}
                         </span>
                       </div>
                       {g.SEASON_TYPE && g.SEASON_TYPE !== "Regular Season" && (
@@ -359,6 +356,24 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
               </div>
             )}
 
+            {home && away && date && (
+              <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={submit}
+                disabled={loading}
+                id="run-prediction-main-btn"
+                className="flex h-9 items-center gap-2 rounded bg-primary px-5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-60 cursor-pointer"
+              >
+                {loading && <RefreshCw size={16} className="animate-spin" />}
+                <span>
+                  {loading
+                    ? (tr ? "Hesaplanıyor..." : "Calculating...")
+                    : result ? (tr ? "Tahmini Yenile" : "Rerun Prediction") : (tr ? "Tahmin Üret" : "Run Prediction")}
+                </span>
+              </button>
+              </div>
+            )}
             {home && away && date && home !== away && date >= etDate(0) && date <= etDate(1) && (
               <div className="space-y-2">
                 <InjuryReportStamp published={latestReport?.published_et} mode="latest" />
@@ -374,22 +389,6 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
               </div>
             )}
 
-            {home && away && date && (
-              <button
-                type="button"
-                onClick={submit}
-                disabled={loading}
-                id="run-prediction-main-btn"
-                className="flex h-9 items-center gap-2 rounded bg-primary px-5 text-xs font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-60 cursor-pointer"
-              >
-                {loading && <RefreshCw size={16} className="animate-spin" />}
-                <span>
-                  {loading
-                    ? (tr ? "Hesaplanıyor..." : "Calculating...")
-                    : result ? (tr ? "Tahmini Yenile" : "Rerun Prediction") : (tr ? "Tahmin Üret" : "Run Prediction")}
-                </span>
-              </button>
-            )}
           </div>
         )}
       </div>
@@ -488,11 +487,10 @@ export default function NbaPrediction({ initialGame, onClearInitialGame }: NbaPr
                   role="tab"
                   aria-selected={activeResultTab === tab.id}
                   onClick={() => setActiveResultTab(tab.id)}
-                  className={`border-b-2 px-3 py-3 text-xs font-medium transition-colors sm:text-sm cursor-pointer ${
-                    activeResultTab === tab.id
+                  className={`border-b-2 px-3 py-3 text-xs font-medium transition-colors sm:text-sm cursor-pointer ${activeResultTab === tab.id
                       ? "border-primary font-semibold text-text-primary"
                       : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>

@@ -3,7 +3,7 @@ import { Search, Shield, CornerDownLeft, X } from "lucide-react";
 import { loadPrivateApi } from "../../lib/dataCache";
 import { NBA_TEAMS, getTeamLogoUrl } from "../../lib/nbaTeams";
 import PlayerPhoto from "../PlayerPhoto";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 interface PlayerProfile {
   PLAYER_ID: number;
@@ -26,27 +26,55 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onSelectPlayer,
   onSelectTeam,
 }) => {
-  const { t, language } = useLanguage();
-  const [query, setQuery] = useState("");
   const [players, setPlayers] = useState<PlayerProfile[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     loadPrivateApi<PlayerProfile[]>("/frontend-data-api/player-profiles")
       .then((data: PlayerProfile[]) => setPlayers(data || []))
-      .catch(() => {});
+      .catch(() => { });
   }, [isOpen]);
 
+  if (!isOpen) return null;
+
+  return (
+    <CommandPaletteDialog
+      players={players}
+      onClose={onClose}
+      onSelectPlayer={onSelectPlayer}
+      onSelectTeam={onSelectTeam}
+    />
+  );
+};
+
+interface CommandPaletteDialogProps {
+  players: PlayerProfile[];
+  onClose: () => void;
+  onSelectPlayer: (playerId: number) => void;
+  onSelectTeam: (teamAbbr: string) => void;
+}
+
+const CommandPaletteDialog: React.FC<CommandPaletteDialogProps> = ({
+  players,
+  onClose,
+  onSelectPlayer,
+  onSelectTeam,
+}) => {
+  const { t, language } = useLanguage();
+  const [query, setQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    if (isOpen) {
-      setQuery("");
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }, [isOpen]);
+    const id = window.setTimeout(() => inputRef.current?.focus(), 50);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  const updateQuery = (value: string) => {
+    setQuery(value);
+    setSelectedIndex(0);
+  };
 
   // Filter items
   const results = useMemo(() => {
@@ -103,10 +131,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     return [...matchedTeams, ...matchedPlayers];
   }, [query, players]);
 
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
-
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
@@ -135,8 +159,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     }
     onClose();
   };
-
-  if (!isOpen) return null;
 
   const optionId = (idx: number) => `command-palette-option-${idx}`;
 
@@ -168,14 +190,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             aria-label={t.common.search}
             autoComplete="off"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => updateQuery(e.target.value)}
             placeholder={t.common.searchPlaceholder}
             className="w-full bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
           />
           {query ? (
             <button
               type="button"
-              onClick={() => setQuery("")}
+              onClick={() => updateQuery("")}
               aria-label={t.common.clearSearch}
               className="rounded p-1 text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
             >
@@ -206,11 +228,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   aria-selected={isSelected}
                   onClick={() => handleSelect(item)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex cursor-pointer items-center justify-between rounded px-3 py-2.5 ${
-                    isSelected
+                  className={`flex cursor-pointer items-center justify-between rounded px-3 py-2.5 ${isSelected
                       ? "bg-background-tertiary text-text-primary"
                       : "text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     {item.type === "player" && item.playerId ? (

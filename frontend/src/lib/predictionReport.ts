@@ -1,8 +1,10 @@
 import { NBA_TEAMS, getTeamLogoUrl } from "./nbaTeams";
 import { reportStampText } from "./injuryTime";
+import type { NormalizedPrediction } from "../types/prediction";
+import type { PlayerMatchupData } from "../components/prediction/PlayerMatchupModal";
 
 interface ExportPredictionReportArgs {
-  result: any;
+  result: NormalizedPrediction;
   date: string;
   fallbackHome: string;
   fallbackAway: string;
@@ -21,7 +23,7 @@ export function exportPredictionAsPDF({
 
   const hInfo = getTeamInfo(resData.home_team || fallbackHome);
   const aInfo = getTeamInfo(resData.away_team || fallbackAway);
-  const winnerAbbr = resData.win_probability?.predicted_winner || resData.predicted_winner;
+  const winnerAbbr = resData.win_probability?.predicted_winner || resData.predicted_winner || hInfo.abbr;
   const winnerInfo = getTeamInfo(winnerAbbr);
 
   const homeProb = Number(resData.win_probability?.home_win_probability ?? 0.5);
@@ -58,7 +60,7 @@ export function exportPredictionAsPDF({
     return '<span style="background: #dcfce7; color: #16a34a; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 9px; text-transform: uppercase;">ACTIVE</span>';
   };
 
-  const renderRosterRows = (players: any[]) => {
+  const renderRosterRows = (players: PlayerMatchupData[]) => {
     if (!players || players.length === 0) {
       return '<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 8px;">Projeksiyon bulunamadı</td></tr>';
     }
@@ -77,7 +79,10 @@ export function exportPredictionAsPDF({
       .join("");
   };
 
-  const renderInjuryList = (injuries: any[], teamName: string) => {
+  const renderInjuryList = (
+    injuries: Array<{ team: string; player_name: string; status: string; reason?: string }>,
+    teamName: string
+  ) => {
     if (!injuries || injuries.length === 0) {
       return `<div style="font-size: 10px; color: #64748b; font-style: italic; padding: 4px 0;">${teamName} için sakatlık bildirimi yok.</div>`;
     }

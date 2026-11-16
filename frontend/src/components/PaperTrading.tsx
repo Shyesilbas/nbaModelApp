@@ -10,7 +10,7 @@ import PublishSnapshotButton from "./PublishSnapshotButton";
 import { loadPrivateApiFresh } from "../lib/dataCache";
 import { CURRENT_SEASON } from "../lib/constants";
 import { fill } from "../lib/fill";
-import { useLanguage } from "../context/LanguageContext";
+import { useLanguage } from "../context/useLanguage";
 
 type PaperGame = {
   game_id: string;
@@ -59,7 +59,7 @@ type Summary = {
 
 type Report = { season: string; summary: Summary; evaluation?: Evaluation; games: PaperGame[] };
 
-type SectionTab = "all" | "games" | "versions" | "calibration";
+type SectionTab = "games" | "versions" | "calibration";
 type GameStatusFilter = "all" | "correct" | "wrong" | "pending";
 
 const teamName = (abbr: string) => TEAM_NAME_BY_ABBR[abbr as keyof typeof TEAM_NAME_BY_ABBR] || abbr;
@@ -108,10 +108,10 @@ function MatchupCell({ game }: { game: PaperGame }) {
       <TeamLogo abbr={abbr} name={teamName(abbr)} size={22} className="shrink-0" />
       <span
         className={`text-sm ${!isFinal
-            ? "font-medium text-text-primary"
-            : won
-              ? "font-semibold text-text-primary"
-              : "font-normal text-text-secondary"
+          ? "font-medium text-text-primary"
+          : won
+            ? "font-semibold text-text-primary"
+            : "font-normal text-text-secondary"
           }`}
       >
         {teamName(abbr)}
@@ -135,19 +135,34 @@ export default function PaperTrading() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [sectionTab, setSectionTab] = useState<SectionTab>("all");
+  const [sectionTab, setSectionTab] = useState<SectionTab>("games");
   const [gameFilter, setGameFilter] = useState<GameStatusFilter>("all");
+  const [reloadTick, setReloadTick] = useState(0);
 
-  const load = useCallback(() => {
+  useEffect(() => {
+    let active = true;
+    loadPrivateApiFresh<Report>(`/frontend-data-api/paper-trading?season=${CURRENT_SEASON}`)
+      .then((next) => {
+        if (!active) return;
+        setReport(next);
+        setError(null);
+      })
+      .catch((e: Error) => {
+        if (active) setError(e.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reloadTick]);
+
+  const retryLoad = useCallback(() => {
     setLoading(true);
     setError(null);
-    loadPrivateApiFresh<Report>(`/frontend-data-api/paper-trading?season=${CURRENT_SEASON}`)
-      .then(setReport)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+    setReloadTick((n) => n + 1);
   }, []);
-
-  useEffect(load, [load]);
 
   const dates = useMemo(
     () => Array.from(new Set((report?.games ?? []).map((g) => g.game_date))).sort(),
@@ -175,6 +190,15 @@ export default function PaperTrading() {
     return map;
   }, [report]);
 
+  const latestVersion = useMemo(
+    () =>
+      (report?.games ?? [])
+        .map((g) => g.model_version)
+        .sort((a, b) => parseInt(a.replace(/\D/g, "") || "0", 10) - parseInt(b.replace(/\D/g, "") || "0", 10))
+        .pop() ?? "",
+    [report]
+  );
+
   const dayGraded = dayGames.filter((g) => g.status === "final" && g.valid);
   const dayCorrect = dayGraded.filter((g) => g.correct).length;
 
@@ -189,14 +213,14 @@ export default function PaperTrading() {
   };
 
   if (error) {
-    return <InlineError title={t.common.loadFailed} message={error} onRetry={load} />;
+    return <InlineError title={t.common.loadFailed} message={error} onRetry={retryLoad} />;
   }
 
   if (loading || !report) {
     return (
       <div className="space-y-4" aria-busy="true">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} height={96} />
           ))}
         </div>
@@ -253,15 +277,14 @@ export default function PaperTrading() {
   };
 
   const sectionTabs: { id: SectionTab; label: string }[] = [
-    { id: "all", label: tr ? "Tüm Görünüm" : "All Sections" },
     { id: "games", label: tr ? "Günlük Tahminler" : "Daily Predictions" },
     { id: "versions", label: tr ? "Sürüm ve Baseline" : "Versions & Baselines" },
     { id: "calibration", label: tr ? "Kalibrasyon ve Trend" : "Calibration & Trends" },
   ];
 
-  const showGames = sectionTab === "all" || sectionTab === "games";
-  const showVersions = sectionTab === "all" || sectionTab === "versions";
-  const showCalibration = sectionTab === "all" || sectionTab === "calibration";
+  const showGames = sectionTab === "games";
+  const showVersions = sectionTab === "versions";
+  const showCalibration = sectionTab === "calibration";
 
   return (
     <div className="space-y-5">
@@ -309,7 +332,7 @@ export default function PaperTrading() {
             </span>
           )}
         </div>
-        <dl className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
             label={p.accuracy}
             value={pct(s.accuracy)}
@@ -319,7 +342,6 @@ export default function PaperTrading() {
                 : p.accuracyNone
             }
           />
-          <KpiCard label={p.homeBaseline} value={pct(s.home_baseline_accuracy)} hint={p.homeBaselineHint} />
           <KpiCard
             label={p.edge}
             value={edge == null ? "-" : `${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}%`}
@@ -332,7 +354,6 @@ export default function PaperTrading() {
             hint={fill(p.gamesLoggedHint, { graded: s.games_graded, pending: s.games_pending })}
           />
           <KpiCard label={p.brier} value={num(s.brier, 3)} hint={p.brierHint} />
-          <KpiCard label={p.logLoss} value={num(s.log_loss, 3)} hint={p.logLossHint} />
         </dl>
       </section>
 
@@ -350,8 +371,8 @@ export default function PaperTrading() {
             aria-selected={sectionTab === tab.id}
             onClick={() => setSectionTab(tab.id)}
             className={`-mb-px cursor-pointer border-b-2 pb-2.5 text-sm font-medium transition-colors ${sectionTab === tab.id
-                ? "border-primary font-semibold text-text-primary"
-                : "border-transparent text-text-secondary hover:text-text-primary"
+              ? "border-primary font-semibold text-text-primary"
+              : "border-transparent text-text-secondary hover:text-text-primary"
               }`}
           >
             {tab.label}
@@ -393,8 +414,8 @@ export default function PaperTrading() {
                   type="button"
                   onClick={() => setGameFilter(id)}
                   className={`cursor-pointer rounded-sm px-2.5 py-1 tabular-nums transition-colors ${gameFilter === id
-                      ? "bg-background-primary font-semibold text-text-primary"
-                      : "text-text-secondary hover:text-text-primary"
+                    ? "bg-background-primary font-semibold text-text-primary"
+                    : "text-text-secondary hover:text-text-primary"
                     }`}
                 >
                   {label}
@@ -408,9 +429,6 @@ export default function PaperTrading() {
               <h3 className="text-sm font-semibold tabular-nums text-text-primary">
                 {activeDate ? formatDate(activeDate) : ""}
               </h3>
-              <span className="text-xs tabular-nums text-text-secondary">
-                {fill(p.winnerTableTitle, { date: activeDate ?? "", logged: s.games_logged, pending: s.games_pending })}
-              </span>
             </div>
 
             <div className="overflow-x-auto">
@@ -438,12 +456,14 @@ export default function PaperTrading() {
                           <td className="whitespace-nowrap px-4 py-3 pr-6">
                             <div className="flex items-center gap-3">
                               <MatchupCell game={g} />
-                              <span className="rounded-sm bg-background-tertiary px-1.5 py-0.5 text-xs font-medium tabular-nums text-text-secondary">
-                                {g.model_version}
-                              </span>
+                              {g.model_version !== latestVersion && (
+                                <span className="rounded-sm bg-background-tertiary px-1.5 py-0.5 text-xs font-medium tabular-nums text-text-secondary">
+                                  {g.model_version}
+                                </span>
+                              )}
                             </div>
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 tabular-nums">
+                          <td className="whitespace-nowrap px-4 py-3 tabular-nums" title={`${injurySummary(g)}\n${injuryTitle(g)}`.trim()}>
                             <div className="flex items-center gap-2">
                               <TeamLogo abbr={g.predicted_winner} name={teamName(g.predicted_winner)} size={18} />
                               <span className="font-semibold text-text-primary">{teamName(g.predicted_winner)}</span>
@@ -453,9 +473,6 @@ export default function PaperTrading() {
                             </div>
                             <p className="mt-1 text-xs text-text-secondary">
                               {p.score}: <span className="font-medium text-text-primary">{g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}</span>
-                            </p>
-                            <p className="mt-0.5 max-w-xs truncate text-xs text-text-secondary" title={injuryTitle(g)}>
-                              {injurySummary(g)}
                             </p>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 tabular-nums">
@@ -502,40 +519,7 @@ export default function PaperTrading() {
             <CalibrationChart bands={s.bands} />
           </div>
 
-          <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
-            {s.bands.length > 0 && (
-              <Card padding="none" className="overflow-hidden">
-                <div className="border-b border-border px-4 py-3">
-                  <h3 className="text-sm font-semibold text-text-primary">{p.bandsTitle}</h3>
-                  <p className="mt-0.5 text-xs text-text-secondary">{p.bandsHint}</p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-border bg-background-tertiary/60 text-xs font-semibold text-text-secondary">
-                      <tr>
-                        <th scope="col" className="px-4 py-2.5">{p.colConfidence}</th>
-                        <th scope="col" className="px-4 py-2.5 text-right">{p.colGames}</th>
-                        <th scope="col" className="px-4 py-2.5 text-right">{p.colModelSaid}</th>
-                        <th scope="col" className="px-4 py-2.5 text-right">{p.colHitRate}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-light">
-                      {s.bands.map((b) => (
-                        <tr key={b.label} className="transition-colors hover:bg-background-tertiary/40">
-                          <td className="px-4 py-2.5 font-medium tabular-nums text-text-primary">{b.label}</td>
-                          <td className="px-4 py-2.5 text-right tabular-nums text-text-secondary">{b.games}</td>
-                          <td className="px-4 py-2.5 text-right tabular-nums text-text-secondary">{pct(b.mean_confidence)}</td>
-                          <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-text-primary">{pct(b.accuracy)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            )}
-
-            <BacktestCalibration />
-          </div>
+          <BacktestCalibration />
         </div>
       )}
     </div>

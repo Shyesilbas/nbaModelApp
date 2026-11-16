@@ -7,7 +7,7 @@ import {
   Calendar,
 } from "lucide-react";
 import TeamLogo from "../TeamLogo";
-import type { GameFeedRow, GameDetail } from "../../types/gameFeed";
+import type { GameFeedRow, GameDetail, TeamRosterEntry } from "../../types/gameFeed";
 import type { TeamBoxScore, PlayerBoxScore } from "./types";
 import {
   fmtInt,
@@ -17,7 +17,8 @@ import {
   sortPlayersByMinutes,
 } from "./utils";
 import { QuarterScores } from "./QuarterScores";
-import { PeriodTabs, QuarterPlayerTable, useGameQuarters } from "./QuarterBreakdown";
+import { PeriodTabs, QuarterPlayerTable } from "./QuarterBreakdown";
+import { useGameQuarters } from "./quarters";
 import { TeamComparisonBars } from "./TeamComparisonBars";
 import { ShootingSummary } from "./ShootingSummary";
 import { TopPerformers } from "./TopPerformers";
@@ -26,7 +27,7 @@ import { HighlightsTab, type PbpData } from "./HighlightsTab";
 import { Button, Badge, Card, Skeleton } from "../common";
 import { loadPrivateApi, loadPrivateApiFresh } from "../../lib/dataCache";
 import PlayerPhoto from "../PlayerPhoto";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 export interface GameCardDetailProps {
   game: GameFeedRow;
@@ -116,15 +117,15 @@ export function GameCardDetail({
     initialHomePlayers && initialHomePlayers.length > 0
       ? initialHomePlayers
       : ((gameDetail?.home_team?.players as unknown as
-          | PlayerBoxScore[]
-          | undefined) ?? [])
+        | PlayerBoxScore[]
+        | undefined) ?? [])
   );
   const topAway: PlayerBoxScore[] = sortPlayersByMinutes(
     initialAwayPlayers && initialAwayPlayers.length > 0
       ? initialAwayPlayers
       : ((gameDetail?.away_team?.players as unknown as
-          | PlayerBoxScore[]
-          | undefined) ?? [])
+        | PlayerBoxScore[]
+        | undefined) ?? [])
   );
   const topGame = [...topHome, ...topAway].sort(
     (a, b) =>
@@ -133,68 +134,79 @@ export function GameCardDetail({
   );
 
   // For unplayed games or games without player stats, fetch team rosters, player profiles & injury report
-  const [teamRosters, setTeamRosters] = useState<any[]>([]);
+  const [teamRosters, setTeamRosters] = useState<TeamRosterEntry[]>([]);
   const [playerPositions, setPlayerPositions] = useState<Record<number, string>>({});
-  const [loadingRosters, setLoadingRosters] = useState(false);
+  const [rostersLoadedKey, setRostersLoadedKey] = useState<string | null>(null);
   const [injuries, setInjuries] = useState<Record<string, { status: string; reason?: string }>>({});
   // null when the report is known; otherwise why statuses cannot be shown (never display everyone as active)
   const [injuryUnavailable, setInjuryUnavailable] = useState<string | null>(null);
   const [notFiled, setNotFiled] = useState<Set<string>>(new Set());
 
+  const shouldFetchRosters = !isCompleted || (topHome.length === 0 && topAway.length === 0);
+  const activeSeason = season ?? game.SEASON ?? "2026-27";
+  const gameDate = game.GAME_DATE ?? "";
+  const rosterKey = `${activeSeason}|${gameDate}`;
+  const loadingRosters = shouldFetchRosters && rostersLoadedKey !== rosterKey;
+
   useEffect(() => {
-    if (!isCompleted || (topHome.length === 0 && topAway.length === 0)) {
-      setLoadingRosters(true);
-      const activeSeason = season ?? game.SEASON ?? "2026-27";
-      const gameDate = game.GAME_DATE ?? "";
+    if (!shouldFetchRosters) return;
+    let active = true;
 
-      Promise.all([
-        loadPrivateApi<any[]>(`/frontend-data-api/team-rosters?season=${encodeURIComponent(activeSeason)}`),
-        loadPrivateApi<Array<{ PLAYER_ID: number; POSITION_GROUP?: string; OFFICIAL_POSITION?: string }>>(
-          "/frontend-data-api/player-profiles"
-        ).catch(() => []),
-        loadPrivateApiFresh<{
-          entries: Array<{ player_name: string; team: string; status: string; reason?: string }>;
-          not_submitted?: string[][];
-          error?: string | null;
-        }>(
-          `/frontend-data-api/injury-report?season=${encodeURIComponent(activeSeason)}&date=${encodeURIComponent(gameDate)}`
-        ).catch((e: Error) => ({ entries: [], not_submitted: [], error: e.message })),
-      ])
-        .then(([rosterData, profileData, injuryData]) => {
-          setTeamRosters(rosterData || []);
+    Promise.all([
+      loadPrivateApi<TeamRosterEntry[]>(`/frontend-data-api/team-rosters?season=${encodeURIComponent(activeSeason)}`),
+      loadPrivateApi<Array<{ PLAYER_ID: number; POSITION_GROUP?: string; OFFICIAL_POSITION?: string }>>(
+        "/frontend-data-api/player-profiles"
+      ).catch(() => []),
+      loadPrivateApiFresh<{
+        entries: Array<{ player_name: string; team: string; status: string; reason?: string }>;
+        not_submitted?: string[][];
+        error?: string | null;
+      }>(
+        `/frontend-data-api/injury-report?season=${encodeURIComponent(activeSeason)}&date=${encodeURIComponent(gameDate)}`
+      ).catch((e: Error) => ({ entries: [], not_submitted: [], error: e.message })),
+    ])
+      .then(([rosterData, profileData, injuryData]) => {
+        if (!active) return;
+        setTeamRosters(rosterData || []);
 
-          const posMap: Record<number, string> = {};
-          (profileData || []).forEach((p) => {
-            const raw = (p.POSITION_GROUP || p.OFFICIAL_POSITION || "").toUpperCase();
-            if (raw.includes("GUARD") || raw === "G") {
-              posMap[p.PLAYER_ID] = "guard";
-            } else if (raw.includes("BIG") || raw === "C" || raw.includes("CENTER")) {
-              posMap[p.PLAYER_ID] = "center";
-            } else {
-              posMap[p.PLAYER_ID] = "forward";
-            }
-          });
-          setPlayerPositions(posMap);
+        const posMap: Record<number, string> = {};
+        (profileData || []).forEach((p) => {
+          const raw = (p.POSITION_GROUP || p.OFFICIAL_POSITION || "").toUpperCase();
+          if (raw.includes("GUARD") || raw === "G") {
+            posMap[p.PLAYER_ID] = "guard";
+          } else if (raw.includes("BIG") || raw === "C" || raw.includes("CENTER")) {
+            posMap[p.PLAYER_ID] = "center";
+          } else {
+            posMap[p.PLAYER_ID] = "forward";
+          }
+        });
+        setPlayerPositions(posMap);
 
-          const map: Record<string, { status: string; reason?: string }> = {};
-          (injuryData?.entries ?? []).forEach((e) => {
-            const key = `${e.team}_${e.player_name.toLowerCase().trim()}`;
-            map[key] = { status: e.status, reason: e.reason };
-            // Also store by name only as fallback
-            map[e.player_name.toLowerCase().trim()] = { status: e.status, reason: e.reason };
-          });
-          setInjuries(map);
-          setInjuryUnavailable(injuryData?.error ?? null);
-          setNotFiled(new Set((injuryData?.not_submitted ?? []).map((x) => x[1])));
-        })
-        .catch(() => {
-          setTeamRosters([]);
-          setInjuries({});
-          setInjuryUnavailable("Roster data could not be loaded");
-        })
-        .finally(() => setLoadingRosters(false));
-    }
-  }, [isCompleted, topHome.length, topAway.length, season, game.SEASON, game.GAME_DATE]);
+        const map: Record<string, { status: string; reason?: string }> = {};
+        (injuryData?.entries ?? []).forEach((e) => {
+          const key = `${e.team}_${e.player_name.toLowerCase().trim()}`;
+          map[key] = { status: e.status, reason: e.reason };
+          // Also store by name only as fallback
+          map[e.player_name.toLowerCase().trim()] = { status: e.status, reason: e.reason };
+        });
+        setInjuries(map);
+        setInjuryUnavailable(injuryData?.error ?? null);
+        setNotFiled(new Set((injuryData?.not_submitted ?? []).map((x) => x[1])));
+      })
+      .catch(() => {
+        if (!active) return;
+        setTeamRosters([]);
+        setInjuries({});
+        setInjuryUnavailable("Roster data could not be loaded");
+      })
+      .finally(() => {
+        if (active) setRostersLoadedKey(rosterKey);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [shouldFetchRosters, activeSeason, gameDate, rosterKey]);
 
   const getPlayerInjury = (team: string, playerName: string) => {
     const key = `${team}_${playerName.toLowerCase().trim()}`;
@@ -225,10 +237,10 @@ export function GameCardDetail({
     (p) => p.TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION
   );
 
-  const groupRosterByPosition = (roster: any[]) => {
-    const guards: any[] = [];
-    const forwards: any[] = [];
-    const centers: any[] = [];
+  const groupRosterByPosition = (roster: TeamRosterEntry[]) => {
+    const guards: TeamRosterEntry[] = [];
+    const forwards: TeamRosterEntry[] = [];
+    const centers: TeamRosterEntry[] = [];
 
     roster.forEach((p) => {
       const pos = playerPositions[p.PLAYER_ID] || "forward";
@@ -240,7 +252,7 @@ export function GameCardDetail({
     return { guards, forwards, centers };
   };
 
-  const renderPositionColumn = (title: string, players: any[], teamAbbr: string) => {
+  const renderPositionColumn = (title: string, players: TeamRosterEntry[], teamAbbr: string) => {
     return (
       <div className="flex-1 min-w-[200px]">
         <div className="flex items-center justify-between border-b border-border pb-2 mb-3">
@@ -256,17 +268,18 @@ export function GameCardDetail({
         ) : (
           <div className="space-y-2">
             {players.map((p) => {
-              const injury = getPlayerInjury(teamAbbr, p.PLAYER_NAME);
+              const playerName = p.PLAYER_NAME || `Player ${p.PLAYER_ID}`;
+              const injury = getPlayerInjury(teamAbbr, playerName);
               return (
                 <div
                   key={p.PLAYER_ID}
                   className="flex items-center justify-between gap-3 py-1.5 transition-colors hover:bg-background-tertiary/40 px-2 rounded"
-                  title={injury.reason ? `${p.PLAYER_NAME}: ${injury.label} (${injury.reason})` : `${p.PLAYER_NAME}: ${injury.label}`}
+                  title={injury.reason ? `${playerName}: ${injury.label} (${injury.reason})` : `${playerName}: ${injury.label}`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <PlayerPhoto playerId={p.PLAYER_ID} name={p.PLAYER_NAME} size={32} />
+                    <PlayerPhoto playerId={p.PLAYER_ID} name={playerName} size={32} />
                     <span className="text-xs font-medium text-text-primary truncate">
-                      {p.PLAYER_NAME}
+                      {playerName}
                     </span>
                   </div>
                   <Badge variant={injury.variant} size="sm">
@@ -281,7 +294,7 @@ export function GameCardDetail({
     );
   };
 
-  const renderRosterByPositions = (roster: any[], teamAbbr: string) => {
+  const renderRosterByPositions = (roster: TeamRosterEntry[], teamAbbr: string) => {
     const { guards, forwards, centers } = groupRosterByPosition(roster);
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1">
@@ -465,8 +478,8 @@ export function GameCardDetail({
                 {refreshDone
                   ? (language === "tr" ? "Veri Alındı" : "Cached")
                   : refreshState === "failed"
-                  ? (language === "tr" ? "Yeniden Dene" : "Retry")
-                  : (language === "tr" ? "Kutu Puanı Çek" : "Fetch Box Score")}
+                    ? (language === "tr" ? "Yeniden Dene" : "Retry")
+                    : (language === "tr" ? "Kutu Puanı Çek" : "Fetch Box Score")}
               </Button>
             )}
             {!isCompleted && onPredict && (
@@ -490,9 +503,8 @@ export function GameCardDetail({
               return (
                 <div
                   key={side}
-                  className={`flex flex-col items-center gap-2 text-center ${
-                    side === "home" ? "order-3" : "order-1"
-                  } ${isCompleted && !won ? "opacity-70" : ""}`}
+                  className={`flex flex-col items-center gap-2 text-center ${side === "home" ? "order-3" : "order-1"
+                    } ${isCompleted && !won ? "opacity-70" : ""}`}
                 >
                   <TeamLogo abbr={abbr} name={name} size={56} />
                   <div className="min-w-0 max-w-full">
@@ -571,11 +583,10 @@ export function GameCardDetail({
                 role="tab"
                 aria-selected={isTabActive}
                 onClick={() => setActiveTab(t.id)}
-                className={`border-b-2 px-3 py-3 text-xs font-medium transition-colors sm:text-sm ${
-                  isTabActive
+                className={`border-b-2 px-3 py-3 text-xs font-medium transition-colors sm:text-sm ${isTabActive
                     ? "border-primary text-text-primary font-semibold"
                     : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
-                }`}
+                  }`}
               >
                 {t.label}
               </button>

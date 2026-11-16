@@ -215,7 +215,11 @@ def paper_trading_report(season: str) -> Dict[str, Any]:
     graded = grade(read_ledger(season), load_results(season))
     graded.sort(key=lambda g: (g["game_date"], g["start_utc"], g["game_id"]), reverse=True)
     evaluation = _evaluation_view(build_report(season, graded))
-    return {"season": season, "summary": summarize(graded), "evaluation": evaluation, "games": graded}
+    # The page shows only the current release's live calls; older versions and backfill stay in the ledger.
+    release = evaluation["production_release"]
+    shown = [g for g in graded if g["model_version"] == release and g["origin"] == "live"]
+    evaluation["by_version"] = [v for v in evaluation["by_version"] if v["version"] == release and v["origin"] == "live"]
+    return {"season": season, "summary": summarize(shown), "evaluation": evaluation, "games": shown}
 
 
 WALK_FORWARD_JSON = ROOT / "reports" / "evaluation" / "multi_season_walk_forward_backtest.json"

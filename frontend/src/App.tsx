@@ -18,7 +18,8 @@ import { LanguageToggle } from "./components/common/LanguageToggle";
 import { CommandPalette } from "./components/common/CommandPalette";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { Skeleton } from "./components/common/Skeleton";
-import { useLanguage } from "./context/LanguageContext";
+import { useLanguage } from "./context/useLanguage";
+import type { TeamRosterEntry } from "./types/gameFeed";
 
 const TeamExplorer = lazy(() => import("./components/TeamExplorer"));
 const TradeBoard = lazy(() => import("./components/TradeBoard"));
@@ -33,14 +34,14 @@ const PlayerCompare = lazy(() =>
 import { loadPrivateApi } from "./lib/dataCache";
 
 const MENU_ITEMS = [
-  { id: "game-results",   labelKey: "gameResults",   icon: <CalendarDays size={16} strokeWidth={1.5} />, sectionKey: "fixtureSection" },
-  { id: "player-profile", labelKey: "playerProfile", icon: <UserCircle size={16} strokeWidth={1.5} />,  sectionKey: "playersSection" },
+  { id: "game-results", labelKey: "gameResults", icon: <CalendarDays size={16} strokeWidth={1.5} />, sectionKey: "fixtureSection" },
+  { id: "player-profile", labelKey: "playerProfile", icon: <UserCircle size={16} strokeWidth={1.5} />, sectionKey: "playersSection" },
   { id: "player-compare", labelKey: "playerCompare", icon: <ArrowLeftRight size={16} strokeWidth={1.5} />, sectionKey: null },
-  { id: "team-explorer",  labelKey: "teamExplorer",  icon: <Search size={16} strokeWidth={1.5} />,      sectionKey: "analysisSection" },
-  { id: "multi-team",     labelKey: "tradeDiscovery",icon: <RefreshCw size={16} strokeWidth={1.5} />,   sectionKey: null },
-  { id: "nba-prediction", labelKey: "predictions",    icon: <BarChart2 size={16} strokeWidth={1.5} />,   sectionKey: "modelsSection" },
-  { id: "paper-trading",  labelKey: "paperTrading",  icon: <ClipboardCheck size={16} strokeWidth={1.5} />, sectionKey: null },
-  { id: "injuries",       labelKey: "injuries",       icon: <Stethoscope size={16} strokeWidth={1.5} />,    sectionKey: null },
+  { id: "team-explorer", labelKey: "teamExplorer", icon: <Search size={16} strokeWidth={1.5} />, sectionKey: "analysisSection" },
+  { id: "multi-team", labelKey: "tradeDiscovery", icon: <RefreshCw size={16} strokeWidth={1.5} />, sectionKey: null },
+  { id: "nba-prediction", labelKey: "predictions", icon: <BarChart2 size={16} strokeWidth={1.5} />, sectionKey: "modelsSection" },
+  { id: "paper-trading", labelKey: "paperTrading", icon: <ClipboardCheck size={16} strokeWidth={1.5} />, sectionKey: null },
+  { id: "injuries", labelKey: "injuries", icon: <Stethoscope size={16} strokeWidth={1.5} />, sectionKey: null },
 ] as const;
 
 export default function App() {
@@ -122,7 +123,7 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const [rosters, setRosters] = useState<any[]>([]);
+  const [rosters, setRosters] = useState<TeamRosterEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -204,10 +205,10 @@ export default function App() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        setRosters(await loadPrivateApi<any[]>("/frontend-data-api/team-rosters"));
+        setRosters(await loadPrivateApi<TeamRosterEntry[]>("/frontend-data-api/team-rosters"));
         setLoading(false);
-      } catch (e: any) {
-        setError(e.message);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : String(e));
         setLoading(false);
       }
     };
@@ -219,9 +220,8 @@ export default function App() {
       <div className="flex min-h-screen">
         {/* ── Sidebar ── */}
         <aside
-          className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-background-primary text-text-primary lg:flex ${
-            sidebarCollapsed ? "w-16" : "w-60"
-          }`}
+          className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-background-primary text-text-primary lg:flex ${sidebarCollapsed ? "w-16" : "w-60"
+            }`}
         >
           {/* Collapse Toggle Header (Replaces former NBA Intel / Model dashboard text) */}
           <div className="flex h-14 items-center border-b border-border px-3">
@@ -231,9 +231,8 @@ export default function App() {
               title={sidebarCollapsed ? t.common.expandSidebar : t.common.collapseSidebar}
               aria-label={sidebarCollapsed ? t.common.expandSidebar : t.common.collapseSidebar}
               aria-expanded={!sidebarCollapsed}
-              className={`flex h-8 w-8 items-center justify-center rounded text-text-secondary hover:bg-background-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
-                sidebarCollapsed ? "mx-auto" : "ml-auto"
-              }`}
+              className={`flex h-8 w-8 items-center justify-center rounded text-text-secondary hover:bg-background-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${sidebarCollapsed ? "mx-auto" : "ml-auto"
+                }`}
             >
               {sidebarCollapsed ? (
                 <PanelLeft size={18} strokeWidth={1.5} />
@@ -257,11 +256,10 @@ export default function App() {
                   title={sidebarCollapsed ? item.label : undefined}
                   aria-label={sidebarCollapsed ? item.label : undefined}
                   aria-current={activeTab === item.id ? "page" : undefined}
-                  className={`flex w-full items-center gap-3 rounded px-3 py-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
-                    activeTab === item.id
+                  className={`flex w-full items-center gap-3 rounded px-3 py-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${activeTab === item.id
                       ? "bg-primary text-white"
                       : "text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
-                  } ${sidebarCollapsed ? "justify-center px-0" : ""}`}
+                    } ${sidebarCollapsed ? "justify-center px-0" : ""}`}
                 >
                   <span className={activeTab === item.id ? "text-white" : "text-text-secondary"}>
                     {item.icon}
@@ -283,7 +281,7 @@ export default function App() {
               </div>
               <span className="text-sm font-semibold text-text-primary">NBA Intel</span>
             </div>
-            
+
             {/* Global Search Bar (Trigger for Cmd+K) */}
             <div className="flex-1 max-w-md mx-2 sm:mx-0">
               <button
@@ -292,9 +290,9 @@ export default function App() {
                 aria-label={t.common.searchCmdK}
                 className="flex h-9 w-full items-center justify-between rounded border border-border bg-background-secondary px-3 text-xs text-text-muted hover:border-card-border-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
               >
-                <div className="flex items-center gap-2">
-                  <Search size={16} strokeWidth={1.5} />
-                  <span>{t.common.searchPlaceholder}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Search size={16} strokeWidth={1.5} className="shrink-0" />
+                  <span className="truncate">{t.common.searchPlaceholder}</span>
                 </div>
                 <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-secondary">
                   ⌘K
@@ -318,9 +316,8 @@ export default function App() {
                 key={item.id}
                 onClick={() => handleTabChange(item.id)}
                 aria-current={activeTab === item.id ? "page" : undefined}
-                className={`${
-                  activeTab === item.id ? "nav-btn-active nav-btn" : "nav-btn"
-                } !w-auto shrink-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus`}
+                className={`${activeTab === item.id ? "nav-btn-active nav-btn" : "nav-btn"
+                  } !w-auto shrink-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus`}
               >
                 {item.icon}
                 <span>{item.label}</span>
@@ -348,91 +345,96 @@ export default function App() {
               ) : (
                 <div className="space-y-4">
                   <ErrorBoundary resetKey={activeTab}>
-                  {activeTab === "game-results" && (
-                    <GameResults
-                      onNavigateToPrediction={(game) => {
-                        const target = {
-                          home: game.HOME_TEAM_ABBREVIATION,
-                          away: game.AWAY_TEAM_ABBREVIATION,
-                          date: game.GAME_DATE,
-                        };
-                        setPredictionTarget(target);
-                        setActiveTab("nba-prediction");
-                        updateUrlRoute({
-                          tab: "nba-prediction",
-                          predictHome: target.home,
-                          predictAway: target.away,
-                          predictDate: target.date,
-                        });
-                      }}
-                      onSelectTeam={(abbr) => {
-                        setTargetTeam(abbr);
-                        setActiveTab("team-explorer");
-                        updateUrlRoute({ tab: "team-explorer", team: abbr });
-                      }}
-                    />
-                  )}
-                  <Suspense
-                    fallback={
-                      <div className="space-y-4" aria-busy="true" aria-label={t.common.loadingScreen}>
-                        <Skeleton className="h-10 w-1/3 rounded" />
-                        <Skeleton className="h-64 w-full rounded" />
-                      </div>
-                    }
-                  >
-                    {activeTab === "player-profile" && (
-                      <PlayerPage
-                        initialPlayerId={profileTargetPlayerId}
-                        onSelectGame={(gameId) => {
-                          setActiveTab("game-results");
-                          updateUrlRoute({ tab: "game-results", gameId });
+                    {activeTab === "game-results" && (
+                      <GameResults
+                        onNavigateToPrediction={(game) => {
+                          const target = {
+                            home: game.HOME_TEAM_ABBREVIATION,
+                            away: game.AWAY_TEAM_ABBREVIATION,
+                            date: game.GAME_DATE,
+                          };
+                          setPredictionTarget(target);
+                          setActiveTab("nba-prediction");
+                          updateUrlRoute({
+                            tab: "nba-prediction",
+                            predictHome: target.home,
+                            predictAway: target.away,
+                            predictDate: target.date,
+                          });
                         }}
-                      />
-                    )}
-                    {activeTab === "paper-trading" && <PaperTrading />}
-                    {activeTab === "injuries" && <InjuriesTab />}
-                    {activeTab === "player-compare" && (
-                      <PlayerCompare
-                        initialP1Id={compareP1}
-                        initialP2Id={compareP2}
-                        onSelectPlayerProfile={(playerId) => {
+                        onSelectTeam={(abbr) => {
+                          setTargetTeam(abbr);
+                          setActiveTab("team-explorer");
+                          updateUrlRoute({ tab: "team-explorer", team: abbr });
+                        }}
+                        onSelectPlayer={(playerId) => {
                           setProfileTargetPlayerId(playerId);
                           setActiveTab("player-profile");
                           updateUrlRoute({ tab: "player-profile", playerId });
                         }}
                       />
                     )}
-                    {activeTab === "team-explorer" &&
-                      (loading ? (
-                        <div className="flex h-72 flex-col items-center justify-center gap-3">
-                          <p className="text-sm text-text-secondary">{t.team.loadingRosters}</p>
+                    <Suspense
+                      fallback={
+                        <div className="space-y-4" aria-busy="true" aria-label={t.common.loadingScreen}>
+                          <Skeleton className="h-10 w-1/3 rounded" />
+                          <Skeleton className="h-64 w-full rounded" />
                         </div>
-                      ) : (
-                        <TeamExplorer
-                          rosters={rosters}
-                          initialTeam={targetTeam ?? undefined}
-                          onSelectPlayer={(playerId) => {
+                      }
+                    >
+                      {activeTab === "player-profile" && (
+                        <PlayerPage
+                          initialPlayerId={profileTargetPlayerId}
+                          onSelectGame={(gameId) => {
+                            setActiveTab("game-results");
+                            updateUrlRoute({ tab: "game-results", gameId });
+                          }}
+                        />
+                      )}
+                      {activeTab === "paper-trading" && <PaperTrading />}
+                      {activeTab === "injuries" && <InjuriesTab />}
+                      {activeTab === "player-compare" && (
+                        <PlayerCompare
+                          initialP1Id={compareP1}
+                          initialP2Id={compareP2}
+                          onSelectPlayerProfile={(playerId) => {
                             setProfileTargetPlayerId(playerId);
                             setActiveTab("player-profile");
                             updateUrlRoute({ tab: "player-profile", playerId });
                           }}
                         />
-                      ))}
-                    {activeTab === "multi-team" && <TradeBoard />}
-                    {activeTab === "nba-prediction" && (
-                      <NbaPrediction
-                        initialGame={predictionTarget}
-                        onClearInitialGame={() => {
-                          setPredictionTarget(null);
-                          updateUrlRoute({
-                            predictHome: null,
-                            predictAway: null,
-                            predictDate: null,
-                          });
-                        }}
-                      />
-                    )}
-                  </Suspense>
+                      )}
+                      {activeTab === "team-explorer" &&
+                        (loading ? (
+                          <div className="flex h-72 flex-col items-center justify-center gap-3">
+                            <p className="text-sm text-text-secondary">{t.team.loadingRosters}</p>
+                          </div>
+                        ) : (
+                          <TeamExplorer
+                            rosters={rosters}
+                            initialTeam={targetTeam ?? undefined}
+                            onSelectPlayer={(playerId) => {
+                              setProfileTargetPlayerId(playerId);
+                              setActiveTab("player-profile");
+                              updateUrlRoute({ tab: "player-profile", playerId });
+                            }}
+                          />
+                        ))}
+                      {activeTab === "multi-team" && <TradeBoard />}
+                      {activeTab === "nba-prediction" && (
+                        <NbaPrediction
+                          initialGame={predictionTarget}
+                          onClearInitialGame={() => {
+                            setPredictionTarget(null);
+                            updateUrlRoute({
+                              predictHome: null,
+                              predictAway: null,
+                              predictDate: null,
+                            });
+                          }}
+                        />
+                      )}
+                    </Suspense>
                   </ErrorBoundary>
                 </div>
               )}

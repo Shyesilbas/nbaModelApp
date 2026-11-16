@@ -1,11 +1,12 @@
 import { Download, RefreshCw } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { TeamInfo } from "./types";
+import type { NormalizedPrediction } from "../../types/prediction";
 import { exportPredictionAsPDF } from "../../lib/predictionReport";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 interface MatchupHeroCardProps {
-  result: any;
+  result: NormalizedPrediction;
   homeInfo: TeamInfo;
   awayInfo: TeamInfo;
   winnerInfo: TeamInfo;
@@ -46,8 +47,8 @@ export function MatchupHeroCard({
   const confidenceLabel = confidence.includes("STRONG")
     ? t.predictions.highConfidence
     : confidence.includes("MODERATE")
-    ? t.predictions.moderateConfidence
-    : tr ? "Dengeli Karşılaşma" : "Balanced Matchup";
+      ? t.predictions.moderateConfidence
+      : tr ? "Dengeli Karşılaşma" : "Balanced Matchup";
 
   const isHomeWinner = winnerInfo.abbr === homeInfo.abbr;
 

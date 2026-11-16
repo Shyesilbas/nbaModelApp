@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Card, EmptyState, InlineError, Select, Skeleton } from "../common";
 import { loadPrivateApi } from "../../lib/dataCache";
 import { fill } from "../../lib/fill";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 interface CalibrationBand {
   label: string;
@@ -42,19 +42,34 @@ export default function BacktestCalibration() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(POOLED);
+  const [reloadTick, setReloadTick] = useState(0);
 
-  const load = useCallback(() => {
+  useEffect(() => {
+    let active = true;
+    loadPrivateApi<BacktestCalibrationData>("/frontend-data-api/backtest-calibration")
+      .then((res) => {
+        if (!active) return;
+        setData(res);
+        setError(null);
+      })
+      .catch((e: Error) => {
+        if (active) setError(e.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reloadTick]);
+
+  const retryLoad = useCallback(() => {
     setLoading(true);
     setError(null);
-    loadPrivateApi<BacktestCalibrationData>("/frontend-data-api/backtest-calibration")
-      .then(setData)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+    setReloadTick((n) => n + 1);
   }, []);
 
-  useEffect(load, [load]);
-
-  if (error) return <InlineError title={t.common.loadFailed} message={error} onRetry={load} />;
+  if (error) return <InlineError title={t.common.loadFailed} message={error} onRetry={retryLoad} />;
   if (loading || !data) return <Skeleton height={240} />;
   if (!data.pooled || data.seasons.length === 0) {
     return <EmptyState title={p.backtestEmptyTitle} description={p.backtestEmptyBody} />;

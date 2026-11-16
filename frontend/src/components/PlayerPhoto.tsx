@@ -11,14 +11,11 @@ type Props = {
 
 function PlayerPhotoComponent({ playerId, name, size = 44, className = "", style }: Props) {
 
-  const [failed, setFailed] = React.useState(false);
+  const [failedId, setFailedId] = React.useState<number | string | null>(null);
   const src = getPlayerHeadshotUrl(playerId);
+  const failed = !playerId || failedId === playerId;
 
-  React.useEffect(() => {
-    setFailed(false);
-  }, [playerId]);
-
-  if (!playerId || failed) {
+  if (failed) {
     return (
       <div
         className={`flex items-center justify-center rounded-full border border-border bg-background-tertiary text-xs font-medium uppercase text-text-muted ${className}`}
@@ -42,7 +39,7 @@ function PlayerPhotoComponent({ playerId, name, size = 44, className = "", style
       style={style}
       className={`rounded-full object-cover ring-1 ring-border bg-background-primary ${className}`}
 
-      onError={() => setFailed(true)}
+      onError={() => setFailedId(playerId)}
     />
   );
 }

@@ -1,5 +1,9 @@
 import { API_BASE_URL } from "../lib/constants";
+import type { InjuryReportSummary } from "../components/prediction/InjuryReportPanel";
+import type { PlayerMatchupData } from "../components/prediction/PlayerMatchupModal";
+import type { NormalizedPrediction, PredictionExplanation, RawScoreRange } from "../types/prediction";
 export { API_BASE_URL };
+export type { NormalizedPrediction };
 
 export type PlayerStatusOverride = {
   player_id?: number | string;
@@ -52,8 +56,6 @@ type RawPlayerProjection = {
   importance?: number;
 };
 
-type RawScoreRange = [number, number] | number[] | null | undefined;
-
 export type GameFullResponse = {
   win_probability: { home_win_prob: number; away_win_prob: number; model_version?: string };
   score_prediction: {
@@ -71,29 +73,32 @@ export type GameFullResponse = {
     predicted_home_off_rtg?: number | null;
     predicted_away_off_rtg?: number | null;
   };
-  injury_report?: unknown;
+  injury_report?: InjuryReportSummary | null;
   home_players?: RawPlayerProjection[];
   away_players?: RawPlayerProjection[];
-  explanation?: unknown;
+  explanation?: PredictionExplanation | null;
   is_preseason?: boolean;
   season_type?: string;
 };
 
-const normalizePlayer = (p: RawPlayerProjection) => ({
+const normalizePlayer = (p: RawPlayerProjection): PlayerMatchupData => ({
   player_id: p.player_id ?? p.player_name,
   player_name: p.player_name,
-  position_group: p.position_group,
-  predicted_pts: p.proj_pts,
-  predicted_reb: p.proj_reb,
-  predicted_ast: p.proj_ast,
-  predicted_pra: p.proj_pra,
+  position_group: p.position_group ?? "",
+  predicted_pts: p.proj_pts ?? 0,
+  predicted_reb: p.proj_reb ?? 0,
+  predicted_ast: p.proj_ast ?? 0,
+  predicted_pra: p.proj_pra ?? 0,
   predicted_min: p.proj_min,
-  status: p.status || "ACTIVE",
-  assumed_out: Boolean(p.assumed_out),
-  importance: p.importance ?? 0,
+  status: (p.status as PlayerMatchupData["status"]) || "ACTIVE",
 });
 
-export function normalizeGameFullPrediction(data: GameFullResponse, home: string, away: string, predictionDate: string) {
+export function normalizeGameFullPrediction(
+  data: GameFullResponse,
+  home: string,
+  away: string,
+  predictionDate: string
+): NormalizedPrediction {
   return {
     home_team: home,
     away_team: away,

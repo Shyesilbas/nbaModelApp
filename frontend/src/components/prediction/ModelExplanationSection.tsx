@@ -3,16 +3,8 @@ import { Info } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { TeamInfo } from "./types";
 import { formatFeatureInsight, type ExplanationContext } from "./featureLabels";
-import { useLanguage } from "../../context/LanguageContext";
-
-type FeatureImpact = {
-  feature_name: string;
-  display_name?: string;
-  category?: string;
-  value: number;
-  contribution: number;
-  influence?: "FAVORS_HOME" | "FAVORS_AWAY" | "NEUTRAL" | string;
-};
+import { useLanguage } from "../../context/useLanguage";
+import type { FeatureImpact, PredictionExplanation } from "../../types/prediction";
 
 // Tek bir sebep: lehine olan takım solda, açıklama ortada, etki payı sağda
 function ReasonRow({
@@ -93,19 +85,7 @@ function ReasonRow({
 }
 
 type PredictionResult = {
-  explanation?: {
-    win_probability?: {
-      context?: ExplanationContext;
-      features?: FeatureImpact[];
-      predicted_winner?: string;
-    };
-    score_prediction?: {
-      margin_features?: FeatureImpact[];
-      pace_features?: FeatureImpact[];
-      home_rtg_features?: FeatureImpact[];
-      away_rtg_features?: FeatureImpact[];
-    };
-  };
+  explanation?: PredictionExplanation | null;
   win_probability?: {
     predicted_winner?: string;
     home_win_probability?: number;
@@ -191,24 +171,24 @@ export function ModelExplanationSection({
 
   const top1Insight = activeFeatures[0]
     ? formatFeatureInsight(
-        activeFeatures[0].feature_name,
-        activeFeatures[0].value,
-        activeFeatures[0].influence ?? "NEUTRAL",
-        homeInfo,
-        awayInfo,
-        winContext
-      )
+      activeFeatures[0].feature_name,
+      activeFeatures[0].value,
+      activeFeatures[0].influence ?? "NEUTRAL",
+      homeInfo,
+      awayInfo,
+      winContext
+    )
     : null;
 
   const top2Insight = activeFeatures[1]
     ? formatFeatureInsight(
-        activeFeatures[1].feature_name,
-        activeFeatures[1].value,
-        activeFeatures[1].influence ?? "NEUTRAL",
-        homeInfo,
-        awayInfo,
-        winContext
-      )
+      activeFeatures[1].feature_name,
+      activeFeatures[1].value,
+      activeFeatures[1].influence ?? "NEUTRAL",
+      homeInfo,
+      awayInfo,
+      winContext
+    )
     : null;
 
   const tr = language === "tr";
@@ -218,11 +198,10 @@ export function ModelExplanationSection({
       role="tab"
       aria-selected={activeTab === id}
       onClick={() => setActiveTab(id)}
-      className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
-        activeTab === id
+      className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${activeTab === id
           ? "border-primary font-semibold text-text-primary"
           : "border-transparent text-text-secondary hover:text-text-primary"
-      }`}
+        }`}
     >
       {label}
     </button>

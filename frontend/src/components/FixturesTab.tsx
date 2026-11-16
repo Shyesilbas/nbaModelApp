@@ -21,13 +21,15 @@ import {
   type PlayerBoxScore,
   type TeamBoxScore,
 } from "./game-results";
+import type { PbpData } from "./game-results/HighlightsTab";
 import { parseUrlRoute, updateUrlRoute } from "../lib/router";
 import type { ActiveView, DayGroup, DisplayMode } from "./fixtures/types";
 import { DatePicker, InlineError, Select, Skeleton } from "./common";
 import { FixturesScheduleView } from "./fixtures/FixturesScheduleView";
+import { SeasonLeadersCard } from "./fixtures/SeasonLeadersCard";
 import { FixturesStandingsView } from "./fixtures/FixturesStandingsView";
 import { computeSeasonTeamRecords } from "../lib/teamRecords";
-import { useLanguage } from "../context/LanguageContext";
+import { useLanguage } from "../context/useLanguage";
 
 
 
@@ -38,11 +40,13 @@ export interface FixturesTabProps {
     GAME_DATE: string;
   }) => void;
   onSelectTeam?: (abbr: string) => void;
+  onSelectPlayer?: (playerId: number) => void;
 }
 
 export default function FixturesTab({
   onNavigateToPrediction,
   onSelectTeam,
+  onSelectPlayer,
 }: FixturesTabProps) {
   const { t, language, formatDate } = useLanguage();
   const [seasonsList, setSeasonsList] = useState<string[]>([
@@ -78,7 +82,9 @@ export default function FixturesTab({
     setDisplayMode(mode);
     try {
       localStorage.setItem("fixtures_display_mode", mode);
-    } catch { }
+    } catch {
+      /* ignore localStorage quota errors */
+    }
   };
 
   const [search, setSearch] = useState<string>(() => sessionStorage.getItem("nba-results-search") ?? "");
@@ -106,12 +112,13 @@ export default function FixturesTab({
       }
     >
   >({});
-  const [detailLoading, setDetailLoading] = useState<boolean>(false);
+  const [detailStatus, setDetailStatus] = useState<{ key: string; done: boolean } | null>(null);
   const [refreshingGameId, setRefreshingGameId] = useState<string | null>(null);
   const [refreshState, setRefreshState] = useState<"idle" | "running" | "failed">("idle");
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshDone, setRefreshDone] = useState<boolean>(false);
-  const [freshPlayByPlay, setFreshPlayByPlay] = useState<any>(null);
+  const [freshPlayByPlay, setFreshPlayByPlay] = useState<PbpData | null>(null);
+  const [seasonReloadTick, setSeasonReloadTick] = useState(0);
 
 
   useEffect(() => {
@@ -164,30 +171,14 @@ export default function FixturesTab({
   }, [selectedGameId]);
 
   // Load matches of selected season
-  const fetchSeasonGames = useCallback((season: string) => {
+  const retrySeasonGames = useCallback(() => {
     setLoading(true);
     setError(null);
-    loadArchivedGameIndex(season)
-      .then((rows) => {
-        const currentSeasonRows = rows.map((g) => ({ ...g, SEASON: g.SEASON ?? season }));
-        setAllResults((prev) => [
-          ...prev.filter((g) => g.SEASON !== season),
-          ...currentSeasonRows,
-        ]);
-        setResults(currentSeasonRows);
-      })
-      .catch((e) => {
-        setError(e.message);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    setSeasonReloadTick((n) => n + 1);
   }, []);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
     loadArchivedGameIndex(selectedSeason)
       .then((rows) => {
         if (!active) return;
@@ -197,6 +188,7 @@ export default function FixturesTab({
           ...currentSeasonRows,
         ]);
         setResults(currentSeasonRows);
+        setError(null);
       })
       .catch((e) => {
         if (active) setError(e.message);
@@ -207,7 +199,7 @@ export default function FixturesTab({
     return () => {
       active = false;
     };
-  }, [selectedSeason]);
+  }, [selectedSeason, seasonReloadTick]);
 
   // Filter pool based on season and season type
   const seasonPool = useMemo(() => {
@@ -350,28 +342,44 @@ export default function FixturesTab({
     ? gameDetailCache[normGid(selectedGameId)] ?? gameDetailCache[selectedGameId] ?? null
     : null;
 
+  const selectedDetailGid = selectedGameId ? normGid(selectedGameId) : null;
+  const detailLoading = Boolean(
+    selectedGame &&
+    selectedGameId &&
+    !selectedDetail &&
+    detailStatus?.key !== selectedDetailGid
+  );
+
   // Boxscore detail loading
   useEffect(() => {
     if (!selectedGame || !selectedGameId) return;
     const gid = normGid(selectedGameId);
     if (gameDetailCache[gid] || gameDetailCache[selectedGameId]) return;
-    setDetailLoading(true);
+    let active = true;
     loadArchivedGameBoxscores(selectedSeason, selectedGame.GAME_ID)
       .then((detail) => {
+        if (!active) return;
         setGameDetailCache((prev) => ({ ...prev, [gid]: detail, [selectedGameId]: detail }));
+        setDetailStatus({ key: gid, done: true });
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setDetailLoading(false));
+      .catch((e) => {
+        if (!active) return;
+        setError(e.message);
+        setDetailStatus({ key: gid, done: true });
+      });
+    return () => {
+      active = false;
+    };
   }, [selectedGame, selectedGameId, selectedSeason, gameDetailCache]);
 
   type RefreshStatus = {
     status: string;
     detail?: { team_boxscores?: { TEAM_ABBREVIATION: string; PTS: number; WL: string }[] };
-    play_by_play?: unknown;
+    play_by_play?: PbpData | null;
     error?: string;
   };
 
-  const applyRefreshed = (targetGame: GameFeedRow, status: RefreshStatus) => {
+  const applyRefreshed = useCallback((targetGame: GameFeedRow, status: RefreshStatus) => {
     const gid = normGid(targetGame.GAME_ID);
     const detailObj = status.detail as unknown as {
       game_detail: GameDetail;
@@ -405,7 +413,7 @@ export default function FixturesTab({
     setAllResults((prev) => prev.map(markFinal));
     setResults((prev) => prev.map(markFinal));
     invalidateGameIndexCache();
-  };
+  }, []);
 
   const refreshGame = useCallback(
     async (targetGame: GameFeedRow) => {
@@ -438,7 +446,7 @@ export default function FixturesTab({
         setRefreshingGameId(null);
       }
     },
-    [refreshingGameId, selectedSeason]
+    [refreshingGameId, selectedSeason, applyRefreshed]
   );
 
   // Candidates: the day has come; the backend says which have no box scores yet. One worker runs them in order.
@@ -446,28 +454,32 @@ export default function FixturesTab({
     () => (selectedDate && selectedDate <= todayStr ? sortedResults.filter((g) => g.GAME_DATE === selectedDate && isGameEligibleForRefresh(g)) : []),
     [sortedResults, selectedDate, todayStr]
   );
-  const [missingIds, setMissingIds] = useState<string[]>([]);
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchMsg, setBatchMsg] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; done: number; failed: number } | null>(null);
+  const dueKey =
+    dueGames.length > 0 && !batchRunning
+      ? `${selectedSeason}|${selectedDate}|${dueGames.map((g) => g.GAME_ID).join(",")}`
+      : null;
+  const [missingState, setMissingState] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
   useEffect(() => {
-    if (dueGames.length === 0 || batchRunning) {
-      setMissingIds([]);
-      return;
-    }
+    if (!dueKey) return;
     let active = true;
     loadPrivateApiFresh<{ missing: string[] }>(
       `/frontend-data-api/games/refresh-batch/pending?season=${encodeURIComponent(selectedSeason)}&ids=${dueGames
         .map((g) => encodeURIComponent(g.GAME_ID))
         .join(",")}`
     )
-      .then((r) => active && setMissingIds(r.missing))
-      .catch(() => active && setMissingIds([]));
+      .then((r) => active && setMissingState({ key: dueKey, ids: r.missing }))
+      .catch(() => active && setMissingState({ key: dueKey, ids: [] }));
     return () => {
       active = false;
     };
-  }, [dueGames, selectedSeason, batchRunning]);
-  const pendingDateGames = dueGames.filter((g) => missingIds.includes(normGid(g.GAME_ID)));
+  }, [dueKey, dueGames, selectedSeason]);
+  const pendingDateGames =
+    dueKey && missingState.key === dueKey
+      ? dueGames.filter((g) => missingState.ids.includes(normGid(g.GAME_ID)))
+      : [];
 
   const refreshDateGames = async () => {
     const games = pendingDateGames;
@@ -578,6 +590,27 @@ export default function FixturesTab({
     );
   }
 
+  const seasonSelect = (
+    <div className="w-28 shrink-0">
+      <Select
+        aria-label={t.common.season}
+        value={selectedSeason}
+        onChange={(e) => {
+          setLoading(true);
+          setError(null);
+          setSelectedSeason(e.target.value);
+          setSelectedGameId(null);
+        }}
+      >
+        {seasonsList.map((season) => (
+          <option key={season} value={season}>
+            {season}
+          </option>
+        ))}
+      </Select>
+    </div>
+  );
+
   return (
     <div className="space-y-5">
       <div className="space-y-3">
@@ -602,22 +635,7 @@ export default function FixturesTab({
               </button>
             ))}
           </div>
-          <div className="mb-2 w-28">
-            <Select
-              aria-label={t.common.season}
-              value={selectedSeason}
-              onChange={(e) => {
-                setSelectedSeason(e.target.value);
-                setSelectedGameId(null);
-              }}
-            >
-              {seasonsList.map((season) => (
-                <option key={season} value={season}>
-                  {season}
-                </option>
-              ))}
-            </Select>
-          </div>
+          {activeView === "table" && seasonSelect}
         </div>
 
         {activeView === "fixtures" && (
@@ -658,7 +676,7 @@ export default function FixturesTab({
                   <RefreshCw size={14} className={batchRunning ? "animate-spin text-primary" : ""} />
                   {batchRunning
                     ? language === "tr" ? "Çekiliyor..." : "Fetching..."
-                    : language === "tr" ? `Eksik kutu puanlarını çek (${pendingDateGames.length})` : `Fetch missing box scores (${pendingDateGames.length})`}
+                    : language === "tr" ? `Eksik kutu puanları (${pendingDateGames.length})` : `Missing box scores (${pendingDateGames.length})`}
                 </button>
                 {batchProgress && (
                   <div className="flex items-center gap-2 text-xs text-text-secondary">
@@ -711,8 +729,8 @@ export default function FixturesTab({
                   onClick={() => handleDisplayModeChange(mode)}
                   aria-pressed={displayMode === mode}
                   className={`inline-flex h-full items-center gap-1.5 rounded-sm px-2.5 transition-colors ${displayMode === mode
-                      ? "bg-background-primary font-semibold text-text-primary"
-                      : "text-text-secondary hover:text-text-primary"
+                    ? "bg-background-primary font-semibold text-text-primary"
+                    : "text-text-secondary hover:text-text-primary"
                     }`}
                 >
                   <Icon size={14} />
@@ -720,6 +738,8 @@ export default function FixturesTab({
                 </button>
               ))}
             </div>
+
+            {seasonSelect}
           </div>
         )}
       </div>
@@ -728,7 +748,7 @@ export default function FixturesTab({
       {error && (
         <InlineError
           message={error}
-          onRetry={() => fetchSeasonGames(selectedSeason)}
+          onRetry={retrySeasonGames}
         />
       )}
 
@@ -740,28 +760,37 @@ export default function FixturesTab({
           onSelectTeam={onSelectTeam}
         />
       ) : (
-        <FixturesScheduleView
-          loading={loading}
-          dayGroups={displayedDayGroups}
-          displayMode={displayMode}
-          teamForms={teamForms}
-          teamRecords={teamRecords}
-          onOpenGame={(gameId) => handleOpenGame(gameId, "game")}
-          onSelectTeam={onSelectTeam}
-          onPredict={(game) => {
-            if (onNavigateToPrediction) {
-              onNavigateToPrediction({
-                HOME_TEAM_ABBREVIATION: game.HOME_TEAM_ABBREVIATION,
-                AWAY_TEAM_ABBREVIATION: game.AWAY_TEAM_ABBREVIATION,
-                GAME_DATE: game.GAME_DATE,
-              });
-            }
-          }}
-          onRefresh={refreshGame}
-          refreshingGameId={refreshingGameId}
-          hasActiveSearch={Boolean(search.trim())}
-          onClearSearch={() => setSearch("")}
-        />
+        <div
+          className={displayMode === "list" ? "xl:grid xl:grid-cols-[minmax(0,42rem)_24rem] xl:items-start xl:gap-6" : ""}
+        >
+          <FixturesScheduleView
+            loading={loading}
+            dayGroups={displayedDayGroups}
+            displayMode={displayMode}
+            teamForms={teamForms}
+            teamRecords={teamRecords}
+            onOpenGame={(gameId) => handleOpenGame(gameId, "game")}
+            onSelectTeam={onSelectTeam}
+            onPredict={(game) => {
+              if (onNavigateToPrediction) {
+                onNavigateToPrediction({
+                  HOME_TEAM_ABBREVIATION: game.HOME_TEAM_ABBREVIATION,
+                  AWAY_TEAM_ABBREVIATION: game.AWAY_TEAM_ABBREVIATION,
+                  GAME_DATE: game.GAME_DATE,
+                });
+              }
+            }}
+            onRefresh={refreshGame}
+            refreshingGameId={refreshingGameId}
+            hasActiveSearch={Boolean(search.trim())}
+            onClearSearch={() => setSearch("")}
+          />
+          {displayMode === "list" && (
+            <div className="mt-5 xl:sticky xl:top-4 xl:mt-0">
+              <SeasonLeadersCard season={selectedSeason} onSelectPlayer={onSelectPlayer} />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

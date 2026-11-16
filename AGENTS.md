@@ -1,40 +1,49 @@
-# Project Rules — NBA Model App
+# nbaModelApp — Unified Agent Guide
 
-NBA maçları için makine öğrenmesi tahmin motoru, analitik veri hattı, FastAPI backend ve React/Tailwind arayüzü.
+NBA game & player ML prediction platform: Python 3.12 analytical data pipeline, FastAPI inference/store service (`src/`), and React 19 / TypeScript / Tailwind frontend (`frontend/`). Single source of truth for all AI agents (`CLAUDE.md`, `GEMINI.md`, `CODEX.md` point here).
 
-## Uzmanlaşmış Agent Skill'leri (`.agents/skills/`)
-Detaylı iş akışları ve standartlar `.agents/skills/` altındadır; ilgili görevlerde mutlaka bu skill'leri oku ve uygula:
-- **`quant-model-experiment-and-audit`** (`.agents/skills/quant-model-experiment-and-audit/SKILL.md`): Model deneyleri, özellik ablasyonları, sıfır sızıntı (`shift(1)` ve OOF kalibrasyon), kilitli sezon (`2026-27`), dış sezon skill gate (saf Elo / prior karşılaştırması), bootstrap CI, train-serve paritesi ve rapor/registry güncelleme zinciri.
-- **`sports-pipeline-and-paper-trading`** (`.agents/skills/sports-pipeline-and-paper-trading/SKILL.md`): Günlük veri çekme/ETL, BoxScoreTraditionalV3 ilk 5 takibi, SQLite frontend store (`data/frontend_store/season_YYYY_YY.db`), maç öncesi dondurulmuş tahmin kaydı (`paper_ledger_2026_27.jsonl`) ve shadow logging.
-- **`restrained-ui-design-standard`** (`.agents/skills/restrained-ui-design-standard/SKILL.md`): Apple/Spotify-tier sade arayüz tasarım kuralları, semantik tokenlar, radius tavanı (`rounded-md`), 4 veri durumu (loading/empty/error/pending) ve iş bitimi zorunlu lint/regex kontrolleri.
+## Commands
+- **Start all:** `./scripts/start_all.sh` (FastAPI `127.0.0.1:8001`, Vite `localhost:5173`; API only: `.venv/bin/python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001`).
+- **Daily update & store:** `PYTHONPATH=. python3 main.py --update-data` | `PYTHONPATH=. python3 scripts/build_frontend_store.py`.
+- **Paper trading & reports:** `PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --season 2026-27` | `PYTHONPATH=. python3 scripts/paper_ledger_report.py --season 2026-27` | `PYTHONPATH=. python3 scripts/refresh_reports.py`.
+- **Walk-forward benchmark:** `PYTHONPATH=. python3 scripts/walk_forward_benchmark.py`.
+- **Tests & audits:** `PYTHONPATH=. python3 -m pytest tests -q` | `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py`.
+- **Frontend:** `cd frontend && npm run dev | lint:design | lint | build`.
+- **Verify:** `./scripts/verify.sh` = `python3 scripts/check_no_emoji.py` + `python3 scripts/check_docs.py` + `python3 scripts/check_api_endpoints.py` + `pytest tests/test_docs_consistency.py -q` + frontend `lint:design`, `lint` & `build`.
 
-## Hızlı Komutlar
-- **Uygulamayı Başlat (Backend + Frontend):** `./scripts/start_all.sh` (yalnız API: `.venv/bin/python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001`)
-- **Günlük Veri Güncelleme:** `PYTHONPATH=. python3 main.py --update-data`
-- **Maç Öncesi Tahmin Kaydı (Paper Trading):** `PYTHONPATH=. python3 scripts/paper_trading_snapshot.py --season 2026-27`
-- **Paper Trading Raporu (Elo / son-10 baseline, bootstrap CI):** `PYTHONPATH=. python3 scripts/paper_ledger_report.py --season 2026-27`
-- **Tüm Raporları ve Doküman Rakamlarını Yenile (günlük `morning.py` ve retrain sonrası otomatik):** `PYTHONPATH=. python3 scripts/refresh_reports.py`
-- **Walk-Forward Benchmark Raporu:** `PYTHONPATH=. python3 scripts/walk_forward_benchmark.py`
-- **Frontend SQLite Store Derleme:** `PYTHONPATH=. python3 scripts/build_frontend_store.py`
-- **Testleri Çalıştır:** `PYTHONPATH=. python3 -m pytest tests -q`
-- **Frontend Geliştirme & Doğrulama:** `cd frontend && npm run lint:design && npm run build`
-- **Veritabanı Sorgulama:** `sqlite3 data/frontend_store/season_2025_26.db "SELECT ... LIMIT 5;"` (`.db` ve `.parquet` dosyalarını asla metin olarak doğrudan okuma).
+## Skills (`.agents/skills/`, symlinked as `.claude/skills`)
+Load the matching skill before modifying code.
 
-## Mimari Özeti & Dokümantasyon Haritası
-- **Aktif Üretim Modelleri (`models/production/`):**
-  - Release `v15` (`config/production_artifacts.yaml`; her `*_metadata.json` aynı sürümü taşır).
-  - `win_model.pkl`: 11 özellikli Lojistik Regresyon (Elo farkı, dinlenme, B2B, temiz net rating, `ABS_DIFF`, `MISSING_ROT_MINS_DIFF`, `ROT_CONTINUITY_DIFF`, `ACTIVE_WT_GS_DIFF`).
-  - `score_model_*.pkl`: Ridge pace (2 özellik), hücum reytingi (4 özellik her biri), Ridge sayı farkı (11 özellik, WIN girdi seti) ve temporal OOF artık düzeltmeleri; hedefler gerçek sayılardır.
-  - `player_model_*.pkl`: 24 özellikli LightGBM (tüm hedeflerde L1 medyan), pozisyon bayrakları, pozisyona izin verilen rakip savunması ve takım rotasyon bağlamı.
-- **Referans Belgeler (Tek Kaynak Sırası):**
-  1. `ARTIFACT_REGISTRY.md` — Veri, model ve rapor envanteri.
-  2. `PROJECT_STATUS.md` — Güncel sezon, model durumu ve bilinen sınırlar.
-  3. `docs/reports/models/*.md` — Her modelin kendi mimari, denetim ve reddedilen deney raporu (`win_probability_model.md`, `score_model.md`, `player_props_model.md`).
-  4. `docs/reports/nba_models_comprehensive_report.md` — Ana rapor indeksi.
-  5. `AI_CONTEXT.md` — Makine okunabilir özet ve veri/API şema kataloğu.
-  6. Otomatik raporlar (`reports/evaluation/multi_season_walk_forward_backtest.md` <- `scripts/walk_forward_benchmark.py`, `reports/evaluation/paper_ledger_2026_27.md` <- `scripts/paper_ledger_report.py`) elle düzenlenmez; başlık rakamları bu raporlardan alınır. Model yeniden eğitildiğinde walk-forward raporu yeniden üretilir (`tests/test_docs_consistency.py` sürüm uyuşmazlığını yakalar).
+| Touching | Skill |
+|---|---|
+| Model experiments, feature ablations, walk-forward backtests, calibration, promotions | `quant-model-experiment-and-audit` |
+| Data ingestion, ETL, early-season priors, SQLite frontend store, paper trading ledger | `sports-pipeline-and-paper-trading` |
+| Any doc, README, report, skill or `AGENTS.md` edit | `docs-drift-audit` |
+| Frontend UI component, view, chart, table or style | `restrained-ui-design-standard` |
 
-## Kod ve Bağlam Verimliliği
-- **Sıfır Emoji:** Kod, yorum satırı, docstring, commit mesajı, UI ve raporlarda kesinlikle emoji kullanma.
-- **Nokta Atışı Okuma ve Düzenleme:** Büyük dosyaları tamamen okumak yerine `grep` ve satır aralıklı okuma kullan; veri dosyalarında yalnızca şema veya ilk birkaç satırı incele.
-- **Kilitli Sezon:** `2026-27` sezonu sadece prospektif izleme içindir; asla model eğitimi, hiperparametre optimizasyonu veya özellik seçimi için kullanılmaz.
+## Active Production Models (`v15`)
+Release `v15` (`config/production_artifacts.yaml`; every `*_metadata.json` carries the same version):
+- `win_model.pkl` (11 features, uncalibrated Logistic Regression: Elo diff, rest, B2B, clean net rating, `ABS_DIFF`, `MISSING_ROT_MINS_DIFF`, `ROT_CONTINUITY_DIFF`, `ACTIVE_WT_GS_DIFF`).
+- `score_model_*.pkl` (Ridge pace on 2 features, home/away offensive rating on 4 features each, 11-feature margin model, and temporal OOF residual corrections; actual-point targets).
+- `player_model_*.pkl` (24 features, LightGBM with unified L1 median objectives across PTS, REB, AST; position flags, opponent allowances, team rotation context).
+
+## Invariants
+- **Zero emoji** in code, comments, docstrings, UI text, reports, and git commits. Use `lucide-react` icons.
+- **Pre-game leakage boundary (`shift(1)`):** All rolling, EWMA, Elo, allowance, and availability features must use only prior games; 100% train-serve parity across offline builders (`src/features/`) and live inference (`src/api/services/`, `src/inference/`).
+- **Locked season `2026-27`:** Strictly for prospective paper-trading evaluation; never train, tune hyperparameters, or select features on it.
+- **Production safety:** Never overwrite `models/production/*` or `config/production_artifacts.yaml` silently; write experiments to `models/experimental/`, `data/experimental/`, or `reports/backtests/`.
+- **One home per fact:** Module rules live in `src/<module>/README.md` and `frontend/src/<module>/README.md`; cross-module guides and registries live in `docs/`; generated and frozen evaluations live in `reports/`. Generated blocks (`<!-- BEGIN GENERATED: ... -->`) are rewritten only by `scripts/refresh_reports.py`.
+- **Never read:** raw `.csv`, `.jsonl`, `.db`, `.pkl` files or `node_modules/`, `dist/`, `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `__pycache__/`, `graphify-out/`, `.git/`. Inspect schemas with `head -n 5` or `sqlite3 data/frontend_store/season_2025_26.db "SELECT ... LIMIT 5;"`.
+
+## Project Map & Risk Tiers
+| Group | Modules | Risk |
+|---|---|---|
+| Modeling & Inference | `features`, `training`, `inference`, `evaluation` | High |
+| Data & Storage | `ingestion`, `processing`, `validation`, `frontend_store`, `analysis` | High |
+| Serving & Orchestration | `api`, `orchestration`, `core` | Medium |
+| Frontend (`frontend/src/`) | `api`, `components`, `lib`, `context`, `i18n`, `types` | Medium |
+
+## Where to Look
+1. **Module hub first:** `src/<module>/README.md` (frontend: `frontend/src/<module>/README.md` and `frontend/README.md`).
+2. **Cross-module guides, registries & model specs:** `docs/README.md` (`docs/artifact_registry.md`, `docs/project_status.md`, `docs/reports/models/*.md`).
+3. **Generated & frozen evaluation records:** `reports/README.md`.

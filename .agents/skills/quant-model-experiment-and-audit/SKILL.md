@@ -12,69 +12,34 @@ description: >-
 Follow this workflow whenever evaluating new features, tuning model hyperparameters, auditing model behavior, or updating model reports.
 
 ## 1. Pre-Flight & Production Safety
-
-1. **Read Registry & Status First**:
-   - Check `ARTIFACT_REGISTRY.md` and `PROJECT_STATUS.md` before touching any code or data.
-2. **Never Overwrite Production Silently**:
-   - Never overwrite artifacts under `models/production/` or production manifests (`config/production_artifacts.yaml`) during analysis or experimentation.
-   - Write all experimental outputs to `models/experimental/`, `data/experimental/`, `research/`, or `reports/backtests/YYYY-MM-DD_<topic>/`.
-3. **Zero Emoji in Code & Artifacts**:
-   - Never place emojis in Python code, comments, docstrings, commit messages, or markdown reports.
-4. **Reproducibility & Seed Management**:
-   - Explicitly seed all stochastic processes (train/test splits, bootstrap resampling, model initialization, CV folds). Report seeds in experiment headers and verify bitwise determinism.
+1. **Read Registry & Status First:** Check [`docs/artifact_registry.md`](../../../docs/artifact_registry.md) and [`docs/project_status.md`](../../../docs/project_status.md) before touching code or data.
+2. **Never Overwrite Production Silently:** Never overwrite `models/production/` or `config/production_artifacts.yaml` during experiments. Write experimental outputs to `models/experimental/`, `data/experimental/`, or `reports/backtests/YYYY-MM-DD_<topic>/`.
+3. **Zero Emoji & Deterministic Seeds:** Zero emojis in code, comments, docstrings, or reports. Seed all stochastic steps (splits, bootstrap, model init, CV) and record seeds in experiment headers.
 
 ## 2. Strict Zero-Leakage & Validation Protocol
-
-1. **Strict Pre-Game Boundaries (`shift(1)`)**:
-   - Every rolling, EWMA, form, usage, opponent allowance, or Elo feature must strictly use information available prior to tip-off / kickoff (`shift(1)` on chronologically sorted game logs).
-   - Post-game statistics (e.g., realized match xG, actual minutes played tonight, overtime points) must never enter pre-game feature columns.
-2. **Out-of-Fold Calibrators & Shrinkage**:
-   - Fit all post-processing calibrators (Platt, temperature scaling, beta, isotonic) and shrinkage/prior weights (`alpha`, floor thresholds, blend decay windows) strictly inside training folds or expanding walk-forward splits. Never tune them on holdout or evaluation seasons.
-   - Explicitly label any in-sample diagnostic metric as in-sample; never present it as generalization performance.
-3. **Locked / Active Season Rule**:
-   - The active in-progress season (e.g., `2026-27`) is locked for prospective monitoring. Do not use it to select features, tune hyperparameters, or make deployment decisions.
-4. **Expanding-Window Walk-Forward & Outer-Season Evaluation**:
-   - Evaluate candidates across multiple unseen historical seasons using expanding-window walk-forward validation (each season predicted by a model fit strictly on earlier seasons).
+1. **Pre-Game Boundaries (`shift(1)`):** Rolling, EWMA, form, usage, opponent allowance, and Elo features must strictly use games completed prior to tip-off (`shift(1)` on chronologically sorted logs). Post-game stats must never enter feature columns.
+2. **Out-of-Fold Calibrators & Shrinkage:** Fit all post-processing calibrators, residual corrections, and early-season prior weights strictly inside training folds or expanding walk-forward splits—never on holdout or evaluation seasons. Label in-sample metrics explicitly.
+3. **Locked Season Rule (`2026-27`):** The active season is strictly for prospective monitoring. Never use it for feature selection, hyperparameter tuning, or deployment decisions.
+4. **Expanding-Window Walk-Forward:** Evaluate candidates across multiple unseen historical seasons where each test season is predicted by models fit strictly on earlier seasons.
 
 ## 3. Hypothesis-Driven Diagnosis & Baseline Skill Gates
-
-1. **Diagnose Before Algorithm Hopping**:
-   - When a model underperforms on a cohort, test foundational distribution assumptions first (e.g., dispersion index $\sigma^2/\mu$, Chi-square goodness-of-fit for Poisson overdispersion) and inspect feature variances/correlations before switching algorithms (e.g., jumping to XGBoost).
-   - Measure feature utility via permutation importance, SHAP, or multi-season ablation—never raw regression coefficients alone (collinear features can have large coefficients with near-zero permutation $\Delta \text{LL}$).
-2. **Mandatory Baseline Comparison (Skill Gate)**:
-   - Always benchmark candidates against strong, honest pre-game baselines:
-     - **Win / 1X2 Probability**: Pure Elo + Home advantage, or historical base rates.
-     - **Score / Goals / Totals**: Last-10 / EMA-10 actual points, prior-season team means, or `training_mean`.
-     - **Player / Count Props**: EMA-10 per-game average or `training_mean` + outer-season gate.
-   - **Gate Criterion**: A feature or model passes only if it beats the baseline on primary proper scoring rules (Log-Loss, Brier, MAE, RMSE) across the majority of unseen outer seasons.
-3. **Statistical Rigor, Power Analysis & Multiple Testing**:
-   - **Bootstrap CI**: For sample sizes $N < 500$, compute a 10,000-iteration bootstrap 95% Confidence Interval on the metric delta ($\Delta \text{LL}$, $\Delta \text{Brier}$, $\Delta \text{MAE}$).
-   - **Power Analysis**: If the 95% CI spans zero ($p \ge 0.05$), document that the difference is within noise margins and state the required sample size:
-     $$N_{\text{req}} = \frac{(Z_{\alpha/2} + Z_\beta)^2 \cdot \sigma^2}{\Delta^2}$$
-     where $Z_{\alpha/2} = 1.96$ ($\alpha=0.05$) and $Z_\beta = 0.8416$ ($80\%$ power).
-   - **Multiple Testing**: When testing $k > 1$ segments, hypotheses, or markets, apply Bonferroni or Benjamini-Hochberg FDR correction.
-4. **Honest Rejection ("No Gain — Not Adopted")**:
-   - If an experiment fails the skill gate or adds complexity for negligible gain (e.g., $< 0.01$ MAE on points or $< 0.0005$ Log-Loss), **do not adopt it**. Keep the simpler production configuration and record the negative result in the backtest/model report so it is not re-tested later.
+1. **Diagnose Before Algorithm Hopping:** Test distribution assumptions, variances, and collinearity (`check_feature_matrix`) before switching model families. Measure feature utility via permutation importance (`permutation_contribution`), SHAP, or multi-season ablation—never raw collinear regression weights alone.
+2. **Mandatory Baseline Skill Gates:**
+   - **WIN Probability:** Pure Elo + Home advantage.
+   - **SCORE (Total / Margin):** Last-10 / EMA-10 actual points or prior-season team means.
+   - **PLAYER Props (PTS/REB/AST):** EMA-10 per-game averages.
+   - **Gate Criterion:** Pass only if beating the baseline on proper scoring rules (Log-Loss, Brier, MAE, RMSE) across the majority of unseen outer seasons.
+3. **Statistical Rigor & Power Analysis:** Compute 10,000-iteration date-block bootstrap 95% CIs (`paired_block_bootstrap`) on metric deltas. When the CI spans zero ($p \ge 0.05$), document noise margins and compute required sample size $N_{\text{req}} = (Z_{\alpha/2} + Z_\beta)^2 \sigma^2 / \Delta^2$ ($Z_{\alpha/2}=1.96$, $Z_\beta=0.8416$). Apply Bonferroni or Benjamini-Hochberg FDR when testing $k > 1$ segments or markets.
+4. **Honest Rejection ("No Gain — Not Adopted"):** Reject experiments that fail skill gates or add complexity for negligible gain (e.g., `< 0.01` MAE or `< 0.0005` Log-Loss). Keep the simpler model and record the negative result in `reports/backtests/`.
 
 ## 4. Train-Serve Parity & Cross-Market Coherence
+1. **Train-Serve Skew Audit:** Verify that `src/api/services/`, `src/inference/`, and CLI predictors call the exact same feature builders (`build_features`, `build_absence_deltas`, `add_player_matchup_features`, early-season blends) as offline training.
+2. **Coherent Predictions:** Winner calls come from the dedicated WIN model (`WinPredictor`). Team-level score projections and player projections remain reconciled via `team_reconciliation`.
 
-1. **Train-Serve Skew Audit**:
-   - Verify that live inference code paths (FastAPI endpoints, CLI predictors, daily schedule runners) produce identical feature values and post-processing adjustments (early-season blends, residual corrections, injury/absence deltas) as the offline training dataset builder.
-2. **Coherent Multi-Market Probabilities**:
-   - Winner prediction must come from the dedicated Win / 1X2 probability model (or a score matrix explicitly aligned to it).
-   - Multi-threshold probabilities ($P(\text{Over } 1.5) \ge P(\text{Over } 2.5) \ge P(\text{Over } 3.5)$, $P(\text{BTTS})$) must remain monotonic and derived from a single coherent distribution/matrix $M_{ij}$.
-
-## 5. Documentation & Registry Synchronization Chain
-
-Whenever a model changes, an audit concludes, or a backtest is finalized, update documents in this exact order using metrics read directly from the generated artifact/JSON files (never copy-paste stale numbers from prose):
-
-1. **Experiment / Model Report**:
-   - Create or update `reports/backtests/YYYY-MM-DD_<topic>/README.md` (with reproducible scripts in `code/`) or `docs/reports/models/<model>.md`.
-2. **Artifact Registry**:
-   - Register new active datasets, backtest reports, or promoted model artifacts in `ARTIFACT_REGISTRY.md`.
-3. **Project Status**:
-   - Log the completed work, key metric deltas, and current production status in `PROJECT_STATUS.md`.
-4. **Root Overview**:
-   - Update benchmark tables in `README.md` (and `AI_CONTEXT.md` if present) if headline metrics or model versions changed.
-5. **Verification**:
-   - Run the test suite (`PYTHONPATH=. python3 -m pytest tests -q`) and structure audits (`scripts/audit/validate_project_structure.py` if present) before finishing.
+## 5. Documentation & Registry Sync Chain
+Whenever a model changes, an audit concludes, or a backtest finalizes, read metrics directly from generated JSONs and update in order:
+1. Create or update `reports/backtests/YYYY-MM-DD_<topic>/README.md` (with script in `code/`) or `docs/reports/models/<model>.md`.
+2. Register new active datasets, reports, or promoted artifacts in `docs/artifact_registry.md`.
+3. Log completed milestones and status in `docs/project_status.md`.
+4. Refresh generated reports & blocks via `PYTHONPATH=. python3 scripts/refresh_reports.py`.
+5. Run `./scripts/verify.sh` and `PYTHONPATH=. python3 scripts/audit/validate_project_structure.py`.

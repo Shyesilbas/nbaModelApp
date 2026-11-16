@@ -4,7 +4,7 @@ import PlayerPhoto from "../PlayerPhoto";
 import { EmptyState, InlineError, Skeleton } from "../common";
 import { loadPrivateApi } from "../../lib/dataCache";
 import type { TeamInfo } from "./types";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 export interface PlayerMatchupData {
   player_id: number | string;
@@ -268,24 +268,24 @@ export function PlayerMatchupModal({
       parts.push(
         language === "tr"
           ? `Skor modeli senkronizasyonu: Ham bireysel model tahmini ${player.raw_pts.toFixed(1)} PTS iken, ` +
-            `takımın hedeflenen maç skoru doğrultusunda ${player.scale_factor.toFixed(3)}x katsayısı (${isPositive ? "+" : ""}${scalePercent}%) uygulanarak ${player.predicted_pts.toFixed(1)} PTS olarak kalibre edilmiştir.`
+          `takımın hedeflenen maç skoru doğrultusunda ${player.scale_factor.toFixed(3)}x katsayısı (${isPositive ? "+" : ""}${scalePercent}%) uygulanarak ${player.predicted_pts.toFixed(1)} PTS olarak kalibre edilmiştir.`
           : `Score model synchronization: Unconstrained individual projection was ${player.raw_pts.toFixed(1)} PTS, ` +
-            `calibrated by ${player.scale_factor.toFixed(3)}x (${isPositive ? "+" : ""}${scalePercent}%) to match projected team totals at ${player.predicted_pts.toFixed(1)} PTS.`
+          `calibrated by ${player.scale_factor.toFixed(3)}x (${isPositive ? "+" : ""}${scalePercent}%) to match projected team totals at ${player.predicted_pts.toFixed(1)} PTS.`
       );
     }
 
     return parts;
-  }, [player, stats5, seasonAverages, teamInfo, opponentInfo]);
+  }, [player, stats5, seasonAverages, teamInfo, opponentInfo, language]);
 
   if (!player) return null;
 
   const tr = language === "tr";
   const statusText =
     player.status === "OUT" ? { text: "OUT", cls: "text-status-error" }
-    : player.status === "RESTRICTED" ? { text: tr ? "Kısıtlı" : "Restricted", cls: "text-status-warning" }
-    : player.status === "DOUBTFUL" ? { text: tr ? "Şüpheli" : "Doubtful", cls: "text-status-warning" }
-    : player.status === "QUESTIONABLE" ? { text: tr ? "Belirsiz" : "Questionable", cls: "text-status-warning" }
-    : null;
+      : player.status === "RESTRICTED" ? { text: tr ? "Kısıtlı" : "Restricted", cls: "text-status-warning" }
+        : player.status === "DOUBTFUL" ? { text: tr ? "Şüpheli" : "Doubtful", cls: "text-status-warning" }
+          : player.status === "QUESTIONABLE" ? { text: tr ? "Belirsiz" : "Questionable", cls: "text-status-warning" }
+            : null;
 
   const projection = [
     { unit: "PTS", val: player.predicted_pts, strong: true },
@@ -296,16 +296,16 @@ export function PlayerMatchupModal({
 
   const compareRows = stats5
     ? [
-        { metric: "PTS", season: seasonAverages?.PTS, l5: stats5.pts, model: player.predicted_pts },
-        { metric: "REB", season: seasonAverages?.REB, l5: stats5.reb, model: player.predicted_reb },
-        { metric: "AST", season: seasonAverages?.AST, l5: stats5.ast, model: player.predicted_ast },
-        {
-          metric: "PRA",
-          season: (seasonAverages?.PTS || 0) + (seasonAverages?.REB || 0) + (seasonAverages?.AST || 0),
-          l5: stats5.pra,
-          model: player.predicted_pra,
-        },
-      ]
+      { metric: "PTS", season: seasonAverages?.PTS, l5: stats5.pts, model: player.predicted_pts },
+      { metric: "REB", season: seasonAverages?.REB, l5: stats5.reb, model: player.predicted_reb },
+      { metric: "AST", season: seasonAverages?.AST, l5: stats5.ast, model: player.predicted_ast },
+      {
+        metric: "PRA",
+        season: (seasonAverages?.PTS || 0) + (seasonAverages?.REB || 0) + (seasonAverages?.AST || 0),
+        l5: stats5.pra,
+        model: player.predicted_pra,
+      },
+    ]
     : [];
 
   return (

@@ -4,7 +4,8 @@ import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { fmtTipoffTR, isGameEligibleForRefresh } from "../game-results/utils";
 import { TEAM_NAME_BY_ABBR, getTeamShortName, isKnownTeamAbbr } from "../../lib/nbaTeams";
-import { useLanguage } from "../../context/LanguageContext";
+import { FormDots } from "./FormDots";
+import { useLanguage } from "../../context/useLanguage";
 
 interface FixtureMatchRowProps {
   game: GameFeedRow;
@@ -48,7 +49,6 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
 
   const awayWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === awayAbbr;
   const homeWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === homeAbbr;
-  const margin = isCompleted ? Math.abs((Number(game.HOME_SCORE) || 0) - (Number(game.AWAY_SCORE) || 0)) : 0;
 
   const side = (
     abbr: string,
@@ -66,7 +66,7 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
 
     return (
       <div
-        className={`flex min-w-0 items-center gap-2.5 sm:gap-3 ${align === "right" ? "justify-end text-right" : "justify-start text-left"
+        className={`flex min-w-0 items-center gap-1.5 sm:gap-3 ${align === "right" ? "justify-end text-right" : "justify-start text-left"
           }`}
       >
         {align === "left" && <TeamLogo abbr={abbr} name={fullName} size={28} className="shrink-0" />}
@@ -81,8 +81,7 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
               } ${teamTextClass}`}
             title={fullName}
           >
-            <span className="hidden md:inline">{fullName}</span>
-            <span className="md:hidden">{getTeamShortName(abbr, fullName)}</span>
+            {getTeamShortName(abbr, fullName)}
           </button>
           {(record || form.length > 0) && (
             <div
@@ -90,15 +89,7 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
                 }`}
             >
               {record && <span className="font-medium text-text-secondary">{record}</span>}
-              {form.length > 0 && (
-                <span className="hidden items-center gap-0.5 font-medium lg:inline-flex" title={tr ? "Son 5 maç" : "Last 5 games"}>
-                  {form.map((res, i) => (
-                    <span key={i} className={res === "W" ? "text-status-success" : "text-status-error"}>
-                      {res === "W" ? (tr ? "G" : "W") : tr ? "M" : "L"}
-                    </span>
-                  ))}
-                </span>
-              )}
+              <FormDots form={form} className="hidden lg:inline-flex" />
             </div>
           )}
         </div>
@@ -121,23 +112,15 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
   return (
     <div
       onClick={onOpen}
-      className="group grid cursor-pointer grid-cols-[72px_1fr_auto] items-center gap-2.5 px-3.5 py-3 transition-colors hover:bg-background-tertiary sm:grid-cols-[96px_1fr_132px] sm:gap-4 sm:px-4 sm:py-3.5"
+      className={`group grid cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors hover:bg-background-tertiary sm:grid-cols-[1fr_132px] sm:gap-4 sm:px-4 sm:py-2 grid-cols-[1fr_auto]`}
     >
-      <div className="shrink-0">
-        <span
-          className={`inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-medium tabular-nums ${isCompleted
-            ? "bg-background-tertiary text-text-secondary"
-            : "bg-background-tertiary text-text-primary"
-            }`}
-        >
-          {statusText}
-        </span>
-      </div>
-
-      <div className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
+      <div className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-4">
         {side(awayAbbr, awayFullName, awayRecord, awayForm, awayWon, "right")}
 
-        <div className="flex min-w-[76px] shrink-0 items-center justify-center text-center tabular-nums sm:min-w-[96px]">
+        <div className="flex shrink-0 items-center justify-center text-center tabular-nums sm:min-w-[96px]">
+          {!isCompleted && (
+            <span className="inline-flex items-center whitespace-nowrap rounded-sm bg-background-tertiary px-1.5 py-1 text-xs font-medium tabular-nums text-text-primary sm:px-2.5 sm:text-sm">{statusText}</span>
+          )}
           {isCompleted && (
             <div className="inline-flex items-center justify-center gap-1.5 rounded bg-background-tertiary px-2.5 py-1 text-sm sm:text-base">
               <span className={awayWon ? "font-semibold text-text-primary" : "font-medium text-text-secondary"}>
@@ -159,33 +142,37 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
           <button
             type="button"
             disabled={isRefreshing}
+            aria-label={tr ? "Yenile" : "Refresh"}
             onClick={(event) => {
               event.stopPropagation();
               onRefresh?.();
             }}
-            className="hidden items-center gap-1 rounded-sm border border-border bg-background-primary px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:border-card-border-hover hover:text-text-primary disabled:opacity-50 sm:inline-flex"
+            className="inline-flex items-center gap-1 rounded-sm border border-border bg-background-primary px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:border-card-border-hover hover:text-text-primary disabled:opacity-50"
           >
             <RefreshCw size={12} className={isRefreshing ? "animate-spin text-primary" : ""} />
-            {isRefreshing ? "..." : tr ? "Yenile" : "Refresh"}
+            <span className="hidden sm:inline">{isRefreshing ? "..." : tr ? "Yenile" : "Refresh"}</span>
           </button>
         ) : isCompleted ? (
-          <p className="hidden text-right text-xs font-medium tabular-nums text-text-secondary sm:block">
-            {[margin > 0 ? `+${margin}` : null, ...extra].filter(Boolean).join(" · ")}
-          </p>
+          extra.length > 0 && (
+            <p className="hidden text-right text-xs font-medium tabular-nums text-text-secondary sm:block">
+              {extra.join(" · ")}
+            </p>
+          )
         ) : onPredict ? (
           <button
             type="button"
+            aria-label={tr ? "Tahmin" : "Predict"}
             onClick={(event) => {
               event.stopPropagation();
               onPredict();
             }}
-            className="hidden items-center gap-1 rounded-sm bg-primary/10 px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 sm:inline-flex"
+            className="inline-flex items-center gap-1 rounded-sm bg-primary/10 px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
           >
             <Sparkles size={12} />
-            {tr ? "Tahmin" : "Predict"}
+            <span className="hidden sm:inline">{tr ? "Tahmin" : "Predict"}</span>
           </button>
         ) : null}
-        <ChevronRight size={16} className="text-text-secondary transition-colors group-hover:text-text-primary" />
+        <ChevronRight size={16} className="hidden text-text-secondary sm:block transition-colors group-hover:text-text-primary" />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import TeamLogo from "../TeamLogo";
 import { teamFull } from "./utils";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 export interface QuarterScoresProps {
   homeAbbr: string;
@@ -25,7 +25,6 @@ export function QuarterScores({
   homeScore,
   awayScore,
   winnerAbbr,
-  margin,
 }: QuarterScoresProps) {
   const { language } = useLanguage();
   const hasQS =
@@ -49,15 +48,7 @@ export function QuarterScores({
           <h3 className="text-sm font-semibold text-text-primary">
             {language === "tr" ? "Periyot Skorları" : "Quarter Scores"}
           </h3>
-          <p className="mt-0.5 text-xs text-text-secondary">
-            {language === "tr" ? "Çeyrek ve uzatma bazında skor dağılımı" : "Score progression by quarters and overtime"}
-          </p>
         </div>
-        {winnerAbbr && margin != null && margin > 0 && (
-          <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium text-text-secondary">
-            {teamFull(winnerAbbr, null)} +{margin}
-          </span>
-        )}
       </div>
 
       <div className="overflow-x-auto">

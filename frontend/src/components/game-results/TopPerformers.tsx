@@ -1,6 +1,6 @@
 import PlayerPhoto from "../PlayerPhoto";
 import type { TeamLeader } from "../../types/gameFeed";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 export interface TopPerformerRow {
   PTS?: number | null;

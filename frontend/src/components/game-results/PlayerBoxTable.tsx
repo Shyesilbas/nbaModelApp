@@ -4,7 +4,7 @@ import PlayerPhoto from "../PlayerPhoto";
 import type { PlayerBoxScore } from "./types";
 import { fmtInt, fmtPct, parseMinutes } from "./utils";
 import { updateUrlRoute } from "../../lib/router";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 type SortKey = "Player" | "MIN" | "PTS" | "REB" | "AST" | "STL" | "BLK" | "TOV" | "+/-" | "FG" | "3P" | "FT";
 

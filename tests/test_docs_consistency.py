@@ -17,9 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 CORE_DOCS = [
     "README.md",
     "AGENTS.md",
-    "AI_CONTEXT.md",
-    "ARTIFACT_REGISTRY.md",
-    "PROJECT_STATUS.md",
+    "docs/README.md",
+    "docs/artifact_registry.md",
+    "docs/project_status.md",
     "docs/reports/nba_models_comprehensive_report.md",
     "reports/README.md",
     "reports/production/model_performance_and_architecture_report.md",
@@ -44,7 +44,7 @@ def test_metadata_versions_match_release():
         assert _meta(family)["version"] == release, family
 
 
-@pytest.mark.parametrize("doc", ["README.md", "AGENTS.md", "AI_CONTEXT.md", "ARTIFACT_REGISTRY.md", "PROJECT_STATUS.md",
+@pytest.mark.parametrize("doc", ["README.md", "AGENTS.md", "docs/artifact_registry.md", "docs/project_status.md",
                                  "docs/reports/nba_models_comprehensive_report.md"])
 def test_core_docs_name_the_release(doc):
     assert production_release() in (ROOT / doc).read_text(), f"{doc} does not mention {production_release()}"
@@ -52,8 +52,8 @@ def test_core_docs_name_the_release(doc):
 
 def test_agents_feature_counts_match_artifacts():
     text = (ROOT / "AGENTS.md").read_text()
-    win_n = int(re.search(r"`win_model\.pkl`: (\d+) özellikli", text).group(1))
-    player_n = int(re.search(r"`player_model_\*\.pkl`: (\d+) özellikli", text).group(1))
+    win_n = int(re.search(r"`win_model\.pkl`[^`\n]*?\b(\d+)\s+(?:features|özellikli)", text).group(1))
+    player_n = int(re.search(r"`player_model_\*\.pkl`[^`\n]*?\b(\d+)\s+(?:features|özellikli)", text).group(1))
     assert win_n == len(json.loads((ROOT / "models/production/win_features.json").read_text()))
     assert player_n == _meta("player")["features_count"]
 
@@ -101,12 +101,12 @@ def test_status_doc_blocks_match_reports():
 
     wf = json.loads((ROOT / sb.WALK_FORWARD_JSON).read_text())
     expected = {
-        "PROJECT_STATUS.md": {"walk-forward-headline": sb.status_walk_forward(wf)},
+        "docs/project_status.md": {"walk-forward-headline": sb.status_walk_forward(wf)},
         "README.md": {"walk-forward-table": sb.readme_table(wf), "walk-forward-significance": sb.readme_significance(wf)},
     }
     ledger_path = ROOT / "reports/evaluation/paper_ledger_2026_27.json"
     if ledger_path.exists():
-        expected["PROJECT_STATUS.md"]["ledger-headline"] = sb.status_ledger(json.loads(ledger_path.read_text()))
+        expected["docs/project_status.md"]["ledger-headline"] = sb.status_ledger(json.loads(ledger_path.read_text()))
     for doc, blocks in expected.items():
         text = (ROOT / doc).read_text()
         for name, body in blocks.items():

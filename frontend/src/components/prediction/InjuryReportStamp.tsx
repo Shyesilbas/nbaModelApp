@@ -1,5 +1,5 @@
 import { reportStampText } from "../../lib/injuryTime";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 interface InjuryReportStampProps {
   published: string | null | undefined;

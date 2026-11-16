@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Card } from "../common";
 import { fill } from "../../lib/fill";
-import { useLanguage } from "../../context/LanguageContext";
+import { useLanguage } from "../../context/useLanguage";
 
 export interface ChartGame {
   game_date: string;
