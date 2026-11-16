@@ -19,6 +19,7 @@ mentioned, assumes whoever played the team's previous game plays again.
 """
 from __future__ import annotations
 
+import logging
 import os
 import weakref
 from functools import lru_cache
@@ -26,6 +27,8 @@ from typing import Mapping, Optional
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 WINDOW = 15
 MIN_ROTATION_MINUTES = 20.0
@@ -271,7 +274,9 @@ def current_roster_ids(team: str, pred_date) -> Optional[set]:
         roster = _roster_on(str(path), os.path.getmtime(path), moves_mtime, season, dt.strftime("%Y-%m-%d"))
         ids = set(roster.loc[roster["TEAM_ABBREVIATION"] == team, "PLAYER_ID"].astype(int))
         return ids or None
-    except Exception:
+    except Exception as exc:
+        # Not silent: without a roster, players who left the team count as absent.
+        logger.warning("Roster lookup failed for %s on %s (%s); roster filter skipped.", team, pred_date, exc)
         return None
 
 

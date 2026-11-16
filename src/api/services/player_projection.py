@@ -392,7 +392,8 @@ def _active_roster_ids(team: str, season: str, as_of=None):
         roster_df = _season_roster(str(roster_path), season, as_of, mtimes)
         team_roster = roster_df[roster_df["TEAM_ABBREVIATION"] == team]
         return set(team_roster["PLAYER_ID"].unique()), team_roster
-    except Exception:
+    except Exception as exc:
+        logger.warning("Roster lookup failed for %s (%s); falling back to recently active players.", team, exc)
         return None, None
 
 

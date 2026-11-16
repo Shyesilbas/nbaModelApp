@@ -107,3 +107,11 @@ def test_player_summary_grades_only_expected_players_who_played(monkeypatch):
     assert out["stats"]["pts"]["model_mae"] == pytest.approx(2.0) and out["stats"]["pts"]["ema10_mae"] == pytest.approx(3.0)
     assert out["stats"]["ast"]["rows"] == 0  # no earlier game, no baseline
     assert ledger_detail.player_summary([{"game_id": "x"}], "2026-27") is None
+
+
+def test_team_id_map_matches_nba_api_when_installed():
+    from src.analysis.roster_transactions import TEAM_ID_TO_ABBREVIATION
+
+    assert len(TEAM_ID_TO_ABBREVIATION) == 30 and len(set(TEAM_ID_TO_ABBREVIATION.values())) == 30
+    teams = pytest.importorskip("nba_api.stats.static.teams")
+    assert TEAM_ID_TO_ABBREVIATION == {int(t["id"]): t["abbreviation"] for t in teams.get_teams()}
