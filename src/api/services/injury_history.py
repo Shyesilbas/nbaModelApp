@@ -326,21 +326,31 @@ def changes_for_game(season: str, day: str, away: str, home: str) -> List[Dict[s
 
 
 _PAYLOAD_CACHE: Dict[Any, Any] = {}
-PAYLOAD_TTL_SECONDS = 60
+REPORT_SLOT_MINUTES = 15
+PUBLISH_GRACE_SECONDS = 180
+
+
+def _report_slot(now: datetime) -> Tuple[str, bool]:
+    """The official report is published at :00/:15/:30/:45 ET. Returns (slot id, inside the publish grace window)."""
+    minute = now.minute - now.minute % REPORT_SLOT_MINUTES
+    slot = now.replace(minute=minute, second=0, microsecond=0).isoformat()
+    return slot, (now.minute - minute) * 60 + now.second < PUBLISH_GRACE_SECONDS
 
 
 def injuries_payload(season: Optional[str], day: Optional[str]) -> Dict[str, Any]:
-    """Memoized for a minute per (season, day) and invalidated when the game files or history change."""
+    """Memoized per (season, day, report slot); invalidated when the game files or history change.
+    Right after a slot boundary the report may not be out yet, so entries made then are kept only briefly."""
     resolved = normalize_season(season or get_default_season())
     paths = get_data_paths(resolved)
     files = (paths.team_games_raw, paths.player_games_raw, history_path(resolved))
     stamp = tuple(os.stat(f).st_mtime_ns if os.path.exists(f) else 0 for f in files)
+    slot, in_grace = _report_slot(datetime.now(inj.ET))
     key = (resolved, day)
     hit = _PAYLOAD_CACHE.get(key)
-    if hit and hit[0] == stamp and time.monotonic() - hit[1] < PAYLOAD_TTL_SECONDS:
-        return hit[2]
+    if hit and hit[0] == stamp and hit[1] == slot and not (hit[3] and time.monotonic() - hit[2] > 30):
+        return hit[4]
     payload = _injuries_payload(season, day)
-    _PAYLOAD_CACHE[key] = (stamp, time.monotonic(), payload)
+    _PAYLOAD_CACHE[key] = (stamp, slot, time.monotonic(), in_grace, payload)
     return payload
 
 
