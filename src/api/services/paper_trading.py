@@ -234,7 +234,27 @@ def _evaluation_view(rep: Dict[str, Any]) -> Dict[str, Any]:
     return {"production_release": rep["production_release"], "current_live": current, "by_version": by_version}
 
 
+_REPORT_CACHE: Dict[str, Any] = {}
+
+
+def _mtime(path: Path) -> int:
+    return path.stat().st_mtime_ns if path.exists() else 0
+
+
 def paper_trading_report(season: str) -> Dict[str, Any]:
+    """Cached by the mtimes of everything the report reads, so a new snapshot or result invalidates it."""
+    season = normalize_season(season)
+    key = (season, _mtime(ledger_path(season)), _mtime(Path(get_data_paths(season).team_games_raw)),
+           _mtime(ROOT / "config" / "production_artifacts.yaml"))
+    hit = _REPORT_CACHE.get(season)
+    if hit and hit[0] == key:
+        return hit[1]
+    report = _build_paper_trading_report(season)
+    _REPORT_CACHE[season] = (key, report)
+    return report
+
+
+def _build_paper_trading_report(season: str) -> Dict[str, Any]:
     # Imported here because src.evaluation.paper_ledger imports this module.
     from src.evaluation.paper_ledger import build_report
 

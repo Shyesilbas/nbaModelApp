@@ -9,6 +9,7 @@ on the next sync.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 from datetime import datetime, timedelta
@@ -131,7 +132,22 @@ def _plain(name: str) -> str:
     return inj._plain(name)
 
 
+_GAMES_CACHE: Dict[str, Any] = {}
+
+
 def _games(season: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Cached by source-file mtimes; callers must treat the frames as read-only."""
+    paths = get_data_paths(season)
+    key = tuple(os.stat(f).st_mtime_ns for f in (paths.team_games_raw, paths.player_games_raw))
+    hit = _GAMES_CACHE.get(season)
+    if hit and hit[0] == key:
+        return hit[1]
+    frames = _load_games(season)
+    _GAMES_CACHE[season] = (key, frames)
+    return frames
+
+
+def _load_games(season: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """(team game dates, player appearances) for the season so far (Regular Season / Playoffs only)."""
     paths = get_data_paths(season)
     teams = pd.read_csv(paths.team_games_raw, usecols=["TEAM_ABBREVIATION", "GAME_ID", "GAME_DATE", "SEASON_TYPE"],
@@ -144,6 +160,24 @@ def _games(season: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     players["team"] = players["MATCHUP"].str.split(" ").str[0]
     players["plain"] = players["PLAYER_NAME"].map(_plain)
     return teams, players
+
+
+_EMPTY = pd.DataFrame()
+
+
+def _index(teams: pd.DataFrame, players: pd.DataFrame):
+    """(team -> sorted game dates, (team, plain) -> appearances), built once per frame pair."""
+    key = (id(teams), id(players))
+    hit = _INDEX_CACHE.get("v")
+    if hit and hit[0] == key:
+        return hit[1]
+    dates = {t: sorted(g["GAME_DATE"].unique()) for t, g in teams.groupby("TEAM_ABBREVIATION")}
+    played = {k: g for k, g in players.groupby(["team", "plain"])}
+    _INDEX_CACHE["v"] = (key, (dates, played))
+    return dates, played
+
+
+_INDEX_CACHE: Dict[str, Any] = {}
 
 
 def _streak(listed_dates: set, team_dates: List[str]) -> List[str]:
@@ -163,14 +197,16 @@ def _player_state(season: str, listing: List[Dict[str, Any]], today: str, histor
                   teams: pd.DataFrame, players: pd.DataFrame) -> List[Dict[str, Any]]:
     """Adds since / games_missed / minutes / rotation to listed players."""
     out = []
+    dates, by_player = _index(teams, players)
+    history = history.assign(_plain=history["player_name"].map(_plain))
     for p in listing:
         team, plain = p["team"], _plain(p["player_name"])
-        team_dates = sorted(teams.loc[teams["TEAM_ABBREVIATION"] == team, "GAME_DATE"].unique())
-        mine = history[(history["team"] == team) & (history["player_name"].map(_plain) == plain)]
+        team_dates = dates.get(team, [])
+        mine = history[(history["team"] == team) & (history["_plain"] == plain)]
         listed = set(mine["game_date"])
         streak = _streak(listed, [d for d in team_dates if d < today])
         since = streak[0] if streak else today
-        played = players[(players["team"] == team) & (players["plain"] == plain)]
+        played = by_player.get((team, plain), players.iloc[0:0])
         missed_dates = [d for d in team_dates if d >= since and d < today]
         missed = [d for d in missed_dates if d not in set(played["GAME_DATE"])]
         recent = played.sort_values("GAME_DATE").tail(10)["MIN"]
@@ -185,17 +221,19 @@ def recent_returns(season: str, today: str, history: pd.DataFrame, teams: pd.Dat
     """Players listed Out or Doubtful earlier who have played again within the last week."""
     cutoff = (datetime.strptime(today, "%Y-%m-%d") - timedelta(days=RECENT_RETURN_DAYS)).strftime("%Y-%m-%d")
     out = []
+    dates, by_player = _index(teams, players)
     serious = history[history["status"].isin(SERIOUS)]
     for (team, name), grp in serious.groupby(["team", "player_name"]):
         plain = _plain(name)
         last_listed = grp["game_date"].max()
-        played = players[(players["team"] == team) & (players["plain"] == plain) & (players["GAME_DATE"] > last_listed)]
+        played = by_player.get((team, plain), players.iloc[0:0])
+        played = played[played["GAME_DATE"] > last_listed]
         if played.empty:
             continue
         back = played["GAME_DATE"].min()
         if back < cutoff:
             continue
-        team_dates = sorted(teams.loc[teams["TEAM_ABBREVIATION"] == team, "GAME_DATE"].unique())
+        team_dates = dates.get(team, [])
         first = grp["game_date"].min()
         out.append({"team": team, "player_name": name, "listed_from": first, "listed_to": last_listed,
                     "returned_on": back,
@@ -287,7 +325,26 @@ def changes_for_game(season: str, day: str, away: str, home: str) -> List[Dict[s
         return []
 
 
+_PAYLOAD_CACHE: Dict[Any, Any] = {}
+PAYLOAD_TTL_SECONDS = 60
+
+
 def injuries_payload(season: Optional[str], day: Optional[str]) -> Dict[str, Any]:
+    """Memoized for a minute per (season, day) and invalidated when the game files or history change."""
+    resolved = normalize_season(season or get_default_season())
+    paths = get_data_paths(resolved)
+    files = (paths.team_games_raw, paths.player_games_raw, history_path(resolved))
+    stamp = tuple(os.stat(f).st_mtime_ns if os.path.exists(f) else 0 for f in files)
+    key = (resolved, day)
+    hit = _PAYLOAD_CACHE.get(key)
+    if hit and hit[0] == stamp and time.monotonic() - hit[1] < PAYLOAD_TTL_SECONDS:
+        return hit[2]
+    payload = _injuries_payload(season, day)
+    _PAYLOAD_CACHE[key] = (stamp, time.monotonic(), payload)
+    return payload
+
+
+def _injuries_payload(season: Optional[str], day: Optional[str]) -> Dict[str, Any]:
     season = normalize_season(season or get_default_season())
     today = datetime.now(inj.ET).strftime("%Y-%m-%d")
     day = day or today
