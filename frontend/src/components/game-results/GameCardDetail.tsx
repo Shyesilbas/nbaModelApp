@@ -26,6 +26,7 @@ import { PlayerBoxTable } from "./PlayerBoxTable";
 import { HighlightsTab, type PbpData } from "./HighlightsTab";
 import { Button, Badge, Card, Skeleton } from "../common";
 import { loadPrivateApi, loadPrivateApiFresh } from "../../lib/dataCache";
+import { updateUrlRoute } from "../../lib/router";
 import PlayerPhoto from "../PlayerPhoto";
 import { useLanguage } from "../../context/useLanguage";
 
@@ -253,39 +254,42 @@ export function GameCardDetail({
   };
 
   const renderPositionColumn = (title: string, players: TeamRosterEntry[], teamAbbr: string) => {
+    const tr = language === "tr";
     return (
-      <div className="flex-1 min-w-[200px]">
-        <div className="flex items-center justify-between border-b border-border pb-2 mb-3">
+      <div className="min-w-48 flex-1">
+        <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
           <span className="text-xs font-semibold text-text-secondary">
             {title}
           </span>
-          <span className="text-xs font-medium text-text-muted">
-            {players.length} oyuncu
+          <span className="text-xs font-medium tabular-nums text-text-muted">
+            {players.length} {tr ? "oyuncu" : "players"}
           </span>
         </div>
         {players.length === 0 ? (
-          <p className="text-xs text-text-muted py-2 italic">Oyuncu bulunmuyor</p>
+          <p className="py-2 text-xs italic text-text-muted">{tr ? "Oyuncu bulunmuyor" : "No players"}</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {players.map((p) => {
               const playerName = p.PLAYER_NAME || `Player ${p.PLAYER_ID}`;
               const injury = getPlayerInjury(teamAbbr, playerName);
               return (
-                <div
+                <button
                   key={p.PLAYER_ID}
-                  className="flex items-center justify-between gap-3 py-1.5 transition-colors hover:bg-background-tertiary/40 px-2 rounded"
+                  type="button"
+                  onClick={() => updateUrlRoute({ tab: "player-profile", playerId: p.PLAYER_ID })}
+                  className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded px-2 py-1.5 text-left transition-colors hover:bg-background-tertiary/50"
                   title={injury.reason ? `${playerName}: ${injury.label} (${injury.reason})` : `${playerName}: ${injury.label}`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex min-w-0 items-center gap-2.5">
                     <PlayerPhoto playerId={p.PLAYER_ID} name={playerName} size={32} />
-                    <span className="text-xs font-medium text-text-primary truncate">
+                    <span className="truncate text-xs font-medium text-text-primary group-hover:underline">
                       {playerName}
                     </span>
                   </div>
                   <Badge variant={injury.variant} size="sm">
                     {injury.label}
                   </Badge>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -295,17 +299,18 @@ export function GameCardDetail({
   };
 
   const renderRosterByPositions = (roster: TeamRosterEntry[], teamAbbr: string) => {
+    const tr = language === "tr";
     const { guards, forwards, centers } = groupRosterByPosition(roster);
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1">
-        {renderPositionColumn("Guards", guards, teamAbbr)}
-        {renderPositionColumn("Forwards", forwards, teamAbbr)}
-        {renderPositionColumn("Centers", centers, teamAbbr)}
+      <div className="grid grid-cols-1 gap-6 pt-1 md:grid-cols-3">
+        {renderPositionColumn(tr ? "Guardlar" : "Guards", guards, teamAbbr)}
+        {renderPositionColumn(tr ? "Forvetler" : "Forwards", forwards, teamAbbr)}
+        {renderPositionColumn(tr ? "Pivotlar" : "Centers", centers, teamAbbr)}
       </div>
     );
   };
 
-  const officials = parseOfficials(game.OFFICIALS);
+  const officials = parseOfficials(gameDetail?.officials?.length ? gameDetail.officials : game.OFFICIALS);
   const arenaName =
     gameDetail?.arena?.name || (game as { ARENA?: string })?.ARENA;
   const arenaCity =
@@ -414,7 +419,13 @@ export function GameCardDetail({
         )}
         {isCompleted && players.length > 0 ? (
           period !== "total" && quarterData ? (
-            <QuarterPlayerTable data={quarterData} team={abbr} period={period} nameById={nameById} />
+            <QuarterPlayerTable
+              data={quarterData}
+              team={abbr}
+              period={period}
+              nameById={nameById}
+              onSelectPlayer={(playerId) => updateUrlRoute({ tab: "player-profile", playerId })}
+            />
           ) : (
             <PlayerBoxTable players={players} />
           )
@@ -528,7 +539,9 @@ export function GameCardDetail({
                     <span className={homeWon ? "text-text-primary" : "text-text-muted"}>{homeScore ?? "—"}</span>
                   </div>
                   <p className="mt-2 text-xs font-medium tabular-nums text-text-muted">
-                    {firstHalfScore ?? game.GAME_STATUS ?? "Final"}
+                    {firstHalfScore
+                      ? `${language === "tr" ? "İY" : "HT"} ${firstHalfScore}`
+                      : (game.GAME_STATUS ?? (language === "tr" ? "Bitti" : "Final"))}
                   </p>
                 </>
               ) : (
@@ -545,34 +558,38 @@ export function GameCardDetail({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-border-light px-4 py-2.5 text-xs text-text-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <Calendar size={14} />
-            {formatDate(game.GAME_DATE)}
-          </span>
-          <span>{seasonLabel}</span>
-          {game.SERIES_GAME_NUMBER != null && <span>Game {game.SERIES_GAME_NUMBER}</span>}
-          {game.IS_ELIMINATION_GAME && (
-            <Badge variant="error" size="sm">{language === "tr" ? "Eleme Maçı" : "Elimination Match"}</Badge>
-          )}
-          {arenaName && (
+        <div className="flex flex-col items-center gap-1 border-t border-border-light px-4 py-2.5 text-center text-xs text-text-muted">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <span className="inline-flex items-center gap-1.5">
-              <MapPin size={14} />
-              {[arenaName, arenaCity].filter(Boolean).join(" · ")}
+              <Calendar size={14} strokeWidth={1.5} />
+              {formatDate(game.GAME_DATE)}
             </span>
-          )}
+            <span>{seasonLabel}</span>
+            {game.SERIES_GAME_NUMBER != null && (
+              <span>{language === "tr" ? `Maç ${game.SERIES_GAME_NUMBER}` : `Game ${game.SERIES_GAME_NUMBER}`}</span>
+            )}
+            {game.IS_ELIMINATION_GAME && (
+              <Badge variant="error" size="sm">{language === "tr" ? "Eleme Maçı" : "Elimination Match"}</Badge>
+            )}
+            {arenaName && (
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin size={14} strokeWidth={1.5} />
+                {[arenaName, arenaCity].filter(Boolean).join(" · ")}
+              </span>
+            )}
+          </div>
           {officials.length > 0 && (
-            <span>
+            <p className="text-xs text-text-muted">
               {language === "tr" ? "Hakemler: " : "Officials: "}
               {officials.map((o) => o.cleanName).join(", ")}
-            </span>
+            </p>
           )}
         </div>
 
         <nav
           aria-label="Game detail sections"
           role="tablist"
-          className="flex border-t border-border bg-background-primary px-3 sm:px-4"
+          className="flex gap-2 border-t border-border bg-background-primary px-3 sm:px-4"
         >
           {tabs.map((t) => {
             const isTabActive = activeTab === t.id;
@@ -582,9 +599,12 @@ export function GameCardDetail({
                 type="button"
                 role="tab"
                 aria-selected={isTabActive}
-                onClick={() => setActiveTab(t.id)}
-                className={`border-b-2 px-3 py-3 text-xs font-medium transition-colors sm:text-sm ${isTabActive
-                    ? "border-primary text-text-primary font-semibold"
+                onClick={() => {
+                  setActiveTab(t.id);
+                  setPeriod("total");
+                }}
+                className={`cursor-pointer border-b-2 px-3 py-3 text-xs font-medium transition-colors sm:text-sm ${isTabActive
+                    ? "border-primary font-semibold text-text-primary"
                     : "border-transparent text-text-secondary hover:border-border hover:text-text-primary"
                   }`}
               >

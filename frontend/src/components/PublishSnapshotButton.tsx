@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CloudUpload } from "lucide-react";
 import { Badge, Button } from "./common";
 import { loadPrivateApiFresh, postPrivateApi } from "../lib/dataCache";
+import { useLanguage } from "../context/useLanguage";
 
 type PublishStatus = {
   status: "idle" | "running" | "done" | "failed";
@@ -16,6 +17,8 @@ const POLL_MS = 2000;
 
 /** Sends the fetched game data to GitHub so the cloud snapshot predicts from it. */
 export default function PublishSnapshotButton() {
+  const { language } = useLanguage();
+  const tr = language === "tr";
   const [state, setState] = useState<PublishStatus | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
 
@@ -81,7 +84,7 @@ export default function PublishSnapshotButton() {
         leftIcon={<CloudUpload size={16} strokeWidth={1.5} />}
         onClick={start}
       >
-        {running ? "Publishing" : "Publish data to cloud"}
+        {running ? (tr ? "Yayınlanıyor..." : "Publishing...") : tr ? "Buluta yayınla" : "Publish data to cloud"}
       </Button>
       {state?.status === "done" && state.message && (
         <Badge variant="success" size="sm">{state.message}</Badge>
@@ -89,7 +92,7 @@ export default function PublishSnapshotButton() {
       {failure && (
         <>
           <Badge variant="error" size="sm">{failure}</Badge>
-          <Button variant="ghost" size="sm" onClick={start}>Retry</Button>
+          <Button variant="ghost" size="sm" onClick={start}>{tr ? "Tekrar dene" : "Retry"}</Button>
         </>
       )}
     </div>

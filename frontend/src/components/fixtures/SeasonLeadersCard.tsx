@@ -72,11 +72,11 @@ export const SeasonLeadersCard: React.FC<SeasonLeadersCardProps> = ({ season, on
       className="rounded border border-border bg-background-primary"
       aria-label={tr ? "Sezon liderleri" : "Season leaders"}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-border-light px-4 py-2.5">
+      <div className="flex items-center justify-between gap-2 border-b border-border-light px-4 py-3">
         <h3 className="text-sm font-semibold text-text-primary">
           {tr ? "Sezon liderleri" : "Season leaders"}
         </h3>
-        <span className="text-xs tabular-nums text-text-secondary">{season}</span>
+        <span className="text-xs tabular-nums text-text-muted">{season}</span>
       </div>
 
       <div role="tablist" className="flex gap-4 border-b border-border-light px-4">

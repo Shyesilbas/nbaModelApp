@@ -1,6 +1,7 @@
 import PlayerPhoto from "../PlayerPhoto";
 import type { TeamLeader } from "../../types/gameFeed";
 import { useLanguage } from "../../context/useLanguage";
+import { updateUrlRoute } from "../../lib/router";
 
 export interface TopPerformerRow {
   PTS?: number | null;
@@ -22,12 +23,22 @@ export interface TopPerformerRow {
 export function TopPerformers({
   topGame,
   leaders,
+  onSelectPlayer,
 }: {
   topGame: TopPerformerRow[];
   leaders?: { points?: TeamLeader | null; rebounds?: TeamLeader | null; assists?: TeamLeader | null } | null;
+  onSelectPlayer?: (playerId: number) => void;
 }) {
   const { language } = useLanguage();
   if (topGame.length === 0 && !leaders) return null;
+  const openPlayer = (playerId: number) => {
+    if (!playerId) return;
+    if (onSelectPlayer) {
+      onSelectPlayer(playerId);
+    } else {
+      updateUrlRoute({ tab: "player-profile", playerId });
+    }
+  };
 
   // 1. Extract category leaders
   const topScorer = topGame[0];
@@ -134,17 +145,22 @@ export function TopPerformers({
                   )}
                 </div>
 
-                <div className="mt-3 flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={!pid}
+                  onClick={() => openPlayer(Number(pid))}
+                  className="group mt-3 flex w-full cursor-pointer items-center gap-3 text-left disabled:cursor-default"
+                >
                   <PlayerPhoto playerId={pid} name={name} size={44} className="ring-1 ring-border" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-text-primary" title={name}>
+                    <p className="truncate text-sm font-semibold text-text-primary group-hover:underline" title={name}>
                       {name}
                     </p>
                     <p className="text-xs text-text-muted tabular-nums">
                       {min != null ? (language === "tr" ? `${Math.round(Number(min))} dk oynadı` : `${Math.round(Number(min))} mins played`) : "—"}
                     </p>
                   </div>
-                </div>
+                </button>
               </div>
 
               {/* Stat Value & Line Summary */}
@@ -186,9 +202,12 @@ export function TopPerformers({
               const ast = p.AST ?? p.ast ?? 0;
 
               return (
-                <div
+                <button
                   key={`${pid}-${team}-${idx}`}
-                  className="flex items-center justify-between py-2.5 px-1 transition-colors hover:bg-background-tertiary/30"
+                  type="button"
+                  disabled={!pid}
+                  onClick={() => openPlayer(Number(pid))}
+                  className="group flex w-full cursor-pointer items-center justify-between px-2 py-2.5 text-left transition-colors hover:bg-background-tertiary/50 disabled:cursor-default"
                 >
                   {/* Player & Team Info */}
                   <div className="flex items-center gap-3 min-w-0">
@@ -198,7 +217,7 @@ export function TopPerformers({
                     <PlayerPhoto playerId={pid} name={name} size={34} className="ring-1 ring-border shrink-0" />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="truncate text-xs font-semibold text-text-primary">
+                        <span className="truncate text-xs font-semibold text-text-primary group-hover:underline">
                           {name}
                         </span>
                         {team && (
@@ -209,7 +228,7 @@ export function TopPerformers({
                       </div>
                       {min != null && (
                         <span className="text-xs tabular-nums text-text-muted">
-                          {Math.round(Number(min))} dk
+                          {Math.round(Number(min))} {language === "tr" ? "dk" : "min"}
                         </span>
                       )}
                     </div>
@@ -230,7 +249,7 @@ export function TopPerformers({
                       <span className="ml-1 text-xs font-medium text-text-muted">AST</span>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

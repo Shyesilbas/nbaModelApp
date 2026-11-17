@@ -71,7 +71,8 @@ const versionSortNum = (v: string): number => {
 };
 
 export function BaselineComparison({ evaluation }: { evaluation: Evaluation }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const tr = language === "tr";
   const p = t.paper;
   const s = evaluation.current_live;
   const verdictLabel: Record<Verdict, string> = {
@@ -126,16 +127,19 @@ export function BaselineComparison({ evaluation }: { evaluation: Evaluation }) {
 
   return (
     <Card padding="none" className="overflow-hidden">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div>
           <h2 id="paper-baselines" className="text-sm font-semibold text-text-primary">
             {fill(p.baselineTitle, { version: evaluation.production_release })}
           </h2>
-          <p className="mt-0.5 text-xs text-text-secondary">{p.baselineHint}</p>
+          <p className="mt-0.5 max-w-2xl text-xs text-text-secondary">{p.baselineHint}</p>
         </div>
         {s.games > 0 && (
-          <span className="rounded-sm bg-background-tertiary px-2 py-0.5 text-xs font-medium tabular-nums text-text-secondary">
-            {fill(p.baselineSample, { games: s.games, baseGames: s.baseline_games ?? 0 })}
+          <span
+            title={fill(p.baselineSample, { games: s.games, baseGames: s.baseline_games ?? 0 })}
+            className="shrink-0 rounded-sm bg-background-tertiary px-2 py-0.5 text-xs font-medium tabular-nums text-text-secondary"
+          >
+            {s.games} {tr ? "canlı" : "live"} · {s.baseline_games ?? 0} baseline
           </span>
         )}
       </div>
@@ -314,7 +318,7 @@ export function VersionTable({ evaluation }: { evaluation: Evaluation }) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-text-primary">{p.versionsTitle}</h2>
-          <p className="mt-0.5 text-xs text-text-secondary">{p.versionsHint}</p>
+          <p className="mt-0.5 max-w-2xl text-xs text-text-secondary">{p.versionsHint}</p>
         </div>
         {hasDuplicateVersions && (
           <div className="inline-flex items-center rounded border border-border bg-background-tertiary p-0.5 text-xs font-medium">

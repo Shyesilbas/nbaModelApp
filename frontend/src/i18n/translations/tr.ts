@@ -67,7 +67,7 @@ const tr = {
   fixtures: {
     boxscoresLoading: "Kutu puanları yükleniyor...",
     goToToday: "Bugünkü maçlara git",
-    searchPlaceholder: "Sezonda ara",
+    searchPlaceholder: "Takım veya tarih filtrele",
     clearSearch: "Aramayı temizle",
     allGames: "Tüm Maçlar",
     gamesCount: "{count} maç",
@@ -208,7 +208,7 @@ const tr = {
   compare: {
     loading: "Karşılaştırma yükleniyor...",
     title: "Oyuncu karşılaştırma",
-    subtitle: "Sezon istatistiklerini, şut yüzdelerini ve verimlilik metriklerini yan yana inceleyin",
+    subtitle: "Sezon ortalamalarını, şut yüzdelerini ve temel maç istatistiklerini yan yana karşılaştırın.",
     searchPlaceholder: "{slot} için oyuncu ara...",
     slot1: "1. Oyuncu",
     slot2: "2. Oyuncu",

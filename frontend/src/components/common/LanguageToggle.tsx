@@ -17,8 +17,8 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ className = "" }
       title={t.common.toggleLanguage}
       aria-label={t.common.toggleLanguage}
     >
-      <Globe size={15} strokeWidth={1.5} className="text-text-secondary" />
-      <span className="uppercase tracking-wider">{language}</span>
+      <Globe size={15} strokeWidth={1.5} className="text-text-secondary" aria-hidden="true" />
+      <span className="tabular-nums">{language.toUpperCase()}</span>
     </button>
   );
 };

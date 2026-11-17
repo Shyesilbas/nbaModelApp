@@ -10,14 +10,23 @@ export type InjuryChange = {
 
 const clock = (published: string) => published.split(" ").slice(1).join(" ");
 
+const STATUS_TR: Record<string, string> = {
+  Out: "Yok (Out)",
+  Doubtful: "Şüpheli",
+  Questionable: "Belirsiz",
+  Probable: "Muhtemel",
+  Available: "Aktif",
+};
+
 /** Status changes of players across today's injury reports ("not on the report" reads as Available). */
 export function InjuryChangesList({ changes }: { changes: InjuryChange[] }) {
   const { language } = useLanguage();
+  const tr = language === "tr";
   if (changes.length === 0) return null;
   return (
-    <section aria-label={language === "tr" ? "Rapor değişimleri" : "Report changes"}>
+    <section aria-label={tr ? "Rapor değişimleri" : "Report changes"}>
       <h4 className="text-xs font-medium text-text-muted">
-        {language === "tr" ? "Bugünkü rapor değişimleri" : "Report changes today"}
+        {tr ? "Bugünkü rapor değişimleri" : "Report changes today"}
       </h4>
       <ul className="mt-1 divide-y divide-border-light">
         {changes.map((c) => (
@@ -31,7 +40,9 @@ export function InjuryChangesList({ changes }: { changes: InjuryChange[] }) {
                 return (
                   <span key={`${s.at}-${i}`} className="inline-flex items-center gap-1.5">
                     {i > 0 && <ArrowRight size={14} className="text-text-muted" aria-hidden="true" />}
-                    <span className={`font-medium ${INJURY_TONE[status] ?? "text-text-secondary"}`}>{status}</span>
+                    <span className={`font-medium ${INJURY_TONE[status] ?? "text-text-secondary"}`}>
+                      {tr ? (STATUS_TR[status] ?? status) : status}
+                    </span>
                     <span className="text-text-muted">{clock(s.at)}</span>
                   </span>
                 );

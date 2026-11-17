@@ -429,7 +429,7 @@ export default function FixturesTab({
         const startTime = Date.now();
         const timeoutMs = 5 * 60_000;
         while (Date.now() - startTime < timeoutMs) {
-          await new Promise((resolve) => window.setTimeout(resolve, 2000));
+          await new Promise((resolve) => window.setTimeout(resolve, 800));
           const status = await loadPrivateApiFresh<RefreshStatus>(`/frontend-data-api/games/${encodeURIComponent(targetGame.GAME_ID)}/refresh`);
           if (status.status === "complete") {
             applyRefreshed(targetGame, status);
@@ -495,18 +495,29 @@ export default function FixturesTab({
       await postPrivateApi("/frontend-data-api/games/refresh-batch", { season: selectedSeason, game_ids: ids });
       const deadline = Date.now() + 15 * 60_000;
       while (done.size + failed.size < games.length && Date.now() < deadline) {
-        await new Promise((resolve) => window.setTimeout(resolve, 3000));
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
         const { games: st } = await loadPrivateApiFresh<{ games: Record<string, { status: string }> }>(
           `/frontend-data-api/games/refresh-batch?ids=${ids.map(encodeURIComponent).join(",")}`
         );
+        const newlyDone: GameFeedRow[] = [];
         for (const g of games) {
           const gid = normGid(g.GAME_ID);
           stateOf[gid] = st[gid]?.status ?? stateOf[gid];
           if (done.has(gid) || failed.has(gid)) continue;
           if (stateOf[gid] === "complete") {
-            applyRefreshed(g, await loadPrivateApiFresh<RefreshStatus>(`/frontend-data-api/games/${encodeURIComponent(g.GAME_ID)}/refresh`));
-            done.add(gid);
-          } else if (stateOf[gid] === "failed") failed.add(gid);
+            newlyDone.push(g);
+          } else if (stateOf[gid] === "failed") {
+            failed.add(gid);
+          }
+        }
+        if (newlyDone.length > 0) {
+          await Promise.all(
+            newlyDone.map(async (g) => {
+              const detail = await loadPrivateApiFresh<RefreshStatus>(`/frontend-data-api/games/${encodeURIComponent(g.GAME_ID)}/refresh`);
+              applyRefreshed(g, detail);
+              done.add(normGid(g.GAME_ID));
+            })
+          );
         }
         const finished = done.size + failed.size;
         setBatchProgress({ current: finished, total: games.length, done: done.size, failed: failed.size });
@@ -695,7 +706,7 @@ export default function FixturesTab({
               </div>
             )}
 
-            <div className="relative ml-auto min-w-[180px] flex-1 sm:max-w-[240px] sm:flex-initial">
+            <div className="relative ml-auto min-w-44 flex-1 sm:max-w-60 sm:flex-initial">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-secondary" />
               <input
                 type="text"
@@ -761,32 +772,34 @@ export default function FixturesTab({
         />
       ) : (
         <div
-          className={displayMode === "list" ? "xl:grid xl:grid-cols-[minmax(0,42rem)_24rem] xl:items-start xl:gap-6" : ""}
+          className={displayMode === "list" ? "lg:grid lg:grid-cols-12 lg:items-start lg:gap-6" : ""}
         >
-          <FixturesScheduleView
-            loading={loading}
-            dayGroups={displayedDayGroups}
-            displayMode={displayMode}
-            teamForms={teamForms}
-            teamRecords={teamRecords}
-            onOpenGame={(gameId) => handleOpenGame(gameId, "game")}
-            onSelectTeam={onSelectTeam}
-            onPredict={(game) => {
-              if (onNavigateToPrediction) {
-                onNavigateToPrediction({
-                  HOME_TEAM_ABBREVIATION: game.HOME_TEAM_ABBREVIATION,
-                  AWAY_TEAM_ABBREVIATION: game.AWAY_TEAM_ABBREVIATION,
-                  GAME_DATE: game.GAME_DATE,
-                });
-              }
-            }}
-            onRefresh={refreshGame}
-            refreshingGameId={refreshingGameId}
-            hasActiveSearch={Boolean(search.trim())}
-            onClearSearch={() => setSearch("")}
-          />
+          <div className={displayMode === "list" ? "min-w-0 lg:col-span-8" : ""}>
+            <FixturesScheduleView
+              loading={loading}
+              dayGroups={displayedDayGroups}
+              displayMode={displayMode}
+              teamForms={teamForms}
+              teamRecords={teamRecords}
+              onOpenGame={(gameId) => handleOpenGame(gameId, "game")}
+              onSelectTeam={onSelectTeam}
+              onPredict={(game) => {
+                if (onNavigateToPrediction) {
+                  onNavigateToPrediction({
+                    HOME_TEAM_ABBREVIATION: game.HOME_TEAM_ABBREVIATION,
+                    AWAY_TEAM_ABBREVIATION: game.AWAY_TEAM_ABBREVIATION,
+                    GAME_DATE: game.GAME_DATE,
+                  });
+                }
+              }}
+              onRefresh={refreshGame}
+              refreshingGameId={refreshingGameId}
+              hasActiveSearch={Boolean(search.trim())}
+              onClearSearch={() => setSearch("")}
+            />
+          </div>
           {displayMode === "list" && (
-            <div className="mt-5 xl:sticky xl:top-4 xl:mt-0">
+            <div className="mt-5 lg:sticky lg:top-4 lg:col-span-4 lg:mt-0">
               <SeasonLeadersCard season={selectedSeason} onSelectPlayer={onSelectPlayer} />
             </div>
           )}

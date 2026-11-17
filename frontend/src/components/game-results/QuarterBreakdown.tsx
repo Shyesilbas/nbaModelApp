@@ -5,6 +5,7 @@ import {
   type GameQuarters,
   type QuarterStatLine,
 } from "./quarters";
+import { useLanguage } from "../../context/useLanguage";
 
 export function PeriodTabs({
   periods,
@@ -56,6 +57,8 @@ export function QuarterPlayerTable({
   nameById?: Record<number, string>;
   onSelectPlayer?: (id: number) => void;
 }) {
+  const { language } = useLanguage();
+  const tr = language === "tr";
   const rows = data.players
     .filter((p) => p.team === team && p.periods[String(period)])
     .map((p) => ({ p, s: p.periods[String(period)] }))
@@ -69,7 +72,7 @@ export function QuarterPlayerTable({
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-border text-text-secondary">
-            <th className="py-2 pr-3 text-left font-medium">Oyuncu</th>
+            <th className="py-2 pr-3 text-left font-medium">{tr ? "Oyuncu" : "Player"}</th>
             {["PTS", "REB", "AST"].map((h) => (
               <th key={h} className="px-2 py-2 text-right font-medium text-text-primary">{h}</th>
             ))}
@@ -112,19 +115,21 @@ export function QuarterPlayerTable({
 
 /** A single player's line split by period, with a total row. */
 export function PlayerQuarterTable({ data, playerId }: { data: GameQuarters; playerId: number }) {
+  const { language } = useLanguage();
+  const tr = language === "tr";
   const player = data.players.find((p) => p.player_id === playerId);
   if (!player) return null;
   const total = sumPeriods(player);
   const rows: { label: string; s: QuarterStatLine; strong?: boolean }[] = [
     ...data.periods.map((p) => ({ label: p.label, s: player.periods[String(p.period)] ?? EMPTY_QUARTER_LINE })),
-    { label: "Toplam", s: total, strong: true },
+    { label: tr ? "Toplam" : "Total", s: total, strong: true },
   ];
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-border text-text-secondary">
-            <th className="py-2 pr-3 text-left font-medium">Periyot</th>
+            <th className="py-2 pr-3 text-left font-medium">{tr ? "Periyot" : "Period"}</th>
             {["PTS", "REB", "AST"].map((h) => (
               <th key={h} className="px-2 py-2 text-right font-medium text-text-primary">{h}</th>
             ))}

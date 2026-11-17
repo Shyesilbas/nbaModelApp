@@ -13,6 +13,13 @@ export type InjuryReportSummary = {
 };
 
 const ORDER: Record<string, number> = { Out: 0, Doubtful: 1, Questionable: 2, Probable: 3, Available: 4 };
+const STATUS_TR: Record<string, string> = {
+  Out: "Yok (Out)",
+  Doubtful: "Şüpheli",
+  Questionable: "Belirsiz",
+  Probable: "Muhtemel",
+  Available: "Aktif",
+};
 
 interface InjuryReportPanelProps {
   report: InjuryReportSummary | null | undefined;
@@ -76,7 +83,7 @@ export function InjuryReportPanel({ report, homeInfo, awayInfo }: InjuryReportPa
                         {p.reason && <p className="text-xs text-text-muted">{p.reason}</p>}
                       </div>
                       <span className={`shrink-0 text-xs font-medium ${INJURY_TONE[p.status] ?? "text-text-secondary"}`}>
-                        {p.status}
+                        {tr ? (STATUS_TR[p.status] ?? p.status) : p.status}
                       </span>
                     </li>
                   ))}

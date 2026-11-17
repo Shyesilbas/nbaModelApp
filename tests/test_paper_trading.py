@@ -37,3 +37,39 @@ def test_record_made_after_tipoff_is_not_counted():
     results = {"0022600001": {"home_team": "BOS", "away_team": "NYK", "home_score": 105, "away_score": 99}}
     s = pt.summarize(pt.grade([late], results))
     assert s["games_graded"] == 0 and s["invalid_late"] == 1 and s["accuracy"] is None
+
+
+def test_build_paper_trading_report_includes_all_versions_and_backfill(monkeypatch):
+    import src.evaluation.paper_ledger as pl
+
+    records = [
+        pt.build_record("0022600001", "2026-10-20", "2026-10-20T23:00:00Z", "BOS", "NYK", "v11", 0.65, 110, 102,
+                        now=datetime.fromisoformat("2026-10-20T18:00:00+00:00"), origin="backfill"),
+        pt.build_record("0022600050", "2026-10-26", "2026-10-26T23:00:00Z", "BOS", "NYK", "v15", 0.70, 112, 100,
+                        now=datetime.fromisoformat("2026-10-26T18:00:00+00:00"), origin="live"),
+    ]
+    results = {
+        "0022600001": {"home_team": "BOS", "away_team": "NYK", "home_score": 108, "away_score": 101},
+        "0022600050": {"home_team": "BOS", "away_team": "NYK", "home_score": 115, "away_score": 104},
+    }
+    monkeypatch.setattr(pt, "read_ledger", lambda season: records)
+    monkeypatch.setattr(pt, "load_results", lambda season: results)
+    monkeypatch.setattr(
+        pl,
+        "build_report",
+        lambda season, graded: {
+            "production_release": "v15",
+            "current_live": {"games": 1, "accuracy": 1.0, "bands": []},
+            "by_version": {
+                "v11/backfill": {"games": 1, "accuracy": 1.0, "bands": []},
+                "v15/live": {"games": 1, "accuracy": 1.0, "bands": []},
+            },
+        },
+    )
+
+    rep = pt._build_paper_trading_report("2026-27")
+    assert [g["game_id"] for g in rep["games"]] == ["0022600050", "0022600001"]
+    assert rep["summary"]["games_logged"] == 2
+    assert rep["summary"]["backfilled_graded"] == 1
+    assert rep["evaluation"]["current_live"]["games"] == 1
+    assert [(v["version"], v["origin"]) for v in rep["evaluation"]["by_version"]] == [("v11", "backfill"), ("v15", "live")]

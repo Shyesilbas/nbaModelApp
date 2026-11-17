@@ -5,6 +5,7 @@ import TeamLogo from "../TeamLogo";
 import PlayerPhoto from "../PlayerPhoto";
 import { PlayerMatchupModal, type PlayerMatchupData } from "./PlayerMatchupModal";
 import type { TeamInfo } from "./types";
+import { CURRENT_SEASON } from "../../lib/constants";
 import { useLanguage } from "../../context/useLanguage";
 
 interface PlayerSpotlightProps {
@@ -15,7 +16,7 @@ interface PlayerSpotlightProps {
   season?: string;
 }
 
-export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season = "2025-26" }: PlayerSpotlightProps) {
+export function PlayerSpotlight({ players, homeInfo, awayInfo, gameDate, season = CURRENT_SEASON }: PlayerSpotlightProps) {
   const { t, language } = useLanguage();
   const [selectedPlayer, setSelectedPlayer] = useState<{
     player: PlayerMatchupData;

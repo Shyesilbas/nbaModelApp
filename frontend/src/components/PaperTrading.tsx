@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, ClipboardCheck } from "lucide-react";
-import { Card, DatePicker, EmptyState, InlineError, Skeleton } from "./common";
+import { ClipboardCheck, HelpCircle } from "lucide-react";
+import { Button, Card, DatePicker, EmptyState, InlineError, Skeleton } from "./common";
 import TeamLogo from "./TeamLogo";
-import { TEAM_NAME_BY_ABBR } from "../lib/nbaTeams";
+import { TEAM_NAME_BY_ABBR, getTeamShortName } from "../lib/nbaTeams";
 import { CalibrationChart, RollingAccuracyChart } from "./paper/PaperCharts";
 import { BaselineComparison, VersionTable, type Evaluation } from "./paper/PaperBaselines";
 import BacktestCalibration from "./paper/BacktestCalibration";
@@ -63,6 +63,7 @@ type SectionTab = "games" | "versions" | "calibration";
 type GameStatusFilter = "all" | "correct" | "wrong" | "pending";
 
 const teamName = (abbr: string) => TEAM_NAME_BY_ABBR[abbr as keyof typeof TEAM_NAME_BY_ABBR] || abbr;
+const shortTeam = (abbr: string) => getTeamShortName(abbr, teamName(abbr));
 const pct = (v: number | null, digits = 1) => (v == null ? "-" : `${(v * 100).toFixed(digits)}%`);
 const num = (v: number | null | undefined, digits = 2) => (v == null ? "-" : v.toFixed(digits));
 const signed = (v: number) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1));
@@ -73,11 +74,13 @@ function KpiCard({
   label,
   value,
   hint,
+  tooltip,
   tone = "default",
 }: {
   label: string;
   value: string;
   hint: string;
+  tooltip?: string;
   tone?: "default" | "positive" | "negative";
 }) {
   const valueColor =
@@ -88,12 +91,10 @@ function KpiCard({
         : "text-text-primary";
 
   return (
-    <Card padding="sm" className="flex flex-col justify-between">
-      <div>
-        <dt className="text-xs font-medium text-text-secondary">{label}</dt>
-        <dd className={`mt-1 text-xl font-semibold tabular-nums sm:text-2xl ${valueColor}`}>{value}</dd>
-      </div>
-      <p className="mt-1.5 text-xs leading-snug text-text-secondary">{hint}</p>
+    <Card padding="sm" className="flex flex-col justify-between" title={tooltip}>
+      <dt className="text-xs font-medium text-text-secondary">{label}</dt>
+      <dd className={`mt-1 text-xl font-semibold tabular-nums sm:text-2xl ${valueColor}`}>{value}</dd>
+      <p className="mt-1 truncate text-xs tabular-nums text-text-muted">{hint}</p>
     </Card>
   );
 }
@@ -105,8 +106,9 @@ function MatchupCell({ game }: { game: PaperGame }) {
 
   const row = (abbr: string, won: boolean) => (
     <div className="flex items-center gap-2">
-      <TeamLogo abbr={abbr} name={teamName(abbr)} size={22} className="shrink-0" />
+      <TeamLogo abbr={abbr} name={teamName(abbr)} size={20} className="shrink-0" />
       <span
+        title={teamName(abbr)}
         className={`text-sm ${!isFinal
           ? "font-medium text-text-primary"
           : won
@@ -114,7 +116,7 @@ function MatchupCell({ game }: { game: PaperGame }) {
             : "font-normal text-text-secondary"
           }`}
       >
-        {teamName(abbr)}
+        {shortTeam(abbr)}
       </span>
     </div>
   );
@@ -137,6 +139,7 @@ export default function PaperTrading() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [sectionTab, setSectionTab] = useState<SectionTab>("games");
   const [gameFilter, setGameFilter] = useState<GameStatusFilter>("all");
+  const [showGuide, setShowGuide] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
@@ -221,10 +224,10 @@ export default function PaperTrading() {
       <div className="space-y-4" aria-busy="true">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} height={96} />
+            <Skeleton key={i} height={92} />
           ))}
         </div>
-        <Skeleton height={280} />
+        <Skeleton height={44} />
         <Skeleton height={320} />
       </div>
     );
@@ -236,7 +239,7 @@ export default function PaperTrading() {
     return (
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-text-primary">{p.title}</h1>
+          <h1 className="text-xl font-semibold text-text-primary sm:text-2xl">{p.title}</h1>
           <PublishSnapshotButton />
         </div>
         <EmptyState icon={<ClipboardCheck size={32} strokeWidth={1.5} />} title={p.emptyTitle} description={p.emptyBody} />
@@ -245,6 +248,7 @@ export default function PaperTrading() {
   }
 
   const edge = s.accuracy != null && s.home_baseline_accuracy != null ? s.accuracy - s.home_baseline_accuracy : null;
+  const liveGraded = Math.max(0, s.games_graded - s.backfilled_graded);
 
   const resultBadges = (g: PaperGame) => {
     if (!g.valid) {
@@ -270,7 +274,7 @@ export default function PaperTrading() {
           {g.correct ? p.resultCorrect : p.resultWrong}
         </span>
         {g.origin === "backfill" && (
-          <span className="text-xs text-text-secondary">{p.resultBackfill}</span>
+          <span className="text-xs text-text-muted">{p.resultBackfill}</span>
         )}
       </div>
     );
@@ -294,68 +298,92 @@ export default function PaperTrading() {
           <h1 className="text-xl font-semibold text-text-primary sm:text-2xl">{p.title}</h1>
           <p className="mt-0.5 text-xs text-text-secondary sm:text-sm">{fill(p.subtitle, { season: report.season })}</p>
         </div>
-        <PublishSnapshotButton />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-expanded={showGuide}
+            leftIcon={<HelpCircle size={15} strokeWidth={1.5} />}
+            onClick={() => setShowGuide((prev) => !prev)}
+          >
+            {p.howTitle}
+          </Button>
+          <PublishSnapshotButton />
+        </div>
       </div>
 
-      {/* Collapsible How It Works */}
-      <details className="group rounded border border-border bg-background-primary">
-        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary sm:text-sm">
-          <span>{p.howTitle}</span>
-          <ChevronDown size={16} className="transition-transform group-open:rotate-180" />
-        </summary>
-        <div className="grid grid-cols-1 gap-4 border-t border-border-light px-4 py-3.5 md:grid-cols-3">
-          <div>
-            <h3 className="text-xs font-semibold text-text-primary">{p.howFrozenTitle}</h3>
-            <p className="mt-1 text-xs leading-relaxed text-text-secondary">{p.howFrozen}</p>
+      {/* On-demand Methodology Panel */}
+      {showGuide && (
+        <Card padding="md">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <h3 className="text-xs font-semibold text-text-primary">{p.howFrozenTitle}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-text-secondary">{p.howFrozen}</p>
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold text-text-primary">{p.howGradedTitle}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-text-secondary">{p.howGraded}</p>
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold text-text-primary">{p.howLabelsTitle}</h3>
+              <ul className="mt-1 space-y-1 text-xs leading-relaxed text-text-secondary">
+                <li><span className="font-semibold text-status-warning">{p.resultLate}:</span> {p.howLate}</li>
+                <li><span className="font-semibold text-text-primary">{p.resultBackfill}:</span> {p.howBackfill}</li>
+              </ul>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xs font-semibold text-text-primary">{p.howGradedTitle}</h3>
-            <p className="mt-1 text-xs leading-relaxed text-text-secondary">{p.howGraded}</p>
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold text-text-primary">{p.howLabelsTitle}</h3>
-            <ul className="mt-1 space-y-1 text-xs leading-relaxed text-text-secondary">
-              <li><span className="font-semibold text-status-warning">{p.resultLate}:</span> {p.howLate}</li>
-              <li><span className="font-semibold text-text-primary">{p.resultBackfill}:</span> {p.howBackfill}</li>
-            </ul>
-          </div>
-        </div>
-      </details>
+        </Card>
+      )}
 
       {/* Season KPI Strip */}
-      <section aria-labelledby="paper-season-summary" className="space-y-2">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="paper-season-summary" className="text-sm font-semibold text-text-primary">{p.seasonSummary}</h2>
-          {(s.backfilled_graded > 0 || s.invalid_late > 0) && (
-            <span className="text-xs text-text-secondary">
-              {fill(p.gamesGradedExtra, { backfill: s.backfilled_graded, late: s.invalid_late })}
-            </span>
-          )}
-        </div>
-        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiCard
-            label={p.accuracy}
-            value={pct(s.accuracy)}
-            hint={
-              s.games_graded
-                ? fill(p.accuracyHint, { correct: Math.round((s.accuracy ?? 0) * s.games_graded), graded: s.games_graded })
-                : p.accuracyNone
-            }
-          />
-          <KpiCard
-            label={p.edge}
-            value={edge == null ? "-" : `${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}%`}
-            hint={p.edgeHint}
-            tone={edge == null ? "default" : edge > 0 ? "positive" : edge < 0 ? "negative" : "default"}
-          />
-          <KpiCard
-            label={p.gamesLogged}
-            value={`${s.games_logged}`}
-            hint={fill(p.gamesLoggedHint, { graded: s.games_graded, pending: s.games_pending })}
-          />
-          <KpiCard label={p.brier} value={num(s.brier, 3)} hint={p.brierHint} />
-        </dl>
-      </section>
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard
+          label={p.accuracy}
+          value={pct(s.accuracy)}
+          hint={
+            s.games_graded
+              ? tr
+                ? `${Math.round((s.accuracy ?? 0) * s.games_graded)} / ${s.games_graded} doğru`
+                : `${Math.round((s.accuracy ?? 0) * s.games_graded)} / ${s.games_graded} correct`
+              : p.accuracyNone
+          }
+        />
+        <KpiCard
+          label={p.edge}
+          value={edge == null ? "-" : `${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}%`}
+          hint={
+            s.home_baseline_accuracy != null
+              ? tr
+                ? `Ev sahibi bazı ${pct(s.home_baseline_accuracy)}`
+                : `Home baseline ${pct(s.home_baseline_accuracy)}`
+              : p.edgeHint
+          }
+          tooltip={p.edgeHint}
+          tone={edge == null ? "default" : edge > 0 ? "positive" : edge < 0 ? "negative" : "default"}
+        />
+        <KpiCard
+          label={p.gamesLogged}
+          value={`${s.games_logged}`}
+          hint={
+            s.backfilled_graded > 0
+              ? tr
+                ? `${liveGraded} canlı · ${s.backfilled_graded} geriye dönük`
+                : `${liveGraded} live · ${s.backfilled_graded} backfill`
+              : fill(p.gamesLoggedHint, { graded: s.games_graded, pending: s.games_pending })
+          }
+          tooltip={
+            s.backfilled_graded > 0 || s.invalid_late > 0
+              ? fill(p.gamesGradedExtra, { backfill: s.backfilled_graded, late: s.invalid_late })
+              : undefined
+          }
+        />
+        <KpiCard
+          label={p.brier}
+          value={num(s.brier, 3)}
+          hint={s.log_loss != null ? `Log loss ${num(s.log_loss, 3)}` : p.brierHint}
+          tooltip={p.brierHint}
+        />
+      </dl>
 
       {/* Section Navigation Tabs */}
       <div
@@ -384,7 +412,7 @@ export default function PaperTrading() {
       {showGames && (
         <section className="space-y-3" aria-label={tr ? "Günlük tahminler" : "Daily predictions"}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
               <DatePicker
                 dates={dates}
                 value={activeDate ?? ""}
@@ -392,11 +420,11 @@ export default function PaperTrading() {
                 counts={dateCounts}
                 formatDate={formatDate}
               />
-              <span className="rounded-sm bg-background-tertiary px-2.5 py-1 text-xs font-medium tabular-nums text-text-primary">
-                {fill(p.dayGames, { n: dayGames.length })}
-                {dayGraded.length > 0 &&
-                  ` · ${fill(p.dayCorrect, { correct: dayCorrect, graded: dayGraded.length })} (${pct(dayCorrect / dayGraded.length, 0)})`}
-              </span>
+              {dayGraded.length > 0 && (
+                <span className="rounded-sm bg-background-tertiary px-2.5 py-1 text-xs font-medium tabular-nums text-text-secondary">
+                  {dayCorrect}/{dayGraded.length} {tr ? "doğru" : "correct"} · {pct(dayCorrect / dayGraded.length, 0)}
+                </span>
+              )}
             </div>
 
             {/* Status Filter Pills */}
@@ -425,12 +453,6 @@ export default function PaperTrading() {
           </div>
 
           <Card padding="none" className="overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-              <h3 className="text-sm font-semibold tabular-nums text-text-primary">
-                {activeDate ? formatDate(activeDate) : ""}
-              </h3>
-            </div>
-
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-border bg-background-tertiary/60 text-xs font-semibold text-text-secondary">
@@ -457,7 +479,7 @@ export default function PaperTrading() {
                             <div className="flex items-center gap-3">
                               <MatchupCell game={g} />
                               {g.model_version !== latestVersion && (
-                                <span className="rounded-sm bg-background-tertiary px-1.5 py-0.5 text-xs font-medium tabular-nums text-text-secondary">
+                                <span className="rounded-sm bg-background-tertiary px-1.5 py-0.5 text-xs font-medium tabular-nums text-text-muted">
                                   {g.model_version}
                                 </span>
                               )}
@@ -466,29 +488,29 @@ export default function PaperTrading() {
                           <td className="whitespace-nowrap px-4 py-3 tabular-nums" title={`${injurySummary(g)}\n${injuryTitle(g)}`.trim()}>
                             <div className="flex items-center gap-2">
                               <TeamLogo abbr={g.predicted_winner} name={teamName(g.predicted_winner)} size={18} />
-                              <span className="font-semibold text-text-primary">{teamName(g.predicted_winner)}</span>
+                              <span className="font-semibold text-text-primary">{shortTeam(g.predicted_winner)}</span>
                               <span className="rounded-sm bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
                                 {pct(conf, 0)}
                               </span>
                             </div>
-                            <p className="mt-1 text-xs text-text-secondary">
-                              {p.score}: <span className="font-medium text-text-primary">{g.predicted_away_score.toFixed(0)} - {g.predicted_home_score.toFixed(0)}</span>
+                            <p className="mt-1 text-xs text-text-muted">
+                              {g.away_team} {g.predicted_away_score.toFixed(0)} – {g.home_team} {g.predicted_home_score.toFixed(0)}
                             </p>
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 tabular-nums">
                             {g.status === "final" ? (
                               <>
-                                <p className="text-base font-semibold text-text-primary">
-                                  {g.actual_away_score} - {g.actual_home_score}
+                                <p className="text-sm font-semibold text-text-primary">
+                                  {g.away_team} {g.actual_away_score} – {g.home_team} {g.actual_home_score}
                                 </p>
                                 {g.predicted_margin != null && g.actual_margin != null && (
-                                  <p className="mt-0.5 text-xs text-text-secondary">
-                                    {fill(p.marginErrorInline, { v: signed(g.predicted_margin - g.actual_margin) })}
+                                  <p className="mt-1 text-xs text-text-muted">
+                                    {tr ? "Fark" : "Err"} {signed(g.predicted_margin - g.actual_margin)}
                                   </p>
                                 )}
                               </>
                             ) : (
-                              <span className="text-xs text-text-secondary">{p.resultPending}</span>
+                              <span className="text-xs text-text-muted">{p.resultPending}</span>
                             )}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3">{resultBadges(g)}</td>

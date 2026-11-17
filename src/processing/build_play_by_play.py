@@ -231,16 +231,63 @@ def build_play_by_play_payload(
     team_scoring_run: dict[str, dict[str, Any]] = {}
     prev_home, prev_away = 0, 0
 
-    for _, row in df.iterrows():
-        period = int(row["period"])
-        action_type = str(pick(row, "actionType", default="") or "")
-        sub_type = str(pick(row, "subType", default="") or "")
-        team = pick(row, "teamTricode", "teamAbbreviation", default=None)
-        player_name = pick(row, "playerName", default=None)
-        player_id = as_int(pick(row, "personId", "playerId", "PLAYER_ID", default=None))
-        description = str(pick(row, "description", default="") or "")
-        score_home = int(row["scoreHome_clean"])
-        score_away = int(row["scoreAway_clean"])
+    def _col_vals(df_in: pd.DataFrame, *names: str, default: Any = None) -> list[Any]:
+        n = len(df_in)
+        cols = [df_in[name].tolist() for name in names if name in df_in.columns]
+        if not cols:
+            return [default] * n
+        out_vals: list[Any] = []
+        for idx in range(n):
+            chosen = default
+            for col in cols:
+                val = clean_value(col[idx], None)
+                if val is not None:
+                    chosen = val
+                    break
+            out_vals.append(chosen)
+        return out_vals
+
+    periods = df["period"].tolist()
+    clocks = df["clock"].tolist() if "clock" in df.columns else [None] * len(df)
+    action_types = _col_vals(df, "actionType", default="")
+    sub_types = _col_vals(df, "subType", default="")
+    teams = _col_vals(df, "teamTricode", "teamAbbreviation", default=None)
+    player_names = _col_vals(df, "playerName", default=None)
+    raw_player_ids = _col_vals(df, "personId", "playerId", "PLAYER_ID", default=None)
+    descriptions = _col_vals(df, "description", default="")
+    scores_home = df["scoreHome_clean"].tolist()
+    scores_away = df["scoreAway_clean"].tolist()
+
+    for (
+        raw_period,
+        raw_clock,
+        raw_action_type,
+        raw_sub_type,
+        team,
+        player_name,
+        raw_pid,
+        raw_desc,
+        score_home,
+        score_away,
+    ) in zip(
+        periods,
+        clocks,
+        action_types,
+        sub_types,
+        teams,
+        player_names,
+        raw_player_ids,
+        descriptions,
+        scores_home,
+        scores_away,
+    ):
+        period = int(raw_period)
+        action_type = str(raw_action_type or "")
+        sub_type = str(raw_sub_type or "")
+        player_id = as_int(raw_pid)
+        description = str(raw_desc or "")
+        score_home = int(score_home)
+        score_away = int(score_away)
         points_scored = event_points(action_type, description, score_home, score_away, prev_home, prev_away)
         assisted_name: str | None = None
         assisted_total: int | None = None
@@ -306,7 +353,7 @@ def build_play_by_play_payload(
         stats_after = snapshot(player_stats[key]) if team and player_name else None
         event = {
             "period": period,
-            "clock": clean_clock(row["clock"]),
+            "clock": clean_clock(raw_clock),
             "action_type": action_type,
             "sub_type": sub_type,
             "team": team,

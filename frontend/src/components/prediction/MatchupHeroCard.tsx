@@ -36,23 +36,32 @@ export function MatchupHeroCard({
 
   const homeScore = score.predicted_home_score?.toFixed(0) ?? "--";
   const awayScore = score.predicted_away_score?.toFixed(0) ?? "--";
-  const homeRange = score.home_score_range || [0, 0];
-  const awayRange = score.away_score_range || [0, 0];
+  const homeRange = score.home_score_range;
+  const awayRange = score.away_score_range;
 
-  const margin = score.predicted_margin ? Math.abs(score.predicted_margin).toFixed(1) : "0.0";
+  const margin = score.predicted_margin != null ? Math.abs(score.predicted_margin).toFixed(1) : "0.0";
   const scoreWinner = (score.predicted_margin ?? 0) >= 0 ? homeInfo : awayInfo;
-  const pace = score.predicted_pace ? score.predicted_pace.toFixed(1) : "--";
+  const pace = score.predicted_pace != null ? score.predicted_pace.toFixed(1) : "--";
 
   const confidence = String(win.confidence_bucket || "MEDIUM").toUpperCase();
   const confidenceLabel = confidence.includes("STRONG")
     ? t.predictions.highConfidence
     : confidence.includes("MODERATE")
       ? t.predictions.moderateConfidence
-      : tr ? "Dengeli Karşılaşma" : "Balanced Matchup";
+      : tr
+        ? "Dengeli Karşılaşma"
+        : "Balanced Matchup";
 
   const isHomeWinner = winnerInfo.abbr === homeInfo.abbr;
 
-  const side = (info: TeamInfo, pct: string, pts: string, range: number[], favorite: boolean, label: string) => (
+  const side = (
+    info: TeamInfo,
+    pct: string,
+    pts: string,
+    range: number[] | null | undefined,
+    favorite: boolean,
+    label: string
+  ) => (
     <div className={`flex flex-col items-center gap-2 text-center ${favorite ? "" : "opacity-75"}`}>
       <TeamLogo abbr={info.abbr} name={info.name} size={56} />
       <div>
@@ -60,11 +69,11 @@ export function MatchupHeroCard({
         <p className="text-xs text-text-muted">{label}</p>
       </div>
       <p className={`text-4xl font-semibold tabular-nums sm:text-5xl ${favorite ? "text-text-primary" : "text-text-muted"}`}>
-        %{pct}
+        {tr ? `%${pct}` : `${pct}%`}
       </p>
       <p className="text-xs tabular-nums text-text-secondary">
-        {t.predictions.expectedScore}: <span className="font-semibold text-text-primary">{pts}</span>{" "}
-        ({range[0]}–{range[1]})
+        {t.predictions.expectedScore}: <span className="font-semibold text-text-primary">{pts}</span>
+        {range && range.length >= 2 ? ` (${range[0]}–${range[1]})` : ""}
       </p>
     </div>
   );
@@ -84,21 +93,27 @@ export function MatchupHeroCard({
               disabled={isLoading}
               aria-label={tr ? "Yenile" : "Refresh"}
               title={tr ? "Yenile" : "Refresh"}
-              className="flex h-8 w-8 items-center justify-center rounded border border-border text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50 cursor-pointer"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded border border-border text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:opacity-50"
             >
-              <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+              <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} aria-hidden="true" />
             </button>
           )}
           <button
             type="button"
             onClick={() =>
-              exportPredictionAsPDF({ result, date, fallbackHome: homeInfo.abbr, fallbackAway: awayInfo.abbr })
+              exportPredictionAsPDF({
+                result,
+                date,
+                fallbackHome: homeInfo.abbr,
+                fallbackAway: awayInfo.abbr,
+                language,
+              })
             }
             aria-label={t.predictions.downloadPdf}
             title={t.predictions.downloadPdf}
-            className="flex h-8 w-8 items-center justify-center rounded border border-border text-text-secondary transition-colors hover:text-text-primary cursor-pointer"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded border border-border text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
           >
-            <Download size={16} />
+            <Download size={16} aria-hidden="true" />
           </button>
         </div>
       </div>

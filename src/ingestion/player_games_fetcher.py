@@ -153,11 +153,11 @@ def fetch_player_games_from_boxscore(game_id: str, schedule_df: Optional[pd.Data
     # Fallback to BoxScoreTraditionalV2 if V3 failed or was empty
     if df is None or df.empty:
         try:
-            from nba_api.stats.endpoints import boxscoretraditionalv2
-            bs2 = call_nba_api(boxscoretraditionalv2.BoxScoreTraditionalV2, game_id=game_id_str)
-            df = bs2.get_data_frames()[0]
-            if len(bs2.get_data_frames()) >= 2:
-                team_df = bs2.get_data_frames()[1]
+            from src.ingestion.nba_api_client import fetch_boxscore_v2_frames
+            frames2 = fetch_boxscore_v2_frames(game_id_str)
+            df = frames2[0] if frames2 else pd.DataFrame()
+            if len(frames2) >= 2:
+                team_df = frames2[1]
                 if len(team_df) == 2:
                     pts0 = float(team_df.iloc[0]["PTS"])
                     pts1 = float(team_df.iloc[1]["PTS"])

@@ -1,0 +1,43 @@
+{
+  "generated_utc": "2026-11-17T14:09:04Z",
+  "test_season": "2025-26",
+  "test_games": 1257,
+  "elo_brier": 0.2058,
+  "curve": [
+    {
+      "train_seasons": 1,
+      "train_games": 1256,
+      "brier": 0.2011,
+      "auc": 0.7483,
+      "brier_gain_vs_elo": 0.0047
+    },
+    {
+      "train_seasons": 2,
+      "train_games": 2515,
+      "brier": 0.201,
+      "auc": 0.7484,
+      "brier_gain_vs_elo": 0.0048
+    },
+    {
+      "train_seasons": 3,
+      "train_games": 3763,
+      "brier": 0.2011,
+      "auc": 0.7483,
+      "brier_gain_vs_elo": 0.0047
+    },
+    {
+      "train_seasons": 4,
+      "train_games": 5019,
+      "brier": 0.2011,
+      "auc": 0.7481,
+      "brier_gain_vs_elo": 0.0047
+    },
+    {
+      "train_seasons": 5,
+      "train_games": 6124,
+      "brier": 0.2007,
+      "auc": 0.7493,
+      "brier_gain_vs_elo": 0.0051
+    }
+  ]
+}

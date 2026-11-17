@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import date, datetime
 
 import pandas as pd
 
@@ -143,31 +143,80 @@ def build_player_season(season_key: str, season_path: str, roster: pd.DataFrame 
     bs["DID_NOT_PLAY"] = bs["MIN"].isna() | (bs["MIN"] == 0)
 
     game_lookup: dict = {}
-    team_games: dict = {}
-    for _, row in gr.iterrows():
-        gid = row["GAME_ID_STR"]
-        game_lookup[gid] = _game_info(row)
-        for col in ["HOME_TEAM_ABBREVIATION", "AWAY_TEAM_ABBREVIATION"]:
-            abbr = nan_safe(row.get(col))
-            if abbr:
-                team_games.setdefault(abbr, set()).add(gid)
+    team_games: dict[str, set[str]] = {}
+    if not gr.empty:
+        for row in gr.to_dict(orient="records"):
+            gid = row["GAME_ID_STR"]
+            game_lookup[gid] = _game_info(row)
+            for col in ("HOME_TEAM_ABBREVIATION", "AWAY_TEAM_ABBREVIATION"):
+                abbr = nan_safe(row.get(col))
+                if abbr:
+                    team_games.setdefault(abbr, set()).add(gid)
 
-    for pid_raw, grp_df in bs.groupby("PLAYER_ID"):
-        pid = int(pid_raw)
-        teams = grp_df["TEAM_ABBREVIATION"].dropna().unique().tolist()
+    team_games_sorted: dict[str, list[str]] = {
+        team: sorted(gids, key=lambda g: game_lookup.get(g, {}).get("GAME_DATE") or "")
+        for team, gids in team_games.items()
+    }
+
+    bs_cols = set(bs.columns)
+    present_stat_cols = [c for c in (STAT_COLS + ["PF"]) if c in bs_cols]
+
+    # Single fast column-array pass preserving numpy scalar types (and exact float64 rounding parity)
+    per_player_rows: dict[int, dict[str, dict]] = {}
+    per_player_teams: dict[int, list[str]] = {}
+    per_player_teams_set: dict[int, set[str]] = {}
+    per_player_appearances: dict[int, list[tuple[str, str]]] = {}
+
+    cols_list = list(bs.columns)
+    col_arrays = [bs[c].to_numpy() for c in cols_list]
+    n_rows = len(bs)
+    pid_idx = cols_list.index("PLAYER_ID")
+    gid_idx = cols_list.index("GAME_ID_STR")
+    team_idx = cols_list.index("TEAM_ABBREVIATION") if "TEAM_ABBREVIATION" in bs_cols else -1
+    pname_idx = cols_list.index("PLAYER_NAME") if "PLAYER_NAME" in bs_cols else -1
+    gdate_idx = cols_list.index("GAME_DATE") if "GAME_DATE" in bs_cols else -1
+
+    for i in range(n_rows):
+        pid = int(col_arrays[pid_idx][i])
+        gid = col_arrays[gid_idx][i]
+        team = nan_safe(col_arrays[team_idx][i]) if team_idx >= 0 else None
+        pname = nan_safe(col_arrays[pname_idx][i]) if pname_idx >= 0 else None
+
         entry = index.setdefault(pid, {})
-        if teams:
-            entry["boxscore_team"] = teams[-1]
-        names = grp_df["PLAYER_NAME"].dropna()
-        if len(names) > 0:
-            entry["boxscore_name"] = str(names.iloc[0])
+        if team:
+            seen = per_player_teams_set.setdefault(pid, set())
+            if team not in seen:
+                seen.add(team)
+                per_player_teams.setdefault(pid, []).append(team)
+            entry["boxscore_team"] = team
+        if pname and "boxscore_name" not in entry:
+            entry["boxscore_name"] = str(pname)
 
-        player_rows = grp_df.set_index("GAME_ID_STR")
-        appearances = sorted(
-            (game_lookup.get(gid, {}).get("GAME_DATE") or nan_safe(r.get("GAME_DATE")), nan_safe(r.get("TEAM_ABBREVIATION")))
-            for gid, r in player_rows.iterrows()
-        )
-        appearances = [(d, t) for d, t in appearances if d and t]
+        p_rows = per_player_rows.setdefault(pid, {})
+        if gid not in p_rows:
+            p_rows[gid] = {cols_list[j]: col_arrays[j][i] for j in range(len(cols_list))}
+
+        raw_gdate = nan_safe(col_arrays[gdate_idx][i]) if gdate_idx >= 0 else None
+        gdate = game_lookup.get(gid, {}).get("GAME_DATE") or raw_gdate
+        if gdate and team:
+            per_player_appearances.setdefault(pid, []).append((gdate, team))
+
+    ord_cache: dict[str, int] = {}
+
+    def _to_ord(d_str: str) -> int:
+        val = ord_cache.get(d_str)
+        if val is None:
+            try:
+                val = date.fromisoformat(d_str[:10]).toordinal()
+            except ValueError:
+                val = datetime.strptime(d_str, "%Y-%m-%d").date().toordinal()
+            ord_cache[d_str] = val
+        return val
+
+    for pid, p_rows in per_player_rows.items():
+        teams = per_player_teams.get(pid, [])
+        appearances = sorted(per_player_appearances.get(pid, []))
+        app_ords = [(_to_ord(d), t) for d, t in appearances]
 
         def active_team(target_date: str):
             # The team of the nearest game the player actually appeared in.
@@ -177,26 +226,28 @@ def build_player_season(season_key: str, season_path: str, roster: pd.DataFrame 
                 return appearances[0][1]
             if target_date >= appearances[-1][0]:
                 return appearances[-1][1]
-            target = datetime.strptime(target_date, "%Y-%m-%d")
-            best, best_diff = None, timedelta(days=9999)
-            for gdate, team in appearances:
-                diff = abs(target - datetime.strptime(gdate, "%Y-%m-%d"))
+            target_ord = _to_ord(target_date)
+            best, best_diff = None, 9999
+            for g_ord, team in app_ords:
+                diff = abs(target_ord - g_ord)
                 if diff < best_diff:
                     best, best_diff = team, diff
             return best
 
-        all_team_game_ids: set = set()
-        for team in teams:
-            all_team_game_ids |= team_games.get(team, set())
+        if len(teams) == 1:
+            ordered_gids = team_games_sorted.get(teams[0], [])
+        else:
+            all_team_game_ids: set[str] = set()
+            for team in teams:
+                all_team_game_ids |= team_games.get(team, set())
+            ordered_gids = sorted(all_team_game_ids, key=lambda g: game_lookup.get(g, {}).get("GAME_DATE") or "")
 
         games = []
-        for gid_str in sorted(all_team_game_ids, key=lambda g: game_lookup.get(g, {}).get("GAME_DATE") or ""):
+        for gid_str in ordered_gids:
             info = game_lookup.get(gid_str, {})
             home, away = info.get("HOME_TEAM_ABBREVIATION"), info.get("AWAY_TEAM_ABBREVIATION")
-            if gid_str in player_rows.index:
-                row = player_rows.loc[gid_str]
-                if isinstance(row, pd.DataFrame):
-                    row = row.iloc[0]
+            row = p_rows.get(gid_str)
+            if row is not None:
                 dnp = bool(row.get("DID_NOT_PLAY", False))
                 team_abbr = nan_safe(row.get("TEAM_ABBREVIATION"))
                 g = _game_header(
@@ -208,8 +259,11 @@ def build_player_season(season_key: str, season_path: str, roster: pd.DataFrame 
                     dnp,
                 )
                 if not dnp:
+                    for col in present_stat_cols:
+                        g[col] = _stat_value(col, row.get(col))
                     for col in STAT_COLS + ["PF"]:
-                        g[col] = _stat_value(col, row.get(col) if col in row.index else None)
+                        if col not in present_stat_cols:
+                            g[col] = None
             else:
                 game_date = info.get("GAME_DATE")
                 if not game_date:
@@ -229,5 +283,5 @@ def build_player_season(season_key: str, season_path: str, roster: pd.DataFrame 
             games_by_player[pid] = games
             averages_by_player[pid] = compute_averages(games)
 
-    print(f"  {season_key}: {bs['PLAYER_ID'].nunique()} players, {len(game_lookup)} games", file=sys.stderr)
+    print(f"  {season_key}: {len(per_player_rows)} players, {len(game_lookup)} games", file=sys.stderr)
     return {"games": games_by_player, "averages": averages_by_player, "index": index}

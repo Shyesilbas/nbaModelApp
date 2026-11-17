@@ -131,7 +131,7 @@ export function ShootingSummary({ home, away }: { home: TeamBoxScore | null; awa
 
                 {/* Home */}
                 <div className="flex items-baseline gap-1.5">
-                  <span className={`text-xs tabular-nums ${homeWins && !tied ? "font-semibold text-text-muted" : "text-text-muted"}`}>
+                  <span className={`text-xs tabular-nums ${homeWins && !tied ? "font-semibold text-text-primary" : "text-text-muted"}`}>
                     ({row.hPctStr})
                   </span>
                   <span className={`text-xs tabular-nums ${homeWins && !tied ? "font-semibold text-text-primary" : "text-text-secondary"}`}>

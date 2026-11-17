@@ -55,16 +55,16 @@ export function QuarterScores({
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border-light text-text-secondary">
-              <th className="pb-2 text-left text-xs font-medium min-w-[140px]">{language === "tr" ? "Takım" : "Team"}</th>
+              <th className="pb-2 text-left text-xs font-medium min-w-36">{language === "tr" ? "Takım" : "Team"}</th>
               {cols.map((i) => {
                 const label = i < 4 ? `Q${i + 1}` : quarters === 5 ? "OT" : `OT${i - 3}`;
                 return (
-                  <th key={i} className="pb-2 text-center text-xs font-medium w-12 sm:w-16">
+                  <th key={i} className="w-12 pb-2 text-center text-xs font-medium sm:w-16">
                     {label}
                   </th>
                 );
               })}
-              <th className="pb-2 text-center text-xs font-semibold text-text-primary w-14 sm:w-18">
+              <th className="w-14 pb-2 text-center text-xs font-semibold text-text-primary sm:w-16">
                 {language === "tr" ? "Toplam" : "Total"}
               </th>
             </tr>

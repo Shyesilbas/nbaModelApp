@@ -88,9 +88,9 @@ export function TeamComparisonBars({
           const hv = row.hVal ?? 0;
           const total = av + hv;
           const awayPct = total > 0 ? (av / total) * 100 : 50;
-          const awayWins = row.higherIsBetter ? av >= hv : av <= hv;
-          const homeWins = row.higherIsBetter ? hv >= av : hv <= av;
           const tied = av === hv;
+          const awayWins = !tied && (row.higherIsBetter ? av > hv : av < hv);
+          const homeWins = !tied && (row.higherIsBetter ? hv > av : hv < av);
 
           return (
             <div key={row.label}>

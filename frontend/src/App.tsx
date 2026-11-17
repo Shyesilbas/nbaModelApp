@@ -257,11 +257,11 @@ export default function App() {
                   aria-label={sidebarCollapsed ? item.label : undefined}
                   aria-current={activeTab === item.id ? "page" : undefined}
                   className={`flex w-full items-center gap-3 rounded px-3 py-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${activeTab === item.id
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-white dark:text-background-secondary"
                       : "text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
                     } ${sidebarCollapsed ? "justify-center px-0" : ""}`}
                 >
-                  <span className={activeTab === item.id ? "text-white" : "text-text-secondary"}>
+                  <span className={activeTab === item.id ? "text-current" : "text-text-secondary"}>
                     {item.icon}
                   </span>
                   {!sidebarCollapsed && <span>{item.label}</span>}
@@ -276,7 +276,7 @@ export default function App() {
           {/* Top Bar for Desktop and Mobile */}
           <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background-primary px-4 py-2.5 lg:px-8">
             <div className="flex items-center gap-2 lg:hidden">
-              <div className="flex h-7 w-7 items-center justify-center rounded bg-primary text-white">
+              <div className="flex h-7 w-7 items-center justify-center rounded bg-primary text-white dark:text-background-secondary">
                 <BarChart2 size={16} strokeWidth={1.5} />
               </div>
               <span className="text-sm font-semibold text-text-primary">NBA Intel</span>
@@ -420,7 +420,20 @@ export default function App() {
                             }}
                           />
                         ))}
-                      {activeTab === "multi-team" && <TradeBoard />}
+                      {activeTab === "multi-team" && (
+                        <TradeBoard
+                          onSelectTeam={(abbr) => {
+                            setTargetTeam(abbr);
+                            setActiveTab("team-explorer");
+                            updateUrlRoute({ tab: "team-explorer", team: abbr });
+                          }}
+                          onSelectPlayer={(playerId) => {
+                            setProfileTargetPlayerId(playerId);
+                            setActiveTab("player-profile");
+                            updateUrlRoute({ tab: "player-profile", playerId });
+                          }}
+                        />
+                      )}
                       {activeTab === "nba-prediction" && (
                         <NbaPrediction
                           initialGame={predictionTarget}

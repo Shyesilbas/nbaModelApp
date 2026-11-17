@@ -81,3 +81,40 @@ def test_a_team_that_had_not_filed_is_not_treated_as_available(monkeypatch):
     late = _report("10/22/26 02:00 PM", [("CLE", "Jarrett Allen", "Out")])
     _stub_day(monkeypatch, [early, late])
     assert ih.status_changes("2026-27", "2026-10-22", game_date="2026-10-22") == []
+
+
+def test_injuries_payload_reads_tomorrow_from_live_report(monkeypatch):
+    from datetime import datetime
+
+    class FakeDT(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 10, 22, 18, 0, tzinfo=tz)
+
+    report = InjuryReport(
+        published_et="10/22/26 06:00 PM",
+        entries=[
+            {"game_date": "10/23/2026", "game_time": "07:00 (ET)", "matchup": "BOS@NYK",
+             "team": "BOS", "player_name": "Jayson Tatum", "status": "Questionable", "reason": "Knee"},
+        ],
+        not_submitted={("CLE@PHI", "CLE")},
+    )
+    monkeypatch.setattr(ih, "datetime", FakeDT)
+    monkeypatch.setattr(ih, "sync_history", lambda s: 0)
+    monkeypatch.setattr(ih, "read_history", lambda s: pd.DataFrame(columns=ih.COLUMNS))
+    monkeypatch.setattr(ih, "_read_raw", lambda s: pd.DataFrame(columns=ih.COLUMNS))
+    monkeypatch.setattr(
+        ih,
+        "_games",
+        lambda s: (
+            pd.DataFrame(columns=["TEAM_ABBREVIATION", "GAME_DATE"]),
+            pd.DataFrame(columns=["team", "plain", "GAME_DATE", "MIN"]),
+        ),
+    )
+    monkeypatch.setattr(ih, "recent_returns", lambda *a, **kw: [])
+    monkeypatch.setattr(ih.inj, "fetch_report", lambda s, d: report)
+
+    payload = ih._injuries_payload("2026-27", "2026-10-23")
+    assert payload["live"] is True
+    assert payload["not_filed"] == []
+    assert [p["player_name"] for p in payload["players"]] == ["Jayson Tatum"]

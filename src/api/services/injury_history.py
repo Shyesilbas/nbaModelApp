@@ -369,13 +369,13 @@ def _injuries_payload(season: Optional[str], day: Optional[str]) -> Dict[str, An
     if live:
         report = None
         try:
-            report = inj.fetch_report(season, today) if day == today else None
+            report = inj.fetch_report(season, today)
         except Exception as exc:
             logger.warning("Live injury report unavailable: %s", exc)
         mmddyyyy = datetime.strptime(day, "%Y-%m-%d").strftime("%m/%d/%Y")
         if report:
             published = report.published_et
-            not_filed = sorted({t for (_, t) in report.not_submitted})
+            not_filed = sorted({t for (_, t) in report.not_submitted}) if day == today else []
             listing = [dict(e) for e in report.entries if e["game_date"] == mmddyyyy]
     else:
         listing = [{"game_date": r.game_date, "team": r.team, "player_name": r.player_name, "status": r.status,

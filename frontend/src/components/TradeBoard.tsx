@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRightLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRightLeft } from "lucide-react";
 import TeamLogo from "./TeamLogo";
 import PlayerPhoto from "./PlayerPhoto";
+import { Button, Card, DatePicker, EmptyState, InlineError, Select, Skeleton } from "./common";
 import { loadPrivateApi } from "../lib/dataCache";
 import { TEAM_NAME_BY_ABBR, type NbaTeamAbbr } from "../lib/nbaTeams";
 import { useLanguage } from "../context/useLanguage";
@@ -12,12 +13,14 @@ interface TradeSide {
   players: { id: number; name: string; pos: string | null; impact: number | null }[];
   assets: string[];
 }
+
 interface Trade {
   kind: "trade";
   id: string;
   date: string;
   sides: TradeSide[];
 }
+
 interface Move {
   kind: "move";
   id: string;
@@ -26,6 +29,7 @@ interface Move {
   teams: string;
   how: string;
 }
+
 type Event = Trade | Move;
 
 type Tier = "cornerstone" | "costar" | "starter" | "rotation";
@@ -38,7 +42,11 @@ const TIERS: { id: Tier; label: string; tr: string; min: number }[] = [
 const tierOf = (impact: number | null | undefined) => TIERS.find((t) => (impact ?? 0) >= t.min)!;
 
 const topImpact = (e: Event) =>
-  Math.max(...(e.kind === "trade" ? e.sides.flatMap((s) => s.players.map((p) => p.impact ?? 0)) : [e.player.impact ?? 0]));
+  Math.max(
+    ...(e.kind === "trade"
+      ? e.sides.flatMap((s) => s.players.map((p) => p.impact ?? 0))
+      : [e.player.impact ?? 0])
+  );
 
 function TierTag({ impact }: { impact: number | null | undefined }) {
   const { language } = useLanguage();
@@ -58,40 +66,104 @@ const seasonOf = (iso: string) => {
   return `${start}-${String(start + 1).slice(2)}`;
 };
 
-const POS_TR: Record<string, string> = { guard: "Guard", forward: "Forward", center: "Center" };
-const teamName = (abbr: string) => TEAM_NAME_BY_ABBR[abbr as NbaTeamAbbr] ?? abbr;
-const posLabel = (pos: string | null) =>
-  pos ? pos.split("-").map((p) => POS_TR[p] ?? p).join("-") : null;
+const POS_LABEL: Record<string, { tr: string; en: string }> = {
+  guard: { tr: "Guard", en: "Guard" },
+  forward: { tr: "Forvet", en: "Forward" },
+  center: { tr: "Pivot", en: "Center" },
+};
 
-function SideColumn({ side }: { side: TradeSide }) {
+const HOW_TR: Record<string, string> = {
+  "Claimed on waivers": "Waiver'dan alındı",
+  "Contract converted": "Sözleşme dönüştürüldü",
+  Signed: "İmzalandı",
+  Waived: "Serbest bırakıldı",
+};
+
+const formatMoveHow = (how: string, tr: boolean) => {
+  if (!tr) return how;
+  for (const [prefix, trLabel] of Object.entries(HOW_TR)) {
+    if (how.startsWith(prefix)) {
+      return `${trLabel}${how.slice(prefix.length)}`;
+    }
+  }
+  return how;
+};
+
+const teamName = (abbr: string) => TEAM_NAME_BY_ABBR[abbr as NbaTeamAbbr] ?? abbr;
+const posLabel = (pos: string | null, tr: boolean) =>
+  pos
+    ? pos
+        .split("-")
+        .map((p) => POS_LABEL[p.toLowerCase()]?.[tr ? "tr" : "en"] ?? p)
+        .join("-")
+    : null;
+
+function SideColumn({
+  side,
+  onSelectPlayer,
+  onSelectTeam,
+}: {
+  side: TradeSide;
+  onSelectPlayer?: (playerId: number) => void;
+  onSelectTeam?: (abbr: string) => void;
+}) {
   const { language } = useLanguage();
+  const tr = language === "tr";
+  const resolvedTeam = teamName(side.team);
+
   return (
     <div className="flex min-w-0 flex-col gap-2 p-3 sm:p-4">
       <div className="flex items-center gap-3">
-        <TeamLogo abbr={side.team} name="" size={32} />
+        <TeamLogo abbr={side.team} name={resolvedTeam} size={32} />
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-text-primary">{teamName(side.team)}</p>
-          <p className="text-sm text-text-secondary">
-            {language === "tr"
-              ? `${side.from.join(", ")} takımından alıyor`
-              : `Acquires from ${side.from.join(", ")}`}
+          {onSelectTeam ? (
+            <button
+              type="button"
+              onClick={() => onSelectTeam(side.team)}
+              className="cursor-pointer truncate text-left text-sm font-semibold text-text-primary transition-colors hover:text-primary hover:underline"
+            >
+              {resolvedTeam}
+            </button>
+          ) : (
+            <p className="truncate text-sm font-semibold text-text-primary">{resolvedTeam}</p>
+          )}
+          <p className="text-xs text-text-secondary">
+            {tr ? `${side.from.join(", ")} takımından alıyor` : `Acquires from ${side.from.join(", ")}`}
           </p>
         </div>
       </div>
       <ul className="flex flex-col">
-        {side.players.map((p) => (
-          <li key={p.id} className="flex items-center gap-3 border-t border-border-light py-1.5 first:border-t-0">
-            <PlayerPhoto playerId={p.id} name={p.name} size={32} />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-text-primary">{p.name}</p>
-              {posLabel(p.pos) && <p className="text-xs text-text-secondary">{posLabel(p.pos)}</p>}
-            </div>
-            <span className="ml-auto hidden shrink-0 lg:block"><TierTag impact={p.impact} /></span>
-          </li>
-        ))}
+        {side.players.map((p) => {
+          const pPos = posLabel(p.pos, tr);
+          return (
+            <li
+              key={p.id}
+              className="flex items-center gap-3 border-t border-border-light py-1.5 first:border-t-0"
+            >
+              <PlayerPhoto playerId={p.id} name={p.name} size={32} className="shrink-0" />
+              <div className="min-w-0 flex-1">
+                {onSelectPlayer ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelectPlayer(p.id)}
+                    className="block max-w-full cursor-pointer truncate text-left text-sm font-semibold text-text-primary transition-colors hover:text-primary hover:underline"
+                  >
+                    {p.name}
+                  </button>
+                ) : (
+                  <p className="truncate text-sm font-semibold text-text-primary">{p.name}</p>
+                )}
+                {pPos && <p className="text-xs text-text-secondary">{pPos}</p>}
+              </div>
+              <span className="ml-auto hidden shrink-0 lg:block">
+                <TierTag impact={p.impact} />
+              </span>
+            </li>
+          );
+        })}
       </ul>
       {side.assets.length > 0 && (
-        <p className="border-t border-border-light pt-2 text-sm text-text-secondary">
+        <p className="border-t border-border-light pt-2 text-xs text-text-secondary">
           + {side.assets.join(", ")}
         </p>
       )}
@@ -99,92 +171,173 @@ function SideColumn({ side }: { side: TradeSide }) {
   );
 }
 
-function TradeCard({ trade }: { trade: Trade }) {
+function TradeCard({
+  trade,
+  onSelectPlayer,
+  onSelectTeam,
+}: {
+  trade: Trade;
+  onSelectPlayer?: (playerId: number) => void;
+  onSelectTeam?: (abbr: string) => void;
+}) {
   const { language, formatDate } = useLanguage();
   const count = trade.sides.reduce((n, s) => n + s.players.length, 0);
+  const tr = language === "tr";
   return (
-    <article className="rounded border border-border bg-background-primary hover:border-card-border-hover">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-light px-4 py-2 sm:px-4">
+    <Card padding="none" className="overflow-hidden transition-colors hover:border-card-border-hover">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-light px-4 py-2.5">
         <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
           {trade.sides.map((s, i) => (
             <span key={s.team} className="flex items-center gap-2">
-              {i > 0 && <ArrowRightLeft size={16} strokeWidth={1.5} className="text-text-tertiary" />}
-              {s.team}
+              {i > 0 && <ArrowRightLeft size={15} strokeWidth={1.5} className="text-text-muted" aria-hidden="true" />}
+              <span>{s.team}</span>
             </span>
           ))}
         </div>
-        <div className="flex items-center gap-3 text-sm text-text-secondary">
+        <div className="flex items-center gap-3 text-xs text-text-secondary">
           <span className="tabular-nums">{formatDate(trade.date)}</span>
-          <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 text-xs font-medium">
-            {count} {language === "tr" ? "oyuncu" : "players"}
+          <span className="rounded-sm border border-border bg-background-tertiary px-2 py-0.5 font-medium tabular-nums">
+            {count} {tr ? "oyuncu" : count === 1 ? "player" : "players"}
           </span>
         </div>
       </div>
       <div
-        className={`grid divide-y divide-border-light sm:divide-y-0 sm:divide-x ${trade.sides.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"
-          }`}
+        className={`grid divide-y divide-border-light sm:divide-y-0 sm:divide-x ${
+          trade.sides.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"
+        }`}
       >
         {trade.sides.map((s) => (
-          <SideColumn key={s.team} side={s} />
+          <SideColumn
+            key={s.team}
+            side={s}
+            onSelectPlayer={onSelectPlayer}
+            onSelectTeam={onSelectTeam}
+          />
         ))}
       </div>
-    </article>
+    </Card>
   );
 }
 
-function MovesCard({ moves }: { moves: Move[] }) {
-  const { language, formatDate } = useLanguage();
+function MovesCard({
+  moves,
+  onSelectPlayer,
+}: {
+  moves: Move[];
+  onSelectPlayer?: (playerId: number) => void;
+}) {
+  const { t, language, formatDate } = useLanguage();
+  const tr = language === "tr";
+  if (moves.length === 0) return null;
+
   return (
-    <article className="rounded border border-border bg-background-primary">
-      <div className="flex items-center justify-between gap-3 border-b border-border-light px-4 py-2 text-sm">
-        <span className="font-semibold text-text-primary">
-          {language === "tr" ? "Kadro dışı hareketler" : "Roster moves & Waivers"}
-        </span>
-        <span className="tabular-nums text-text-secondary">{formatDate(moves[0].date)}</span>
+    <Card padding="none" className="overflow-hidden">
+      <div className="flex items-center justify-between gap-3 border-b border-border-light px-4 py-2.5 text-sm">
+        <span className="font-semibold text-text-primary">{t.trades.offRosterMoves}</span>
+        <span className="text-xs tabular-nums text-text-secondary">{formatDate(moves[0].date)}</span>
       </div>
       <ul className="px-4">
         {moves.map((m) => (
-          <li key={m.id} className="flex flex-wrap items-center gap-3 border-t border-border-light py-2 first:border-t-0">
-            <PlayerPhoto playerId={m.player.id} name={m.player.name} size={32} />
+          <li
+            key={m.id}
+            className="flex flex-wrap items-center gap-3 border-t border-border-light py-2 first:border-t-0"
+          >
+            <PlayerPhoto playerId={m.player.id} name={m.player.name} size={32} className="shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-text-primary">{m.player.name}</p>
+              {onSelectPlayer ? (
+                <button
+                  type="button"
+                  onClick={() => onSelectPlayer(m.player.id)}
+                  className="block max-w-full cursor-pointer truncate text-left text-sm font-semibold text-text-primary transition-colors hover:text-primary hover:underline"
+                >
+                  {m.player.name}
+                </button>
+              ) : (
+                <p className="truncate text-sm font-semibold text-text-primary">{m.player.name}</p>
+              )}
               <p className="text-xs text-text-secondary">
-                {m.teams.split(", ").join(" → ")} · {m.how}
+                {m.teams.split(", ").join(" → ")} · {formatMoveHow(m.how, tr)}
               </p>
             </div>
             <TierTag impact={m.player.impact} />
           </li>
         ))}
       </ul>
-    </article>
+    </Card>
+  );
+}
+
+function TradesSkeleton({ label }: { label: string }) {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label={label}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Skeleton className="h-9 w-56 rounded" />
+        <Skeleton className="h-9 w-28 rounded" />
+        <Skeleton className="h-9 w-48 rounded" />
+        <Skeleton className="h-9 w-40 rounded" />
+      </div>
+      <Skeleton className="h-44 w-full rounded" />
+      <Skeleton className="h-44 w-full rounded" />
+    </div>
   );
 }
 
 const PAGE = 20;
-const KINDS = [
-  { id: "all", label: "Tümü" },
-  { id: "trade", label: "Takas" },
-  { id: "move", label: "Kadro dışı" },
-] as const;
+const KINDS = ["all", "trade", "move"] as const;
+const DEFAULT_TRADE_ERROR = "__TRADE_LOAD_ERROR__";
 
-export default function TradeBoard() {
+export default function TradeBoard({
+  onSelectPlayer,
+  onSelectTeam,
+}: {
+  onSelectPlayer?: (playerId: number) => void;
+  onSelectTeam?: (abbr: string) => void;
+} = {}) {
   const { t, language, formatDate } = useLanguage();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [kind, setKind] = useState<(typeof KINDS)[number]["id"]>("all");
+  const tr = language === "tr";
+  const [reloadKey, setReloadKey] = useState(0);
+  const [result, setResult] = useState<{ key: number; data?: Event[]; error?: string } | null>(null);
+  const [kind, setKind] = useState<(typeof KINDS)[number]>("all");
   const [tier, setTier] = useState<Tier | "all">("all");
-  const [season, setSeason] = useState("");
-  const [date, setDate] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [seasonChoice, setSeasonChoice] = useState<string | null>(null);
+  const [dateChoice, setDateChoice] = useState<string | null>(null);
+  const [shown, setShown] = useState(PAGE);
 
   useEffect(() => {
+    let active = true;
     loadPrivateApi<Event[]>("/frontend-data-api/trades")
       .then((data) => {
-        setEvents(data);
-        setDate(data[0]?.date ?? "");
-        setSeason(data[0] ? seasonOf(data[0].date) : "");
+        if (!active) return;
+        setResult({ key: reloadKey, data: data ?? [] });
       })
-      .catch((e) => setError(e.message));
-  }, []);
+      .catch((e: unknown) => {
+        if (!active) return;
+        setResult({
+          key: reloadKey,
+          error: e instanceof Error && e.message ? e.message : DEFAULT_TRADE_ERROR,
+        });
+      });
+    return () => {
+      active = false;
+    };
+  }, [reloadKey]);
+
+  const loading = result?.key !== reloadKey;
+  const events = useMemo(() => (result?.key === reloadKey ? (result.data ?? []) : []), [result, reloadKey]);
+  const rawError = result?.key === reloadKey ? result.error : undefined;
+  const error =
+    rawError === DEFAULT_TRADE_ERROR
+      ? tr
+        ? "Takas ve kadro hareketleri yüklenemedi."
+        : "Failed to load trade and roster move data."
+      : rawError;
+
+  const seasons = useMemo(
+    () => [...new Set(events.map((e) => seasonOf(e.date)))].sort((a, b) => b.localeCompare(a)),
+    [events]
+  );
+
+  const season = seasonChoice && seasons.includes(seasonChoice) ? seasonChoice : (seasons[0] ?? "");
 
   const visible = useMemo(
     () =>
@@ -192,171 +345,230 @@ export default function TradeBoard() {
         if (season && seasonOf(e.date) !== season) return false;
         if (kind !== "all" && e.kind !== kind) return false;
         if (tier === "all") return true;
-        const impacts = e.kind === "trade" ? e.sides.flatMap((s) => s.players.map((p) => p.impact)) : [e.player.impact];
+        const impacts =
+          e.kind === "trade" ? e.sides.flatMap((s) => s.players.map((p) => p.impact)) : [e.player.impact];
         return impacts.some((i) => i != null && tierOf(i).id === tier);
       }),
     [events, kind, tier, season]
   );
-  const seasons = useMemo(() => [...new Set(events.map((e) => seasonOf(e.date)))], [events]);
+
   const dates = useMemo(() => [...new Set(visible.map((e) => e.date))].sort(), [visible]);
-  // A tier filter lists every matching event by impact score, whatever the date; otherwise one day at a time.
+  const countsByDate = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const e of visible) {
+      counts[e.date] = (counts[e.date] ?? 0) + 1;
+    }
+    return counts;
+  }, [visible]);
+
   const byTier = tier !== "all";
-  const [shown, setShown] = useState(PAGE);
+  const latest = dates[dates.length - 1] ?? "";
+  const date = dateChoice && dates.includes(dateChoice) ? dateChoice : latest;
+
   const todays = useMemo(
-    () => (byTier ? [...visible].sort((x, y) => topImpact(y) - topImpact(x)).slice(0, shown) : visible.filter((e) => e.date === date)),
+    () =>
+      byTier
+        ? [...visible].sort((x, y) => topImpact(y) - topImpact(x)).slice(0, shown)
+        : visible.filter((e) => e.date === date),
     [byTier, visible, shown, date]
   );
   const todayTrades = todays.filter((e): e is Trade => e.kind === "trade");
   const todayMoves = todays.filter((e): e is Move => e.kind === "move");
-  const prev = [...dates].reverse().find((d) => d < date);
-  const next = dates.find((d) => d > date);
-  const latest = dates[dates.length - 1] ?? date;
-
-  if (error) {
-    return (
-      <p className="text-sm text-status-error">
-        {language === "tr" ? `Takas verisi yüklenemedi: ${error}` : `Failed to load trade data: ${error}`}
-      </p>
-    );
-  }
-  if (!date) {
-    return <p className="text-sm text-text-secondary">{t.trades.loading}</p>;
-  }
-
-  const stepBtn =
-    "inline-flex h-9 w-9 items-center justify-center rounded border border-border bg-background-primary text-text-primary hover:border-card-border-hover disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer";
 
   const summary = byTier
-    ? (language === "tr" ? `${visible.length} kayıt · tüm tarihler` : `${visible.length} entries · all dates`)
+    ? tr
+      ? `${visible.length} kayıt · tüm tarihler`
+      : `${visible.length} entries · all dates`
     : todays.length
-      ? (language === "tr"
+      ? tr
         ? `${todayTrades.length} takas · ${todayMoves.length} kadro dışı`
-        : `${todayTrades.length} trades · ${todayMoves.length} moves`)
-      : (language === "tr" ? "Kayıt yok" : "No records");
+        : `${todayTrades.length} trades · ${todayMoves.length} moves`
+      : tr
+        ? "Kayıt yok"
+        : "No records";
 
-  const control = "h-9 rounded border border-border bg-background-primary px-3 text-sm font-medium text-text-primary focus:border-border-focus focus:outline-none";
+  const resetFilters = () => {
+    setKind("all");
+    setTier("all");
+    setDateChoice(null);
+    setShown(PAGE);
+  };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <h1 className="text-base font-semibold text-text-primary md:text-lg">{t.trades.title}</h1>
-        <span className="text-xs tabular-nums text-text-secondary">{summary}</span>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-text-primary sm:text-xl">{t.trades.title}</h1>
+          <p className="mt-0.5 text-xs text-text-secondary">{t.trades.subtitle}</p>
+        </div>
+        {!loading && !error && events.length > 0 && (
+          <span className="text-xs tabular-nums text-text-secondary">{summary}</span>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1">
-          <button type="button" className={stepBtn} disabled={byTier || !prev} onClick={() => prev && setDate(prev)} aria-label={t.common.previousDay}>
-            <ChevronLeft size={16} strokeWidth={1.5} />
-          </button>
-          <label className={`inline-flex h-9 items-center rounded border border-border bg-background-primary px-2 focus-within:border-border-focus ${byTier ? "opacity-40" : ""}`}>
-            <span className="sr-only">{t.common.date}</span>
-            <input
-              type="date"
-              value={date}
-              disabled={byTier}
-              min={dates[0]}
-              max={latest}
-              onChange={(e) => e.target.value && setDate(e.target.value)}
-              className="rounded bg-transparent text-sm font-medium tabular-nums text-text-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
-            />
-          </label>
-          <button type="button" className={stepBtn} disabled={byTier || !next} onClick={() => next && setDate(next)} aria-label={t.common.nextDay}>
-            <ChevronRight size={16} strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setDate(latest)}
-            disabled={byTier || date === latest}
-            className={`${control} disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer`}
-          >
-            {language === "tr" ? "Son" : "Latest"}
-          </button>
-        </div>
-
-        <select
-          aria-label={t.common.season}
-          value={season}
-          onChange={(e) => {
-            setSeason(e.target.value);
-            const first = events.find((ev) => seasonOf(ev.date) === e.target.value);
-            if (first) setDate(first.date);
-          }}
-          className={`${control} tabular-nums`}
-        >
-          {seasons.map((sn) => (
-            <option key={sn} value={sn}>{sn}</option>
-          ))}
-        </select>
-        <div role="group" aria-label={language === "tr" ? "Hareket türü" : "Movement type"} className="inline-flex rounded border border-border bg-background-tertiary p-0.5">
-          {KINDS.map((k) => (
-            <button
-              key={k.id}
-              type="button"
-              aria-pressed={kind === k.id}
-              onClick={() => {
-                setKind(k.id);
-                setShown(PAGE);
-              }}
-              className={`h-8 rounded-sm px-3 text-sm font-medium cursor-pointer ${kind === k.id ? "bg-background-primary text-text-primary" : "text-text-secondary hover:text-text-primary"
-                }`}
-            >
-              {k.id === "all" ? t.common.all : k.id === "trade" ? (language === "tr" ? "Takas" : "Trades") : (language === "tr" ? "Kadro dışı" : "Moves")}
-            </button>
-          ))}
-        </div>
-        <select
-          aria-label={language === "tr" ? "Etki seviyesi" : "Impact level"}
-          value={tier}
-          onChange={(e) => {
-            setTier(e.target.value as Tier | "all");
-            setShown(PAGE);
-          }}
-          className={control}
-        >
-          <option value="all">{language === "tr" ? "Tüm etki seviyeleri" : "All impact levels"}</option>
-          {TIERS.map((t) => (
-            <option key={t.id} value={t.id}>{language === "tr" ? t.tr : t.label}</option>
-          ))}
-        </select>
-      </div>
-
-      {todays.length > 0 ? (
-        byTier ? (
-          <>
-            {todays.map((e) =>
-              e.kind === "trade" ? <TradeCard key={e.id} trade={e} /> : <MovesCard key={e.id} moves={[e]} />
-            )}
-            {shown < visible.length && (
-              <button
-                type="button"
-                onClick={() => setShown((n) => n + PAGE)}
-                className="h-10 self-center rounded border border-border px-4 text-sm font-medium text-text-primary hover:border-card-border-hover cursor-pointer"
-              >
-                {language === "tr" ? "Daha fazla göster" : "Show more"}
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            {todayTrades.map((t) => <TradeCard key={t.id} trade={t} />)}
-            {todayMoves.length > 0 && <MovesCard moves={todayMoves} />}
-          </>
-        )
+      {loading ? (
+        <TradesSkeleton label={t.trades.loading} />
+      ) : error ? (
+        <InlineError
+          title={t.common.loadFailed}
+          message={error}
+          onRetry={() => setReloadKey((k) => k + 1)}
+        />
+      ) : events.length === 0 ? (
+        <EmptyState
+          icon={<ArrowRightLeft size={24} strokeWidth={1.5} />}
+          title={t.common.noData}
+          description={tr ? "Kayıtlı takas veya kadro hareketi bulunmuyor." : "No recorded trades or roster moves found."}
+        />
       ) : (
-        <div className="flex flex-col items-center gap-3 rounded border border-border bg-background-primary px-4 py-12 text-center text-sm text-text-secondary">
-          <p>
-            {language === "tr"
-              ? `${formatDate(date)} tarihinde kayıt yok.`
-              : `No moves recorded on ${formatDate(date)}.`}
-          </p>
-          <button
-            type="button"
-            onClick={() => setDate(prev ?? next ?? latest)}
-            className="h-10 rounded border border-border px-3 font-medium text-text-primary hover:border-card-border-hover cursor-pointer"
-          >
-            {language === "tr" ? "En yakın kayıt gününe git" : "Jump to nearest active date"}
-          </button>
-        </div>
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            {!byTier && dates.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <DatePicker
+                  dates={dates}
+                  value={date}
+                  onChange={setDateChoice}
+                  counts={countsByDate}
+                  countLabel={tr ? "kayıt" : "moves"}
+                  formatDate={formatDate}
+                  order="desc"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setDateChoice(latest)}
+                  disabled={!latest || date === latest}
+                  className="h-9 px-3"
+                >
+                  {tr ? "Son" : "Latest"}
+                </Button>
+              </div>
+            )}
+
+            {seasons.length > 0 && (
+              <div className="w-28">
+                <Select
+                  aria-label={t.common.season}
+                  value={season}
+                  onChange={(e) => {
+                    setSeasonChoice(e.target.value);
+                    setDateChoice(null);
+                    setShown(PAGE);
+                  }}
+                  className="h-9 tabular-nums"
+                >
+                  {seasons.map((sn) => (
+                    <option key={sn} value={sn}>
+                      {sn}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+
+            <div
+              role="group"
+              aria-label={tr ? "Hareket türü" : "Movement type"}
+              className="inline-flex items-center rounded border border-border bg-background-tertiary p-0.5 text-xs font-medium"
+            >
+              {KINDS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={kind === k}
+                  onClick={() => {
+                    setKind(k);
+                    setDateChoice(null);
+                    setShown(PAGE);
+                  }}
+                  className={`cursor-pointer rounded-sm px-2.5 py-1.5 transition-colors ${
+                    kind === k
+                      ? "bg-background-primary font-semibold text-text-primary"
+                      : "text-text-secondary hover:text-text-primary"
+                  }`}
+                >
+                  {k === "all" ? t.trades.all : k === "trade" ? t.trades.tradesOnly : t.trades.waiversOnly}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-48">
+              <Select
+                aria-label={tr ? "Etki seviyesi" : "Impact level"}
+                value={tier}
+                onChange={(e) => {
+                  setTier(e.target.value as Tier | "all");
+                  setShown(PAGE);
+                }}
+                className="h-9"
+              >
+                <option value="all">{tr ? "Tüm etki seviyeleri" : "All impact levels"}</option>
+                {TIERS.map((ti) => (
+                  <option key={ti.id} value={ti.id}>
+                    {tr ? ti.tr : ti.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          {todays.length > 0 ? (
+            byTier ? (
+              <div className="flex flex-col gap-3">
+                {todays.map((e) =>
+                  e.kind === "trade" ? (
+                    <TradeCard
+                      key={e.id}
+                      trade={e}
+                      onSelectPlayer={onSelectPlayer}
+                      onSelectTeam={onSelectTeam}
+                    />
+                  ) : (
+                    <MovesCard key={e.id} moves={[e]} onSelectPlayer={onSelectPlayer} />
+                  )
+                )}
+                {shown < visible.length && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShown((n) => n + PAGE)}
+                    className="self-center"
+                  >
+                    {tr
+                      ? `Daha fazla göster (${visible.length - shown})`
+                      : `Show more (${visible.length - shown})`}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {todayTrades.map((trd) => (
+                  <TradeCard
+                    key={trd.id}
+                    trade={trd}
+                    onSelectPlayer={onSelectPlayer}
+                    onSelectTeam={onSelectTeam}
+                  />
+                ))}
+                {todayMoves.length > 0 && (
+                  <MovesCard moves={todayMoves} onSelectPlayer={onSelectPlayer} />
+                )}
+              </div>
+            )
+          ) : (
+            <EmptyState
+              icon={<ArrowRightLeft size={24} strokeWidth={1.5} />}
+              title={tr ? "Kayıt bulunamadı" : "No matching records"}
+              description={
+                tr
+                  ? "Seçili sezon ve filtreler için takas veya kadro hareketi bulunmuyor."
+                  : "No trades or roster moves match the active season and filters."
+              }
+              actionLabel={t.common.clearFilters}
+              onAction={resetFilters}
+            />
+          )}
+        </>
       )}
     </div>
   );

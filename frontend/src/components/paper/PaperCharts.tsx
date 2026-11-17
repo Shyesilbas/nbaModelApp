@@ -91,7 +91,7 @@ function Legend({ items }: { items: { label: string; className: string }[] }) {
 }
 
 export function RollingAccuracyChart({ games }: { games: ChartGame[] }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const p = t.paper;
   const points = useMemo<RollingPoint[]>(() => {
     const graded = games
@@ -156,12 +156,16 @@ export function RollingAccuracyChart({ games }: { games: ChartGame[] }) {
         <polyline points={line("home")} fill="none" className="stroke-text-muted" strokeWidth="2" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
         <polyline points={line("model")} fill="none" className="stroke-primary" strokeWidth="2" vectorEffect="non-scaling-stroke" />
       </svg>
-      {points.map((p) => (
+      {points.map((pt) => (
         <span
-          key={p.date}
-          title={`${p.date}: model ${pct(p.model, 1)}, home ${pct(p.home, 1)} (${p.games} games)`}
+          key={pt.date}
+          title={
+            language === "tr"
+              ? `${pt.date}: model ${pct(pt.model, 1)}, ev sahibi ${pct(pt.home, 1)} (${pt.games} maç)`
+              : `${pt.date}: model ${pct(pt.model, 1)}, home ${pct(pt.home, 1)} (${pt.games} games)`
+          }
           className="absolute h-2 w-2 -translate-x-1/2 translate-y-1/2 rounded-full bg-primary"
-          style={{ left: `${x(p.day)}%`, bottom: `${100 - y(p.model)}%` }}
+          style={{ left: `${x(pt.day)}%`, bottom: `${100 - y(pt.model)}%` }}
         />
       ))}
     </ChartFrame>
@@ -169,7 +173,7 @@ export function RollingAccuracyChart({ games }: { games: ChartGame[] }) {
 }
 
 export function CalibrationChart({ bands }: { bands: ChartBand[] }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const p = t.paper;
   const usable = bands.filter((b) => b.games > 0);
   if (usable.length === 0) return null;
@@ -194,7 +198,11 @@ export function CalibrationChart({ bands }: { bands: ChartBand[] }) {
       {usable.map((b) => (
         <span
           key={b.label}
-          title={`${b.label}: model said ${pct(b.mean_confidence, 1)}, hit ${pct(b.accuracy, 1)} over ${b.games} games`}
+          title={
+            language === "tr"
+              ? `${b.label}: model ${pct(b.mean_confidence, 1)}, isabet ${pct(b.accuracy, 1)} (${b.games} maç)`
+              : `${b.label}: model said ${pct(b.mean_confidence, 1)}, hit ${pct(b.accuracy, 1)} over ${b.games} games`
+          }
           className="absolute h-3 w-3 -translate-x-1/2 translate-y-1/2 rounded-full border border-background-primary bg-primary"
           style={{ left: `${pos(b.mean_confidence)}%`, bottom: `${pos(b.accuracy)}%` }}
         />

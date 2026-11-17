@@ -30,9 +30,10 @@ export function reportLocalClock(published: string): string | null {
   }).format(real);
 }
 
-/** "22:45 TSİ (03:45 PM ET)" for an injury report stamp; the stamp itself when it cannot be read. */
-export function reportStampText(published: string): string {
-  const tsi = reportLocalClock(published);
+/** "22:45 TSİ (03:45 PM ET)" (or TRT in EN) for an injury report stamp; the stamp itself when unreadable. */
+export function reportStampText(published: string, language: "tr" | "en" = "tr"): string {
+  const localClock = reportLocalClock(published);
   const eastern = published.split(" ").slice(1).join(" ");
-  return tsi ? `${tsi} TSİ (${eastern} ET)` : published;
+  const zoneLabel = language === "tr" ? "TSİ" : "TRT";
+  return localClock ? `${localClock} ${zoneLabel} (${eastern} ET)` : published;
 }

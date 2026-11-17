@@ -413,12 +413,18 @@ def _is_player_form_column(col: str) -> bool:
     return bool(re.search(r"_(LAST|EMA)_\d+$|_PER_MIN_LAST_10$|_TREND$|_STD_LAST_10$", col))
 
 
-@lru_cache(maxsize=1)
-def _metadata_positions() -> dict:
+@lru_cache(maxsize=4)
+def _metadata_positions_cached(_mtime_ns: int) -> dict:
+    del _mtime_ns
     if not PLAYER_METADATA_CSV.exists():
         return {}
     meta = pd.read_csv(PLAYER_METADATA_CSV, usecols=["PLAYER_ID", "POSITION_GROUP"]).dropna()
     return {int(p): str(g) for p, g in zip(meta["PLAYER_ID"], meta["POSITION_GROUP"])}
+
+
+def _metadata_positions() -> dict:
+    mtime_ns = PLAYER_METADATA_CSV.stat().st_mtime_ns if PLAYER_METADATA_CSV.exists() else 0
+    return _metadata_positions_cached(mtime_ns)
 
 
 def apply_no_history_rates(full_X: pd.DataFrame) -> pd.DataFrame:

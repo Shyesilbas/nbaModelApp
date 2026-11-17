@@ -13,8 +13,9 @@ import {
 import PlayerPhoto from "../PlayerPhoto";
 import TeamLogo from "../TeamLogo";
 import { loadArchivedPlayByPlay } from "../../lib/archiveData";
-import { Badge, Button, Card, EmptyState, InlineError, Skeleton } from "../common";
+import { Badge, Card, EmptyState, InlineError, Skeleton } from "../common";
 import { useLanguage } from "../../context/useLanguage";
+import { updateUrlRoute } from "../../lib/router";
 
 export interface PbpEvent {
   period: number;
@@ -86,16 +87,16 @@ const KEY_MOMENT_REASONS = new Set([
 
 const STRONG_REASONS = new Set(["clutch", "game_winner", "team_run", "triple_double", "30_pt_game", "40_pt_game"]);
 
-const FILTERS: { id: FilterId; label: string; reasons: string[] | null }[] = [
-  { id: "all", label: "Tümü", reasons: null },
-  { id: "runs", label: "Seriler ve farklar", reasons: RUN_REASONS },
-  { id: "leads", label: "Liderlik", reasons: LEAD_REASONS },
-  { id: "clutch", label: "Clutch", reasons: ["clutch"] },
-  { id: "threes", label: "Üçlükler", reasons: THREE_REASONS },
-  { id: "milestones", label: "Kilometre taşları", reasons: MILESTONE_REASONS },
+const FILTERS: { id: FilterId; tr: string; en: string; reasons: string[] | null }[] = [
+  { id: "all", tr: "Tümü", en: "All", reasons: null },
+  { id: "runs", tr: "Seriler ve farklar", en: "Runs & leads", reasons: RUN_REASONS },
+  { id: "leads", tr: "Liderlik", en: "Lead changes", reasons: LEAD_REASONS },
+  { id: "clutch", tr: "Clutch", en: "Clutch", reasons: ["clutch"] },
+  { id: "threes", tr: "Üçlükler", en: "3PT streaks", reasons: THREE_REASONS },
+  { id: "milestones", tr: "Kilometre taşları", en: "Milestones", reasons: MILESTONE_REASONS },
 ];
 
-const BADGE_LABELS: Record<string, string> = {
+const BADGE_LABELS_TR: Record<string, string> = {
   "points this quarter": "sayı (çeyrek)",
   "straight team points": "üst üste takım sayısı",
   "assists created": "asist",
@@ -104,9 +105,10 @@ const BADGE_LABELS: Record<string, string> = {
   steals: "top çalma",
 };
 
-const translateBadge = (badge: string) => {
+const translateBadge = (badge: string, tr: boolean) => {
+  if (!tr) return badge;
   const m = badge.match(/^(\d+) (.+)$/);
-  const label = m ? BADGE_LABELS[m[2]] : undefined;
+  const label = m ? BADGE_LABELS_TR[m[2]] : undefined;
   return m && label ? `${m[1]} ${label}` : badge;
 };
 
@@ -127,32 +129,36 @@ const ERROR = "border-status-error/30 bg-status-error/10 text-status-error";
 const INFO = "border-status-info/30 bg-status-info/10 text-status-info";
 const PRIMARY = "border-primary/25 bg-primary/10 text-primary";
 
-function reasonMeta(reason: string, event: PbpEvent): ReasonMeta {
+function reasonMeta(reason: string, event: PbpEvent, tr: boolean): ReasonMeta {
   const d = event.moment_detail ?? {};
   switch (reason) {
     case "back_to_back_3":
-      return { label: "Üst üste üçlük", icon: Flame, className: WARNING };
+      return { label: tr ? "Üst üste üçlük" : "Back-to-back 3PT", icon: Flame, className: WARNING };
     case "player_3_run":
-      return { label: "Sıcak el: 3 üçlük", icon: Flame, className: WARNING };
+      return { label: tr ? "Sıcak el: 3 üçlük" : "Hot hand: 3 threes", icon: Flame, className: WARNING };
     case "lead_change":
-      return { label: "Liderlik değişimi", icon: ArrowRightLeft, className: SUCCESS };
+      return { label: tr ? "Liderlik değişimi" : "Lead change", icon: ArrowRightLeft, className: SUCCESS };
     case "go_ahead":
-      return { label: "Öne geçiş", icon: ArrowRightLeft, className: SUCCESS };
+      return { label: tr ? "Öne geçiş" : "Go-ahead basket", icon: ArrowRightLeft, className: SUCCESS };
     case "game_tie":
-      return { label: "Beraberlik", icon: ArrowRightLeft, className: NEUTRAL };
+      return { label: tr ? "Beraberlik" : "Game tie", icon: ArrowRightLeft, className: NEUTRAL };
     case "game_winner":
-      return { label: "Maçın basketi", icon: Trophy, className: ERROR };
+      return { label: tr ? "Maçın basketi" : "Game winner", icon: Trophy, className: ERROR };
     case "clutch":
       return { label: "Clutch", icon: Zap, className: ERROR };
     case "team_run":
       return {
-        label: d.run_team && d.run_points ? `${d.run_team} ${d.run_points}-0 seri` : "Skor serisi",
+        label: d.run_team && d.run_points
+          ? `${d.run_team} ${d.run_points}-0 ${tr ? "seri" : "run"}`
+          : (tr ? "Skor serisi" : "Scoring run"),
         icon: TrendingUp,
         className: PRIMARY,
       };
     case "largest_lead":
       return {
-        label: d.lead_team && d.lead ? `${d.lead_team} +${d.lead} fark` : "En büyük fark",
+        label: d.lead_team && d.lead
+          ? `${d.lead_team} +${d.lead} ${tr ? "fark" : "lead"}`
+          : (tr ? "En büyük fark" : "Largest lead"),
         icon: TrendingUp,
         className: PRIMARY,
       };
@@ -161,19 +167,19 @@ function reasonMeta(reason: string, event: PbpEvent): ReasonMeta {
     case "double_double":
       return { label: "Double-double", icon: Award, className: INFO };
     case "40_pt_game":
-      return { label: "40+ sayı", icon: Sparkles, className: INFO };
+      return { label: tr ? "40+ sayı" : "40+ PTS", icon: Sparkles, className: INFO };
     case "30_pt_game":
-      return { label: "30+ sayı", icon: Sparkles, className: INFO };
+      return { label: tr ? "30+ sayı" : "30+ PTS", icon: Sparkles, className: INFO };
     case "20_pt_game":
-      return { label: "20+ sayı", icon: Sparkles, className: NEUTRAL };
+      return { label: tr ? "20+ sayı" : "20+ PTS", icon: Sparkles, className: NEUTRAL };
     case "10_ast":
-      return { label: "10 asist", icon: Award, className: NEUTRAL };
+      return { label: tr ? "10 asist" : "10 AST", icon: Award, className: NEUTRAL };
     case "15_reb":
-      return { label: "15 ribaund", icon: Award, className: NEUTRAL };
+      return { label: tr ? "15 ribaund" : "15 REB", icon: Award, className: NEUTRAL };
     case "5_stl":
-      return { label: "5 top çalma", icon: Award, className: NEUTRAL };
+      return { label: tr ? "5 top çalma" : "5 STL", icon: Award, className: NEUTRAL };
     case "5_blk":
-      return { label: "5 blok", icon: Award, className: NEUTRAL };
+      return { label: tr ? "5 blok" : "5 BLK", icon: Award, className: NEUTRAL };
     default:
       return { label: reason.replaceAll("_", " "), icon: Sparkles, className: NEUTRAL };
   }
@@ -181,19 +187,28 @@ function reasonMeta(reason: string, event: PbpEvent): ReasonMeta {
 
 const reasonsOf = (e: PbpEvent) => (e.moment_reasons ?? []).filter((r) => KEY_MOMENT_REASONS.has(r) && r !== "badge");
 
-function SummaryStrip({ data }: { data: PbpData }) {
+function SummaryStrip({ data, tr }: { data: PbpData; tr: boolean }) {
   const s = data.summary;
   if (!s) return null;
   const leads = Object.entries(s.largest_lead ?? {}).filter(([, v]) => v > 0);
   const items: { label: string; value: string }[] = [];
   if (leads.length > 0) {
-    items.push({ label: "En büyük fark", value: leads.map(([team, v]) => `${team} +${v}`).join(" · ") });
+    items.push({
+      label: tr ? "En büyük fark" : "Largest lead",
+      value: leads.map(([team, v]) => `${team} +${v}`).join(" · "),
+    });
   }
   if (s.comeback_points && s.comeback_team) {
-    items.push({ label: "Geri dönüş", value: `${s.comeback_team}, ${s.comeback_points} sayı geriden` });
+    items.push({
+      label: tr ? "Geri dönüş" : "Biggest comeback",
+      value: tr ? `${s.comeback_team}, ${s.comeback_points} sayı geriden` : `${s.comeback_team} from ${s.comeback_points} down`,
+    });
   }
   if (s.second_half_lead_changes != null) {
-    items.push({ label: "2. yarıda liderlik değişimi", value: String(s.second_half_lead_changes) });
+    items.push({
+      label: tr ? "2. yarı liderlik değişimi" : "2nd-half lead changes",
+      value: String(s.second_half_lead_changes),
+    });
   }
   if (items.length === 0) return null;
   return (
@@ -218,6 +233,7 @@ export function HighlightsTab({
   initialData?: PbpData | null;
 }) {
   const { language } = useLanguage();
+  const tr = language === "tr";
   const [reloadKey, setReloadKey] = useState(0);
   const requestKey = `${gameId}|${season ?? ""}|${reloadKey}`;
   const [result, setResult] = useState<{ key: string; data?: PbpData; error?: string } | null>(null);
@@ -232,13 +248,16 @@ export function HighlightsTab({
       })
       .catch((e: unknown) => {
         if (!cancelled) {
-          setResult({ key: requestKey, error: e instanceof Error && e.message ? e.message : "Önemli anlar yüklenemedi." });
+          setResult({
+            key: requestKey,
+            error: e instanceof Error && e.message ? e.message : (tr ? "Önemli anlar yüklenemedi." : "Failed to load highlights."),
+          });
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [gameId, season, initialData, requestKey]);
+  }, [gameId, season, initialData, requestKey, tr]);
 
   const fetched = result?.key === requestKey ? result : null;
   const data = initialData ?? fetched?.data ?? null;
@@ -267,7 +286,7 @@ export function HighlightsTab({
 
   if (loading) {
     return (
-      <Card className="space-y-3" aria-busy="true" aria-label="Önemli anlar yükleniyor">
+      <Card className="space-y-3" aria-busy="true" aria-label={tr ? "Önemli anlar yükleniyor" : "Loading highlights"}>
         <Skeleton className="h-12 w-full rounded" />
         {[0, 1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-14 w-full rounded" />
@@ -279,7 +298,7 @@ export function HighlightsTab({
   if (error) {
     return (
       <InlineError
-        title={language === "tr" ? "Önemli anlar yüklenemedi" : "Failed to load highlights"}
+        title={tr ? "Önemli anlar yüklenemedi" : "Failed to load highlights"}
         message={error}
         onRetry={() => setReloadKey((k) => k + 1)}
       />
@@ -290,8 +309,8 @@ export function HighlightsTab({
     return (
       <EmptyState
         icon={<Clock size={24} strokeWidth={1.5} />}
-        title={language === "tr" ? "Önemli anlar yok" : "No highlights available"}
-        description={language === "tr" ? "Bu maç için play-by-play verisi henüz hazır değil." : "Play-by-play data is not yet recorded for this game."}
+        title={tr ? "Önemli anlar yok" : "No highlights available"}
+        description={tr ? "Bu maç için play-by-play verisi henüz hazır değil." : "Play-by-play data is not yet recorded for this game."}
       />
     );
   }
@@ -301,33 +320,45 @@ export function HighlightsTab({
       <div className="flex flex-col gap-2 border-b border-border-light pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-sm font-semibold text-text-primary">
-            {language === "tr" ? "Maçın dönüm noktaları" : "Key Matchup Moments & Turning Points"}
+            {tr ? "Maçın dönüm noktaları" : "Key Matchup Moments & Turning Points"}
           </h3>
           <p className="mt-0.5 text-xs text-text-secondary">
-            {language === "tr"
-              ? "Skor serileri, ikinci yarıdaki liderlik değişimleri, clutch basketler ve eşiği aşan bireysel performanslar"
+            {tr
+              ? "Skor serileri, ikinci yarıdaki liderlik değişimleri, clutch basketler ve eşik performansları"
               : "Scoring runs, second-half lead changes, clutch executions, and milestone performances"}
           </p>
         </div>
         <Badge variant="neutral">
-          <span className="tabular-nums">{visible.length}</span> {language === "tr" ? "an" : "events"}
+          <span className="tabular-nums">{visible.length}</span> {tr ? "an" : "events"}
         </Badge>
       </div>
 
-      <SummaryStrip data={data} />
+      <SummaryStrip data={data} tr={tr} />
 
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Önemli an filtresi">
-        {FILTERS.filter((f) => f.id === "all" || counts[f.id] > 0).map((f) => (
-          <Button
-            key={f.id}
-            size="sm"
-            variant={filter === f.id ? "primary" : "secondary"}
-            aria-pressed={filter === f.id}
-            onClick={() => setFilter(f.id)}
-          >
-            {f.label} <span className="tabular-nums opacity-75">({counts[f.id]})</span>
-          </Button>
-        ))}
+      <div
+        className="inline-flex flex-wrap items-center gap-1 rounded border border-border bg-background-tertiary p-1"
+        role="group"
+        aria-label={tr ? "Önemli an filtresi" : "Highlights filter"}
+      >
+        {FILTERS.filter((f) => f.id === "all" || counts[f.id] > 0).map((f) => {
+          const active = filter === f.id;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setFilter(f.id)}
+              className={`cursor-pointer rounded-sm px-2.5 py-1 text-xs font-medium transition-colors ${
+                active
+                  ? "bg-background-primary font-semibold text-text-primary"
+                  : "text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              {tr ? f.tr : f.en}{" "}
+              <span className="tabular-nums text-text-muted">({counts[f.id]})</span>
+            </button>
+          );
+        })}
       </div>
 
       <ol className="max-h-screen divide-y divide-border-light overflow-y-auto">
@@ -338,18 +369,25 @@ export function HighlightsTab({
           return (
             <li key={`hl-${e.period}-${e.clock}-${idx}`}>
               {showPeriod && (
-                <p className="sticky top-0 bg-background-primary py-2 text-xs font-semibold text-text-secondary">
+                <p className="sticky top-0 z-10 border-b border-border-light bg-background-primary px-2 py-2 text-xs font-semibold text-text-secondary">
                   {periodName(e.period)}
                 </p>
               )}
-              <div className={`flex items-start gap-3 px-2 py-3 ${strong ? "bg-background-secondary" : ""}`}>
+              <div className={`flex items-start gap-3 px-2 py-3 ${strong ? "bg-background-secondary/70" : ""}`}>
                 <div className="shrink-0 pt-0.5">
                   {e.player_id ? (
-                    <PlayerPhoto playerId={e.player_id} name={e.player_name || "Oyuncu"} size={40} />
+                    <button
+                      type="button"
+                      onClick={() => updateUrlRoute({ tab: "player-profile", playerId: e.player_id! })}
+                      className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
+                      aria-label={e.player_name ? `${e.player_name} ${tr ? "profilini aç" : "open profile"}` : undefined}
+                    >
+                      <PlayerPhoto playerId={e.player_id} name={e.player_name || (tr ? "Oyuncu" : "Player")} size={36} />
+                    </button>
                   ) : e.team ? (
-                    <TeamLogo abbr={e.team} name="" size={40} />
+                    <TeamLogo abbr={e.team} name="" size={36} />
                   ) : (
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background-tertiary text-text-muted">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background-tertiary text-text-muted">
                       <Clock size={16} strokeWidth={1.5} aria-hidden="true" />
                     </span>
                   )}
@@ -358,21 +396,33 @@ export function HighlightsTab({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2">
                     <span className="text-xs font-semibold tabular-nums text-text-secondary">{e.clock}</span>
-                    {e.player_name && <span className="text-sm font-semibold text-text-primary">{e.player_name}</span>}
+                    {e.player_name && (
+                      e.player_id ? (
+                        <button
+                          type="button"
+                          onClick={() => updateUrlRoute({ tab: "player-profile", playerId: e.player_id! })}
+                          className="cursor-pointer text-sm font-semibold text-text-primary hover:underline"
+                        >
+                          {e.player_name}
+                        </button>
+                      ) : (
+                        <span className="text-sm font-semibold text-text-primary">{e.player_name}</span>
+                      )
+                    )}
                     {e.team && <span className="text-xs text-text-muted">{e.team}</span>}
                   </div>
                   <p className="mt-0.5 text-xs leading-snug text-text-secondary">{e.description || e.action_type}</p>
                   {(reasons.length > 0 || (e.badges?.length ?? 0) > 0) && (
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       {reasons.map((r) => {
-                        const meta = reasonMeta(r, e);
+                        const meta = reasonMeta(r, e, tr);
                         const Icon = meta.icon;
                         return (
                           <span
                             key={r}
                             className={`inline-flex items-center gap-1 rounded-sm border px-2 py-0.5 text-xs font-medium ${meta.className}`}
                           >
-                            <Icon size={16} strokeWidth={1.5} className="shrink-0" aria-hidden="true" />
+                            <Icon size={14} strokeWidth={1.5} className="shrink-0" aria-hidden="true" />
                             {meta.label}
                           </span>
                         );
@@ -382,8 +432,8 @@ export function HighlightsTab({
                           key={b}
                           className={`inline-flex items-center gap-1 rounded-sm border px-2 py-0.5 text-xs font-medium ${NEUTRAL}`}
                         >
-                          <Award size={16} strokeWidth={1.5} className="shrink-0" aria-hidden="true" />
-                          {translateBadge(b)}
+                          <Award size={14} strokeWidth={1.5} className="shrink-0" aria-hidden="true" />
+                          {translateBadge(b, tr)}
                         </span>
                       ))}
                     </div>
@@ -392,7 +442,7 @@ export function HighlightsTab({
 
                 <div className="shrink-0 pt-0.5 text-right">
                   <p className="text-xs font-semibold tabular-nums text-text-primary">
-                    {e.score_away} - {e.score_home}
+                    {e.score_away} – {e.score_home}
                   </p>
                   {e.points_scored > 0 && (
                     <p className="mt-0.5 text-xs font-semibold tabular-nums text-status-success">+{e.points_scored}</p>
@@ -405,7 +455,9 @@ export function HighlightsTab({
       </ol>
 
       {visible.length === 0 && (
-        <p className="py-8 text-center text-xs text-text-muted">Seçili filtreye uygun an bulunamadı.</p>
+        <p className="py-8 text-center text-xs text-text-muted">
+          {tr ? "Seçili filtreye uygun an bulunamadı." : "No highlights match the selected filter."}
+        </p>
       )}
     </Card>
   );

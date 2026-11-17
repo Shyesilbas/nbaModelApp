@@ -1,5 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
+import { useLanguage } from "../../context/useLanguage";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -20,18 +21,51 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   maxWidth = "md",
 }) => {
-  useEffect(() => {
-    if (!isOpen) return;
+  const { t } = useLanguage();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const descId = useId();
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (isOpen && !dialog.open) {
+      dialog.setAttribute("closedby", "any");
+      dialog.showModal();
+    } else if (!isOpen && dialog.open) {
+      dialog.close();
+    }
+  }, [isOpen]);
+
+  // Fallback click-outside light-dismiss for browsers without native `closedby="any"` (e.g. Safari)
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !isOpen || "closedBy" in HTMLDialogElement.prototype) return;
+
+    const isOutside = (e: PointerEvent) => {
+      const r = dialog.getBoundingClientRect();
+      return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+    let pressedOutside = false;
+    const onDown = (e: PointerEvent) => {
+      pressedOutside = isOutside(e);
+    };
+    const onUp = (e: PointerEvent) => {
+      if (pressedOutside && isOutside(e) && dialog.open) {
+        dialog.close();
+      }
+      pressedOutside = false;
+    };
+
+    dialog.addEventListener("pointerdown", onDown);
+    dialog.addEventListener("pointerup", onUp);
+    return () => {
+      dialog.removeEventListener("pointerdown", onDown);
+      dialog.removeEventListener("pointerup", onUp);
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -43,51 +77,44 @@ export const Modal: React.FC<ModalProps> = ({
   }[maxWidth];
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <dialog
+      ref={dialogRef}
+      aria-labelledby={title ? titleId : undefined}
+      aria-label={title ? undefined : t.common.close}
+      aria-describedby={description ? descId : undefined}
+      onClose={onClose}
+      className={`m-auto w-full rounded-md border border-border bg-background-primary p-5 text-text-primary shadow-md sm:p-6 ${maxStyles}`}
     >
-      {/* Restrained Backdrop (40% black, NO blur) */}
-      <div
-        className="fixed inset-0 bg-black/40 transition-opacity"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Modal Surface */}
-      <div
-        className={`relative z-10 w-full rounded-md border border-border bg-background-primary p-5 sm:p-6 shadow-md ${maxStyles}`}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            {title && (
-              <h2 className="text-base font-semibold text-text-primary">
-                {title}
-              </h2>
-            )}
-            {description && (
-              <p className="mt-1 text-xs text-text-secondary">{description}</p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="rounded p-1 text-text-muted hover:bg-background-tertiary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus"
-          >
-            <X size={16} />
-          </button>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          {title && (
+            <h2 id={titleId} className="text-base font-semibold text-text-primary">
+              {title}
+            </h2>
+          )}
+          {description && (
+            <p id={descId} className="mt-1 text-xs text-text-secondary">
+              {description}
+            </p>
+          )}
         </div>
-
-        <div className="mt-4">{children}</div>
-
-        {footer && (
-          <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-border-light pt-4">
-            {footer}
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => dialogRef.current?.close()}
+          aria-label={t.common.close}
+          className="cursor-pointer rounded p-1 text-text-muted hover:bg-background-tertiary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+        >
+          <X size={16} strokeWidth={1.5} aria-hidden="true" />
+        </button>
       </div>
-    </div>
+
+      <div className="mt-4">{children}</div>
+
+      {footer && (
+        <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-border-light pt-4">
+          {footer}
+        </div>
+      )}
+    </dialog>
   );
 };

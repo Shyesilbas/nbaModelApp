@@ -104,11 +104,16 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
         </div>
 
         {/* Conference Tabs */}
-        <div className="flex items-center justify-center gap-1 self-stretch rounded border border-border bg-background-tertiary p-1 sm:self-auto">
+        <div
+          role="group"
+          aria-label={language === "tr" ? "Konferans filtresi" : "Conference filter"}
+          className="flex items-center justify-center gap-1 self-stretch rounded border border-border bg-background-tertiary p-1 sm:self-auto"
+        >
           <button
             type="button"
+            aria-pressed={conferenceFilter === "all"}
             onClick={() => setConferenceFilter("all")}
-            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${conferenceFilter === "all"
+            className={`cursor-pointer rounded px-3 py-1.5 text-xs font-semibold transition-all ${conferenceFilter === "all"
                 ? "bg-primary text-white dark:text-background-secondary"
                 : "text-text-secondary hover:text-text-primary"
               }`}
@@ -117,8 +122,9 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           </button>
           <button
             type="button"
+            aria-pressed={conferenceFilter === "east"}
             onClick={() => setConferenceFilter("east")}
-            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${conferenceFilter === "east"
+            className={`cursor-pointer rounded px-3 py-1.5 text-xs font-semibold transition-all ${conferenceFilter === "east"
                 ? "bg-primary text-white dark:text-background-secondary"
                 : "text-text-secondary hover:text-text-primary"
               }`}
@@ -127,8 +133,9 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
           </button>
           <button
             type="button"
+            aria-pressed={conferenceFilter === "west"}
             onClick={() => setConferenceFilter("west")}
-            className={`rounded px-3 py-1.5 text-xs font-semibold transition-all ${conferenceFilter === "west"
+            className={`cursor-pointer rounded px-3 py-1.5 text-xs font-semibold transition-all ${conferenceFilter === "west"
                 ? "bg-primary text-white dark:text-background-secondary"
                 : "text-text-secondary hover:text-text-primary"
               }`}
@@ -143,45 +150,45 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
         <table className="w-full border-collapse text-left text-xs">
           <thead>
             <tr className="border-b border-border bg-background-tertiary/50 text-xs font-semibold text-text-secondary">
-              <th className="w-12 px-3 py-2.5 text-center">#</th>
-              <th className="min-w-[180px] px-3 py-2.5">{t.common.team}</th>
-              <th className="w-10 px-2 py-2.5 text-center" title={language === "tr" ? "Oynanan maç" : "Games Played"}>
+              <th scope="col" className="w-12 px-3 py-2.5 text-center">#</th>
+              <th scope="col" className="min-w-[180px] px-3 py-2.5">{t.common.team}</th>
+              <th scope="col" className="w-10 px-2 py-2.5 text-center" title={language === "tr" ? "Oynanan maç" : "Games Played"}>
                 {language === "tr" ? "O" : "GP"}
               </th>
-              <th className="w-10 px-2 py-2.5 text-center" title={language === "tr" ? "Galibiyet" : "Wins"}>
+              <th scope="col" className="w-10 px-2 py-2.5 text-center" title={language === "tr" ? "Galibiyet" : "Wins"}>
                 {language === "tr" ? "G" : "W"}
               </th>
-              <th className="w-10 px-2 py-2.5 text-center" title={language === "tr" ? "Mağlubiyet" : "Losses"}>
+              <th scope="col" className="w-10 px-2 py-2.5 text-center" title={language === "tr" ? "Mağlubiyet" : "Losses"}>
                 {language === "tr" ? "M" : "L"}
               </th>
-              <th className="w-12 px-2 py-2.5 text-center font-semibold text-text-primary" title={t.fixtures.winRate}>
+              <th scope="col" className="w-12 px-2 py-2.5 text-center font-semibold text-text-primary" title={t.fixtures.winRate}>
                 {t.fixtures.pct}
               </th>
-              <th className="w-12 px-2 py-2.5 text-center" title={t.fixtures.gamesBehind}>
+              <th scope="col" className="w-12 px-2 py-2.5 text-center" title={t.fixtures.gamesBehind}>
                 {t.fixtures.gamesBehind}
               </th>
-              <th className="hidden w-14 px-2 py-2.5 text-center md:table-cell" title={t.fixtures.pointsFor}>
+              <th scope="col" className="hidden w-14 px-2 py-2.5 text-center md:table-cell" title={t.fixtures.pointsFor}>
                 {language === "tr" ? "Sayı" : "PPG"}
               </th>
-              <th className="hidden w-14 px-2 py-2.5 text-center md:table-cell" title={t.fixtures.pointsAgainst}>
+              <th scope="col" className="hidden w-14 px-2 py-2.5 text-center md:table-cell" title={t.fixtures.pointsAgainst}>
                 {language === "tr" ? "Y.Sayı" : "OPP"}
               </th>
-              <th className="w-12 px-2 py-2.5 text-center" title={t.fixtures.pointDiff}>
+              <th scope="col" className="w-12 px-2 py-2.5 text-center" title={t.fixtures.pointDiff}>
                 {language === "tr" ? "AV" : "DIFF"}
               </th>
-              <th className="hidden w-16 px-2 py-2.5 text-center lg:table-cell" title={language === "tr" ? "İç saha" : "Home record"}>
+              <th scope="col" className="hidden w-16 px-2 py-2.5 text-center lg:table-cell" title={language === "tr" ? "İç saha" : "Home record"}>
                 {t.fixtures.homeRecord}
               </th>
-              <th className="hidden w-16 px-2 py-2.5 text-center lg:table-cell" title={language === "tr" ? "Deplasman" : "Away record"}>
+              <th scope="col" className="hidden w-16 px-2 py-2.5 text-center lg:table-cell" title={language === "tr" ? "Deplasman" : "Away record"}>
                 {t.fixtures.awayRecord}
               </th>
-              <th className="hidden w-14 px-2 py-2.5 text-center sm:table-cell" title={language === "tr" ? "Son 10 maç" : "Last 10"}>
+              <th scope="col" className="hidden w-14 px-2 py-2.5 text-center sm:table-cell" title={language === "tr" ? "Son 10 maç" : "Last 10"}>
                 {t.fixtures.l10}
               </th>
-              <th className="hidden w-12 px-2 py-2.5 text-center sm:table-cell" title={language === "tr" ? "Mevcut seri" : "Streak"}>
+              <th scope="col" className="hidden w-12 px-2 py-2.5 text-center sm:table-cell" title={language === "tr" ? "Mevcut seri" : "Streak"}>
                 {t.fixtures.streak}
               </th>
-              <th className="hidden w-28 px-3 py-2.5 text-center sm:table-cell" title={t.fixtures.recentForm}>
+              <th scope="col" className="hidden w-28 px-3 py-2.5 text-center sm:table-cell" title={t.fixtures.recentForm}>
                 Form
               </th>
             </tr>
@@ -201,10 +208,16 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
                   <td className="px-3 py-2.5 text-center font-semibold tabular-nums text-text-secondary">
                     <div className="flex items-center justify-center gap-1.5">
                       {isDirectPlayoff && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-status-success" title="Dogrudan Playoff (1-6)" />
+                        <span
+                          className="h-1.5 w-1.5 rounded-full bg-status-success"
+                          title={language === "tr" ? "Doğrudan Playoff (1-6)" : "Playoffs Seed (1-6)"}
+                        />
                       )}
                       {isPlayIn && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-status-warning" title="Play-In Turnuvasi (7-10)" />
+                        <span
+                          className="h-1.5 w-1.5 rounded-full bg-status-warning"
+                          title={language === "tr" ? "Play-In Turnuvası (7-10)" : "Play-In Tournament (7-10)"}
+                        />
                       )}
                       {isLottery && (
                         <span className="h-1.5 w-1.5 rounded-full bg-border" />
@@ -290,8 +303,8 @@ export const FixturesStandingsView: React.FC<FixturesStandingsViewProps> = ({
 
         <div className="tabular-nums text-xs text-text-secondary">
           {language === "tr"
-            ? "O: oynanan • G: galibiyet • M: mağlubiyet • %: yüzde • Fark: galibiyet farkı • AV: averaj"
-            : "GP: games played • W: wins • L: losses • %: win pct • GB: games behind • DIFF: point diff"}
+            ? "O: oynanan • G: galibiyet • M: mağlubiyet • GYZ: galibiyet yüzdesi • Fark: lider farkı • AV: sayı averajı"
+            : "GP: games played • W: wins • L: losses • PCT: win pct • GB: games behind • DIFF: point diff"}
         </div>
       </div>
     </div>

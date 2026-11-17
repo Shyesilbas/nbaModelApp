@@ -46,25 +46,26 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
           <Skeleton className="h-3.5 w-16" />
         </div>
         {displayMode === "list" ? (
-          <div className="divide-y divide-border overflow-hidden rounded border border-border bg-background-primary">
+          <div className="divide-y divide-border-light overflow-hidden rounded border border-border bg-background-primary">
             {Array.from({ length: 6 }).map((_, idx) => (
               <div
                 key={idx}
-                className="grid grid-cols-[72px_1fr_auto] items-center gap-3 px-4 py-3.5 sm:grid-cols-[96px_1fr_132px]"
+                className="grid grid-cols-12 items-center gap-3 px-4 py-3.5"
               >
-                <Skeleton className="h-5 w-14 rounded-sm" />
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                <div className="col-span-9 grid grid-cols-3 items-center gap-4">
                   <div className="flex items-center justify-end gap-2.5">
-                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-24" />
                     <Skeleton variant="circular" className="h-7 w-7" />
                   </div>
-                  <Skeleton className="h-6 w-20 rounded" />
+                  <div className="flex justify-center">
+                    <Skeleton className="h-7 w-20 rounded" />
+                  </div>
                   <div className="flex items-center gap-2.5">
                     <Skeleton variant="circular" className="h-7 w-7" />
-                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-24" />
                   </div>
                 </div>
-                <div className="flex justify-end">
+                <div className="col-span-3 flex justify-end">
                   <Skeleton className="h-4 w-16" />
                 </div>
               </div>
@@ -116,20 +117,24 @@ export const FixturesScheduleView: React.FC<FixturesScheduleViewProps> = ({
     );
   }
 
+  const showDayHeader = Boolean(hasActiveSearch) || dayGroups.length > 1;
+
   return (
     <div className="space-y-6">
       {dayGroups.map((dayGroup) => (
-        <div key={dayGroup.date} className={`space-y-2.5 ${displayMode === "list" ? "max-w-2xl" : ""}`}>
-          <div className="flex items-baseline justify-between px-1">
-            <h3 className="text-sm font-semibold text-text-primary">{dayGroup.formattedDate}</h3>
-            <span className="text-xs font-medium tabular-nums text-text-secondary">
-              {dayGroup.games.length} {language === "tr" ? "maç" : dayGroup.games.length === 1 ? "game" : "games"}
-            </span>
-          </div>
+        <div key={dayGroup.date} className="space-y-2.5">
+          {showDayHeader && (
+            <div className="flex items-baseline justify-between px-1">
+              <h3 className="text-sm font-semibold text-text-primary">{dayGroup.formattedDate}</h3>
+              <span className="text-xs font-medium tabular-nums text-text-secondary">
+                {dayGroup.games.length} {language === "tr" ? "maç" : dayGroup.games.length === 1 ? "game" : "games"}
+              </span>
+            </div>
+          )}
 
           {/* Matches List or Grid for that Day */}
           {displayMode === "list" ? (
-            <div className="divide-y divide-border overflow-hidden rounded border border-border bg-background-primary">
+            <div className="divide-y divide-border-light overflow-hidden rounded border border-border bg-background-primary">
               {dayGroup.games.map((game) => {
                 const awayAbbr = game.AWAY_TEAM_ABBREVIATION ?? "";
                 const homeAbbr = game.HOME_TEAM_ABBREVIATION ?? "";

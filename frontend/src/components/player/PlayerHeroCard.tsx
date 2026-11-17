@@ -16,11 +16,13 @@ function SeasonSelector({
   selected,
   onChange,
   teamFor,
+  tr,
 }: {
   seasons: string[];
   selected: string;
   onChange: (s: string) => void;
   teamFor: (s: string) => string | null;
+  tr: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -56,9 +58,9 @@ function SeasonSelector({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={`Sezon seç, şu an ${selected}`}
+        aria-label={tr ? `Sezon seç, şu an ${selected}` : `Select season, currently ${selected}`}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex h-9 items-center gap-2 rounded border border-border bg-background-primary px-3 text-sm text-text-primary hover:border-card-border-hover focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus cursor-pointer"
+        className="inline-flex h-9 cursor-pointer items-center gap-2 rounded border border-border bg-background-primary px-3 text-sm text-text-primary hover:border-card-border-hover focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-focus"
       >
         {label(selected)}
         <ChevronDown size={16} strokeWidth={1.5} className="text-text-muted" aria-hidden="true" />
@@ -66,7 +68,7 @@ function SeasonSelector({
       {open && (
         <ul
           role="listbox"
-          aria-label="Sezonlar"
+          aria-label={tr ? "Sezonlar" : "Seasons"}
           className="absolute right-0 z-50 mt-1 max-h-72 min-w-full overflow-y-auto rounded border border-border bg-background-primary py-1 shadow-md"
         >
           {[...seasons].reverse().map((sn) => (
@@ -79,7 +81,7 @@ function SeasonSelector({
                   onChange(sn);
                   setOpen(false);
                 }}
-                className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm text-text-primary hover:bg-background-tertiary focus-visible:bg-background-tertiary focus-visible:outline-none cursor-pointer"
+                className="flex h-10 w-full cursor-pointer items-center gap-2 px-3 text-left text-sm text-text-primary hover:bg-background-tertiary focus-visible:bg-background-tertiary focus-visible:outline-none"
               >
                 {label(sn)}
                 {sn === selected && (
@@ -122,40 +124,49 @@ function SeasonStats({ avgs }: { avgs: SeasonAverages }) {
   ];
 
   return (
-    <dl className="grid grid-cols-3 gap-x-5 gap-y-3 sm:grid-cols-5 lg:grid-cols-[repeat(13,minmax(0,auto))] lg:justify-between">
-      {primary.map((s) => (
-        <div key={s.label}>
-          <dt className="text-xs text-text-secondary">{s.label}</dt>
-          <dd className="text-lg font-semibold tabular-nums text-text-primary">{s.value}</dd>
-        </div>
-      ))}
-      {secondary.map((s) => (
-        <div key={s.label}>
-          <dt className="text-xs text-text-muted">{s.label}</dt>
-          <dd className="text-sm font-medium tabular-nums text-text-primary">{s.value}</dd>
-          {s.hint && <p className="text-xs tabular-nums text-text-muted">{s.hint}</p>}
-        </div>
-      ))}
-    </dl>
+    <div className="space-y-3">
+      <dl className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        {primary.map((s) => (
+          <div key={s.label} className="rounded border border-border-light bg-background-secondary/70 px-3 py-2">
+            <dt className="text-xs font-medium text-text-secondary">{s.label}</dt>
+            <dd className="mt-0.5 text-xl font-semibold tabular-nums text-text-primary">{s.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <dl className="grid grid-cols-3 gap-x-4 gap-y-2.5 sm:grid-cols-5 lg:grid-cols-9">
+        {secondary.map((s) => (
+          <div key={s.label}>
+            <dt className="text-xs text-text-muted">{s.label}</dt>
+            <dd className="text-sm font-medium tabular-nums text-text-primary">{s.value}</dd>
+            {s.hint && <p className="text-xs tabular-nums text-text-muted">{s.hint}</p>}
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
 
-function StatsSkeleton() {
+function StatsSkeleton({ tr }: { tr: boolean }) {
   return (
-    <div aria-busy="true" aria-label="Sezon ortalamaları yükleniyor">
-      <Skeleton className="h-12 w-full rounded" />
+    <div className="space-y-3" aria-busy="true" aria-label={tr ? "Sezon ortalamaları yükleniyor" : "Loading season averages"}>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-14 w-full rounded" />
+        ))}
+      </div>
+      <Skeleton className="h-10 w-full rounded" />
     </div>
   );
 }
 
 /* ─────────── Bio ─────────── */
 
-function draftText(p: PlayerProfile): string {
-  if (!p.DRAFT_YEAR) return "Draft edilmedi";
+function draftText(p: PlayerProfile, tr: boolean): string {
+  if (!p.DRAFT_YEAR) return tr ? "Draft edilmedi" : "Undrafted";
   return [
     p.DRAFT_YEAR,
-    p.DRAFT_ROUND ? `${p.DRAFT_ROUND}. tur` : null,
-    p.DRAFT_NUMBER ? `${p.DRAFT_NUMBER}. sıra` : null,
+    p.DRAFT_ROUND ? (tr ? `${p.DRAFT_ROUND}. tur` : `Rd ${p.DRAFT_ROUND}`) : null,
+    p.DRAFT_NUMBER ? (tr ? `${p.DRAFT_NUMBER}. sıra` : `Pick ${p.DRAFT_NUMBER}`) : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -183,13 +194,14 @@ export default function PlayerHeroCard({
   teamFor,
 }: PlayerHeroCardProps) {
   const { language } = useLanguage();
+  const tr = language === "tr";
   const teams = avgs?.teams && avgs.teams.length > 0 ? avgs.teams : player.CURRENT_TEAM ? [player.CURRENT_TEAM] : [];
   const bio = [
-    { label: language === "tr" ? "Boy" : "Height", value: formatHeight(player.HEIGHT) || null },
-    { label: language === "tr" ? "Kilo" : "Weight", value: player.WEIGHT ? `${player.WEIGHT} lbs` : null },
-    { label: language === "tr" ? "Ülke" : "Country", value: player.COUNTRY },
-    { label: language === "tr" ? "Okul" : "College", value: player.COLLEGE },
-    { label: "Draft", value: draftText(player) },
+    { label: tr ? "Boy" : "Height", value: formatHeight(player.HEIGHT) || null },
+    { label: tr ? "Kilo" : "Weight", value: player.WEIGHT ? `${player.WEIGHT} lbs` : null },
+    { label: tr ? "Ülke" : "Country", value: player.COUNTRY },
+    { label: tr ? "Okul" : "College", value: player.COLLEGE },
+    { label: "Draft", value: draftText(player, tr) },
   ];
   const hasAverages = avgs != null && avgs.games_total > 0;
 
@@ -229,32 +241,32 @@ export default function PlayerHeroCard({
         </div>
 
         {seasons.length > 0 && (
-          <SeasonSelector seasons={seasons} selected={season} onChange={onSeasonChange} teamFor={teamFor} />
+          <SeasonSelector seasons={seasons} selected={season} onChange={onSeasonChange} teamFor={teamFor} tr={tr} />
         )}
       </div>
 
       {seasons.length > 0 && (
-        <section className="mt-4 space-y-3 border-t border-border-light pt-3" aria-labelledby="player-hero-stats">
+        <section className="mt-4 space-y-3 border-t border-border-light pt-3.5" aria-labelledby="player-hero-stats">
           <h2 id="player-hero-stats" className="text-xs text-text-muted">
-            <span className="tabular-nums">{season}</span> {language === "tr" ? "maç başına ortalamalar" : "per-game averages"}
+            <span className="tabular-nums">{season}</span> {tr ? "maç başına ortalamalar" : "per-game averages"}
             {hasAverages && (
               <>
                 {" · "}
                 <span className="tabular-nums">
                   {avgs.games_played}/{avgs.games_total}
                 </span>{" "}
-                {language === "tr" ? "maç" : "games"}
+                {tr ? "maç" : "games"}
               </>
             )}
           </h2>
 
           {loading ? (
-            <StatsSkeleton />
+            <StatsSkeleton tr={tr} />
           ) : hasAverages ? (
             <SeasonStats avgs={avgs} />
           ) : (
             <p className="py-2 text-sm text-text-secondary">
-              {language === "tr" ? (
+              {tr ? (
                 <>
                   <span className="tabular-nums">{season}</span> sezonu için ortalama verisi bulunamadı.
                 </>

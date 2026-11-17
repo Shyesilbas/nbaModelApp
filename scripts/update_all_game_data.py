@@ -43,14 +43,14 @@ def main() -> int:
         common + season_args + ["--fetch-boxscores"],
     )
 
-    pbp_command = [sys.executable, str(ROOT / "scripts" / "build_play_by_play.py")]
     if args.season:
-        pbp_command += ["--season", args.season]
+        target_season = args.season
     else:
-        # Resolve the season once so both ingestion stages use the same target.
         from src.core.season_utils import get_default_season
 
-        pbp_command += ["--season", get_default_season()]
+        target_season = get_default_season()
+
+    pbp_command = [sys.executable, str(ROOT / "scripts" / "build_play_by_play.py"), "--season", target_season]
     if args.pbp_limit:
         pbp_command += ["--limit", str(args.pbp_limit)]
     pbp_command += ["--sleep", str(args.pbp_sleep)]
@@ -63,13 +63,17 @@ def main() -> int:
         [
             sys.executable,
             "-c",
+            "import sys; "
             "from src.core.data_paths import PBP_SITUATIONAL_CSV; "
             "from src.features.pbp_situational import build_situational_dataset; "
-            "df = build_situational_dataset('data'); "
-            "PBP_SITUATIONAL_CSV.parent.mkdir(parents=True, exist_ok=True); "
-            "df.to_csv(PBP_SITUATIONAL_CSV, index=False); "
+            "from src.ingestion.atomic_io import write_csv_atomic; "
             "from src.frontend_store.builders import build_frontend_store; "
-            "build_frontend_store()",
+            "target = sys.argv[1]; "
+            "df = build_situational_dataset('data', seasons=[target], existing_csv=PBP_SITUATIONAL_CSV); "
+            "PBP_SITUATIONAL_CSV.parent.mkdir(parents=True, exist_ok=True); "
+            "write_csv_atomic(df, str(PBP_SITUATIONAL_CSV)); "
+            "build_frontend_store([target])",
+            target_season,
         ],
     )
     print("\nAll game data steps completed.")

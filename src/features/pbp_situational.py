@@ -145,10 +145,21 @@ def parse_pbp_file(file_path: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def build_situational_dataset(data_dir: str = "data") -> pd.DataFrame:
-    pattern = os.path.join(data_dir, "season=*", "raw", "play_by_play", "*.json")
-    files = glob.glob(pattern)
-    logger.info("Found %d play-by-play files to process across seasons", len(files))
+def build_situational_dataset(
+    data_dir: str = "data",
+    seasons: Optional[List[str]] = None,
+    existing_csv: Optional[str | Path] = None,
+) -> pd.DataFrame:
+    if seasons:
+        files: List[str] = []
+        for season in seasons:
+            pattern = os.path.join(data_dir, f"season={season}", "raw", "play_by_play", "*.json")
+            files.extend(glob.glob(pattern))
+    else:
+        pattern = os.path.join(data_dir, "season=*", "raw", "play_by_play", "*.json")
+        files = glob.glob(pattern)
+
+    logger.info("Found %d play-by-play files to process (%s)", len(files), seasons or "all seasons")
 
     records: List[Dict[str, Any]] = []
     for f in files:
@@ -156,12 +167,28 @@ def build_situational_dataset(data_dir: str = "data") -> pd.DataFrame:
         if rec:
             records.append(rec)
 
-    if not records:
+    new_df = pd.DataFrame(records) if records else pd.DataFrame()
+    if seasons and existing_csv and os.path.exists(existing_csv):
+        try:
+            prev_df = pd.read_csv(existing_csv, dtype={"GAME_ID": str})
+            if not prev_df.empty:
+                prev_df["GAME_ID"] = prev_df["GAME_ID"].astype(str).str.split(".").str[0].str.zfill(10)
+                if not new_df.empty:
+                    new_gids = set(new_df["GAME_ID"].astype(str).str.zfill(10))
+                    prev_df = prev_df[~prev_df["GAME_ID"].isin(new_gids)]
+                    df = pd.concat([prev_df, new_df], ignore_index=True)
+                else:
+                    df = prev_df
+                df.drop_duplicates(subset=["GAME_ID"], keep="last", inplace=True)
+                return df
+        except Exception as exc:
+            logger.warning("Could not read existing situational CSV %s (%s); rewriting from parsed rows.", existing_csv, exc)
+
+    if new_df.empty:
         return pd.DataFrame()
 
-    df = pd.DataFrame(records)
-    df.drop_duplicates(subset=["GAME_ID"], inplace=True)
-    return df
+    new_df.drop_duplicates(subset=["GAME_ID"], inplace=True)
+    return new_df
 
 
 def load_situational_lookup(csv_path: str = "data/training/pbp_situational_features.csv") -> Dict[tuple[str, str], Dict[str, float]]:

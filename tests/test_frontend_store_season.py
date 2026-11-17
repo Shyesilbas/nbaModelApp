@@ -65,3 +65,81 @@ def test_failed_build_keeps_the_previous_file(tmp_path, monkeypatch):
         pass
     assert store.read_meta(store.season_db_path("2024-25"))["store_version"] == "keep-me"
     assert [p.name for p in tmp_path.iterdir()] == ["season_2024_25.db"]
+
+
+def test_incremental_pbp_moments_reuses_unchanged_games(tmp_path, monkeypatch):
+    import json
+    from types import SimpleNamespace
+    from src.frontend_store import pbp_moments
+
+    monkeypatch.setattr(store, "STORE_DIR", tmp_path / "store")
+    monkeypatch.setattr(builders, "ROOT", tmp_path)
+
+    pbp_dir = tmp_path / "data" / "season=2026-27" / "raw" / "play_by_play"
+    pbp_dir.mkdir(parents=True)
+    for gid in ("0022600001", "0022600002"):
+        (pbp_dir / f"{gid}.json").write_text(
+            json.dumps({"game_id": gid, "home_team": "HOM", "away_team": "AWY", "quarter_scores": [], "events": []}),
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(builders, "finals_winner", lambda s: None)
+    monkeypatch.setattr(builders, "build_games_feed", lambda s: pd.DataFrame())
+    monkeypatch.setattr(builders, "_boxscores", lambda s, k: pd.DataFrame())
+    monkeypatch.setattr(builders, "_roster", lambda s: pd.DataFrame())
+    monkeypatch.setattr(builders, "_analysis_csv", lambda s, n: pd.DataFrame())
+    monkeypatch.setattr(
+        builders,
+        "get_data_paths",
+        lambda s: SimpleNamespace(game_results=str(tmp_path / "missing_results.csv")),
+    )
+    monkeypatch.setattr(
+        builders,
+        "build_player_season",
+        lambda s, p, r: {"games": {}, "averages": {}, "index": {}},
+    )
+
+    condensed = []
+    orig_condense = pbp_moments.condense_payload
+
+    def tracked_condense(payload):
+        condensed.append(payload["game_id"])
+        return orig_condense(payload)
+
+    monkeypatch.setattr(pbp_moments, "condense_payload", tracked_condense)
+
+    builders.build_season_store("2026-27", force=True)
+    assert sorted(condensed) == ["0022600001", "0022600002"]
+
+    condensed.clear()
+    # Update only the second PBP file; the first must be reused without calling condense_payload.
+    (pbp_dir / "0022600002.json").write_text(
+        json.dumps({"game_id": "0022600002", "home_team": "HOM", "away_team": "AWY", "quarter_scores": [{"quarter": "Q1"}], "events": []}),
+        encoding="utf-8",
+    )
+    builders.build_season_store("2026-27", force=True)
+    assert condensed == ["0022600002"]
+
+    conn = store.connect_ro(store.season_db_path("2026-27"))
+    try:
+        rows = dict(conn.execute("SELECT game_id, data_json FROM pbp_moments").fetchall())
+    finally:
+        conn.close()
+    assert set(rows) == {"0022600001", "0022600002"}
+    assert json.loads(rows["0022600002"])["quarter_scores"] == [{"quarter": "Q1"}]
+
+
+def test_normalize_game_matchups_sparse_conflict():
+    from src.processing.cleaning import normalize_game_matchups
+
+    df = pd.DataFrame([
+        {"GAME_ID": "0022600001", "TEAM_ABBREVIATION": "BOS", "MATCHUP": "BOS vs. NYK"},
+        {"GAME_ID": "0022600001", "TEAM_ABBREVIATION": "NYK", "MATCHUP": "NYK @ BOS"},
+        {"GAME_ID": "0022600002", "TEAM_ABBREVIATION": "DAL", "MATCHUP": "DAL @ DET"},
+        {"GAME_ID": "0022600002", "TEAM_ABBREVIATION": "DET", "MATCHUP": "DAL @ DET"},
+    ])
+    out = normalize_game_matchups(df)
+    assert out["IS_HOME"].tolist() == [True, False, False, True]
+    assert out["NORMALIZED_MATCHUP"].tolist() == [
+        "BOS vs. NYK", "NYK @ BOS", "DAL @ DET", "DET vs. DAL",
+    ]

@@ -34,7 +34,7 @@ export function SignalCards({
     {
       icon: <TrendingUp size={16} />,
       label: t.predictions.winProbability,
-      value: `%${(winProb * 100).toFixed(1)}`,
+      value: language === "tr" ? `%${(winProb * 100).toFixed(1)}` : `${(winProb * 100).toFixed(1)}%`,
       detail: language === "tr" ? "Model güveni" : "Model confidence",
     },
     {

@@ -36,12 +36,35 @@ TEAM_BS_COLS = [
 ]
 
 
+def normalize_team_boxscores(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize team-level box score rows in memory (dates, matchups, columns, sort)."""
+    from src.processing.cleaning import normalize_game_matchups
+
+    if df.empty:
+        return pd.DataFrame(columns=[c for c in TEAM_BS_COLS if c not in ("RAW_MATCHUP", "NORMALIZED_MATCHUP")])
+
+    out = df.copy()
+    out["GAME_ID"] = out["GAME_ID"].astype(str).str.zfill(10)
+    out["GAME_DATE"] = pd.to_datetime(out["GAME_DATE"], errors="coerce", format="mixed").dt.strftime("%Y-%m-%d")
+    out = normalize_game_matchups(out)
+
+    existing_cols = [c for c in TEAM_BS_COLS if c in out.columns]
+    out = out[existing_cols].copy()
+
+    if "GAME_ID" in out.columns and "SEASON_TYPE" in out.columns:
+        finals_mask = out["GAME_ID"].str.startswith(("00425004", "00424004"))
+        out["SEASON_TYPE"] = out["SEASON_TYPE"].where(~finals_mask, "NBA Finals")
+
+    if "IS_PLAYOFF" not in out.columns and "SEASON_TYPE" in out.columns:
+        out["IS_PLAYOFF"] = out["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
+
+    return out.sort_values(["GAME_DATE", "GAME_ID", "TEAM_ABBREVIATION"]).reset_index(drop=True)
+
+
 def load_team_boxscores(save: bool = True, season: str = None, output_scope: str = "production") -> pd.DataFrame:
     """
     Load and normalise team-level box scores from the raw game log CSV.
     """
-    from src.processing.cleaning import normalize_game_matchups
-
     dp = get_data_paths(season)
     raw_team_path = dp.team_games_raw
 
@@ -49,28 +72,7 @@ def load_team_boxscores(save: bool = True, season: str = None, output_scope: str
         raise FileNotFoundError(f"Raw team game log not found: {raw_team_path}")
 
     df = pd.read_csv(raw_team_path, dtype={"GAME_ID": str, "TEAM_ID": str})
-
-    # Normalise GAME_DATE
-    df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce", format="mixed").dt.strftime("%Y-%m-%d")
-
-    # Correct matchup pivot drops/anomalies (identical away-style MATCHUPs)
-    df = normalize_game_matchups(df)
-
-    # Select and reorder columns (keep only those that exist)
-    existing_cols = [c for c in TEAM_BS_COLS if c in df.columns]
-    df = df[existing_cols].copy()
-
-    if "GAME_ID" in df.columns and "SEASON_TYPE" in df.columns:
-        df["SEASON_TYPE"] = df.apply(
-            lambda r: _normalize_season_type(r["GAME_ID"], r["SEASON_TYPE"]),
-            axis=1,
-        )
-
-    # Ensure IS_PLAYOFF can be derived later
-    if "IS_PLAYOFF" not in df.columns and "SEASON_TYPE" in df.columns:
-        df["IS_PLAYOFF"] = df["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
-
-    df = df.sort_values(["GAME_DATE", "GAME_ID", "TEAM_ABBREVIATION"]).reset_index(drop=True)
+    df = normalize_team_boxscores(df)
 
     print(f"  Team box scores: {len(df):,} rows, {df['GAME_ID'].nunique():,} unique games")
 
@@ -99,6 +101,41 @@ PLAYER_BS_COLS = [
 ]
 
 
+def normalize_player_boxscores(
+    df: pd.DataFrame,
+    starters_df: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Normalize player-level box score rows in memory and attach starter flags if available."""
+    if df.empty:
+        return pd.DataFrame(columns=PLAYER_BS_COLS)
+
+    out = df.rename(columns={"Player_ID": "PLAYER_ID", "Game_ID": "GAME_ID"}).copy()
+    out["GAME_ID"] = out["GAME_ID"].astype(str).str.zfill(10)
+    out["GAME_DATE"] = pd.to_datetime(out["GAME_DATE"], errors="coerce", format="mixed").dt.strftime("%Y-%m-%d")
+
+    if "TEAM_ABBREVIATION" not in out.columns and "MATCHUP" in out.columns:
+        out["TEAM_ABBREVIATION"] = out["MATCHUP"].str.split(r"\s+").str[0]
+
+    if starters_df is not None and not starters_df.empty:
+        st = starters_df.copy()
+        st["GAME_ID"] = st["Game_ID"].astype(str).str.zfill(10)
+        out = out.merge(
+            st[["GAME_ID", "Player_ID", "IS_STARTER"]].rename(columns={"Player_ID": "PLAYER_ID"}),
+            on=["GAME_ID", "PLAYER_ID"],
+            how="left",
+        )
+        out["IS_STARTER"] = out["IS_STARTER"].astype("Int64")
+
+    existing_cols = [c for c in PLAYER_BS_COLS if c in out.columns]
+    out = out[existing_cols].copy()
+
+    if "GAME_ID" in out.columns and "SEASON_TYPE" in out.columns:
+        finals_mask = out["GAME_ID"].str.startswith(("00425004", "00424004"))
+        out["SEASON_TYPE"] = out["SEASON_TYPE"].where(~finals_mask, "NBA Finals")
+
+    return out.sort_values(["GAME_DATE", "GAME_ID", "TEAM_ABBREVIATION", "PLAYER_NAME"]).reset_index(drop=True)
+
+
 def load_player_boxscores(save: bool = True, season: str = None, output_scope: str = "production") -> pd.DataFrame:
     """
     Load and normalise player-level box scores from the raw player log CSV.
@@ -111,41 +148,11 @@ def load_player_boxscores(save: bool = True, season: str = None, output_scope: s
 
     df = pd.read_csv(raw_player_path, dtype={"Game_ID": str})
 
-    # Normalise column names from the player CSV schema
-    rename_map = {
-        "Player_ID": "PLAYER_ID",
-        "Game_ID":   "GAME_ID",
-    }
-    df = df.rename(columns=rename_map)
-
-    # Normalise GAME_DATE
-    df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"], errors="coerce", format="mixed").dt.strftime("%Y-%m-%d")
-
-    # Derive TEAM_ABBREVIATION from MATCHUP if not present
-    if "TEAM_ABBREVIATION" not in df.columns and "MATCHUP" in df.columns:
-        df["TEAM_ABBREVIATION"] = df["MATCHUP"].str.split(r"\s+").str[0]
-
     # Starter flags are recorded per game from the box score; games without a record keep it empty.
     from src.ingestion.starters_fetcher import starters_path
     starters_csv = starters_path(season)
-    if starters_csv.exists():
-        st = pd.read_csv(starters_csv, dtype={"Game_ID": str})
-        st["GAME_ID"] = st["Game_ID"].str.zfill(10)
-        df["GAME_ID"] = df["GAME_ID"].astype(str).str.zfill(10)
-        df = df.merge(st[["GAME_ID", "Player_ID", "IS_STARTER"]].rename(columns={"Player_ID": "PLAYER_ID"}), on=["GAME_ID", "PLAYER_ID"], how="left")
-        df["IS_STARTER"] = df["IS_STARTER"].astype("Int64")
-
-    # Select and reorder columns
-    existing_cols = [c for c in PLAYER_BS_COLS if c in df.columns]
-    df = df[existing_cols].copy()
-
-    if "GAME_ID" in df.columns and "SEASON_TYPE" in df.columns:
-        df["SEASON_TYPE"] = df.apply(
-            lambda r: _normalize_season_type(r["GAME_ID"], r["SEASON_TYPE"]),
-            axis=1,
-        )
-
-    df = df.sort_values(["GAME_DATE", "GAME_ID", "TEAM_ABBREVIATION", "PLAYER_NAME"]).reset_index(drop=True)
+    starters_df = pd.read_csv(starters_csv, dtype={"Game_ID": str}) if starters_csv.exists() else None
+    df = normalize_player_boxscores(df, starters_df=starters_df)
 
     print(f"  Player box scores: {len(df):,} rows, {df['PLAYER_ID'].nunique():,} unique players")
 
@@ -161,17 +168,17 @@ def load_player_boxscores(save: bool = True, season: str = None, output_scope: s
 # ─────────────────────────────────────────────
 # Game results summary
 # ─────────────────────────────────────────────
-def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True, season: str = None, output_scope: str = "production") -> pd.DataFrame:
-    """
-    Build a one-row-per-game results summary.
-    """
-    if team_bs_df is None:
-        team_bs_df = load_team_boxscores(save=False, season=season, output_scope=output_scope)
-
+def assemble_game_results(
+    team_bs_df: pd.DataFrame,
+    schedule_df: pd.DataFrame | None = None,
+    season: str | None = None,
+) -> pd.DataFrame:
+    """Assemble one-row-per-game results summary from normalized team box scores."""
     df = team_bs_df.copy()
     if "MATCHUP" not in df.columns:
         raise ValueError("MATCHUP column is required to determine home/away split.")
 
+    df["GAME_ID"] = df["GAME_ID"].astype(str).str.zfill(10)
     df["IS_HOME"] = df["MATCHUP"].str.contains(r"\bvs\.", case=False, regex=True)
 
     home_df = df[df["IS_HOME"]].rename(columns={
@@ -189,7 +196,6 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
 
     results = home_df.merge(away_df, on="GAME_ID", how="inner")
 
-    # Determine winner / loser
     results["WINNER_TEAM_ABBREVIATION"] = results.apply(
         lambda r: r["HOME_TEAM_ABBREVIATION"] if r["HOME_WL"] == "W" else r["AWAY_TEAM_ABBREVIATION"],
         axis=1,
@@ -199,22 +205,22 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
         axis=1,
     )
 
-    # IS_PLAYOFF from SEASON_TYPE
-    results["IS_PLAYOFF"] = results["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
     results["SEASON_TYPE"] = results.apply(
         lambda r: _normalize_season_type(r["GAME_ID"], r["SEASON_TYPE"]),
         axis=1,
     )
     results["IS_PLAYOFF"] = results["SEASON_TYPE"].isin(["Playoffs", "PlayIn", "NBA Finals"])
-
-    # GAME_STATUS — all rows here are completed
     results["GAME_STATUS"] = "Final"
 
-    # Join schedule for extra playoff context and arena fields if available
-    dp = get_data_paths(season)
-    combined_sched = dp.schedule_combined
-    if os.path.exists(combined_sched):
-        sched_df = pd.read_csv(combined_sched, dtype={"GAME_ID": str})
+    if schedule_df is None:
+        dp = get_data_paths(season)
+        combined_sched = dp.schedule_combined
+        if os.path.exists(combined_sched):
+            schedule_df = pd.read_csv(combined_sched, dtype={"GAME_ID": str})
+
+    if schedule_df is not None and not schedule_df.empty:
+        sched_df = schedule_df.copy()
+        sched_df["GAME_ID"] = sched_df["GAME_ID"].astype(str).str.zfill(10)
         desired_cols = [
             "GAME_ID", "PLAYOFF_ROUND", "SERIES_GAME_NUMBER",
             "HOME_SERIES_WINS", "AWAY_SERIES_WINS",
@@ -224,16 +230,12 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
         available_cols = [c for c in desired_cols if c in sched_df.columns]
         results = results.merge(sched_df[available_cols], on="GAME_ID", how="left")
 
-    # Calculate week number relative to season start using the season year.
     start_year = int((season or get_default_season()).split("-")[0])
-    season_start_str = f"{start_year}-10-21"
-    season_start = pd.to_datetime(season_start_str)
+    season_start = pd.to_datetime(f"{start_year}-10-21")
     game_dates_dt = pd.to_datetime(results["GAME_DATE"])
     results["WEEK"] = (game_dates_dt - season_start).dt.days // 7 + 1
-    # For non-Regular Season, set WEEK to None
     results.loc[results["SEASON_TYPE"] != "Regular Season", "WEEK"] = None
 
-    # Final column order
     final_cols = [
         "GAME_ID", "GAME_DATE",
         "HOME_TEAM_ABBREVIATION", "HOME_TEAM_NAME", "HOME_SCORE",
@@ -241,7 +243,6 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
         "WINNER_TEAM_ABBREVIATION", "LOSER_TEAM_ABBREVIATION",
         "SEASON_TYPE", "IS_PLAYOFF", "GAME_STATUS", "WEEK",
     ]
-    # Append schedule-joined cols that may exist
     extra = [c for c in ["PLAYOFF_ROUND", "SERIES_GAME_NUMBER",
                          "HOME_SERIES_WINS", "AWAY_SERIES_WINS",
                          "IS_ELIMINATION_GAME", "CAN_CLINCH_SERIES",
@@ -249,11 +250,22 @@ def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True
              if c in results.columns]
     final_cols += extra
 
-    results = results[final_cols].sort_values(["GAME_DATE", "GAME_ID"]).reset_index(drop=True)
+    return results[final_cols].sort_values(["GAME_DATE", "GAME_ID"]).reset_index(drop=True)
+
+
+def build_game_results(team_bs_df: pd.DataFrame | None = None, save: bool = True, season: str = None, output_scope: str = "production") -> pd.DataFrame:
+    """
+    Build a one-row-per-game results summary.
+    """
+    if team_bs_df is None:
+        team_bs_df = load_team_boxscores(save=False, season=season, output_scope=output_scope)
+
+    results = assemble_game_results(team_bs_df, season=season)
 
     print(f"  Game results: {len(results):,} completed games")
 
     if save:
+        dp = get_data_paths(season)
         token = season_to_file_token(season or get_default_season())
         if output_scope == "experimental":
             os.makedirs(str(ROOT / "data/experimental"), exist_ok=True)

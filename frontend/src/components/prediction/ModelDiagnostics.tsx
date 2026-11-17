@@ -43,7 +43,14 @@ export function ModelDiagnostics({
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
             { label: "ROC-AUC", value: winModel?.metrics?.roc_auc?.toFixed(4) },
-            { label: t.predictions.accuracy, value: winModel?.metrics?.accuracy ? `%${(winModel.metrics.accuracy * 100).toFixed(1)}` : null },
+            {
+              label: t.predictions.accuracy,
+              value: winModel?.metrics?.accuracy
+                ? language === "tr"
+                  ? `%${(winModel.metrics.accuracy * 100).toFixed(1)}`
+                  : `${(winModel.metrics.accuracy * 100).toFixed(1)}%`
+                : null,
+            },
             { label: t.predictions.modelVersion, value: result?.win_probability?.model_version },
             { label: language === "tr" ? "Ev H-MAE" : "Home H-MAE", value: scoreModel?.metrics?.home_mae?.toFixed(2) },
             { label: language === "tr" ? "Dep A-MAE" : "Away A-MAE", value: scoreModel?.metrics?.away_mae?.toFixed(2) },

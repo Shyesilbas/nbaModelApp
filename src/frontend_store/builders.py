@@ -10,9 +10,13 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import sys
+import tempfile
+import threading
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pandas as pd
 
@@ -22,12 +26,35 @@ from src.frontend_store.player_history import build_player_season, nan_safe
 from src.frontend_store.season_status import CLOSED, finals_winner
 from src.frontend_store.store import (
     GLOBAL_SCHEMA, ROOT, SEASON_SCHEMA, STORE_VERSION, build_db, connect_ro, dumps,
-    global_db_path, read_doc, read_meta, season_db_path, stored_seasons,
+    global_db_path, read_doc, read_meta, season_db_path, season_token, stored_seasons,
 )
 
 
 def _log(msg: str) -> None:
     print(f"[frontend-store] {msg}", file=sys.stderr)
+
+
+def _write_json_cache(path: Path, payload: object) -> None:
+    """Best-effort atomic JSON cache write inside STORE_DIR."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+        os.close(fd)
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write(dumps(payload))
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, path)
+    except OSError as exc:
+        _log(f"cache write skipped for {path.name}: {exc}")
+
+
+def _read_json_cache(path: Path) -> object | None:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def _norm_gid(value) -> str:
@@ -162,6 +189,69 @@ def _pbp_moments(season: str):
         yield _norm_gid(path.stem), condense_payload(payload)
 
 
+def _pbp_moment_rows(
+    season: str, incremental: bool = True
+) -> tuple[list[tuple[str, str]], dict[str, list[int]], Path]:
+    """Return ``(game_id, json_str)`` rows for ``pbp_moments``, reusing unchanged condensed PBP."""
+    from src.frontend_store.pbp_moments import condense_payload
+
+    db_path = season_db_path(season)
+    manifest_path = db_path.with_name(f".pbp_manifest_{season_token(season)}.json")
+    existing_pbp: dict[str, str] = {}
+    manifest: dict[str, list[int]] = {}
+    old_built_ts: float | None = None
+
+    if incremental and db_path.exists():
+        old_meta = read_meta(db_path)
+        if old_meta.get("store_version") == STORE_VERSION:
+            built_raw = old_meta.get("built_at")
+            if built_raw:
+                try:
+                    old_built_ts = datetime.fromisoformat(built_raw).timestamp()
+                except ValueError:
+                    old_built_ts = None
+            conn = connect_ro(db_path)
+            if conn is not None:
+                try:
+                    existing_pbp = dict(conn.execute("SELECT game_id, data_json FROM pbp_moments").fetchall())
+                except sqlite3.Error:
+                    existing_pbp = {}
+                finally:
+                    conn.close()
+            cached_manifest = _read_json_cache(manifest_path)
+            if isinstance(cached_manifest, dict):
+                manifest = cached_manifest
+
+    pbp_dir = ROOT / "data" / f"season={season}" / "raw" / "play_by_play"
+    rows: list[tuple[str, str]] = []
+    new_manifest: dict[str, list[int]] = {}
+    for path in sorted(pbp_dir.glob("*.json")):
+        gid = _norm_gid(path.stem)
+        try:
+            st = path.stat()
+        except OSError as exc:
+            _log(f"skipping unreadable PBP {path.name}: {exc}")
+            continue
+        sig = [st.st_mtime_ns, st.st_size]
+        cached_json = existing_pbp.get(gid)
+        can_reuse = cached_json is not None and (
+            manifest.get(gid) == sig
+            or (gid not in manifest and old_built_ts is not None and st.st_mtime <= old_built_ts - 1.0)
+        )
+        if can_reuse:
+            rows.append((gid, cached_json))
+            new_manifest[gid] = sig
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            _log(f"skipping unreadable PBP {path.name}: {exc}")
+            continue
+        rows.append((gid, dumps(condense_payload(payload))))
+        new_manifest[gid] = sig
+    return rows, new_manifest, manifest_path
+
+
 def _analysis_csv(season: str, name: str) -> pd.DataFrame:
     return _read_csv(ROOT / "data" / f"season={season}" / "analysis" / name)
 
@@ -177,7 +267,7 @@ def season_store_is_current(season: str) -> bool:
     return meta.get("status") == CLOSED and meta.get("store_version") == STORE_VERSION
 
 
-def build_season_store(season: str, force: bool = False) -> bool:
+def build_season_store(season: str, force: bool = False, *, incremental_pbp: bool = True) -> bool:
     """Build one season's store. Returns False when a sealed closed season was skipped."""
     season = normalize_season(season)
     if not force and season_store_is_current(season):
@@ -193,6 +283,8 @@ def build_season_store(season: str, force: bool = False) -> bool:
     player_bs = _boxscores(season, "player")
     roster = _roster(season)
     history = build_player_season(season, season_path, roster)
+    game_records = _records(games)
+    pbp_rows, pbp_manifest, manifest_path = _pbp_moment_rows(season, incremental=incremental_pbp)
 
     player_rows_by_game: dict[str, list[dict]] = {}
     for row in _records(player_bs):
@@ -201,7 +293,7 @@ def build_season_store(season: str, force: bool = False) -> bool:
     with build_db(season_db_path(season), SEASON_SCHEMA) as conn:
         conn.executemany(
             "INSERT INTO games VALUES (?, ?, ?)",
-            [(r["GAME_ID"], r.get("GAME_DATE"), dumps(r)) for r in _records(games)],
+            [(r["GAME_ID"], r.get("GAME_DATE"), dumps(r)) for r in game_records],
         )
         conn.executemany(
             "INSERT INTO team_boxscores VALUES (?, ?)",
@@ -216,7 +308,7 @@ def build_season_store(season: str, force: bool = False) -> bool:
             [
                 # Feed rows carry the result plus the schedule's ARENA/LOCATION.
                 (r["GAME_ID"], dumps(build_game_detail(season, r, player_rows_by_game.get(r["GAME_ID"], []))))
-                for r in _records(games)
+                for r in game_records
                 if r.get("HOME_SCORE") is not None
             ],
         )
@@ -224,7 +316,7 @@ def build_season_store(season: str, force: bool = False) -> bool:
             "INSERT INTO player_games VALUES (?, ?, ?)",
             [(str(pid), dumps(g), dumps(history["averages"][pid])) for pid, g in history["games"].items()],
         )
-        conn.executemany("INSERT INTO pbp_moments VALUES (?, ?)", [(gid, dumps(m)) for gid, m in _pbp_moments(season)])
+        conn.executemany("INSERT INTO pbp_moments VALUES (?, ?)", pbp_rows)
         docs = {
             "game_results": _records(results),
             "team_rosters": _records(roster),
@@ -241,23 +333,147 @@ def build_season_store(season: str, force: bool = False) -> bool:
         }
         conn.executemany("INSERT INTO meta VALUES (?, ?)", list(meta.items()))
 
+    _write_json_cache(manifest_path, pbp_manifest)
     _log(f"{season}: {meta['status']} store built in {time.time() - started:.1f}s "
          f"({len(games)} games, {len(history['games'])} players)")
+    return True
+
+
+_db_upsert_lock = threading.Lock()
+
+
+def upsert_game_to_season_store(
+    season: str,
+    game_id: str,
+    game_row: dict | None,
+    team_rows: list[dict],
+    player_rows: list[dict],
+    detail_dict: dict | None,
+    pbp_payload: dict | None = None,
+) -> bool:
+    """Incrementally upsert one game's rows into the existing season SQLite store.
+
+    Avoids rebuilding and vacuuming the entire database during on-demand refreshes.
+    Returns False if the season store does not exist yet.
+    """
+    season = normalize_season(season)
+    db_path = season_db_path(season)
+    if not db_path.exists():
+        return False
+
+    gid = _norm_gid(game_id)
+    with _db_upsert_lock:
+        conn = sqlite3.connect(str(db_path), timeout=30.0)
+        try:
+            if game_row is not None:
+                existing = conn.execute("SELECT data_json FROM games WHERE game_id = ?", (gid,)).fetchone()
+                merged = json.loads(existing[0]) if existing else {}
+                for k, v in game_row.items():
+                    if v is not None or k not in merged:
+                        merged[k] = v
+                merged["GAME_ID"] = gid
+                merged.setdefault("SEASON", season)
+                conn.execute(
+                    "INSERT OR REPLACE INTO games (game_id, game_date, data_json) VALUES (?, ?, ?)",
+                    (gid, merged.get("GAME_DATE"), dumps(merged)),
+                )
+
+            conn.execute("DELETE FROM team_boxscores WHERE game_id = ?", (gid,))
+            if team_rows:
+                conn.executemany(
+                    "INSERT INTO team_boxscores (game_id, data_json) VALUES (?, ?)",
+                    [(gid, dumps(r)) for r in team_rows],
+                )
+
+            conn.execute("DELETE FROM player_boxscores WHERE game_id = ?", (gid,))
+            if player_rows:
+                conn.executemany(
+                    "INSERT INTO player_boxscores (game_id, player_id, data_json) VALUES (?, ?, ?)",
+                    [(gid, r.get("PLAYER_ID"), dumps(r)) for r in player_rows],
+                )
+
+            if detail_dict is not None:
+                stored_detail = {k: v for k, v in detail_dict.items() if k != "team_stats"}
+                conn.execute(
+                    "INSERT OR REPLACE INTO game_details (game_id, data_json) VALUES (?, ?)",
+                    (gid, dumps(stored_detail)),
+                )
+
+            if pbp_payload is not None:
+                from src.frontend_store.pbp_moments import condense_payload
+                conn.execute(
+                    "INSERT OR REPLACE INTO pbp_moments (game_id, data_json) VALUES (?, ?)",
+                    (gid, dumps(condense_payload(pbp_payload))),
+                )
+
+            conn.commit()
+        finally:
+            conn.close()
     return True
 
 
 def _player_metadata() -> dict[int, dict]:
     path = ROOT / "data" / "reference" / "player_metadata.csv"
     df = _read_csv(path)
+    if df.empty:
+        return {}
     fields = ["HEIGHT", "WEIGHT", "COLLEGE", "COUNTRY", "OFFICIAL_POSITION", "POSITION_GROUP",
               "DRAFT_YEAR", "DRAFT_ROUND", "DRAFT_NUMBER", "FROM_YEAR", "TO_YEAR", "ROSTER_STATUS"]
     meta = {}
-    for _, row in df.iterrows():
+    for row in df.to_dict(orient="records"):
         meta[int(row["PLAYER_ID"])] = {
             "PLAYER_NAME": nan_safe(row.get("PLAYER_NAME")),
             **{f: nan_safe(row.get(f)) for f in fields},
         }
     return meta
+
+
+def _season_global_summary(season: str) -> tuple[dict, dict[str, dict]]:
+    """Read a season DB's player index & averages, caching closed/unchanged seasons in STORE_DIR."""
+    db_path = season_db_path(season)
+    if not db_path.exists():
+        return {}, {}
+    st = db_path.stat()
+    sig = [STORE_VERSION, st.st_mtime_ns, st.st_size]
+    cache_path = db_path.with_name(f".global_season_{season_token(season)}.json")
+    cached = _read_json_cache(cache_path)
+    if isinstance(cached, dict) and cached.get("sig") == sig:
+        return cached.get("index", {}), cached.get("averages", {})
+
+    conn = connect_ro(db_path)
+    if conn is None:
+        return {}, {}
+    try:
+        index = read_doc(conn, "player_index", {})
+        season_avgs = {
+            pid: json.loads(avg_json)
+            for pid, avg_json in conn.execute("SELECT player_id, averages_json FROM player_games")
+        }
+    finally:
+        conn.close()
+    _write_json_cache(cache_path, {"sig": sig, "index": index, "averages": season_avgs})
+    return index, season_avgs
+
+
+def _cached_trades() -> list:
+    from src.frontend_store.export_trades import build_trades
+
+    data_root = ROOT / "data"
+    inputs = [data_root / "reference" / "player_movement.csv"]
+    inputs.extend(sorted(data_root.glob("season=*/analysis/team_rosters.csv")))
+    inputs.extend(sorted(data_root.glob("season=*/analysis/multi_team_players.csv")))
+    sig = []
+    for p in inputs:
+        if p.exists():
+            st = p.stat()
+            sig.append([str(p), st.st_mtime_ns, st.st_size])
+    cache_path = global_db_path().with_name(".trades_cache.json")
+    cached = _read_json_cache(cache_path)
+    if isinstance(cached, dict) and cached.get("sig") == sig:
+        return cached.get("trades", [])
+    trades = build_trades()
+    _write_json_cache(cache_path, {"sig": sig, "trades": trades})
+    return trades
 
 
 def build_global_store() -> None:
@@ -268,21 +484,17 @@ def build_global_store() -> None:
     names: dict[int, str] = {}
     averages: dict[str, dict] = {}
     for season in seasons:  # ascending, so later seasons win the current team
-        conn = connect_ro(season_db_path(season))
-        try:
-            index = read_doc(conn, "player_index", {})
-            for pid_str, entry in index.items():
-                pid = int(pid_str)
-                for team_key in ("roster_team", "boxscore_team"):
-                    if entry.get(team_key):
-                        current_team[pid] = entry[team_key]
-                for name_key in ("roster_name", "boxscore_name"):
-                    if entry.get(name_key):
-                        names.setdefault(pid, entry[name_key])
-            for pid, avg_json in conn.execute("SELECT player_id, averages_json FROM player_games"):
-                averages.setdefault(pid, {})[season] = json.loads(avg_json)
-        finally:
-            conn.close()
+        index, season_avgs = _season_global_summary(season)
+        for pid_str, entry in index.items():
+            pid = int(pid_str)
+            for team_key in ("roster_team", "boxscore_team"):
+                if entry.get(team_key):
+                    current_team[pid] = entry[team_key]
+            for name_key in ("roster_name", "boxscore_name"):
+                if entry.get(name_key):
+                    names.setdefault(pid, entry[name_key])
+        for pid, avg in season_avgs.items():
+            averages.setdefault(pid, {})[season] = avg
 
     meta = _player_metadata()
     profiles = []
@@ -298,13 +510,11 @@ def build_global_store() -> None:
         })
     profiles.sort(key=lambda p: p.get("PLAYER_NAME") or "")
 
-    from src.frontend_store.export_trades import build_trades
-
     docs = {
         "seasons": seasons,
         "player_profiles": profiles,
         "player_season_averages": averages,
-        "trades": build_trades(),
+        "trades": _cached_trades(),
     }
     with build_db(global_db_path(), GLOBAL_SCHEMA) as conn:
         conn.executemany("INSERT INTO docs VALUES (?, ?)", [(k, dumps(v)) for k, v in docs.items()])

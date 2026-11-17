@@ -70,6 +70,71 @@ class TestPBPFeatureEngineering(unittest.TestCase):
         self.assertIn("CLUTCH_MARGIN", df_merged.columns)
         self.assertEqual(df_merged["GARBAGE_TIME_SHARE"].iloc[0], 0.0)
 
+    def test_incremental_situational_preserves_other_seasons(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from src.features.pbp_situational import build_situational_dataset
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            past_csv = root / "pbp_situational_features.csv"
+            pd.DataFrame([{
+                "GAME_ID": "0022400001",
+                "SEASON_TYPE": "Regular Season",
+                "IS_PLAYOFF": False,
+                "PLAYOFF_ROUND": None,
+                "HOME_TEAM": "BOS",
+                "AWAY_TEAM": "NYK",
+                "TOTAL_PBP_EVENTS": 100,
+                "GARBAGE_TIME_SHARE": 0.1,
+                "GARBAGE_TIME_PTS_SHARE": 0.08,
+                "CLEAN_HOME_PTS": 95,
+                "CLEAN_AWAY_PTS": 90,
+                "CLEAN_MARGIN": 5,
+                "CLUTCH_EVENT_COUNT": 12,
+                "CLUTCH_HOME_PTS": 10,
+                "CLUTCH_AWAY_PTS": 8,
+                "CLUTCH_MARGIN": 2,
+            }]).to_csv(past_csv, index=False)
+
+            pbp_dir = root / "season=2025-26" / "raw" / "play_by_play"
+            pbp_dir.mkdir(parents=True)
+            (pbp_dir / "0022500001.json").write_text(json.dumps({
+                "game_id": "0022500001",
+                "home_team": "OKC",
+                "away_team": "HOU",
+                "events": [{"period": 1, "clock": "10:00", "home_score": 10, "away_score": 8}],
+            }), encoding="utf-8")
+
+            df = build_situational_dataset(str(root), seasons=["2025-26"], existing_csv=past_csv)
+            gids = set(df["GAME_ID"].astype(str).str.zfill(10))
+            self.assertEqual(gids, {"0022400001", "0022500001"})
+
+    def test_pregame_rows_cached_invalidates_on_file_mtime(self):
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+        from types import SimpleNamespace
+        from src.features import build_matchup_features as bmf
+
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "team_games.csv"
+            p.write_text("GAME_ID\n", encoding="utf-8")
+            bmf._pregame_rows_versioned.cache_clear()
+            with (
+                mock.patch.object(bmf, "get_data_paths", return_value=SimpleNamespace(team_games_raw=str(p))),
+                mock.patch.object(bmf, "_pregame_rows_versioned", return_value={"ok": 1}) as spy,
+            ):
+                bmf._pregame_rows_cached("2025-26", "2026-01-01", ())
+                mtime1 = spy.call_args[0][3]
+                import time
+                time.sleep(0.02)
+                p.write_text("GAME_ID\n0022500001\n", encoding="utf-8")
+                bmf._pregame_rows_cached("2025-26", "2026-01-01", ())
+                mtime2 = spy.call_args[0][3]
+                self.assertNotEqual(mtime1, mtime2)
+
 
 if __name__ == "__main__":
     unittest.main()

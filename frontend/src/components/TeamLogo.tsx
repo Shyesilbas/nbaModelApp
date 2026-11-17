@@ -11,7 +11,7 @@ type Props = {
 
 function TeamLogoComponent({ abbr, name, size = 36, className = "", fallbackClassName = "" }: Props) {
   const [failedAbbr, setFailedAbbr] = React.useState<string | null>(null);
-  const label = name ?? abbr;
+  const label = name || abbr;
   const src = isKnownTeamAbbr(abbr) ? getTeamLogoUrl(abbr) : "";
   const failed = !src || failedAbbr === abbr;
 

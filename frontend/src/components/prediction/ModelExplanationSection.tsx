@@ -32,7 +32,8 @@ function ReasonRow({
     feature.influence ?? "NEUTRAL",
     homeInfo,
     awayInfo,
-    ctx
+    ctx,
+    language
   );
   const influence = formatted.neutralBadge ? "NEUTRAL" : feature.influence;
   const team = influence === "FAVORS_HOME" ? homeInfo : influence === "FAVORS_AWAY" ? awayInfo : null;
@@ -176,7 +177,8 @@ export function ModelExplanationSection({
       activeFeatures[0].influence ?? "NEUTRAL",
       homeInfo,
       awayInfo,
-      winContext
+      winContext,
+      language
     )
     : null;
 
@@ -187,7 +189,8 @@ export function ModelExplanationSection({
       activeFeatures[1].influence ?? "NEUTRAL",
       homeInfo,
       awayInfo,
-      winContext
+      winContext,
+      language
     )
     : null;
 

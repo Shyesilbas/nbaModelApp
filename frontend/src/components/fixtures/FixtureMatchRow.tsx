@@ -4,7 +4,6 @@ import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
 import { fmtTipoffTR, isGameEligibleForRefresh } from "../game-results/utils";
 import { TEAM_NAME_BY_ABBR, getTeamShortName, isKnownTeamAbbr } from "../../lib/nbaTeams";
-import { FormDots } from "./FormDots";
 import { useLanguage } from "../../context/useLanguage";
 
 interface FixtureMatchRowProps {
@@ -27,8 +26,6 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
   onPredict,
   onRefresh,
   isRefreshing = false,
-  homeForm = [],
-  awayForm = [],
   homeRecord,
   awayRecord,
 }) => {
@@ -54,7 +51,6 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
     abbr: string,
     fullName: string,
     record: string | undefined,
-    form: ("W" | "L")[],
     won: boolean,
     align: "right" | "left"
   ) => {
@@ -66,31 +62,29 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
 
     return (
       <div
-        className={`flex min-w-0 items-center gap-1.5 sm:gap-3 ${align === "right" ? "justify-end text-right" : "justify-start text-left"
-          }`}
+        className={`flex min-w-0 flex-1 items-center gap-2 sm:gap-3 ${
+          align === "right" ? "justify-end text-right" : "justify-start text-left"
+        }`}
       >
         {align === "left" && <TeamLogo abbr={abbr} name={fullName} size={28} className="shrink-0" />}
-        <div className="min-w-0">
+        <div className="min-w-0 leading-tight">
           <button
             type="button"
             onClick={(event) => {
               event.stopPropagation();
               onSelectTeam?.(abbr);
             }}
-            className={`block max-w-full truncate text-sm transition-colors hover:underline ${align === "right" ? "ml-auto" : ""
-              } ${teamTextClass}`}
+            className={`block max-w-full truncate text-sm transition-colors hover:underline ${
+              align === "right" ? "ml-auto" : ""
+            } ${teamTextClass}`}
             title={fullName}
           >
             {getTeamShortName(abbr, fullName)}
           </button>
-          {(record || form.length > 0) && (
-            <div
-              className={`mt-0.5 hidden items-center gap-1.5 text-xs tabular-nums sm:flex ${align === "right" ? "justify-end" : "justify-start"
-                }`}
-            >
-              {record && <span className="font-medium text-text-secondary">{record}</span>}
-              <FormDots form={form} className="hidden lg:inline-flex" />
-            </div>
+          {record && (
+            <span className="mt-0.5 hidden text-xs tabular-nums text-text-muted sm:block">
+              {record}
+            </span>
           )}
         </div>
         {align === "right" && <TeamLogo abbr={abbr} name={fullName} size={28} className="shrink-0" />}
@@ -112,21 +106,22 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
   return (
     <div
       onClick={onOpen}
-      className={`group grid cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors hover:bg-background-tertiary sm:grid-cols-[1fr_132px] sm:gap-4 sm:px-4 sm:py-2 grid-cols-[1fr_auto]`}
+      className="group flex cursor-pointer items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-background-tertiary sm:gap-4"
     >
-      <div className="grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-4">
-        {side(awayAbbr, awayFullName, awayRecord, awayForm, awayWon, "right")}
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+        {side(awayAbbr, awayFullName, awayRecord, awayWon, "right")}
 
-        <div className="flex shrink-0 items-center justify-center text-center tabular-nums sm:min-w-[96px]">
-          {!isCompleted && (
-            <span className="inline-flex items-center whitespace-nowrap rounded-sm bg-background-tertiary px-1.5 py-1 text-xs font-medium tabular-nums text-text-primary sm:px-2.5 sm:text-sm">{statusText}</span>
-          )}
-          {isCompleted && (
+        <div className="flex w-20 shrink-0 items-center justify-center text-center tabular-nums sm:w-24">
+          {!isCompleted ? (
+            <span className="inline-flex items-center whitespace-nowrap rounded-sm bg-background-tertiary px-2 py-1 text-xs font-medium tabular-nums text-text-secondary">
+              {statusText}
+            </span>
+          ) : (
             <div className="inline-flex items-center justify-center gap-1.5 rounded bg-background-tertiary px-2.5 py-1 text-sm sm:text-base">
               <span className={awayWon ? "font-semibold text-text-primary" : "font-medium text-text-secondary"}>
                 {game.AWAY_SCORE}
               </span>
-              <span className="text-xs text-text-secondary">-</span>
+              <span className="text-xs text-text-muted">-</span>
               <span className={homeWon ? "font-semibold text-text-primary" : "font-medium text-text-secondary"}>
                 {game.HOME_SCORE}
               </span>
@@ -134,10 +129,10 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
           )}
         </div>
 
-        {side(homeAbbr, homeFullName, homeRecord, homeForm, homeWon, "left")}
+        {side(homeAbbr, homeFullName, homeRecord, homeWon, "left")}
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-2.5">
+      <div className="flex shrink-0 items-center justify-end gap-2 sm:w-24">
         {canRefresh ? (
           <button
             type="button"
@@ -149,12 +144,12 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
             }}
             className="inline-flex items-center gap-1 rounded-sm border border-border bg-background-primary px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:border-card-border-hover hover:text-text-primary disabled:opacity-50"
           >
-            <RefreshCw size={12} className={isRefreshing ? "animate-spin text-primary" : ""} />
+            <RefreshCw size={12} strokeWidth={1.5} className={isRefreshing ? "animate-spin text-primary" : ""} />
             <span className="hidden sm:inline">{isRefreshing ? "..." : tr ? "Yenile" : "Refresh"}</span>
           </button>
         ) : isCompleted ? (
           extra.length > 0 && (
-            <p className="hidden text-right text-xs font-medium tabular-nums text-text-secondary sm:block">
+            <p className="hidden text-right text-xs font-medium tabular-nums text-text-muted sm:block">
               {extra.join(" · ")}
             </p>
           )
@@ -166,13 +161,17 @@ export const FixtureMatchRow: React.FC<FixtureMatchRowProps> = ({
               event.stopPropagation();
               onPredict();
             }}
-            className="inline-flex items-center gap-1 rounded-sm bg-primary/10 px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+            className="inline-flex items-center gap-1 rounded-sm px-1.5 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-background-primary hover:text-primary"
           >
-            <Sparkles size={12} />
+            <Sparkles size={13} strokeWidth={1.5} />
             <span className="hidden sm:inline">{tr ? "Tahmin" : "Predict"}</span>
           </button>
         ) : null}
-        <ChevronRight size={16} className="hidden text-text-secondary sm:block transition-colors group-hover:text-text-primary" />
+        <ChevronRight
+          size={16}
+          strokeWidth={1.5}
+          className="hidden text-text-muted transition-colors group-hover:text-text-primary sm:block"
+        />
       </div>
     </div>
   );

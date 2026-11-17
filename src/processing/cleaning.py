@@ -116,9 +116,16 @@ def normalize_game_matchups(df: pd.DataFrame) -> pd.DataFrame:
     if "MATCHUP" not in df.columns:
         return df
         
+    if df.empty:
+        df["RAW_MATCHUP"] = df["MATCHUP"]
+        df["NORMALIZED_MATCHUP"] = df["MATCHUP"]
+        if "IS_HOME" not in df.columns:
+            df["IS_HOME"] = pd.Series(dtype=bool)
+        return df
+
     df["RAW_MATCHUP"] = df["MATCHUP"]
     df["NORMALIZED_MATCHUP"] = df["MATCHUP"]
-    
+
     if "IS_HOME" not in df.columns:
         df["IS_HOME"] = df["MATCHUP"].astype(str).str.contains("vs.", regex=False)
 
@@ -172,10 +179,24 @@ def normalize_game_matchups(df: pd.DataFrame) -> pd.DataFrame:
                     grp.loc[idx1, "NORMALIZED_MATCHUP"] = f"{t2} {opposite_sep} {t1}"
         return grp
 
-    df = pd.concat(
-        [correct_group(grp.copy()) for _, grp in df.groupby("GAME_ID", sort=False)],
-        ignore_index=True,
-    )
+    # Fast path: only inspect GAME_IDs where both rows have identical home/away polarity.
+    if "GAME_ID" in df.columns and "TEAM_ABBREVIATION" in df.columns:
+        is_vs = df["MATCHUP"].astype(str).str.contains("vs.", regex=False)
+        gid_counts = df["GAME_ID"].value_counts()
+        two_row_gids = gid_counts[gid_counts == 2].index
+        if len(two_row_gids) > 0:
+            sub_mask = df["GAME_ID"].isin(two_row_gids)
+            polarity_counts = is_vs[sub_mask].groupby(df.loc[sub_mask, "GAME_ID"]).nunique()
+            bad_gids = polarity_counts[polarity_counts == 1].index
+            if len(bad_gids) > 0:
+                bad_mask = df["GAME_ID"].isin(bad_gids)
+                corrected = pd.concat(
+                    [correct_group(grp.copy()) for _, grp in df[bad_mask].groupby("GAME_ID", sort=False)]
+                )
+                df.loc[corrected.index, ["IS_HOME", "NORMALIZED_MATCHUP"]] = corrected[
+                    ["IS_HOME", "NORMALIZED_MATCHUP"]
+                ]
+
     df["MATCHUP"] = df["NORMALIZED_MATCHUP"]
     return df
 

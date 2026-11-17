@@ -108,7 +108,7 @@ export function WinProbabilityArc({
             {awayAbbr} {language === "tr" ? "(Dep)" : "(Away)"}
           </p>
           <p className="font-semibold tabular-nums text-text-primary">
-            %{(awayProb * 100).toFixed(1)}
+            {language === "tr" ? `%${(awayProb * 100).toFixed(1)}` : `${(awayProb * 100).toFixed(1)}%`}
           </p>
         </div>
         <div className="text-right">
@@ -116,7 +116,7 @@ export function WinProbabilityArc({
             {homeAbbr} {language === "tr" ? "(Ev)" : "(Home)"}
           </p>
           <p className="font-semibold tabular-nums text-text-primary">
-            %{(homeProb * 100).toFixed(1)}
+            {language === "tr" ? `%${(homeProb * 100).toFixed(1)}` : `${(homeProb * 100).toFixed(1)}%`}
           </p>
         </div>
       </div>

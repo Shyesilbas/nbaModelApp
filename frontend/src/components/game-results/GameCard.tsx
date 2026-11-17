@@ -1,8 +1,9 @@
-import { Sparkles, ChevronRight, Calendar, Clock, RefreshCw, Shield } from "lucide-react";
+import { Sparkles, ChevronRight, Calendar, RefreshCw, Shield, Clock } from "lucide-react";
 import TeamLogo from "../TeamLogo";
 import type { GameFeedRow } from "../../types/gameFeed";
-import { fmtDate, fmtTipoffTR, isGameEligibleForRefresh, parseOfficials } from "./utils";
+import { fmtTipoffTR, isGameEligibleForRefresh, parseOfficials } from "./utils";
 import { getTeamShortName } from "../../lib/nbaTeams";
+import { useLanguage } from "../../context/useLanguage";
 
 export function GameCard({
   game,
@@ -21,6 +22,8 @@ export function GameCard({
   homeRecord?: string;
   awayRecord?: string;
 }) {
+  const { t, language, formatDate } = useLanguage();
+  const tr = language === "tr";
   const isCompleted =
     game.GAME_STATUS === "Final" ||
     game.GAME_STATUS === "FINAL" ||
@@ -33,7 +36,13 @@ export function GameCard({
   const margin = isCompleted ? Math.abs((game.HOME_SCORE ?? 0) - (game.AWAY_SCORE ?? 0)) : 0;
   const awayWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === game.AWAY_TEAM_ABBREVIATION;
   const homeWon = isCompleted && game.WINNER_TEAM_ABBREVIATION === game.HOME_TEAM_ABBREVIATION;
-  const seasonLabel = game.SEASON_TYPE === "Regular Season" ? "Regular" : (game.SEASON_TYPE ?? "Regular");
+  const seasonLabel =
+    game.SEASON_TYPE === "Regular Season"
+      ? tr
+        ? "Normal Sezon"
+        : "Regular"
+      : game.SEASON_TYPE ?? (tr ? "Normal Sezon" : "Regular");
+  const tipoff = fmtTipoffTR(game.GAME_START_UTC, language);
 
   return (
     <div
@@ -45,26 +54,27 @@ export function GameCard({
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium text-text-secondary">{seasonLabel}</span>
           {game.SERIES_GAME_NUMBER != null && (
-            <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs text-text-secondary">
-              Game {game.SERIES_GAME_NUMBER}
+            <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs tabular-nums text-text-secondary">
+              {tr ? `Maç ${game.SERIES_GAME_NUMBER}` : `Game ${game.SERIES_GAME_NUMBER}`}
             </span>
           )}
           {game.IS_ELIMINATION_GAME && (
             <span className="rounded-sm border border-border bg-background-tertiary px-1.5 py-0.5 text-xs font-medium text-status-error">
-              Elimination
+              {tr ? "Eleme" : "Elimination"}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 tabular-nums">
           {isCompleted ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary">
-              <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
-              {game.GAME_STATUS || "Final"}{fmtTipoffTR(game.GAME_START_UTC) ? ` · ${fmtTipoffTR(game.GAME_START_UTC)}` : ""}
+              <span className="h-1.5 w-1.5 rounded-full bg-status-success" aria-hidden="true" />
+              {t.fixtures.completed}
+              {tipoff ? ` · ${tipoff}` : ""}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary">
-              <Clock size={16} className="text-text-muted" />
-              {fmtTipoffTR(game.GAME_START_UTC) ?? (game.GAME_STATUS || "Scheduled")}
+              <Clock size={16} className="text-text-muted" aria-hidden="true" />
+              {tipoff ?? (game.GAME_STATUS || (tr ? "Programda" : "Scheduled"))}
             </span>
           )}
         </div>
@@ -85,17 +95,15 @@ export function GameCard({
                   {getTeamShortName(game.AWAY_TEAM_ABBREVIATION, game.AWAY_TEAM_NAME)}
                 </p>
                 {awayRecord && (
-                  <span className="shrink-0 text-xs tabular-nums text-text-muted">
-                    ({awayRecord})
-                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-text-muted">({awayRecord})</span>
                 )}
               </div>
-              <p className="text-xs text-text-muted">Away</p>
+              <p className="text-xs text-text-muted">{t.common.away}</p>
             </div>
           </div>
 
           {/* Central Scores / VS */}
-          <div className="min-w-[5.5rem] px-2 py-1 text-center">
+          <div className="min-w-20 px-2 py-1 text-center">
             {isCompleted ? (
               <div>
                 <div className="flex items-baseline justify-center gap-1.5">
@@ -108,7 +116,9 @@ export function GameCard({
                   </span>
                 </div>
                 {game.WINNER_TEAM_ABBREVIATION && (
-                  <p className="text-xs tabular-nums text-text-muted">+{margin} pts</p>
+                  <p className="text-xs tabular-nums text-text-muted">
+                    +{margin} {t.common.ptsUnit}
+                  </p>
                 )}
               </div>
             ) : (
@@ -121,9 +131,7 @@ export function GameCard({
             <div className="min-w-0">
               <div className="flex items-center justify-end gap-1.5">
                 {homeRecord && (
-                  <span className="shrink-0 text-xs tabular-nums text-text-muted">
-                    ({homeRecord})
-                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-text-muted">({homeRecord})</span>
                 )}
                 <p
                   className={`truncate text-xs font-semibold ${homeWon ? "text-text-primary" : "text-text-secondary"}`}
@@ -132,7 +140,7 @@ export function GameCard({
                   {getTeamShortName(game.HOME_TEAM_ABBREVIATION, game.HOME_TEAM_NAME)}
                 </p>
               </div>
-              <p className="text-xs text-text-muted">Home</p>
+              <p className="text-xs text-text-muted">{t.common.home}</p>
             </div>
             <TeamLogo abbr={game.HOME_TEAM_ABBREVIATION} name={game.HOME_TEAM_NAME} size={36} />
           </div>
@@ -141,24 +149,30 @@ export function GameCard({
         {/* Footer info bar */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border-light pt-3 text-xs text-text-secondary">
           <div className="flex items-center gap-2 text-text-muted">
-            <div className="flex items-center gap-1">
-              <Calendar size={16} />
-              <span>{fmtDate(game.GAME_DATE)}</span>
+            <div className="flex items-center gap-1 tabular-nums">
+              <Calendar size={16} aria-hidden="true" />
+              <span>{formatDate(game.GAME_DATE)}</span>
             </div>
             {game.ARENA && (
               <>
-                <span>•</span>
-                <span className="max-w-[130px] truncate" title={game.LOCATION ? `${game.ARENA} (${game.LOCATION})` : game.ARENA}>
+                <span>·</span>
+                <span
+                  className="max-w-32 truncate"
+                  title={game.LOCATION ? `${game.ARENA} (${game.LOCATION})` : game.ARENA}
+                >
                   {game.ARENA}
                 </span>
               </>
             )}
             {officials.length > 0 && (
               <>
-                <span>•</span>
-                <span className="inline-flex items-center gap-1 text-text-secondary" title={`Officials: ${officials.map((o) => o.cleanName).join(", ")}`}>
-                  <Shield size={16} className="text-text-muted" />
-                  <span>{officials.map((o) => o.jerseyNum ? `#${o.jerseyNum}` : o.cleanName).slice(0, 3).join(" ")}</span>
+                <span>·</span>
+                <span
+                  className="inline-flex items-center gap-1 text-text-secondary"
+                  title={`${t.gameCard.officials}: ${officials.map((o) => o.cleanName).join(", ")}`}
+                >
+                  <Shield size={16} className="text-text-muted" aria-hidden="true" />
+                  <span>{officials.map((o) => (o.jerseyNum ? `#${o.jerseyNum}` : o.cleanName)).slice(0, 3).join(" ")}</span>
                 </span>
               </>
             )}
@@ -172,10 +186,10 @@ export function GameCard({
                   e.stopPropagation();
                   onRefresh?.();
                 }}
-                className="inline-flex items-center gap-1 rounded border border-border bg-background-primary px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:bg-background-tertiary disabled:opacity-50"
+                className="inline-flex cursor-pointer items-center gap-1 rounded border border-border bg-background-primary px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:bg-background-tertiary disabled:opacity-50"
               >
-                <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
-                {isRefreshing ? "Refreshing…" : "Refresh"}
+                <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} aria-hidden="true" />
+                {isRefreshing ? (tr ? "Güncelleniyor..." : "Refreshing...") : tr ? "Yenile" : "Refresh"}
               </button>
             )}
             {!isCompleted && onPredict && (
@@ -185,15 +199,15 @@ export function GameCard({
                   e.stopPropagation();
                   onPredict();
                 }}
-                className="inline-flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+                className="inline-flex cursor-pointer items-center gap-1 rounded bg-primary px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover dark:text-background-secondary"
               >
-                <Sparkles size={16} />
-                Predict
+                <Sparkles size={16} aria-hidden="true" />
+                {tr ? "Tahmin Et" : "Predict"}
               </button>
             )}
             <span className="inline-flex items-center gap-0.5 text-xs font-medium text-text-secondary transition-colors group-hover:text-text-primary">
-              {isCompleted ? "Box Score" : "Match Details"}
-              <ChevronRight size={16} />
+              {isCompleted ? t.fixtures.boxscoreButton : t.fixtures.detailsButton}
+              <ChevronRight size={16} aria-hidden="true" />
             </span>
           </div>
         </div>

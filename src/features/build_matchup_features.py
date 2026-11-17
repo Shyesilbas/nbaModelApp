@@ -202,8 +202,9 @@ SCHEDULE_TEAM_FIELDS = ("HOME_SERIES_WINS", "AWAY_SERIES_WINS")
 
 
 @lru_cache(maxsize=8)
-def _prior_season_team_form(season: str) -> dict:
+def _prior_season_team_form_versioned(season: str, _prev_mtime_ns: int) -> dict:
     """Team -> {stat: previous regular-season mean, regressed toward the league mean}."""
+    del _prev_mtime_ns
     try:
         prev = _load_team_features(previous_season(season))
     except FileNotFoundError:
@@ -216,6 +217,12 @@ def _prior_season_team_form(season: str) -> dict:
     league = means.mean()
     regressed = league + SCORE_PRIOR_REGRESSION * (means - league)
     return {team: row.to_dict() for team, row in regressed.iterrows()}
+
+
+def _prior_season_team_form(season: str) -> dict:
+    prev_path = Path(get_data_paths(previous_season(season)).team_features)
+    mtime_ns = prev_path.stat().st_mtime_ns if prev_path.exists() else 0
+    return _prior_season_team_form_versioned(season, mtime_ns)
 
 
 def blend_score_form_with_prior(res: dict, season: str, team: str, opp: str, n_team: int, n_opp: int) -> None:
@@ -250,7 +257,13 @@ def _raw_season_games(season: str) -> pd.DataFrame:
 
 
 @lru_cache(maxsize=64)
-def _pregame_rows_cached(season: str, date_str: str, matchups: tuple) -> dict:
+def _pregame_rows_versioned(
+    season: str,
+    date_str: str,
+    matchups: tuple,
+    _raw_mtime_ns: int,
+    _prev_mtime_ns: int,
+) -> dict:
     """Feature rows exactly as training sees them, for games that have not been played yet.
 
     Training rows hold each team's form *before* that game (rolling windows are
@@ -260,6 +273,7 @@ def _pregame_rows_cached(season: str, date_str: str, matchups: tuple) -> dict:
     feature code is re-run, so the placeholder gets the same pregame values a
     training row would have, including H2H against today's opponent.
     """
+    del _raw_mtime_ns, _prev_mtime_ns
     from src.features import build_team_features
     from src.features.boxscore_advanced_features import compute_team_boxscore_advanced_features
 
@@ -299,6 +313,14 @@ def _pregame_rows_cached(season: str, date_str: str, matchups: tuple) -> dict:
         for _, r in game.iterrows():
             rows[(r["TEAM_ABBREVIATION"], home, away)] = r
     return rows
+
+
+def _pregame_rows_cached(season: str, date_str: str, matchups: tuple) -> dict:
+    raw_p = Path(get_data_paths(season).team_games_raw)
+    prev_p = Path(get_data_paths(previous_season(season)).team_games_raw)
+    raw_mtime = raw_p.stat().st_mtime_ns if raw_p.exists() else 0
+    prev_mtime = prev_p.stat().st_mtime_ns if prev_p.exists() else 0
+    return _pregame_rows_versioned(season, date_str, matchups, raw_mtime, prev_mtime)
 
 
 def pregame_team_rows(season: str, pred_dt: pd.Timestamp, home_team: str, away_team: str, full_games_df: pd.DataFrame) -> dict:

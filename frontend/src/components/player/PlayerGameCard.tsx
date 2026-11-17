@@ -5,6 +5,7 @@ import { Modal, Skeleton } from "../common";
 import { PlayerQuarterTable } from "../game-results/QuarterBreakdown";
 import { useGameQuarters } from "../game-results/quarters";
 import { TEAM_NAME_BY_ABBR, isKnownTeamAbbr } from "../../lib/nbaTeams";
+import { useLanguage } from "../../context/useLanguage";
 
 export interface PlayerGameInfo {
   GAME_ID: string;
@@ -50,6 +51,8 @@ export default function PlayerGameCard({
   onClose: () => void;
   onOpenGame: (gameId: string) => void;
 }) {
+  const { language, formatDate } = useLanguage();
+  const tr = language === "tr";
   const { data, loading } = useGameQuarters(game?.GAME_ID, game?.SEASON);
   if (!game) return null;
 
@@ -58,10 +61,8 @@ export default function PlayerGameCard({
   const ownScore = away ? game.AWAY_SCORE : game.HOME_SCORE;
   const oppScore = away ? game.HOME_SCORE : game.AWAY_SCORE;
   const oppName = isKnownTeamAbbr(oppAbbr) ? TEAM_NAME_BY_ABBR[oppAbbr] : oppAbbr;
-  const date = game.GAME_DATE
-    ? new Date(`${game.GAME_DATE}T12:00:00`).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })
-    : "";
-  const result = game.WL === "W" ? "Galibiyet" : game.WL === "L" ? "Mağlubiyet" : "";
+  const date = game.GAME_DATE ? formatDate(game.GAME_DATE) : "";
+  const result = game.WL === "W" ? (tr ? "Galibiyet" : "Win") : game.WL === "L" ? (tr ? "Mağlubiyet" : "Loss") : "";
   const resultTone = game.WL === "W" ? "text-status-success" : game.WL === "L" ? "text-status-error" : "text-text-muted";
 
   const line = [
@@ -88,7 +89,7 @@ export default function PlayerGameCard({
               <span>{oppName}</span>
             </p>
             <p className="mt-0.5 text-xs text-text-muted">
-              {[date, game.IS_PLAYOFF ? "Playoff" : game.SEASON_TYPE === "Pre Season" ? "Hazırlık" : null]
+              {[date, game.IS_PLAYOFF ? "Playoff" : game.SEASON_TYPE === "Pre Season" ? (tr ? "Hazırlık" : "Preseason") : null]
                 .filter(Boolean)
                 .join(" · ")}
               {ownScore != null && oppScore != null && (
@@ -96,7 +97,7 @@ export default function PlayerGameCard({
                   {" · "}
                   <span className={`font-semibold ${resultTone}`}>{result}</span>{" "}
                   <span className="tabular-nums">
-                    {ownScore} - {oppScore}
+                    {ownScore} – {oppScore}
                   </span>
                 </>
               )}
@@ -105,7 +106,7 @@ export default function PlayerGameCard({
         </div>
 
         {game.DID_NOT_PLAY ? (
-          <p className="text-sm text-text-secondary">Bu maçta oynamadı.</p>
+          <p className="text-sm text-text-secondary">{tr ? "Bu maçta oynamadı." : "Did not play in this game."}</p>
         ) : (
           <>
             <dl className="grid grid-cols-4 gap-x-4 gap-y-3 sm:grid-cols-8">
@@ -119,15 +120,19 @@ export default function PlayerGameCard({
               ))}
             </dl>
 
-            <section aria-label="Periyot bazında performans" className="border-t border-border-light pt-4">
-              <h3 className="mb-2 text-xs text-text-muted">Periyot bazında performans</h3>
+            <section aria-label={tr ? "Periyot bazında performans" : "Quarter breakdown"} className="border-t border-border-light pt-4">
+              <h3 className="mb-2 text-xs text-text-muted">
+                {tr ? "Periyot bazında performans" : "Quarter breakdown"}
+              </h3>
               {loading ? (
                 <Skeleton className="h-28 w-full rounded" />
               ) : data && data.players.some((p) => p.player_id === playerId) ? (
                 <PlayerQuarterTable data={data} playerId={playerId} />
               ) : (
                 <p className="text-xs text-text-muted">
-                  Bu maç için periyot verisi yok. Çeyrek bazlı veri yalnızca play-by-play kaydı bulunan maçlarda görünür.
+                  {tr
+                    ? "Bu maç için periyot verisi yok. Çeyrek bazlı veri yalnızca play-by-play kaydı bulunan maçlarda görünür."
+                    : "Quarter stats are only available for games with recorded play-by-play data."}
                 </p>
               )}
             </section>
@@ -139,8 +144,8 @@ export default function PlayerGameCard({
           onClick={() => onOpenGame(game.GAME_ID)}
           className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-primary hover:underline"
         >
-          Maç detayını aç
-          <ChevronRight size={14} />
+          {tr ? "Maç detayını aç" : "Open game details"}
+          <ChevronRight size={14} strokeWidth={1.5} />
         </button>
       </div>
     </Modal>

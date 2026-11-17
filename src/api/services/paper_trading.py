@@ -262,11 +262,9 @@ def _build_paper_trading_report(season: str) -> Dict[str, Any]:
     graded = grade(read_ledger(season), load_results(season))
     graded.sort(key=lambda g: (g["game_date"], g["start_utc"], g["game_id"]), reverse=True)
     evaluation = _evaluation_view(build_report(season, graded))
-    # The page shows only the current release's live calls; older versions and backfill stay in the ledger.
-    release = evaluation["production_release"]
-    shown = [{k: v for k, v in g.items() if k not in DETAIL_FIELDS}
-             for g in graded if g["model_version"] == release and g["origin"] == "live"]
-    evaluation["by_version"] = [v for v in evaluation["by_version"] if v["version"] == release and v["origin"] == "live"]
+    # Keep evaluation["current_live"] strictly scoped to the active release's live calls,
+    # while returning all graded ledger games (with version/backfill labels) for the UI.
+    shown = [{k: v for k, v in g.items() if k not in DETAIL_FIELDS} for g in graded]
     return {"season": season, "summary": summarize(shown), "evaluation": evaluation, "games": shown}
 
 

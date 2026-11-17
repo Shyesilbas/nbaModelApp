@@ -33,7 +33,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     }[size];
 
     const variantStyles = {
-      primary: "bg-primary text-white hover:bg-primary-hover active:bg-primary-hover",
+      primary: "bg-primary text-white dark:text-background-secondary hover:bg-primary-hover active:bg-primary-hover",
       secondary:
         "border border-border bg-background-primary text-text-primary hover:bg-background-tertiary active:bg-background-tertiary",
       ghost:
