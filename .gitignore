@@ -61,8 +61,16 @@ frontend/public/data/
 data/frontend_store/
 scratch/
 .antigravity/
+.agents/
 .claude/
+.cursor/
+.ai/
 .devin/
+*.log
+logs/
+.eslintcache
+.turbo/
+/plan*.md
 
 # Model binaries are generated artifacts; metadata/schema JSON may stay tracked.
 models/**/*.pkl
