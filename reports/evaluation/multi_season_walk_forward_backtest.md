@@ -2,8 +2,8 @@
 
 > Bu dosya `scripts/walk_forward_benchmark.py` tarafından üretilir; elle düzenlenmez.
 
-**Rapor Tarihi:** 2026-11-16T18:25:16Z  
-**Ölçülen Üretim Yapılandırması:** WIN `v15` (eğitim 2026-10-25), SCORE `v15` (eğitim 2026-10-25), PLAYER `v15` (eğitim 2026-10-25); git `0b7ec57`  
+**Rapor Tarihi:** 2026-11-17T13:53:47Z  
+**Ölçülen Üretim Yapılandırması:** WIN `v15` (eğitim 2026-10-25), SCORE `v15` (eğitim 2026-10-25), PLAYER `v15` (eğitim 2026-10-25); git `a17e20b`  
 **Yöntem:** Kesintisiz Genişleyen Zaman Pencereleri (Expanding Window). Her sezon yalnızca önceki tamamlanmış sezonlarla eğitilen modellerle test edilmiştir; geleceğe dönük hiçbir bilgi sızıntısı (leakage) bulunmamaktadır.  
 **Toplam Görülmemiş Test Maçı:** 6276 maç (5 ayrı NBA sezonu)
 
@@ -55,6 +55,7 @@ Fark = model kaybı - baseline kaybı (negatif = model daha iyi). %95 aralık, a
 |---|---:|---:|---:|---|---:|
 | WIN Brier vs saf Elo | -0.0059 | [-0.0079, -0.0038] | %100.0 | model daha iyi (CI sıfırın altında) | 5/5 |
 | WIN Brier vs saf Elo (canlı kadro varsayımı) | -0.0022 | [-0.0041, -0.0002] | %98.5 | model daha iyi (CI sıfırın altında) | - |
+| WIN ROC-AUC, model eksi saf Elo (pozitif = model daha iyi) | +0.0183 | [+0.0114, +0.0249] | %100.0 | model daha iyi (CI sıfırın üstünde) | 5/5 |
 | SCORE toplam MAE vs son-10 | -0.081 | [-0.157, +0.001] | %97.5 | fark anlamlı değil (CI sıfırı kapsıyor) | 4/5 |
 | SCORE margin MAE vs son-10 | -0.567 | [-0.674, -0.452] | %100.0 | model daha iyi (CI sıfırın altında) | 5/5 |
 | PLAYER PTS MAE vs EMA-10 | -0.171 | [-0.182, -0.161] | %100.0 | model daha iyi (CI sıfırın altında) | 5/5 |

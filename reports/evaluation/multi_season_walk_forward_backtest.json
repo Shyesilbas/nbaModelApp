@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-16T18:25:16Z",
+  "timestamp": "2026-11-17T13:53:47Z",
   "provenance": {
     "win": {
       "version": "v15",
@@ -13,7 +13,7 @@
       "version": "v15",
       "trained_at": "2026-10-25T11:01:57.467925Z"
     },
-    "git_commit": "0b7ec57"
+    "git_commit": "a17e20b"
   },
   "total_unseen_games": 6276,
   "folds_evaluated": 5,
@@ -79,6 +79,15 @@
       "level": 0.95,
       "n": 140378,
       "blocks": 1056,
+      "p_model_better": 1.0
+    },
+    "win_auc": {
+      "mean_diff": 0.01829,
+      "ci_low": 0.01141,
+      "ci_high": 0.02487,
+      "level": 0.95,
+      "n": 6276,
+      "blocks": 1017,
       "p_model_better": 1.0
     }
   },

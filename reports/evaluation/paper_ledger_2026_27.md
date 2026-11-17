@@ -3,9 +3,9 @@
 > Bu dosya `scripts/paper_ledger_report.py` tarafından üretilir; elle düzenlenmez.
 > Kilitli sezon: yalnızca prospektif izleme. Bu sonuçlar model seçimi veya ayar için kullanılmaz.
 
-**Rapor Tarihi:** 2026-11-16T18:27:49Z
+**Rapor Tarihi:** 2026-11-17T13:54:23Z
 **Üretim Sürümü:** `v15`
-**Defter:** 196 kayıt, 196 sonuçlanmış ve geçerli, 0 bekleyen, 0 geç (tip-off sonrası, sayılmaz). Son sonuçlanan maç: 2026-11-15
+**Defter:** 205 kayıt, 205 sonuçlanmış ve geçerli, 0 bekleyen, 0 geç (tip-off sonrası, sayılmaz). Son sonuçlanan maç: 2026-11-16
 
 ---
 
@@ -13,13 +13,14 @@
 
 | Metrik | Model | Baseline | Baseline |
 |---|---:|---:|---|
-| Maç | 153 | 153 | saf Elo eşleşen |
-| Doğruluk | %68.6 | %71.9 | saf Elo |
-| Brier | 0.1924 | 0.1888 | saf Elo |
-| Log-Loss | 0.5699 | - | |
-| Ev sahibi kazanma oranı | %53.6 | - | |
-| Toplam MAE | 14.47 | 14.56 | son-10 sayı (n=149) |
-| Margin MAE | 11.68 | 12.08 | son-10 sayı + ev avantajı |
+| Maç | 161 | 161 | saf Elo eşleşen |
+| Doğruluk | %68.3 | %70.8 | saf Elo |
+| Brier | 0.1975 | 0.1933 | saf Elo |
+| ROC-AUC | 0.7679 | 0.7753 | saf Elo |
+| Log-Loss | 0.5811 | - | |
+| Ev sahibi kazanma oranı | %53.4 | - | |
+| Toplam MAE | 14.64 | 14.65 | son-10 sayı (n=157) |
+| Margin MAE | 11.80 | 12.17 | son-10 sayı + ev avantajı |
 
 Not: model MAE satırları tüm maçlar üzerindedir; baseline sütunu yalnızca iki takımın da en az 3 önceki maçı olan alt kümede hesaplanır. Anlamlılık testi aynı alt kümede eşleştirilmiştir.
 
@@ -27,17 +28,18 @@ Not: model MAE satırları tüm maçlar üzerindedir; baseline sütunu yalnızca
 
 | Karşılaştırma | Ortalama Fark | %95 CI | Model daha iyi olasılığı | Yorum |
 |---|---:|---:|---:|---|
-| Brier vs saf Elo | +0.0036 | [-0.0131, +0.0211] | %32.5 | fark anlamlı değil (CI sıfırı kapsıyor) (n=153) |
-| Toplam MAE vs son-10 | -0.14 | [-0.53, +0.25] | %74.7 | fark anlamlı değil (CI sıfırı kapsıyor) (n=149) |
-| Margin MAE vs son-10 | -0.34 | [-1.15, +0.52] | %79.8 | fark anlamlı değil (CI sıfırı kapsıyor) (n=149) |
+| Brier vs saf Elo | +0.0042 | [-0.0111, +0.0203] | %30.1 | fark anlamlı değil (CI sıfırı kapsıyor) (n=161) |
+| ROC-AUC vs saf Elo (pozitif = model iyi) | -0.0074 | [-0.0603, +0.0420] | %37.2 | fark anlamlı değil (CI sıfırı kapsıyor) (n=161) |
+| Toplam MAE vs son-10 | -0.05 | [-0.45, +0.35] | %59.9 | fark anlamlı değil (CI sıfırı kapsıyor) (n=157) |
+| Margin MAE vs son-10 | -0.31 | [-1.09, +0.47] | %79.2 | fark anlamlı değil (CI sıfırı kapsıyor) (n=157) |
 
 ### Kalibrasyon (tahmin edilen kazananın olasılığı)
 
 | Güven Bandı | Maç | Ortalama Güven | Gerçekleşen Doğruluk |
 |---|---:|---:|---:|
-| 50-60% | 39 | %54.6 | %46.2 |
-| 60-70% | 50 | %64.4 | %68.0 |
-| 70-80% | 46 | %74.6 | %80.4 |
+| 50-60% | 43 | %54.6 | %51.2 |
+| 60-70% | 53 | %64.5 | %66.0 |
+| 70-80% | 47 | %74.6 | %78.7 |
 | 80-100% | 18 | %85.4 | %88.9 |
 
 ---
@@ -49,8 +51,9 @@ Not: model MAE satırları tüm maçlar üzerindedir; baseline sütunu yalnızca
 | `v11/backfill` | 24 | %54.2 | 0.2360 | 0.2182 | 14.70 | 12.47 |
 | `v11/live` | 12 | %50.0 | 0.2335 | 0.2227 | 14.25 | 13.13 |
 | `v12/live` | 7 | %42.9 | 0.2934 | 0.2406 | 17.10 | 15.87 |
-| `v15/live` | 153 | %68.6 | 0.1924 | 0.1888 | 14.47 | 11.68 |
-| **Tümü (karışık sürüm)** | 196 | %64.8 | 0.2038 | 0.1963 | 14.58 | 12.02 |
+| `v15/backfill` | 1 | %100.0 | 0.2159 | 0.5863 | 18.40 | 13.80 |
+| `v15/live` | 161 | %68.3 | 0.1975 | 0.1933 | 14.64 | 11.80 |
+| **Tümü (karışık sürüm)** | 205 | %64.9 | 0.2075 | 0.2015 | 14.73 | 12.11 |
 
 `backfill` kayıtları dondurulmuş çağrı değildir (maç tarihinden önceki verilerle sonradan üretildi, sakatlık raporu yok); güncel sürümün başarısı yalnızca `live` satırlarıyla ölçülür.
 
@@ -63,12 +66,17 @@ Not: model MAE satırları tüm maçlar üzerindedir; baseline sütunu yalnızca
 | 2026-10-26 | 48 | %62.5 | 0.2100 | 0.2082 | 16.69 | 11.57 |
 | 2026-11-02 | 54 | %74.1 | 0.1641 | 0.1723 | 13.11 | 10.55 |
 | 2026-11-09 | 51 | %68.6 | 0.2058 | 0.1880 | 13.82 | 12.99 |
+| 2026-11-16 | 8 | %62.5 | 0.2954 | 0.2793 | 18.00 | 14.15 |
 
 ---
 
 ## 4. Gölge WIN Adayları (`v15` / live)
 
-Henüz gölge olasılığı taşıyan sonuçlanmış kayıt yok (alan 2026-11-16 sonrasındaki kayıtlara yazılır).
+Aynı maç önü kaydında üretim modelinin yanına yazılan aday olasılıkları. Fark = aday - karşılaştırılan, negatif = aday daha iyi.
+
+| Aday | Maç | Aday Brier | Üretim Brier | Elo Brier | Aday - Üretim (%95 CI) | Aday - Elo (%95 CI) |
+|---|---:|---:|---:|---:|---|---|
+| `win_live_roster_v1` | 8 | 0.2888 | 0.2954 | 0.2793 | - | - |
 
 Karar kuralı (kayıt başlamadan sabitlendi, `reports/backtests/2026-11-16_win_live_roster_shadow/README.md`): aday yalnızca izlenir; normal sezon bitmeden ve en az 600 ortak maç birikmeden terfi değerlendirilmez.
 
@@ -76,7 +84,15 @@ Karar kuralı (kayıt başlamadan sabitlendi, `reports/backtests/2026-11-16_win_
 
 ## 5. Oyuncu Projeksiyonları (`v15` / live)
 
-Henüz oyuncu projeksiyonu taşıyan sonuçlanmış kayıt yok (alan 2026-11-16 sonrasındaki kayıtlara yazılır).
+8 maç, oynaması beklenen ve oynayan 156 oyuncu satırı. Oynaması beklenenlerin %94.0'i sahaya çıktı; sahaya çıkanların %99.5'i projeksiyon listesindeydi. Dakika MAE 5.65; ham model sayı MAE 5.430.
+
+| İstatistik | Satır | Model MAE | EMA-10 MAE | Fark (%95 CI) | Yorum |
+|---|---:|---:|---:|---|---|
+| PTS | 156 | 4.688 | 4.600 | - | yetersiz veri |
+| REB | 156 | 2.146 | 2.074 | - | yetersiz veri |
+| AST | 156 | 1.451 | 1.436 | - | yetersiz veri |
+
+Model sütunu, sayfada gösterilen (takım skoruyla uzlaştırılmış, sakatlık raporu uygulanmış) projeksiyondur. EMA-10, oyuncunun önceki maçlarının üstel ortalamasıdır ve maçta oynayacağını bilerek hesaplanır; model ise dakikayı da tahmin eder, bu yüzden karşılaştırma walk-forward'daki koşullu ölçümden daha zordur.
 
 ---
 

@@ -24,7 +24,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.core.season_utils import season_to_file_token  # noqa: E402
-from src.evaluation.bootstrap import verdict  # noqa: E402
+from src.evaluation.bootstrap import verdict, verdict_higher_better  # noqa: E402
 from src.evaluation.paper_ledger import MIN_PRIOR_GAMES, build_report  # noqa: E402
 
 
@@ -72,6 +72,7 @@ def render_markdown(rep: dict) -> str:
 | Maç | {cur['games']} | {cur.get('elo_games', '-')} | saf Elo eşleşen |
 | Doğruluk | %{cur['accuracy'] * 100:.1f} | %{(cur.get('elo_accuracy') or 0) * 100:.1f} | saf Elo |
 | Brier | {_fmt(cur['brier'])} | {_fmt(cur.get('elo_brier'))} | saf Elo |
+| ROC-AUC | {_fmt(cur.get('roc_auc'))} | {_fmt(cur.get('elo_auc'))} | saf Elo |
 | Log-Loss | {_fmt(cur['log_loss'])} | - | |
 | Ev sahibi kazanma oranı | %{cur['home_win_rate'] * 100:.1f} | - | |
 | Toplam MAE | {_fmt(cur['mae_total'], 2)} | {_fmt(cur.get('base_mae_total'), 2)} | son-10 sayı (n={cur.get('baseline_games', 0)}) |
@@ -85,6 +86,9 @@ Not: model MAE satırları tüm maçlar üzerindedir; baseline sütunu yalnızca
 |---|---:|---:|---:|---|
 """
         md += _ci_row("Brier vs saf Elo", cur.get("brier_vs_elo"), 4)
+        auc = cur.get("auc_vs_elo")
+        md += (f"| ROC-AUC vs saf Elo (pozitif = model iyi) | {auc['mean_diff']:+.4f} | [{auc['ci_low']:+.4f}, {auc['ci_high']:+.4f}] "
+               f"| %{auc['p_model_better'] * 100:.1f} | {verdict_higher_better(auc)} (n={auc['n']}) |\n") if auc else "| ROC-AUC vs saf Elo | - | - | - | yetersiz veri |\n"
         md += _ci_row("Toplam MAE vs son-10", cur.get("total_vs_last10"), 2)
         md += _ci_row("Margin MAE vs son-10", cur.get("margin_vs_last10"), 2)
         md += "\n### Kalibrasyon (tahmin edilen kazananın olasılığı)\n\n| Güven Bandı | Maç | Ortalama Güven | Gerçekleşen Doğruluk |\n|---|---:|---:|---:|\n"

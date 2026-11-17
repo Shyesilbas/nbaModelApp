@@ -13,6 +13,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+from sklearn.metrics import roc_auc_score
 
 MIN_BLOCKS = 5
 
@@ -61,4 +62,56 @@ def verdict(ci: Optional[dict]) -> str:
         return "model daha iyi (CI sıfırın altında)"
     if ci["ci_low"] > 0:
         return "baseline daha iyi (CI sıfırın üstünde)"
+    return "fark anlamlı değil (CI sıfırı kapsıyor)"
+
+
+def paired_block_bootstrap_auc(
+    y: np.ndarray,
+    p_model: np.ndarray,
+    p_base: np.ndarray,
+    blocks: np.ndarray,
+    n_boot: int = 1000,
+    level: float = 0.95,
+    seed: int = 42,
+) -> Optional[dict]:
+    """ROC-AUC of the model minus the baseline on the same games, resampling whole date blocks.
+
+    Unlike a loss, AUC is not a per-game mean, so every replicate recomputes both AUCs on the
+    resampled games. ``mean_diff`` is the AUC difference on all games; positive means the model ranks better.
+    """
+    y, p_model, p_base = (np.asarray(a, dtype=float) for a in (y, p_model, p_base))
+    codes, _ = pd.factorize(np.asarray(blocks))
+    n_blocks = int(codes.max()) + 1
+    if len(y) < 2 or n_blocks < MIN_BLOCKS:
+        return None
+    members = [np.flatnonzero(codes == b) for b in range(n_blocks)]
+    rng = np.random.default_rng(seed)
+    diffs = []
+    for _ in range(n_boot):
+        idx = np.concatenate([members[b] for b in rng.integers(0, n_blocks, size=n_blocks)])
+        if y[idx].min() == y[idx].max():
+            continue
+        diffs.append(roc_auc_score(y[idx], p_model[idx]) - roc_auc_score(y[idx], p_base[idx]))
+    diffs = np.asarray(diffs)
+    alpha = (1.0 - level) / 2.0
+    lo, hi = np.quantile(diffs, [alpha, 1.0 - alpha])
+    return {
+        "mean_diff": round(float(roc_auc_score(y, p_model) - roc_auc_score(y, p_base)), 5),
+        "ci_low": round(float(lo), 5),
+        "ci_high": round(float(hi), 5),
+        "level": level,
+        "n": int(len(y)),
+        "blocks": n_blocks,
+        "p_model_better": round(float((diffs > 0).mean()), 4),
+    }
+
+
+def verdict_higher_better(ci: Optional[dict]) -> str:
+    """Same reading as ``verdict`` for a difference where a higher value is better (AUC)."""
+    if not ci:
+        return "yetersiz veri"
+    if ci["ci_low"] > 0:
+        return "model daha iyi (CI sıfırın üstünde)"
+    if ci["ci_high"] < 0:
+        return "baseline daha iyi (CI sıfırın altında)"
     return "fark anlamlı değil (CI sıfırı kapsıyor)"

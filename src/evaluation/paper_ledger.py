@@ -16,12 +16,13 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.metrics import roc_auc_score
 
 from src.api.services.paper_trading import COUNTED_SEASON_TYPES, CONFIDENCE_BANDS, grade, load_results, read_ledger
 from src.core.artifact_paths import production_release
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import normalize_season
-from src.evaluation.bootstrap import paired_block_bootstrap
+from src.evaluation.bootstrap import paired_block_bootstrap, paired_block_bootstrap_auc
 from src.evaluation.ledger_detail import player_summary, shadow_summary
 from src.features.continuous_elo import ContinuousEloEngine
 from src.features.win_strength_features import season_opening_ratings
@@ -114,6 +115,11 @@ def summarize_group(rows: list[dict]) -> dict:
         out["elo_games"] = len(elo_rows)
         out["elo_brier"] = round(float(np.mean((pe - ye) ** 2)), 4)
         out["elo_accuracy"] = round(float(np.mean((pe >= 0.5) == (ye == 1.0))), 4)
+        if 0 < ye.sum() < len(ye):
+            pm = np.array([r["home_win_probability"] for r in elo_rows])
+            out["roc_auc"] = round(float(roc_auc_score(ye, pm)), 4)
+            out["elo_auc"] = round(float(roc_auc_score(ye, pe)), 4)
+            out["auc_vs_elo"] = paired_block_bootstrap_auc(ye, pm, pe, np.array([r["game_date"] for r in elo_rows]))
         out["brier_vs_elo"] = paired_block_bootstrap(
             np.array([_brier(r["home_win_probability"], r["y"]) - _brier(r["elo_prob"], r["y"]) for r in elo_rows]),
             np.array([r["game_date"] for r in elo_rows]),

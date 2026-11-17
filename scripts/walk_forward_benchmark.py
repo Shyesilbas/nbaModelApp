@@ -37,7 +37,7 @@ from src.training.score_trainer import ScoreModelTrainer, get_location_features
 from src.training.player_trainer import PlayerModelTrainer
 from src.features.player_form import add_player_matchup_features
 from src.training.validation_utils import expanding_window_date_splits
-from src.evaluation.bootstrap import paired_block_bootstrap, verdict
+from src.evaluation.bootstrap import paired_block_bootstrap, paired_block_bootstrap_auc, verdict, verdict_higher_better
 from src.evaluation.model_doc_blocks import update_model_docs
 from src.evaluation.status_blocks import update_status_docs
 
@@ -344,6 +344,7 @@ def run_walk_forward_backtest():
     data_cf = _carry_forward_frame(data)
     no_avail_features = [f for f in win_features if f not in AVAILABILITY_FEATURES]
     pooled = {k: ([], []) for k in ("production", "live_like_serve", "live_like_retrain", "no_availability", "elo")}
+    win_dates = []
     audit_players = not player_data.empty and all(f in player_features for f in PLAYER_ROTATION_FEATURES)
     player_cf = _player_carry_forward(player_data) if audit_players else None
     no_rot_features = [f for f in player_features if f not in PLAYER_ROTATION_FEATURES]
@@ -404,6 +405,7 @@ def run_walk_forward_backtest():
         win_eval_elo = _evaluate_prob(y_test_win, elo_prob)
         win_eval_last10 = _evaluate_prob(y_test_win, last10_prob)
         y_arr = y_test_win.to_numpy(dtype=float)
+        win_dates.append(test_home["GAME_DATE"].astype(str).to_numpy())
         paired["win_brier"].append(pd.DataFrame({
             "date": test_home["GAME_DATE"].to_numpy(),
             "diff": (p_win_prod - y_arr) ** 2 - (elo_prob.to_numpy(dtype=float) - y_arr) ** 2,
@@ -575,6 +577,11 @@ def run_walk_forward_backtest():
         df_pair = pd.concat(frames, ignore_index=True)
         significance[key] = paired_block_bootstrap(df_pair["diff"].to_numpy(), df_pair["date"].astype(str).to_numpy())
 
+    # AUC is not a per-game mean, so its paired interval resamples dates and recomputes both AUCs.
+    significance["win_auc"] = paired_block_bootstrap_auc(
+        np.concatenate(pooled["production"][0]), np.concatenate(pooled["production"][1]),
+        np.concatenate(pooled["elo"][1]), np.concatenate(win_dates))
+
     availability_audit = {}
     for key, (ys, ps) in pooled.items():
         y_all, p_all = np.concatenate(ys), np.clip(np.concatenate(ps), 1e-6, 1 - 1e-6)
@@ -722,6 +729,7 @@ Fark = model kaybı - baseline kaybı (negatif = model daha iyi). %95 aralık, a
     n_folds = len(folds)
     season_wins = {
         "win_brier": sum(f["win"]["production"]["brier"] < f["win"]["pregame_elo"]["brier"] for f in folds),
+        "win_auc": sum(f["win"]["production"]["roc_auc"] > f["win"]["pregame_elo"]["roc_auc"] for f in folds),
         "score_total": sum(f["score"]["model"]["total_mae"] < f["score"]["rolling_baseline"]["total_mae"] for f in folds),
         "score_margin": sum(f["score"]["model"]["margin_mae"] < f["score"]["rolling_baseline"]["margin_mae"] for f in folds),
         **{f"player_{t}": sum(f["player"].get(t, {}).get("mae_reduction", 0) > 0 for f in folds) for t in ("pts", "reb", "ast")},
@@ -729,6 +737,7 @@ Fark = model kaybı - baseline kaybı (negatif = model daha iyi). %95 aralık, a
     labels = {
         "win_brier": "WIN Brier vs saf Elo",
         "win_brier_live_like": "WIN Brier vs saf Elo (canlı kadro varsayımı)",
+        "win_auc": "WIN ROC-AUC, model eksi saf Elo (pozitif = model daha iyi)",
         "score_total": "SCORE toplam MAE vs son-10",
         "score_margin": "SCORE margin MAE vs son-10",
         **{f"player_{t}": f"PLAYER {t.upper()} MAE vs EMA-10" for t in ("pts", "reb", "ast")},
@@ -736,10 +745,10 @@ Fark = model kaybı - baseline kaybı (negatif = model daha iyi). %95 aralık, a
     for key, label in labels.items():
         ci = significance.get(key)
         if ci:
-            digits = 4 if key.startswith("win_brier") else 3
+            digits = 4 if key.startswith("win_") else 3
             md_content += (
                 f"| {label} | {_signed(ci['mean_diff'], digits)} | [{_signed(ci['ci_low'], digits)}, {_signed(ci['ci_high'], digits)}] "
-                f"| %{ci['p_model_better'] * 100:.1f} | {verdict(ci)} | {f"{season_wins[key]}/{n_folds}" if key in season_wins else "-"} |\n"
+                f"| %{ci['p_model_better'] * 100:.1f} | {(verdict_higher_better if key == 'win_auc' else verdict)(ci)} | {f"{season_wins[key]}/{n_folds}" if key in season_wins else "-"} |\n"
             )
     playoff_note = ""
     if agg_s.get("playoff_margin_coverage") is not None:

@@ -16,7 +16,7 @@
 <!-- BEGIN GENERATED: walk-forward (scripts/walk_forward_benchmark.py; do not edit) -->
 ## Güncel Walk-Forward Sonuçları (`v15`)
 
-Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-16T18:25:16Z, commit `0b7ec57`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
+Kaynak: `reports/evaluation/multi_season_walk_forward_backtest.json` (üretim: 2026-11-17T13:53:47Z, commit `a17e20b`). 5 genişleyen pencere sezonu, 6,276 görülmemiş maç.
 
 | Sezon | Maç | Toplam MAE | Son-10 Toplam MAE | Fark MAE | Son-10 Fark MAE | %80 Kapsama (toplam / fark) |
 |---|---:|---:|---:|---:|---:|---:|
