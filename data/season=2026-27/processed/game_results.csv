@@ -271,3 +271,8 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600250,2026-11-16,MIN,Timberwolves,106,POR,Trail Blazers,98,MIN,POR,Regular Season,False,Final,4.0,,,0,0,False,False,Target Center,"Minneapolis, MN"
 0022600251,2026-11-16,NOP,Pelicans,115,GSW,Warriors,94,NOP,GSW,Regular Season,False,Final,4.0,,,0,0,False,False,Smoothie King Center,"New Orleans, LA"
 0022600252,2026-11-16,DEN,Nuggets,105,PHX,Suns,117,PHX,DEN,Regular Season,False,Final,4.0,,,0,0,False,False,Ball Arena,"Denver, CO"
+0022600253,2026-11-17,TOR,Raptors,102,NYK,Knicks,111,NYK,TOR,Regular Season,False,Final,4.0,,,0,0,False,False,Scotiabank Arena,"Toronto, ON"
+0022600254,2026-11-17,MIN,Timberwolves,106,POR,Trail Blazers,105,MIN,POR,Regular Season,False,Final,4.0,,,0,0,False,False,Target Center,"Minneapolis, MN"
+0022600255,2026-11-17,SAS,Spurs,93,DET,Pistons,105,DET,SAS,Regular Season,False,Final,4.0,,,0,0,False,False,Frost Bank Center,"San Antonio, TX"
+0022600256,2026-11-17,LAL,Lakers,118,CHA,Hornets,114,LAL,CHA,Regular Season,False,Final,4.0,,,0,0,False,False,Crypto.com Arena,"Los Angeles, CA"
+0022600257,2026-11-17,LAC,Clippers,107,UTA,Jazz,132,UTA,LAC,Regular Season,False,Final,4.0,,,0,0,False,False,Intuit Dome,"Inglewood, CA"
