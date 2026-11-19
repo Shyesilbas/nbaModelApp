@@ -173,13 +173,16 @@ def _mark_schedule_final(season: str, fetched_game_ids: List[str]) -> None:
 
 
 def _features_lag_raw(season: str) -> bool:
-    """True when raw/team_games.csv has games that are not yet in features/team_features.csv."""
+    """True when non-preseason games in raw/team_games.csv are not yet in features/team_features.csv."""
     paths = get_data_paths(season)
     if not os.path.exists(paths.team_games_raw):
         return False
     if not os.path.exists(paths.team_features):
         return True
-    raw_ids = set(_norm_gid(pd.read_csv(paths.team_games_raw, usecols=["GAME_ID"], dtype=str)["GAME_ID"]))
+    raw_ids = {
+        g for g in _norm_gid(pd.read_csv(paths.team_games_raw, usecols=["GAME_ID"], dtype=str)["GAME_ID"])
+        if not g.startswith("001")
+    }
     feat_ids = set(_norm_gid(pd.read_csv(paths.team_features, usecols=["GAME_ID"], dtype=str)["GAME_ID"]))
     return bool(raw_ids - feat_ids)
 
