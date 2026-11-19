@@ -54,8 +54,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--season", default=None)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--list-files", action="store_true", help="Print whitelisted relative paths and exit")
     args = parser.parse_args()
     season = normalize_season(args.season or get_default_season())
+    if args.list_files:
+        for f in whitelist(season):
+            print(f)
+        return 0
     from src.processing.player_history_slim import build_player_history_slim, slim_is_stale
     if slim_is_stale():
         print(f"rebuilt {build_player_history_slim().name} from the player training dataset")

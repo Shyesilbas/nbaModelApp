@@ -1,0 +1,80 @@
+name: morning data sync
+
+# Fetches newly completed NBA games via ESPN's public JSON API, rebuilds features/results/rosters,
+# refreshes the paper-trading ledger report, and pushes the snapshot inputs to the repo so
+# .github/workflows/snapshot.yml always predicts from up-to-date data even when the local machine is off.
+# Scheduled at 09:00 TRT (06:00 UTC) with a 10:00 TRT (07:00 UTC) catch-up pass for late West Coast OT games.
+on:
+  schedule:
+    - cron: "0 6 * * *"
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "Season to sync (blank = active default season)"
+        default: ""
+      force_rebuild:
+        description: "Rebuild derived features/results/rosters even if 0 new games were fetched"
+        type: boolean
+        default: false
+      dry_run:
+        description: "Fetch and validate only, write and push nothing"
+        type: boolean
+        default: false
+
+concurrency:
+  group: morning-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  morning-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-snapshot.txt
+      - run: pip install -r requirements-snapshot.txt
+      - name: Sync missing games, features, and reports
+        env:
+          INPUT_SEASON: ${{ inputs.season }}
+          INPUT_FORCE_REBUILD: ${{ inputs.force_rebuild }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          args=()
+          if [ -n "$INPUT_SEASON" ]; then
+            args+=(--season "$INPUT_SEASON")
+          fi
+          if [ "$INPUT_FORCE_REBUILD" = "true" ]; then
+            args+=(--force-rebuild)
+          fi
+          if [ "$INPUT_DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          PYTHONPATH=. python3 scripts/ops/cloud_morning_sync.py "${args[@]}"
+      - name: Publish updated snapshot inputs and reports
+        if: ${{ !inputs.dry_run }}
+        env:
+          INPUT_SEASON: ${{ inputs.season }}
+        run: |
+          git config user.name "snapshot-bot"
+          git config user.email "snapshot-bot@users.noreply.github.com"
+          season_args=()
+          if [ -n "$INPUT_SEASON" ]; then
+            season_args+=(--season "$INPUT_SEASON")
+          fi
+          PYTHONPATH=. python3 scripts/ops/publish_snapshot_data.py "${season_args[@]}" --list-files | xargs -r git add -f --
+          git add reports/evaluation/paper_ledger_*.md reports/evaluation/paper_ledger_*.json README.md docs/project_status.md docs/reports/models/*.md 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+            exit 0
+          fi
+          git commit -m "data: morning sync $(date -u +%F)"
+          git pull --rebase
+          git push

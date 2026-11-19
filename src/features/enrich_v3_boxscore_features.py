@@ -24,7 +24,7 @@ def enrich_all_seasons(seasons=SEASONS):
         v3_csv = Path(dp.team_model_ready)
         features_csv = Path(dp.team_features)
         
-        if not raw_path.exists() or not v3_csv.exists():
+        if not raw_path.exists() or (not v3_csv.exists() and not features_csv.exists()):
             print(f"Skipping {season} (files missing)")
             continue
             
@@ -38,23 +38,24 @@ def enrich_all_seasons(seasons=SEASONS):
         # Columns to merge (excluding merge keys)
         new_cols = [c for c in adv_feats.columns if c not in ["GAME_ID", "TEAM_ABBREVIATION", "OPPONENT_ABBREVIATION"]]
         
-        # 1. Update team_model_ready_v3
-        df_v3 = pd.read_csv(v3_csv)
-        df_v3["GAME_ID"] = df_v3["GAME_ID"].astype(str).apply(lambda x: x.split('.')[0].zfill(10))
-        
-        # Drop any existing new_cols to avoid duplicate columns
-        existing_drop = [c for c in new_cols if c in df_v3.columns]
-        if existing_drop:
-            df_v3 = df_v3.drop(columns=existing_drop)
+        # 1. Update team_model_ready_v3 if exists
+        if v3_csv.exists():
+            df_v3 = pd.read_csv(v3_csv)
+            df_v3["GAME_ID"] = df_v3["GAME_ID"].astype(str).apply(lambda x: x.split('.')[0].zfill(10))
             
-        df_v3_enriched = df_v3.merge(
-            adv_feats[["GAME_ID", "TEAM_ABBREVIATION"] + new_cols],
-            on=["GAME_ID", "TEAM_ABBREVIATION"],
-            how="left"
-        )
-        
-        df_v3_enriched.to_csv(v3_csv, index=False)
-        print(f"  -> Saved team_model_ready_v3_{token} ({len(df_v3_enriched)} rows, {len(df_v3_enriched.columns)} columns)")
+            # Drop any existing new_cols to avoid duplicate columns
+            existing_drop = [c for c in new_cols if c in df_v3.columns]
+            if existing_drop:
+                df_v3 = df_v3.drop(columns=existing_drop)
+                
+            df_v3_enriched = df_v3.merge(
+                adv_feats[["GAME_ID", "TEAM_ABBREVIATION"] + new_cols],
+                on=["GAME_ID", "TEAM_ABBREVIATION"],
+                how="left"
+            )
+            
+            df_v3_enriched.to_csv(v3_csv, index=False)
+            print(f"  -> Saved team_model_ready_v3_{token} ({len(df_v3_enriched)} rows, {len(df_v3_enriched.columns)} columns)")
         
         # 2. Update team_features.csv if exists
         if features_csv.exists():
