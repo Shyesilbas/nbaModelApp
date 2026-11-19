@@ -15,9 +15,6 @@ from src.frontend_store.store import season_db_path
 from src.core.season_manifest import write_season_manifest
 from src.core.season_utils import get_default_season, normalize_season, season_to_file_token
 from src.processing.player_dataset_builder import build_player_dataset_v4
-from src.training.player_trainer import PlayerModelTrainer
-from src.training.score_trainer import ScoreModelTrainer
-from src.training.win_trainer import WinModelTrainer
 
 
 def run_schedule_context_pipeline(args: Any = None) -> None:
@@ -170,15 +167,21 @@ def run_build_player_dataset_pipeline(args: Any) -> None:
 
 
 def run_train_player_models_pipeline(args: Any) -> None:
+    from src.training.player_trainer import PlayerModelTrainer
+
     trainer = PlayerModelTrainer()
     trainer.train_and_export()
 
 
 def run_train_score_models_pipeline(args: Any) -> None:
+    from src.training.score_trainer import ScoreModelTrainer
+
     trainer = ScoreModelTrainer()
     trainer.train_and_export()
 
 
 def run_train_win_model_pipeline(args: Any) -> None:
+    from src.training.win_trainer import WinModelTrainer
+
     trainer = WinModelTrainer()
     trainer.train_and_export()
