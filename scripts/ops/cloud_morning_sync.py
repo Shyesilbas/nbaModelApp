@@ -187,6 +187,7 @@ def _features_lag_raw(season: str) -> bool:
 def _rebuild_derived_inputs(season: str) -> None:
     from src.analysis.live_roster_refresh import build_live_roster
     from src.ingestion.boxscore_service import BoxscoreService
+    from src.ingestion.schedule_loader import load_combined_schedule
     from src.orchestration.pipeline_runner import PipelineRunner
 
     runner = PipelineRunner(season=season)
@@ -197,7 +198,7 @@ def _rebuild_derived_inputs(season: str) -> None:
     BoxscoreService(save=True, season=season, warm_summaries=False).run_and_export()
 
     logger.info("Rebuilding schedule_combined.csv for %s...", season)
-    runner.build_schedule_context(save=True)
+    load_combined_schedule(season=season, save=True)
 
     logger.info("Rebuilding team_rosters_live.csv for %s...", season)
     build_live_roster(season)
