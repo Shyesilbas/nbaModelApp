@@ -15,7 +15,8 @@ from typing import Any
 from fastapi import HTTPException, Request, Response
 
 from src.core.season_utils import get_default_season
-from src.frontend_store.store import connect_ro, global_db_path, season_db_path, stored_seasons
+from src.frontend_store.season_highs import DOC_NAME as SEASON_HIGHS_DOC, compute_season_highs
+from src.frontend_store.store import connect_ro, global_db_path, read_meta, season_db_path, stored_seasons
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +142,23 @@ def get_game_index(
     finally:
         conn.close()
     return _json_response("[" + ",".join(r[0] for r in rows) + "]")
+
+
+def get_season_highs(season: str | None = None) -> Response:
+    """Single-game player highs. Closed seasons serve the stored doc; active ones compute live."""
+    season = season or DEFAULT_SEASON
+    path = season_db_path(season)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"No frontend data for season {season}")
+    if read_meta(path).get("status") == "closed":
+        stored = _doc(str(path), SEASON_HIGHS_DOC, _mtime(path))
+        if stored is not None:
+            return _json_response(stored)
+    conn = _season_conn(season)
+    try:
+        return _json_response(json.dumps(compute_season_highs(conn)))
+    finally:
+        conn.close()
 
 
 def get_season_weeks(season: str | None = None) -> list[dict[str, Any]]:

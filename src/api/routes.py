@@ -48,6 +48,7 @@ from .services.frontend_data import (
     get_player_history,
     get_player_profiles,
     get_player_season_averages,
+    get_season_highs,
     get_season_weeks,
     get_seasons,
     get_team_rosters,
@@ -196,6 +197,11 @@ def frontend_game_results(season: str = None):
 @data_router.get("/games")
 def frontend_game_index(season: str = None, start_date: str = None, end_date: str = None):
     return _run_endpoint(lambda: get_game_index(season, start_date, end_date))
+
+
+@data_router.get("/season-highs")
+def frontend_season_highs(season: str = None):
+    return _run_endpoint(lambda: get_season_highs(season))
 
 
 @data_router.get("/weeks")

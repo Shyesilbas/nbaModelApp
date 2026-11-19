@@ -23,6 +23,7 @@ import pandas as pd
 from src.core.data_paths import get_data_paths
 from src.core.season_utils import discover_seasons, normalize_season
 from src.frontend_store.player_history import build_player_season, nan_safe
+from src.frontend_store.season_highs import store_season_highs
 from src.frontend_store.season_status import CLOSED, finals_winner
 from src.frontend_store.store import (
     GLOBAL_SCHEMA, ROOT, SEASON_SCHEMA, STORE_VERSION, build_db, connect_ro, dumps,
@@ -324,6 +325,7 @@ def build_season_store(season: str, force: bool = False, *, incremental_pbp: boo
             "player_index": {str(pid): v for pid, v in history["index"].items()},
         }
         conn.executemany("INSERT INTO docs VALUES (?, ?)", [(k, dumps(v)) for k, v in docs.items()])
+        store_season_highs(conn)
         meta = {
             "season": season,
             "status": CLOSED if champion else "active",

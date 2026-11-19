@@ -8,6 +8,7 @@ import {
   ArrowLeftRight,
   ClipboardCheck,
   Stethoscope,
+  Trophy,
   PanelLeftClose,
   PanelLeft,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const TradeBoard = lazy(() => import("./components/TradeBoard"));
 const NbaPrediction = lazy(() => import("./components/NbaPrediction"));
 const PlayerPage = lazy(() => import("./components/PlayerPage"));
 const PaperTrading = lazy(() => import("./components/PaperTrading"));
+const StatsTab = lazy(() => import("./components/StatsTab"));
 const InjuriesTab = lazy(() => import("./components/InjuriesTab"));
 const PlayerCompare = lazy(() =>
   import("./components/PlayerCompare").then((m) => ({ default: m.PlayerCompare }))
@@ -42,6 +44,7 @@ const MENU_ITEMS = [
   { id: "nba-prediction", labelKey: "predictions", icon: <BarChart2 size={16} strokeWidth={1.5} />, sectionKey: "modelsSection" },
   { id: "paper-trading", labelKey: "paperTrading", icon: <ClipboardCheck size={16} strokeWidth={1.5} />, sectionKey: null },
   { id: "injuries", labelKey: "injuries", icon: <Stethoscope size={16} strokeWidth={1.5} />, sectionKey: null },
+  { id: "stats", labelKey: "stats", icon: <Trophy size={16} strokeWidth={1.5} />, sectionKey: null },
 ] as const;
 
 export default function App() {
@@ -393,6 +396,19 @@ export default function App() {
                       )}
                       {activeTab === "paper-trading" && <PaperTrading />}
                       {activeTab === "injuries" && <InjuriesTab />}
+                      {activeTab === "stats" && (
+                        <StatsTab
+                          onSelectGame={(gameId) => {
+                            setActiveTab("game-results");
+                            updateUrlRoute({ tab: "game-results", gameId });
+                          }}
+                          onSelectPlayer={(playerId) => {
+                            setProfileTargetPlayerId(playerId);
+                            setActiveTab("player-profile");
+                            updateUrlRoute({ tab: "player-profile", playerId });
+                          }}
+                        />
+                      )}
                       {activeTab === "player-compare" && (
                         <PlayerCompare
                           initialP1Id={compareP1}

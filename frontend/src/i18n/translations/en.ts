@@ -63,6 +63,7 @@ const en = {
     predictions: "Predictions",
     paperTrading: "Paper Trading",
     injuries: "Injuries",
+    stats: "Statistics",
   },
   fixtures: {
     boxscoresLoading: "Loading box scores...",

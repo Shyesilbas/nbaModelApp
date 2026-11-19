@@ -63,6 +63,7 @@ const tr = {
     predictions: "Tahminler",
     paperTrading: "Model Takibi",
     injuries: "Sakatlıklar",
+    stats: "İstatistikler",
   },
   fixtures: {
     boxscoresLoading: "Kutu puanları yükleniyor...",

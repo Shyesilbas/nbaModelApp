@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ClipboardCheck, HelpCircle } from "lucide-react";
+import { ClipboardCheck, HelpCircle, Lock } from "lucide-react";
 import { Button, Card, DatePicker, EmptyState, InlineError, Skeleton } from "./common";
 import TeamLogo from "./TeamLogo";
 import { TEAM_NAME_BY_ABBR, getTeamShortName } from "../lib/nbaTeams";
@@ -24,6 +24,8 @@ type PaperGame = {
   predicted_away_score: number;
   valid: boolean;
   origin?: "live" | "backfill";
+  created_utc?: string;
+  start_utc?: string;
   status: "final" | "pending";
   actual_home_score?: number;
   actual_away_score?: number;
@@ -59,7 +61,7 @@ type Summary = {
 
 type Report = { season: string; summary: Summary; evaluation?: Evaluation; games: PaperGame[] };
 
-type SectionTab = "games" | "versions" | "calibration";
+type SectionTab = "games" | "versions" | "calibration" | "highlights";
 type GameStatusFilter = "all" | "correct" | "wrong" | "pending";
 
 const teamName = (abbr: string) => TEAM_NAME_BY_ABBR[abbr as keyof typeof TEAM_NAME_BY_ABBR] || abbr;
@@ -193,6 +195,21 @@ export default function PaperTrading() {
     return map;
   }, [report]);
 
+  const dayStats = useMemo(() => {
+    const m: Record<string, { date: string; n: number; ok: number }> = {};
+    (report?.games ?? []).forEach((g) => {
+      if (g.status !== "final" || !g.valid || g.correct === undefined) return;
+      const d = (m[g.game_date] ??= { date: g.game_date, n: 0, ok: 0 });
+      d.n += 1;
+      if (g.correct) d.ok += 1;
+    });
+    const all = Object.values(m);
+    const pool = all.filter((d) => d.n >= 3);
+    const list = pool.length >= 2 ? pool : all;
+    const sorted = [...list].sort((a, b) => b.ok / b.n - a.ok / a.n || b.n - a.n || a.date.localeCompare(b.date));
+    return { best: sorted[0], worst: sorted.length > 1 ? sorted[sorted.length - 1] : undefined };
+  }, [report]);
+
   const latestVersion = useMemo(
     () =>
       (report?.games ?? [])
@@ -280,10 +297,17 @@ export default function PaperTrading() {
     );
   };
 
+  const goToDay = (date: string) => {
+    setSelectedDate(date);
+    setGameFilter("all");
+    setSectionTab("games");
+  };
+
   const sectionTabs: { id: SectionTab; label: string }[] = [
     { id: "games", label: tr ? "Günlük Tahminler" : "Daily Predictions" },
     { id: "versions", label: tr ? "Sürüm ve Baseline" : "Versions & Baselines" },
     { id: "calibration", label: tr ? "Kalibrasyon ve Trend" : "Calibration & Trends" },
+    { id: "highlights", label: tr ? "Öne Çıkanlar" : "Highlights" },
   ];
 
   const showGames = sectionTab === "games";
@@ -484,6 +508,29 @@ export default function PaperTrading() {
                                 </span>
                               )}
                             </div>
+                            {g.created_utc && (
+                              <div className="mt-1 flex items-center gap-1.5 text-xs tabular-nums text-text-muted">
+                                {g.origin !== "backfill" && g.valid && g.start_utc && g.created_utc < g.start_utc ? (
+                                  <span
+                                    className="inline-flex items-center text-status-success"
+                                    title={tr ? "Maç öncesi donduruldu" : "Snapshot before tip-off"}
+                                    aria-label={tr ? "Maç öncesi donduruldu" : "Snapshot before tip-off"}
+                                  >
+                                    <Lock size={12} strokeWidth={2} aria-hidden="true" />
+                                  </span>
+                                ) : (
+                                  <span>{tr ? "Kayıt" : "Snapshot"}</span>
+                                )}
+                                <span>
+                                  {new Date(g.created_utc).toLocaleString(tr ? "tr-TR" : "en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+                            )}
                           </td>
                           <td className="whitespace-nowrap px-4 py-3 tabular-nums" title={`${injurySummary(g)}\n${injuryTitle(g)}`.trim()}>
                             <div className="flex items-center gap-2">
@@ -534,6 +581,36 @@ export default function PaperTrading() {
       )}
 
       {/* 3. Calibration & Rolling Trends Section */}
+      {sectionTab === "highlights" && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {([
+            { key: "best", title: tr ? "En İyi Gün" : "Best Day", d: dayStats.best },
+            { key: "worst", title: tr ? "En Kötü Gün" : "Worst Day", d: dayStats.worst },
+          ] as const).map(({ key, title, d }) => (
+            <Card key={key}>
+              <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{title}</p>
+              {d ? (
+                <button
+                  type="button"
+                  onClick={() => goToDay(d.date)}
+                  className="mt-2 w-full cursor-pointer text-left transition-opacity hover:opacity-80"
+                >
+                  <p className="text-xl font-semibold tabular-nums text-text-primary sm:text-2xl">
+                    {(d.ok / d.n * 100).toFixed(1)}%
+                  </p>
+                  <p className="mt-1 text-sm tabular-nums text-text-secondary">
+                    {formatDate(d.date)} - {d.ok}/{d.n} {tr ? "doğru tahmin" : "correct"}
+                  </p>
+                  <p className="mt-2 text-xs text-text-muted">{tr ? "Günlük tahminlere git" : "Go to daily predictions"}</p>
+                </button>
+              ) : (
+                <p className="mt-2 text-sm text-text-muted">{tr ? "Henüz veri yok" : "No data yet"}</p>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+
       {showCalibration && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
