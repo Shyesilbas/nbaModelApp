@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -234,6 +235,7 @@ def _evaluation_view(rep: Dict[str, Any]) -> Dict[str, Any]:
     return {"production_release": rep["production_release"], "current_live": current, "by_version": by_version}
 
 
+_REPORT_LOCK = threading.Lock()
 _REPORT_CACHE: Dict[str, Any] = {}
 
 
@@ -249,9 +251,15 @@ def paper_trading_report(season: str) -> Dict[str, Any]:
     hit = _REPORT_CACHE.get(season)
     if hit and hit[0] == key:
         return hit[1]
-    report = _build_paper_trading_report(season)
-    _REPORT_CACHE[season] = (key, report)
-    return report
+    # One build at a time: a request arriving while the startup warmup builds the same report
+    # waits for it instead of repeating the work.
+    with _REPORT_LOCK:
+        hit = _REPORT_CACHE.get(season)
+        if hit and hit[0] == key:
+            return hit[1]
+        report = _build_paper_trading_report(season)
+        _REPORT_CACHE[season] = (key, report)
+        return report
 
 
 def _build_paper_trading_report(season: str) -> Dict[str, Any]:

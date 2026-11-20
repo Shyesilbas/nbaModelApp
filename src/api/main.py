@@ -19,6 +19,19 @@ def _warm_caches() -> None:
     """Prime caches after the server is already accepting requests (a request that beats a
     warmup step just computes the same cached value itself)."""
     try:
+        # First: the Model Takibi page (paper trading) is the heaviest cold compute.
+        from datetime import datetime
+        from src.core.season_utils import get_default_season
+        from .services.injury_history import injuries_payload
+        from .services.paper_trading import paper_trading_report
+        from src.ingestion.nba_injury_report import ET
+        season = get_default_season()
+        paper_trading_report(season)
+        injuries_payload(season, datetime.now(ET).strftime("%Y-%m-%d"))
+    except Exception as e:
+        logger.warning("Paper trading / injuries warmup failed on startup: %s", e)
+
+    try:
         from .services.frontend_data import warm_up_cache
         warm_up_cache()
     except Exception as e:
@@ -31,19 +44,6 @@ def _warm_caches() -> None:
         _load_player_dataset(get_default_season())
     except Exception as e:
         logger.warning("Player data warmup failed on startup: %s", e)
-
-    try:
-        # Prime the paper-trading and injuries caches so the first page open is not a cold compute.
-        from datetime import datetime
-        from src.core.season_utils import get_default_season
-        from .services.injury_history import injuries_payload
-        from .services.paper_trading import paper_trading_report
-        from src.ingestion.nba_injury_report import ET
-        season = get_default_season()
-        paper_trading_report(season)
-        injuries_payload(season, datetime.now(ET).strftime("%Y-%m-%d"))
-    except Exception as e:
-        logger.warning("Paper trading / injuries warmup failed on startup: %s", e)
 
 
 @asynccontextmanager

@@ -73,7 +73,9 @@ def player_actuals(season: str) -> pd.DataFrame:
     df = df.sort_values(["Player_ID", "GAME_DATE", "Game_ID"], kind="stable")
     grp = df.groupby("Player_ID", sort=False)
     for c in ("PTS", "REB", "AST"):
-        df[f"{c}_EMA"] = grp[c].transform(lambda x: x.shift(1).ewm(span=EMA_SPAN, min_periods=1).mean())
+        prior = grp[c].shift(1)
+        df[f"{c}_EMA"] = prior.groupby(df["Player_ID"], sort=False).ewm(
+            span=EMA_SPAN, min_periods=1).mean().reset_index(level=0, drop=True)
     return df
 
 
@@ -85,7 +87,12 @@ def player_summary(rows: list[dict], season: str) -> dict | None:
     actual = player_actuals(season)
     if actual.empty:
         return None
-    by_game = {gid: g.set_index("Player_ID") for gid, g in actual.groupby("Game_ID")}
+    wanted = {r["game_id"] for r in rows}
+    actual = actual[actual["Game_ID"].isin(wanted)]
+    by_game: dict = {}
+    cols = ["MIN", "PTS", "REB", "AST", "PTS_EMA", "REB_EMA", "AST_EMA"]
+    for gid, pid, *vals in zip(actual["Game_ID"], actual["Player_ID"], *(actual[c] for c in cols)):
+        by_game.setdefault(gid, {})[pid] = dict(zip(cols, vals))
     recs, projected_active, played_total, played_covered = [], 0, 0, 0
     for r in rows:
         box = by_game.get(r["game_id"])
@@ -95,12 +102,12 @@ def player_summary(rows: list[dict], season: str) -> dict | None:
         for p in r["players"]:
             expected = p["status"] not in ("OUT", "DNP") and p["min"] > 0
             projected_active += int(expected)
-            if p["id"] not in box.index:
+            if p["id"] not in box:
                 continue
             played_covered += 1
             if not expected:
                 continue
-            a = box.loc[p["id"]]
+            a = box[p["id"]]
             rec = {"date": r["game_date"], "min_err": abs(p["min"] - a["MIN"])}
             for s in STATS:
                 rec[f"{s}_model"] = abs(p[s] - a[s.upper()])
