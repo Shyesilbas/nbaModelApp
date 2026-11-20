@@ -47,8 +47,15 @@ else
   echo "python3 not found — cannot start ML service"
 fi
 
-# Give ML service a moment to initialize
-sleep 1
+# Wait until the API answers (model + cache warmup takes ~15 s) so the first page load succeeds
+if [ -n "$ML_PID" ]; then
+  echo "Waiting for ML service to become ready..."
+  for _ in $(seq 1 90); do
+    curl -fs -o /dev/null http://127.0.0.1:8001/health 2>/dev/null && break
+    kill -0 "$ML_PID" >/dev/null 2>&1 || break
+    sleep 1
+  done
+fi
 
 # 2) Start frontend (Vite)
 if command -v npm >/dev/null 2>&1 && [ -f "frontend/package.json" ]; then

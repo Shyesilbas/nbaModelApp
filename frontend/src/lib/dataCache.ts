@@ -9,8 +9,23 @@ function dataHeaders(): HeadersInit | undefined {
   return API_DATA_TOKEN ? { "X-Data-Token": API_DATA_TOKEN } : undefined;
 }
 
+// The API refuses connections for ~15 s after a cold start while it warms its caches.
+// A network-level failure (no HTTP response at all) is retried instead of surfaced.
+const CONNECT_RETRY_DELAYS_MS = [500, 1000, 1500, 2000, 3000, 3000, 4000, 4000, 5000, 5000, 5000];
+
+async function fetchWithStartupRetry(url: string, init?: RequestInit): Promise<Response> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fetch(url, init);
+    } catch (error) {
+      if (init?.signal?.aborted || attempt >= CONNECT_RETRY_DELAYS_MS.length) throw error;
+      await new Promise((resolve) => setTimeout(resolve, CONNECT_RETRY_DELAYS_MS[attempt]));
+    }
+  }
+}
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, init);
+  const response = await fetchWithStartupRetry(`${API_BASE_URL}${path}`, init);
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body?.detail || `Server returned ${response.status}`);
   return body as T;
