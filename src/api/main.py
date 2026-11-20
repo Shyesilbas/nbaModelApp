@@ -1,3 +1,4 @@
+import threading
 from contextlib import asynccontextmanager
 import logging
 import os
@@ -14,13 +15,9 @@ import uvicorn
 logger = logging.getLogger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    try:
-        init_model()
-    except Exception as e:
-        logger.warning("Model load failed on startup: %s", e)
-
+def _warm_caches() -> None:
+    """Prime caches after the server is already accepting requests (a request that beats a
+    warmup step just computes the same cached value itself)."""
     try:
         from .services.frontend_data import warm_up_cache
         warm_up_cache()
@@ -47,6 +44,16 @@ async def lifespan(app: FastAPI):
         injuries_payload(season, datetime.now(ET).strftime("%Y-%m-%d"))
     except Exception as e:
         logger.warning("Paper trading / injuries warmup failed on startup: %s", e)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        init_model()
+    except Exception as e:
+        logger.warning("Model load failed on startup: %s", e)
+
+    threading.Thread(target=_warm_caches, name="cache-warmup", daemon=True).start()
 
     try:
         from .services.slate_warmup import start_background_warmup

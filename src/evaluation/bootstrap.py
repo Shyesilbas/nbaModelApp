@@ -13,9 +13,29 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score
 
 MIN_BLOCKS = 5
+
+
+def roc_auc_score(y: np.ndarray, score: np.ndarray) -> float:
+    """Binary ROC-AUC via the rank-sum identity (ties get average ranks, like sklearn).
+
+    sklearn's roc_auc_score costs ~3 ms per call from input validation alone, which made the
+    bootstrap (thousands of calls) the slowest part of API startup.
+    """
+    y = np.asarray(y) > 0.5
+    n_pos = int(y.sum())
+    n_neg = len(y) - n_pos
+    score = np.asarray(score, dtype=float)
+    order = np.argsort(score, kind="stable")
+    sorted_score = score[order]
+    # Average rank per tie group: group g spans [start, end) in sorted order.
+    starts = np.flatnonzero(np.r_[True, sorted_score[1:] != sorted_score[:-1]])
+    ends = np.r_[starts[1:], len(score)]
+    group_rank = (starts + ends + 1) / 2.0
+    ranks = np.empty(len(score))
+    ranks[order] = np.repeat(group_rank, ends - starts)
+    return float((ranks[y].sum() - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg))
 
 
 def paired_block_bootstrap(
