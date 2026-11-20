@@ -216,6 +216,24 @@ def _refresh_espn_transactions() -> None:
         logger.warning("ESPN transactions refresh failed (continuing with cached feed): %s", exc)
 
 
+def _report_lags_ledger(season: str) -> bool:
+    """True when the saved paper-ledger JSON report has fewer graded games than the ledger."""
+    from src.api.services.paper_trading import grade, load_results, read_ledger
+    from src.core.season_utils import season_to_file_token
+
+    token = season_to_file_token(season)
+    report_path = ROOT / "reports" / "evaluation" / f"paper_ledger_{token}.json"
+    if not report_path.exists():
+        return True
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        graded = grade(read_ledger(season), load_results(season))
+        final = sum(1 for g in graded if g["status"] == "final" and g["valid"])
+        return report.get("graded") != final
+    except Exception:
+        return True
+
+
 def _refresh_reports(season: str) -> None:
     cmd = [sys.executable, str(ROOT / "scripts" / "refresh_reports.py"), "--walk-forward", "never", "--season", season]
     env = {**os.environ, "PYTHONPATH": str(ROOT)}
@@ -322,9 +340,10 @@ def main() -> int:
             _refresh_reports(season)
     else:
         logger.info("Raw data and features already up to date; skipping derived rebuilds.")
-        if not args.skip_reports:
-            # Ledger may have received new pre-tip snapshots overnight; regrade if needed.
+        if not args.skip_reports and _report_lags_ledger(season):
             _refresh_reports(season)
+        else:
+            logger.info("Paper ledger report is already up to date; skipping report refresh.")
 
     logger.info("=== Cloud Morning Sync Finished (%d new game(s), %d aux backfill(s)) ===", len(fetched_ids), aux_updated)
     return 0

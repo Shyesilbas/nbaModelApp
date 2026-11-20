@@ -3,11 +3,13 @@ name: morning data sync
 # Fetches newly completed NBA games via ESPN's public JSON API, rebuilds features/results/rosters,
 # refreshes the paper-trading ledger report, and pushes the snapshot inputs to the repo so
 # .github/workflows/snapshot.yml always predicts from up-to-date data even when the local machine is off.
-# Scheduled at 09:00 TRT (06:00 UTC) with a 10:00 TRT (07:00 UTC) catch-up pass for late West Coast OT games.
+# Off-peak minutes (:17, :47) avoid top-of-hour (:00) GitHub Actions cron drops.
+# Four morning slots cover 09:17, 09:47, 10:17, and 10:47 TRT (06:17-07:47 UTC);
+# when nothing is missing the run exits without committing.
+# Can also be triggered punctually via workflow_dispatch (same external cron pattern as snapshot.yml).
 on:
   schedule:
-    - cron: "0 6 * * *"
-    - cron: "0 7 * * *"
+    - cron: "17,47 6-7 * * *"
   workflow_dispatch:
     inputs:
       season:
