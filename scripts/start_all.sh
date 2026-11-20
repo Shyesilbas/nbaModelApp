@@ -8,15 +8,45 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 ML_PID=""
+FE_PID=""
+CLEANED_UP=0
+
+# Kill a process and all of its descendants (npm -> vite -> esbuild, uvicorn reloader -> worker).
+kill_tree() {
+  local pid="$1" sig="${2:-TERM}" child
+  for child in $(pgrep -P "$pid" 2>/dev/null); do
+    kill_tree "$child" "$sig"
+  done
+  kill "-$sig" "$pid" 2>/dev/null || true
+}
+
+stop_service() {
+  local name="$1" pid="$2"
+  [ -n "$pid" ] || return 0
+  kill -0 "$pid" 2>/dev/null || return 0
+  echo "Stopping $name (PID $pid)"
+  kill_tree "$pid" TERM
+  for _ in $(seq 1 50); do
+    kill -0 "$pid" 2>/dev/null || return 0
+    sleep 0.1
+  done
+  kill_tree "$pid" KILL
+}
 
 on_exit() {
-  echo "\nShutting down services..."
-  if [ -n "$ML_PID" ] && kill -0 "$ML_PID" >/dev/null 2>&1; then
-    echo "Stopping ML service (PID $ML_PID)"; kill "$ML_PID" || true
-  fi
-  wait 2>/dev/null || true
+  [ "$CLEANED_UP" = 1 ] && return
+  CLEANED_UP=1
+  trap - INT TERM HUP
+  printf '\nShutting down services...\n'
+  stop_service "frontend" "$FE_PID"
+  stop_service "ML service" "$ML_PID"
+  # last resort: anything still holding the dev ports
+  lsof -ti :5173 -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
+  lsof -ti :8001 -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null || true
 }
-trap on_exit EXIT INT TERM
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
 
 # 1) Start FastAPI ML service
 if command -v python3 >/dev/null 2>&1; then
@@ -66,8 +96,11 @@ if command -v npm >/dev/null 2>&1 && [ -f "frontend/package.json" ]; then
     npm install --silent
   fi
   echo "Launching frontend dev server (npm run dev) — press Ctrl+C to stop everything"
-  npm run dev
-  # frontend runs in foreground; when it exits, script continues to trap and cleanup
+  # run in background + wait so INT/TERM/HUP traps fire immediately (bash defers traps
+  # while a foreground child runs) and cleanup can kill the whole vite process tree
+  npm run dev &
+  FE_PID=$!
+  wait "$FE_PID" || true
 else
   echo "npm not found or frontend/package.json missing — cannot start frontend"
 fi
