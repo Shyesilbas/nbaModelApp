@@ -288,3 +288,7 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600267,2026-11-18,DAL,Mavericks,116,GSW,Warriors,94,DAL,GSW,Regular Season,False,Final,5.0,,,0,0,False,False,American Airlines Center,"Dallas, TX"
 0022600268,2026-11-18,LAL,Lakers,97,UTA,Jazz,109,UTA,LAL,Regular Season,False,Final,5.0,,,0,0,False,False,Crypto.com Arena,"Los Angeles, CA"
 0022600269,2026-11-18,SAC,Kings,107,PHX,Suns,128,PHX,SAC,Regular Season,False,Final,5.0,,,0,0,False,False,Golden 1 Center,"Sacramento, CA"
+0022600270,2026-11-19,MEM,Grizzlies,126,GSW,Warriors,98,MEM,GSW,Regular Season,False,Final,5.0,,,0,0,False,False,FedExForum,"Memphis, TN"
+0022600271,2026-11-19,MIL,Bucks,114,POR,Trail Blazers,124,POR,MIL,Regular Season,False,Final,5.0,,,0,0,False,False,Fiserv Forum,"Milwaukee, WI"
+0022600272,2026-11-19,MIN,Timberwolves,99,NYK,Knicks,102,NYK,MIN,Regular Season,False,Final,5.0,,,0,0,False,False,Target Center,"Minneapolis, MN"
+0022600273,2026-11-19,SAS,Spurs,124,LAC,Clippers,112,SAS,LAC,Regular Season,False,Final,5.0,,,0,0,False,False,Frost Bank Center,"San Antonio, TX"
