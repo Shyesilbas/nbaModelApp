@@ -1,6 +1,7 @@
 import PlayerPhoto from "../PlayerPhoto";
 import {
   EMPTY_QUARTER_LINE,
+  formatSeconds,
   sumPeriods,
   type GameQuarters,
   type QuarterStatLine,
@@ -59,11 +60,15 @@ export function QuarterPlayerTable({
 }) {
   const { language } = useLanguage();
   const tr = language === "tr";
+  const showMin = Boolean(data.minutes_available);
   const rows = data.players
     .filter((p) => p.team === team && p.periods[String(period)])
     .map((p) => ({ p, s: p.periods[String(period)] }))
-    .filter(({ s }) => s.pts + s.reb + s.ast + s.stl + s.blk + s.tov + s.fga + s.fta > 0)
-    .sort((a, b) => b.s.pts - a.s.pts || b.s.reb + b.s.ast - (a.s.reb + a.s.ast));
+    .filter(({ s }) => (s.sec ?? 0) > 0 || s.pts + s.reb + s.ast + s.stl + s.blk + s.tov + s.fga + s.fta > 0)
+    .sort(
+      (a, b) =>
+        b.s.pts - a.s.pts || b.s.reb + b.s.ast - (a.s.reb + a.s.ast) || (b.s.sec ?? 0) - (a.s.sec ?? 0)
+    );
 
   if (rows.length === 0) return <p className="py-4 text-xs text-text-muted">—</p>;
 
@@ -73,6 +78,7 @@ export function QuarterPlayerTable({
         <thead>
           <tr className="border-b border-border text-text-secondary">
             <th className="py-2 pr-3 text-left font-medium">{tr ? "Oyuncu" : "Player"}</th>
+            {showMin && <th className="px-2 py-2 text-right font-normal text-text-muted">MIN</th>}
             {["PTS", "REB", "AST"].map((h) => (
               <th key={h} className="px-2 py-2 text-right font-medium text-text-primary">{h}</th>
             ))}
@@ -95,6 +101,9 @@ export function QuarterPlayerTable({
                   <span className="text-sm text-text-primary">{nameById?.[p.player_id] ?? p.name}</span>
                 </button>
               </td>
+              {showMin && (
+                <td className="px-2 py-2 text-right tabular-nums text-text-muted">{formatSeconds(s.sec)}</td>
+              )}
               <td className="px-2 py-2 text-right text-sm font-semibold tabular-nums text-text-primary">{s.pts}</td>
               <td className="px-2 py-2 text-right text-sm font-semibold tabular-nums text-text-primary">{s.reb}</td>
               <td className="px-2 py-2 text-right text-sm font-semibold tabular-nums text-text-primary">{s.ast}</td>
@@ -119,6 +128,7 @@ export function PlayerQuarterTable({ data, playerId }: { data: GameQuarters; pla
   const tr = language === "tr";
   const player = data.players.find((p) => p.player_id === playerId);
   if (!player) return null;
+  const showMin = Boolean(data.minutes_available);
   const total = sumPeriods(player);
   const rows: { label: string; s: QuarterStatLine; strong?: boolean }[] = [
     ...data.periods.map((p) => ({ label: p.label, s: player.periods[String(p.period)] ?? EMPTY_QUARTER_LINE })),
@@ -130,6 +140,7 @@ export function PlayerQuarterTable({ data, playerId }: { data: GameQuarters; pla
         <thead>
           <tr className="border-b border-border text-text-secondary">
             <th className="py-2 pr-3 text-left font-medium">{tr ? "Periyot" : "Period"}</th>
+            {showMin && <th className="px-2 py-2 text-right font-normal text-text-muted">MIN</th>}
             {["PTS", "REB", "AST"].map((h) => (
               <th key={h} className="px-2 py-2 text-right font-medium text-text-primary">{h}</th>
             ))}
@@ -142,6 +153,9 @@ export function PlayerQuarterTable({ data, playerId }: { data: GameQuarters; pla
           {rows.map(({ label, s, strong }) => (
             <tr key={label} className={strong ? "border-t border-border font-semibold" : ""}>
               <td className="py-2 pr-3 text-sm text-text-primary">{label}</td>
+              {showMin && (
+                <td className="px-2 py-2 text-right tabular-nums text-text-muted">{formatSeconds(s.sec ?? 0)}</td>
+              )}
               <td className="px-2 py-2 text-right text-sm font-semibold tabular-nums text-text-primary">{s.pts}</td>
               <td className="px-2 py-2 text-right text-sm font-semibold tabular-nums text-text-primary">{s.reb}</td>
               <td className="px-2 py-2 text-right text-sm font-semibold tabular-nums text-text-primary">{s.ast}</td>

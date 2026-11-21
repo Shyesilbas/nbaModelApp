@@ -246,7 +246,14 @@ def get_game_quarters(game_id: str, season: str | None = None) -> Any:
     path = REPO_ROOT / "data" / f"season={season_key}" / "raw" / "play_by_play" / f"{gid}.json"
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"play_by_play not found for {gid} in {season_key}")
-    return build_quarter_breakdown(json.loads(path.read_text(encoding="utf-8")))
+    box_rows: list[dict[str, Any]] = []
+    conn = connect_ro(season_db_path(season_key))
+    if conn is not None:
+        try:
+            box_rows = [json.loads(r[0]) for r in conn.execute("SELECT data_json FROM player_boxscores WHERE game_id = ?", (gid,))]
+        finally:
+            conn.close()
+    return build_quarter_breakdown(json.loads(path.read_text(encoding="utf-8")), box_rows)
 
 
 def get_player_history(player_id: str) -> Response:

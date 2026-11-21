@@ -15,6 +15,8 @@ export interface QuarterStatLine {
   blk: number;
   tov: number;
   pf: number;
+  /** Seconds on court; present only when `GameQuarters.minutes_available` is true. */
+  sec?: number;
 }
 
 export interface QuarterPlayer {
@@ -31,6 +33,8 @@ export interface GameQuarters {
   periods: { period: number; label: string }[];
   quarter_scores: { quarter: string; home: number; away: number }[];
   players: QuarterPlayer[];
+  /** True when the lineup rebuild matched the box score, so each period line carries `sec`. */
+  minutes_available?: boolean;
 }
 
 export const EMPTY_QUARTER_LINE: QuarterStatLine = {
@@ -71,9 +75,18 @@ export function sumPeriods(player: QuarterPlayer, periods?: number[]): QuarterSt
   for (const k of keys) {
     const row = player.periods[k];
     if (!row) continue;
-    (Object.keys(out) as (keyof QuarterStatLine)[]).forEach((s) => {
-      out[s] += row[s];
+    (Object.keys(EMPTY_QUARTER_LINE) as (keyof QuarterStatLine)[]).forEach((s) => {
+      out[s] = (out[s] ?? 0) + (row[s] ?? 0);
     });
+    if (row.sec !== undefined) out.sec = (out.sec ?? 0) + row.sec;
   }
   return out;
+}
+
+/** Seconds on court as m:ss, or a dash when unknown. */
+export function formatSeconds(sec: number | undefined): string {
+  if (sec === undefined) return "—";
+  const m = Math.floor(sec / 60);
+  const r = sec % 60;
+  return `${m}:${String(r).padStart(2, "0")}`;
 }
