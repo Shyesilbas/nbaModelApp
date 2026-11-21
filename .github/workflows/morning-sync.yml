@@ -6,7 +6,8 @@ name: morning data sync
 # Off-peak minutes (:17, :47) avoid top-of-hour (:00) GitHub Actions cron drops.
 # Four morning slots cover 09:17, 09:47, 10:17, and 10:47 TRT (06:17-07:47 UTC);
 # when nothing is missing the run exits without committing.
-# Can also be triggered punctually via workflow_dispatch (same external cron pattern as snapshot.yml).
+# GitHub drops most of these scheduled runs, so snapshot.yml (dispatched every 10 minutes by an
+# external cron from 19:00 UTC) also dispatches this workflow once a day if it has not succeeded yet.
 on:
   schedule:
     - cron: "17,47 6-7 * * *"

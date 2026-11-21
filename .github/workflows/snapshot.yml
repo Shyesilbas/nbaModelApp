@@ -29,6 +29,30 @@ permissions:
   contents: write
 
 jobs:
+  # GitHub drops nearly all scheduled runs of morning-sync.yml, while this workflow is dispatched
+  # every 10 minutes by an external cron. The first dispatch of the UTC day therefore starts the
+  # morning sync if it has not succeeded yet (at most 3 failed attempts per day). The sync is a no-op
+  # when nothing is missing, and workflow_dispatch from GITHUB_TOKEN is allowed to start a new run.
+  ensure-morning-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch morning sync if it has not run today
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          today=$(date -u +%F)
+          runs=$(gh run list --workflow morning-sync.yml --created ">=$today" --limit 50 --json status,conclusion)
+          ok=$(echo "$runs" | jq '[.[] | select(.status != "completed" or .conclusion == "success")] | length')
+          failed=$(echo "$runs" | jq '[.[] | select(.status == "completed" and .conclusion != "success")] | length')
+          if [ "$ok" -gt 0 ]; then echo "Morning sync already ran or is running today."; exit 0; fi
+          if [ "$failed" -ge 3 ]; then echo "Morning sync failed $failed times today, not retrying."; exit 0; fi
+          gh workflow run morning-sync.yml --ref main
+          echo "Dispatched morning sync."
+
   snapshot:
     runs-on: ubuntu-latest
     timeout-minutes: 10
