@@ -302,3 +302,8 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600050,2026-11-20,DEN,Nuggets,133,HOU,Rockets,124,DEN,HOU,Regular Season,False,Final,5.0,Emirates NBA Cup,,0,0,False,False,Ball Arena,"Denver, CO"
 0022600051,2026-11-20,LAL,Lakers,106,SAC,Kings,104,LAL,SAC,Regular Season,False,Final,5.0,Emirates NBA Cup,,0,0,False,False,Crypto.com Arena,"Los Angeles, CA"
 0022600274,2026-11-21,PHI,76ers,132,MIL,Bucks,129,PHI,MIL,Regular Season,False,Final,5.0,,,0,0,False,False,Xfinity Mobile Arena,"Philadelphia, PA"
+0022600275,2026-11-21,NYK,Knicks,97,POR,Trail Blazers,96,NYK,POR,Regular Season,False,Final,5.0,,,0,0,False,False,Madison Square Garden,"New York, NY"
+0022600276,2026-11-21,DAL,Mavericks,110,LAC,Clippers,100,DAL,LAC,Regular Season,False,Final,5.0,,,0,0,False,False,American Airlines Center,"Dallas, TX"
+0022600277,2026-11-21,MIN,Timberwolves,104,MEM,Grizzlies,95,MIN,MEM,Regular Season,False,Final,5.0,,,0,0,False,False,Target Center,"Minneapolis, MN"
+0022600278,2026-11-21,SAS,Spurs,114,NOP,Pelicans,91,SAS,NOP,Regular Season,False,Final,5.0,,,0,0,False,False,Frost Bank Center,"San Antonio, TX"
+0022600279,2026-11-21,SAC,Kings,97,BOS,Celtics,96,SAC,BOS,Regular Season,False,Final,5.0,,,0,0,False,False,Golden 1 Center,"Sacramento, CA"
