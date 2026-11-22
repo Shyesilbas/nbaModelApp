@@ -67,7 +67,9 @@ if command -v python3 >/dev/null 2>&1; then
     lsof -ti :8001 | xargs kill -9 2>/dev/null || true
 
     # start uvicorn from REPO_ROOT; reload on any change under src/ (the API imports it)
-    .venv/bin/python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001 --reload --reload-dir src &
+    # NBA_AUTO_CATCH_UP: the API pulls the cloud morning sync and rebuilds the local store when new
+    # (scripts/ops/local_catch_up.py, at startup and every 30 minutes; log in logs/local_catch_up.log)
+    NBA_AUTO_CATCH_UP=1 .venv/bin/python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001 --reload --reload-dir src &
     ML_PID=$!
     echo "ML service started (PID $ML_PID) on port 8001"
   else

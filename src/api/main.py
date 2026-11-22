@@ -46,6 +46,35 @@ def _warm_caches() -> None:
         logger.warning("Player data warmup failed on startup: %s", e)
 
 
+CATCH_UP_INTERVAL_SECONDS = 30 * 60
+
+
+def _catch_up_loop() -> None:
+    """Pull the cloud morning sync and rebuild the local store when it brought something new.
+
+    Runs scripts/ops/local_catch_up.py now and every 30 minutes; a run with nothing new only does
+    a git fetch. Enabled by NBA_AUTO_CATCH_UP=1 (scripts/start_all.sh sets it).
+    """
+    import subprocess
+    import sys
+    import time
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    log_path = root / "logs" / "local_catch_up.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    while True:
+        try:
+            with open(log_path, "a", encoding="utf-8") as log:
+                subprocess.run(
+                    [sys.executable, str(root / "scripts" / "ops" / "local_catch_up.py")],
+                    cwd=root, stdout=log, stderr=subprocess.STDOUT, timeout=20 * 60,
+                )
+        except Exception as e:
+            logger.warning("Local catch-up failed: %s", e)
+        time.sleep(CATCH_UP_INTERVAL_SECONDS)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -54,6 +83,9 @@ async def lifespan(app: FastAPI):
         logger.warning("Model load failed on startup: %s", e)
 
     threading.Thread(target=_warm_caches, name="cache-warmup", daemon=True).start()
+
+    if os.environ.get("NBA_AUTO_CATCH_UP") == "1":
+        threading.Thread(target=_catch_up_loop, name="local-catch-up", daemon=True).start()
 
     try:
         from .services.slate_warmup import start_background_warmup
