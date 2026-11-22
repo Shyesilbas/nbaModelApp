@@ -301,3 +301,4 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600049,2026-11-20,UTA,Jazz,101,PHX,Suns,111,PHX,UTA,Regular Season,False,Final,5.0,Emirates NBA Cup,,0,0,False,False,Delta Center,"Salt Lake City, UT"
 0022600050,2026-11-20,DEN,Nuggets,133,HOU,Rockets,124,DEN,HOU,Regular Season,False,Final,5.0,Emirates NBA Cup,,0,0,False,False,Ball Arena,"Denver, CO"
 0022600051,2026-11-20,LAL,Lakers,106,SAC,Kings,104,LAL,SAC,Regular Season,False,Final,5.0,Emirates NBA Cup,,0,0,False,False,Crypto.com Arena,"Los Angeles, CA"
+0022600274,2026-11-21,PHI,76ers,132,MIL,Bucks,129,PHI,MIL,Regular Season,False,Final,5.0,,,0,0,False,False,Xfinity Mobile Arena,"Philadelphia, PA"
