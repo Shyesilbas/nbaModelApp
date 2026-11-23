@@ -307,3 +307,4 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600277,2026-11-21,MIN,Timberwolves,104,MEM,Grizzlies,95,MIN,MEM,Regular Season,False,Final,5.0,,,0,0,False,False,Target Center,"Minneapolis, MN"
 0022600278,2026-11-21,SAS,Spurs,114,NOP,Pelicans,91,SAS,NOP,Regular Season,False,Final,5.0,,,0,0,False,False,Frost Bank Center,"San Antonio, TX"
 0022600279,2026-11-21,SAC,Kings,97,BOS,Celtics,96,SAC,BOS,Regular Season,False,Final,5.0,,,0,0,False,False,Golden 1 Center,"Sacramento, CA"
+0022600280,2026-11-22,ATL,Hawks,107,DET,Pistons,97,ATL,DET,Regular Season,False,Final,5.0,,,0,0,False,False,State Farm Arena,"Atlanta, GA"
