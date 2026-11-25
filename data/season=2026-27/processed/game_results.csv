@@ -324,3 +324,6 @@ GAME_ID,GAME_DATE,HOME_TEAM_ABBREVIATION,HOME_TEAM_NAME,HOME_SCORE,AWAY_TEAM_ABB
 0022600294,2026-11-23,HOU,Rockets,116,LAC,Clippers,104,HOU,LAC,Regular Season,False,Final,5.0,,,0,0,False,False,Toyota Center,"Houston, TX"
 0022600295,2026-11-23,LAL,Lakers,109,UTA,Jazz,94,LAL,UTA,Regular Season,False,Final,5.0,,,0,0,False,False,Crypto.com Arena,"Los Angeles, CA"
 0022600296,2026-11-23,SAC,Kings,107,SAS,Spurs,123,SAS,SAC,Regular Season,False,Final,5.0,,,0,0,False,False,Golden 1 Center,"Sacramento, CA"
+0022600052,2026-11-24,ORL,Magic,86,DET,Pistons,104,DET,ORL,Regular Season,False,Final,5.0,Emirates NBA Cup,,0,0,False,False,Kia Center,"Orlando, FL"
+0022600053,2026-11-24,WAS,Wizards,116,BOS,Celtics,131,BOS,WAS,Regular Season,False,Final,5.0,Emirates NBA Cup,,0,0,False,False,Capital One Arena,"Washington, DC"
+0022600054,2026-11-24,DEN,Nuggets,101,DAL,Mavericks,120,DAL,DEN,Regular Season,False,Final,5.0,Emirates NBA Cup,,0,0,False,False,Ball Arena,"Denver, CO"
