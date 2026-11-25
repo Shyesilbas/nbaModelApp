@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isGameEligibleForRefresh } from "./game-results/utils";
 import {
   LayoutGrid,
@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { GameDetail, GameFeedRow } from "../types/gameFeed";
 import { loadPrivateApi, loadPrivateApiFresh, postPrivateApi } from "../lib/dataCache";
+import { useDataSync } from "../lib/dataSync";
 import {
   loadArchivedGameBoxscores,
   loadArchivedGameIndex,
@@ -119,6 +120,9 @@ export default function FixturesTab({
   const [refreshDone, setRefreshDone] = useState<boolean>(false);
   const [freshPlayByPlay, setFreshPlayByPlay] = useState<PbpData | null>(null);
   const [seasonReloadTick, setSeasonReloadTick] = useState(0);
+  // Background catch-up with the cloud sync: reload games whenever the store is rebuilt.
+  const { running: syncRunning, storeBuiltAt } = useDataSync(selectedSeason);
+  const loadedStoreStamp = useRef<string | null>(null);
 
 
   useEffect(() => {
@@ -183,6 +187,12 @@ export default function FixturesTab({
       .then((rows) => {
         if (!active) return;
         const currentSeasonRows = rows.map((g) => ({ ...g, SEASON: g.SEASON ?? selectedSeason }));
+        if (storeBuiltAt && loadedStoreStamp.current && loadedStoreStamp.current !== storeBuiltAt) {
+          // the store was rebuilt: cached box scores and play-by-play may be missing new games
+          setGameDetailCache({});
+          invalidateGameIndexCache();
+        }
+        if (storeBuiltAt) loadedStoreStamp.current = storeBuiltAt;
         setAllResults((prev) => [
           ...prev.filter((g) => g.SEASON !== selectedSeason),
           ...currentSeasonRows,
@@ -199,7 +209,7 @@ export default function FixturesTab({
     return () => {
       active = false;
     };
-  }, [selectedSeason, seasonReloadTick]);
+  }, [selectedSeason, seasonReloadTick, storeBuiltAt]);
 
   // Filter pool based on season and season type
   const seasonPool = useMemo(() => {
@@ -458,8 +468,8 @@ export default function FixturesTab({
   const [batchMsg, setBatchMsg] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; done: number; failed: number } | null>(null);
   const dueKey =
-    dueGames.length > 0 && !batchRunning
-      ? `${selectedSeason}|${selectedDate}|${dueGames.map((g) => g.GAME_ID).join(",")}`
+    dueGames.length > 0 && !batchRunning && !syncRunning
+      ? `${selectedSeason}|${selectedDate}|${storeBuiltAt ?? ""}|${dueGames.map((g) => g.GAME_ID).join(",")}`
       : null;
   const [missingState, setMissingState] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
   useEffect(() => {
@@ -674,8 +684,15 @@ export default function FixturesTab({
               </button>
             )}
 
+            {syncRunning && !batchRunning && (
+              <span role="status" className="inline-flex items-center gap-1.5 text-xs text-text-secondary">
+                <RefreshCw size={14} className="animate-spin text-primary" aria-hidden="true" />
+                {language === "tr" ? "Yeni maç verileri yükleniyor..." : "Loading new game data..."}
+              </span>
+            )}
+
             {/* Fetch every finished game of the day that has no data yet */}
-            {selectedDate && (pendingDateGames.length > 0 || batchRunning || batchProgress) && (
+            {selectedDate && !(syncRunning && !batchRunning) && (pendingDateGames.length > 0 || batchRunning || batchProgress) && (
               <div className="flex items-center gap-3">
                 <button
                   type="button"

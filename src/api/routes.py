@@ -54,6 +54,7 @@ from .services.frontend_data import (
     get_team_rosters,
     get_trades,
 )
+from .services.data_sync import status as data_sync_status
 from .services.paper_trading import backtest_calibration, paper_trading_report
 from .services.player_prediction import predict_players
 from .services.score_prediction import predict_score
@@ -202,6 +203,11 @@ def frontend_game_index(season: str = None, start_date: str = None, end_date: st
 @data_router.get("/season-highs")
 def frontend_season_highs(season: str = None):
     return _run_endpoint(lambda: get_season_highs(season))
+
+
+@data_router.get("/data-sync")
+def frontend_data_sync(season: str = None):
+    return _run_endpoint(lambda: data_sync_status(season))
 
 
 @data_router.get("/weeks")

@@ -6,9 +6,13 @@ frontend store (data/frontend_store/), the box score files and the play-by-play 
 gitignored. This script:
 
 1. fetches origin and fast-forwards the current branch when origin is ahead (never merges, rebases or
-   stashes: a diverged branch or a conflicting local edit is reported and the pull is skipped);
-2. when new commits arrived or the local derived files lag the raw game logs, rebuilds box scores and
-   game results, fetches missing play-by-play, and rebuilds the frontend store of the season.
+   stashes). The in-app refresh button rewrites cloud-published data files (game logs, starters,
+   rosters) from stats.nba.com; such local edits to files the incoming commits also change would block
+   the pull, so they are restored to HEAD first, but only when the local game logs hold no game the
+   upstream logs lack. Any other conflicting edit or a diverged branch is reported and the pull skipped;
+2. when new commits arrived or the local derived files lag the raw game logs, rebuilds the frontend store
+   right away (scores show within seconds), then box scores and game results, then missing play-by-play,
+   rebuilding the store after each so the app gains detail as it lands.
 
 When nothing is new it exits after the fetch (about a second). The API runs it at startup and every
 30 minutes when NBA_AUTO_CATCH_UP=1 (set by scripts/start_all.sh); it can also be run by hand.
@@ -50,12 +54,57 @@ def pull_if_behind() -> bool:
         return False
     if int(behind.stdout.strip()) == 0:
         return False
+    restore_cloud_owned_edits()
     pulled = _git("pull", "--ff-only", "--quiet", check=False)
     if pulled.returncode != 0:
         _log(f"git pull --ff-only refused, pull by hand: {(pulled.stderr or pulled.stdout).strip()}")
         return False
     _log(f"pulled {behind.stdout.strip()} new commit(s)")
     return True
+
+
+def _cloud_owned_files() -> set[str]:
+    result = subprocess.run(
+        [sys.executable, "scripts/ops/publish_snapshot_data.py", "--list-files"],
+        cwd=ROOT, capture_output=True, text=True, env={**os.environ, "PYTHONPATH": str(ROOT)},
+    )
+    return set(result.stdout.split()) if result.returncode == 0 else set()
+
+
+def _game_ids(text: str, column: str) -> set[str]:
+    import io
+
+    import pandas as pd
+
+    frame = pd.read_csv(io.StringIO(text), usecols=[column], dtype=str)
+    return set(frame[column].str.zfill(10))
+
+
+def restore_cloud_owned_edits() -> None:
+    """Restore cloud-published files edited locally that the incoming commits also change.
+
+    Only when every locally edited game log holds no game missing from its upstream version, so the
+    restore never drops a game the cloud has not fetched.
+    """
+    dirty = set(_git("diff", "--name-only", check=False).stdout.split())
+    incoming = set(_git("diff", "--name-only", "HEAD", "@{upstream}", check=False).stdout.split())
+    blocking = dirty & incoming
+    if not blocking:
+        return
+    owned = _cloud_owned_files()
+    if not blocking <= owned:
+        _log(f"local edits outside the cloud-published files block the pull: {sorted(blocking - owned)}")
+        return
+    for path, column in (("raw/team_games.csv", "GAME_ID"), ("raw/player_games.csv", "Game_ID")):
+        for name in sorted(n for n in blocking if n.endswith(path)):
+            local = (ROOT / name).read_text(encoding="utf-8")
+            upstream = _git("show", f"@{{upstream}}:{name}", check=False).stdout
+            extra = _game_ids(local, column) - _game_ids(upstream, column) if upstream else {"?"}
+            if extra:
+                _log(f"{name} holds {len(extra)} game(s) the cloud lacks; keeping local edits, pull skipped")
+                return
+    _git("checkout", "--", *sorted(blocking))
+    _log(f"restored {len(blocking)} cloud-published file(s) rewritten locally: {sorted(blocking)}")
 
 
 def derived_data_lags(season: str) -> bool:
@@ -85,10 +134,13 @@ def derived_data_lags(season: str) -> bool:
 
 def rebuild(season: str) -> None:
     python = sys.executable
+    store = ("frontend store", [python, "scripts/build_frontend_store.py", "--season", season])
     steps = [
+        store,
         ("box scores and game results", [python, "main.py", "--season", season, "--fetch-boxscores"]),
+        store,
         ("play-by-play", [python, "scripts/build_play_by_play.py", "--season", season, "--sleep", "0.6"]),
-        ("frontend store", [python, "scripts/build_frontend_store.py", "--season", season]),
+        store,
     ]
     for label, command in steps:
         _log(f"building {label}")
